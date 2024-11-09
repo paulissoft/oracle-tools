@@ -119,7 +119,7 @@ static function object_type_order
 ( p_object_type in varchar2
 )
 return integer
-deterministic
+deterministic result_cache
 is
 begin
   return
@@ -166,7 +166,7 @@ begin
   return oracle_tools.t_schema_object.object_type_order(self.object_type);
 end object_type_order;
 
-static function id
+static function get_id
 ( p_object_schema in varchar2
 , p_object_type in varchar2
 , p_object_name in varchar2
@@ -179,12 +179,12 @@ static function id
 , p_grantable in varchar2
 )
 return varchar2
-deterministic
+deterministic result_cache
 is
   l_id varchar2(4000 char) := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ID');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_ID');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_type: %s; p_object_name: %s', p_object_schema, p_object_type, p_object_name);
   if not(p_base_object_schema is null and p_base_object_type is null and p_base_object_name is null)
   then
@@ -355,7 +355,27 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   return l_id;
-end id;
+end get_id;
+
+static procedure set_id
+( p_schema_object in out nocopy oracle_tools.t_schema_object
+)
+is
+begin
+  p_schema_object.id := 
+    get_id
+    ( p_object_schema => p_schema_object.object_schema()
+    , p_object_type => p_schema_object.object_type()
+    , p_object_name => p_schema_object.object_name()
+    , p_base_object_schema => p_schema_object.base_object_schema()
+    , p_base_object_type => p_schema_object.base_object_type()
+    , p_base_object_name => p_schema_object.base_object_name()
+    , p_column_name => p_schema_object.column_name()
+    , p_grantee => p_schema_object.grantee()
+    , p_privilege => p_schema_object.privilege()
+    , p_grantable => p_schema_object.grantable()
+    );
+end set_id;
 
 member function id
 return varchar2
@@ -388,7 +408,7 @@ static function dict2metadata_object_type
 ( p_dict_object_type in varchar2
 )
 return varchar2
-deterministic
+deterministic result_cache
 is
   l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
 begin
@@ -772,7 +792,7 @@ static function is_a_repeatable
 ( p_object_type in varchar2
 )
 return integer
-deterministic
+deterministic result_cache
 is
 begin
   -- See generate_ddl.pl documentatation
@@ -860,7 +880,7 @@ static function dict_object_type
 ( p_object_type in varchar2
 )
 return varchar2
-deterministic
+deterministic result_cache
 is
   l_dict_object_type oracle_tools.pkg_ddl_util.t_dict_object_type;
   l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
@@ -933,6 +953,60 @@ begin
          self.privilege() || ':' ||
          self.grantable();  
 end schema_object_info;
+
+static function split_id
+( p_id in varchar2
+)
+return oracle_tools.t_text_tab
+deterministic
+is
+  l_id_parts dbms_sql.varchar2a;
+begin
+  pkg_str_util.split
+  ( p_str => p_id
+  , p_delimiter => ':'
+  , p_str_tab => l_id_parts
+  );
+  if l_id_parts.count != 10
+  then
+    raise program_error;
+  end if;
+  return oracle_tools.t_text_tab
+         ( l_id_parts( 1)
+         , l_id_parts( 2)
+         , l_id_parts( 3)
+         , l_id_parts( 4)
+         , l_id_parts( 5)
+         , l_id_parts( 6)
+         , l_id_parts( 7)
+         , l_id_parts( 8)
+         , l_id_parts( 9)
+         , l_id_parts(10)
+         );
+end split_id;
+
+static function join_id
+( p_id_parts in oracle_tools.t_text_tab
+)
+return varchar2
+deterministic
+is
+begin
+  if p_id_parts.count != 10
+  then
+    raise program_error;
+  end if;
+  return p_id_parts( 1) || ':' ||
+         p_id_parts( 2) || ':' ||
+         p_id_parts( 3) || ':' ||
+         p_id_parts( 4) || ':' ||
+         p_id_parts( 5) || ':' ||
+         p_id_parts( 6) || ':' ||
+         p_id_parts( 7) || ':' ||
+         p_id_parts( 8) || ':' ||
+         p_id_parts( 9) || ':' ||
+         p_id_parts(10)
+end join_id;
 
 end;
 /

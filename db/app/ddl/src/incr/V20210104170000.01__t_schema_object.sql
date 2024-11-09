@@ -4,22 +4,6 @@ create type oracle_tools.t_schema_object authid current_user as object
 ( id varchar2(500 byte) /* the unique id, formerly the id() member function */
 , network_link$ varchar2(128 byte)
 , object_schema$ varchar2(128 byte)
--- begin of constructors
-, constructor function t_schema_object
-  ( self in out nocopy oracle_tools.t_schema_object
-  , id in varchar2
-  , network_link$ in varchar2
-  , object_schema$ in varchar2
-  )
-  return self as result
-/** Constructor that should never be called. **/
-, constructor function t_schema_object
-  ( self in out nocopy oracle_tools.t_schema_object
-  , p_network_link$ in varchar2
-  , p_object_schema$ in varchar2
-  )
-  return self as result
-/** Constructor without id since that must be determined by the procedure construct below. **/
 -- begin of getter(s)/setter(s)
 , final member function network_link return varchar2 deterministic
 , final member procedure network_link
