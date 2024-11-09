@@ -4,12 +4,12 @@ CREATE TYPE "ORACLE_TOOLS"."T_REF_CONSTRAINT_OBJECT" authid current_user under o
 ( ref_object_id$ varchar2(500 byte)
 , constructor function t_ref_constraint_object
   ( self in out nocopy oracle_tools.t_ref_constraint_object
-  , p_base_object_id in varchar2
+  , p_base_object in oracle_tools.t_named_object
   , p_object_schema in varchar2
   , p_object_name in varchar2
   , p_constraint_type in varchar2 default null
   , p_column_names in varchar2 default null
-  , p_ref_object_id in varchar2 default null
+  , p_ref_object in oracle_tools.t_constraint_object default null
   )
   return self as result
 -- begin of getter(s)

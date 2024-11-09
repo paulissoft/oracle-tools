@@ -18,6 +18,7 @@ create type oracle_tools.t_member_object authid current_user under oracle_tools.
 , member function member_name return varchar2 deterministic
 -- end of getter(s)/setter(s)
 , overriding member function is_a_repeatable return integer deterministic
+, overriding member function dict_object_exists return integer -- 0/1
 )
 not final
 not instantiable]';

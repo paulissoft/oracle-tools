@@ -12,12 +12,21 @@ end matches_schema_object_fnc;
 /
 
 create table schema_object_filter_results
-( schema_object_filter_id number 
+( schema_object_filter_id integer
 , schema_object_id varchar2(500 byte)
-, created timestamp(6) default sys_extract_utc(systimestamp) constraint schema_object_filter_results$ck$created check (created is not null)
-, constraint schema_object_filter_results$pk primary key (schema_object_filter_id, schema_object_id)
-, constraint schema_object_filter_results$fk$1 foreign key (schema_object_filter_id) references schema_object_filters(id) on delete cascade
-, constraint schema_object_filter_results$fk$2 foreign key (schema_object_id) references schema_objects(id) on delete cascade
+, created timestamp(6)
+  default sys_extract_utc(systimestamp)
+  constraint schema_object_filter_results$ck$created check (created is not null)
+, constraint schema_object_filter_results$pk
+  primary key (schema_object_filter_id, schema_object_id)
+, constraint schema_object_filter_results$fk$1
+  foreign key (schema_object_filter_id)
+  references schema_object_filters(id) on delete cascade
+, constraint schema_object_filter_results$fk$2
+  foreign key (schema_object_id)
+  references schema_objects(id) on delete cascade
 );
 
-create index schema_object_filter_results$idx$1 on schema_object_filter_results(schema_object_filter_id, oracle_tools.matches_schema_object_fnc(schema_object_filter_id, schema_object_id)); -- Will we generate DDL for this one?
+-- Will we generate DDL for this one?
+create index schema_object_filter_results$idx$1
+on schema_object_filter_results(schema_object_filter_id, oracle_tools.matches_schema_object_fnc(schema_object_filter_id, schema_object_id)); 

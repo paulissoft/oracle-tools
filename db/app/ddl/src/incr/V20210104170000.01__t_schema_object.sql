@@ -20,21 +20,6 @@ create type oracle_tools.t_schema_object authid current_user as object
   )
   return self as result
 /** Constructor without id since that must be determined by the procedure construct below. **/
-, final member procedure construct
-  ( self in out nocopy oracle_tools.t_schema_object
-  , p_network_link$ in varchar2
-  , p_object_schema$ in varchar2
-  )
-/**
-This procedure is there since Oracle Object Types do not allow to invoke a
-super constructor.  Therefore this procedure can be called instead in a sub
-type constructor like this:
-
-(self as oracle_tools.t_schema_object).construct(p_network_link$, p_object_schema$);
-
-This procedure sets id.
-**/
-
 -- begin of getter(s)/setter(s)
 , final member function network_link return varchar2 deterministic
 , final member procedure network_link
@@ -65,7 +50,7 @@ This procedure sets id.
   )
   return integer deterministic result_cache
 , final member function object_type_order return integer deterministic
-, static function determine_id
+, static function get_id
   ( p_object_schema in varchar2
   , p_object_type in varchar2
   , p_object_name in varchar2 default null
@@ -78,6 +63,9 @@ This procedure sets id.
   , p_grantable in varchar2 default null
   )
   return varchar2 deterministic result_cache
+, static procedure set_id
+  ( p_schema_object in out nocopy oracle_tools.t_schema_object
+  )
 , map member function signature return varchar2 deterministic
 , static function dict2metadata_object_type
   ( p_dict_object_type in varchar2
@@ -133,6 +121,15 @@ This procedure sets id.
   )
 , member function base_dict_object_type return varchar2 deterministic
 , member function schema_object_info return varchar2 deterministic 
+, static function split_id
+  ( p_id in varchar2
+  )
+  return oracle_tools.t_text_tab deterministic
+, static function join_id
+  ( p_id_parts in oracle_tools.t_text_tab
+  )
+  return varchar2 deterministic
+, not instantiable member function dict_object_exists return integer -- 0/1
 )
 not instantiable
 not final]';

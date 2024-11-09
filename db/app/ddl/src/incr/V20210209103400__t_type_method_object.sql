@@ -28,7 +28,7 @@ create type oracle_tools.t_type_method_object authid current_user under oracle_t
 
 , constructor function t_type_method_object
   ( self in out nocopy oracle_tools.t_type_method_object
-  , p_base_object_id in varchar2
+  , p_base_object in oracle_tools.t_named_object
   , p_member# in integer -- the METHOD_NO
   , p_member_name in varchar2 -- the METHOD_NAME
   , p_method_type in varchar2

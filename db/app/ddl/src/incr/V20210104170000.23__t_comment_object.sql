@@ -4,7 +4,7 @@ create type oracle_tools.t_comment_object authid current_user under oracle_tools
 ( column_name$ varchar2(128 byte)
 , constructor function t_comment_object
   ( self in out nocopy oracle_tools.t_comment_object
-  , p_base_object_id in varchar2
+  , p_base_object in oracle_tools.t_named_object
   , p_object_schema in varchar2
   , p_column_name in varchar2
   )
@@ -17,6 +17,7 @@ create type oracle_tools.t_comment_object authid current_user under oracle_tools
   ( self in oracle_tools.t_comment_object
   , p_schema in varchar2
   )
+, overriding member function dict_object_exists return integer -- 0/1
 )
 final]';
 end;

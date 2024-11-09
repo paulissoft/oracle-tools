@@ -25,7 +25,16 @@ declare
     , 'SCHEMA_OBJECT_FILTERS'
     , 'SCHEMA_OBJECTS'
     , 'SCHEMA_OBJECT_FILTER_RESULTS'
+    , 'GENERATE_DDL_SESSIONS'
     , 'GENERATE_DDL_SESSION_SCHEMA_OBJECTS'
+    );
+  l_view_tab sys.odcivarchar2list :=
+    sys.odcivarchar2list
+    ( 'V_ALL_SCHEMA_DDLS'
+    , 'V_ALL_SCHEMA_OBJECTS'
+    , 'V_MY_NAMED_SCHEMA_OBJECTS'
+    , 'V_MY_SCHEMA_OBJECTS'
+    , 'V_MY_SCHEMA_OBJECTS_NO_DDL_YET'
     );
   l_sequence_tab sys.odcivarchar2list :=
     sys.odcivarchar2list
@@ -55,6 +64,17 @@ begin
     loop
       begin
         execute immediate 'drop table ' || l_table_tab(i_idx) || ' purge';
+        l_nr_objects_dropped := l_nr_objects_dropped + 1;
+      exception
+        when others
+        then null;
+      end;
+    end loop;
+    
+    for i_idx in l_view_tab.first .. l_view_tab.last
+    loop
+      begin
+        execute immediate 'drop view ' || l_view_tab(i_idx);
         l_nr_objects_dropped := l_nr_objects_dropped + 1;
       exception
         when others

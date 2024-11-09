@@ -29,7 +29,7 @@ create type oracle_tools.t_table_column_object authid current_user under oracle_
                                            -- NVARCHAR2
 , constructor function t_table_column_object
   ( self in out nocopy oracle_tools.t_table_column_object
-  , p_base_object_id in varchar2
+  , p_base_object in oracle_tools.t_named_object
   , p_member# in integer
   , p_member_name in varchar2
   , p_data_type_name in varchar2
