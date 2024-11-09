@@ -28,7 +28,6 @@ procedure add
 procedure add
 ( p_schema_object in oracle_tools.t_schema_object -- The schema object to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 , p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
-, p_must_exist in boolean default null -- p_must_exist: TRUE - must exist (UPDATE); FALSE - must NOT exist (INSERT); NULL - don't care (UPSERT)
 , p_ignore_dup_val_on_index in boolean default false
 );
 /** Add a schema object to GENERATE_DDL_SESSION_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
@@ -36,7 +35,6 @@ procedure add
 procedure add
 ( p_schema_object_cursor in t_schema_object_cursor -- The schema objects to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 , p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
-, p_must_exist in boolean default null -- p_must_exist: TRUE - must exist (UPDATE); FALSE - must NOT exist (INSERT); NULL - don't care (UPSERT)
 , p_ignore_dup_val_on_index in boolean default false
 );
 /** Add schema objects to GENERATE_DDL_SESSION_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
@@ -49,7 +47,7 @@ return generate_ddl_session_schema_objects%rowtype;
 /** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by seq. **/
 
 function find_schema_object_by_object_id
-( p_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id())
+( p_schema_object_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id())
 , p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
 )
 return generate_ddl_session_schema_objects%rowtype;
