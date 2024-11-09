@@ -2346,7 +2346,7 @@ $end
     l_ddl_text varchar2(32767 char) := null;
     l_exclude_name_expr_tab oracle_tools.t_text_tab;
     l_schema_object oracle_tools.t_schema_object;
-    l_my_schema_object all_schema_objects%rowtype;
+    l_my_schema_object generate_ddl_session_schema_objects%rowtype;
     l_generate_ddl pls_integer := 0;
 
     procedure cleanup
