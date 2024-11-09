@@ -1,6 +1,6 @@
-CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_INCLUDE_OBJECTS" ("INCLUDE_OBJECT")  BEQUEATH CURRENT_USER AS 
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_INCLUDE_OBJECTS" ("INCLUDE_OBJECT")  BEQUEATH CURRENT_USER AS 
   select  unique
-        oracle_tools.t_schema_object.id
+        oracle_tools.t_schema_object.get_id
         ( p_object_schema => t.object_schema()
         , p_object_type => t.object_type()
         , p_object_name => case when t.object_type() in ('CONSTRAINT', 'INDEX', 'REF_CONSTRAINT') then '*' else t.object_name() end
