@@ -29,7 +29,7 @@ return varchar2
 deterministic
 is
 begin
-  return self.base_object_name$;
+  return oracle_tools.t_schema_object.split_id(self.base_object_id$)(6);
 end base_object_name;
 
 overriding final member procedure base_object_schema
@@ -65,11 +65,7 @@ return varchar2
 deterministic
 is
 begin
-  return oracle_tools.t_schema_object.id
-         ( p_object_schema => self.base_object_schema$
-         , p_object_type => self.base_object_type$
-         , p_object_name => self.base_object_name$
-         );
+  return self.base_object_id$;
 end base_object_id;
 
 end;
