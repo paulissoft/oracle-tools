@@ -20,12 +20,6 @@ procedure add
 /** Add a record to table GENERATE_DDL_SESSIONS (and its parent SCHEMA_OBJECT_FILTERS). **/
 
 procedure add
-( p_schema_ddl in oracle_tools.t_schema_ddl
-, p_schema_object_filter_id in positiven
-);
-/** Update the record in table GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
-
-procedure add
 ( p_schema_object in oracle_tools.t_schema_object -- The schema object to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 , p_schema_object_filter_id in positiven default get_last_schema_object_filter_id
 , p_ignore_dup_val_on_index in boolean default false
@@ -38,6 +32,12 @@ procedure add
 , p_ignore_dup_val_on_index in boolean default false
 );
 /** Add schema objects to GENERATE_DDL_SESSION_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
+
+procedure add
+( p_schema_ddl in oracle_tools.t_schema_ddl
+, p_schema_object_filter_id in positiven
+);
+/** Update the record in table GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
 
 function find_schema_object_by_seq
 ( p_seq in integer default 1 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, seq)
