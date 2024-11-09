@@ -85,7 +85,6 @@ $end
           from    table(oracle_tools.schema_objects_api.get_named_objects(l_schema, p_schema_object_filter_id)) t;
         add
         ( p_schema_object_cursor => l_cursor
-        , p_must_exist => false
         , p_schema_object_filter_id => p_schema_object_filter_id
         );
 
@@ -120,7 +119,7 @@ $end
                     ,       t.obj.object_schema() as object_schema
                     ,       t.obj.object_name() as object_name
                     ,       t.obj
-                    from    v_my_named_schema_objects t
+                    from    oracle_tools.v_my_named_schema_objects t
                   ) obj
                   inner join prv p
                   on p.table_schema = obj.object_schema and p.table_name = obj.object_name
@@ -139,7 +138,6 @@ $end
               , p_privilege => r.privilege
               , p_grantable => r.grantable
               )
-          , p_must_exist => false
           , p_schema_object_filter_id => p_schema_object_filter_id
           );
         end loop;
@@ -209,7 +207,6 @@ $end
                   , p_object_schema => r.object_schema
                   , p_object_name => r.object_name
                   )
-              , p_must_exist => false
               , p_schema_object_filter_id => p_schema_object_filter_id
               );
             when 'COMMENT'
@@ -221,7 +218,6 @@ $end
                   , p_object_schema => r.object_schema
                   , p_column_name => r.column_name
                   )
-              , p_must_exist => false
               , p_schema_object_filter_id => p_schema_object_filter_id
               );
           end case;
@@ -321,7 +317,6 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                   , p_constraint_type => r.constraint_type
                   , p_column_names => null
                   )
-              , p_must_exist => false
               , p_schema_object_filter_id => p_schema_object_filter_id
               );
 
@@ -337,7 +332,6 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                   , p_search_condition => r.search_condition
                   )
               , p_schema_object_filter_id => p_schema_object_filter_id
-              , p_must_exist => false
               , p_ignore_dup_val_on_index => true
               );
           end case;
@@ -407,7 +401,6 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
               , p_base_object_name => r.base_object_name
               , p_column_name => r.column_name
               )
-          , p_must_exist => false
           , p_schema_object_filter_id => p_schema_object_filter_id
           );
         end loop;
@@ -457,7 +450,6 @@ $end
               , p_object_name => r.object_name
               , p_tablespace_name => r.tablespace_name
               )
-          , p_must_exist => false
           , p_schema_object_filter_id => p_schema_object_filter_id
           );
         end loop;
@@ -490,7 +482,7 @@ procedure cleanup
 is
   pragma autonomous_transaction;
 begin
-  delete from schema_object_filters t where t.created <= (sys_extract_utc(current_timestamp) - interval '1' day);
+  delete from oracle_tools.schema_object_filters t where t.created <= (sys_extract_utc(current_timestamp) - interval '1' day);
   commit;
 end cleanup;
 
@@ -500,16 +492,18 @@ function get_last_schema_object_filter_id
 return positiven
 is
   l_schema_object_filter_id positive;
+  l_session_id constant number := to_number(sys_context('USERENV', 'SESSIONID'));
 begin
-  select  f.id
+  select  gds.schema_object_filter_id
   into    l_schema_object_filter_id
-  from    ( select  f.id
-            from    oracle_tools.schema_object_filters f
-            where   f.session_id = sys_context('USERENV', 'SESSIONID')
+  from    ( select  gds.schema_object_filter_id
+            from    oracle_tools.generate_ddl_sessions gds
+            where   gds.session_id = l_session_id
             order by
-                    f.session_id
-            ,       f.created desc            
-          ) f
+                    -- the descending index GENERATE_DDL_SESSIONS$IDX$1 will be used
+                    gds.session_id
+            ,       gds.created desc            
+          ) gds
   where   rownum = 1;
   return l_schema_object_filter_id;
 end get_last_schema_object_filter_id;
@@ -559,109 +553,150 @@ procedure add
 , p_schema_object_filter_id in positiven
 )
 is
-  cursor c_gdsso
+  l_session_id constant number := to_number(sys_context('USERENV', 'SESSIONID'));
+
+  cursor c_gdsso(b_schema_object_id in generate_ddl_session_schema_objects.schema_object_id%type)
   is
     select  1
-    from    generate_ddl_session_schema_objects gdsso
-    where   gdsso.session_id = sys_context('USERENV', 'SESSIONID')
+    from    oracle_tools.generate_ddl_session_schema_objects gdsso
+    where   gdsso.session_id = l_session_id
     and     gdsso.schema_object_filter_id = p_schema_object_filter_id
-    and     gdsso.schema_object_id = p_schema_ddl.obj.id
+    and     gdsso.schema_object_id = b_schema_object_id
     for update of
             gdsso.ddl;
+  l_rowcount naturaln := 0;
 begin
-  for r_gdsso in c_gdsso
+  for r_gdsso in c_gdsso(p_schema_ddl.obj.id)
   loop
     update  generate_ddl_session_schema_objects gdsso
     set     gdsso.ddl = p_schema_ddl
-    where   currof of c_gdsso;
+    where   current of c_gdsso;
+    l_rowcount := l_rowcount + 1;
   end loop;
+  case l_rowcount
+    when 0
+    then raise no_data_found;
+    when 1
+    then null; -- ok
+    else raise too_many_rows; -- strange
+  end case;
 end add;
 
 procedure add
-( p_schema_object in oracle_tools.all_schema_objects.obj%type
+( p_schema_object in oracle_tools.t_schema_object
 , p_schema_object_filter_id in positiven
-, p_must_exist in boolean
 , p_ignore_dup_val_on_index in boolean
 )
 is
-  -- index 1: update; 2: insert
-  l_lwb constant simple_integer := case p_must_exist when true then 1 when false then 2 else 1 end;
-  l_upb constant simple_integer := case p_must_exist when true then 1 when false then 2 else 2 end; -- try both when p_must_exist is null
-  l_sql_rowcount pls_integer := null;
+  l_session_id constant number := to_number(sys_context('USERENV', 'SESSIONID'));
+  l_found pls_integer;
 begin
-  <<dml_loop>>
-  for i_idx in l_lwb .. l_upb
-  loop
-    case i_idx
-      when 1
+  -- check precondition (in GENERATE_DDL_SESSIONS and thus SCHEMA_OBJECT_FILTERS)
+  if get_last_schema_object_filter_id = p_schema_object_filter_id
+  then
+    null;
+  else
+    raise program_error;
+  end if;
+  
+  -- retrieve from or insert into SCHEMA_OBJECTS
+  begin
+    select  1
+    into    l_found
+    from    oracle_tools.schema_objects so
+    where   so.id = p_schema_object.id;
+  exception
+    when no_data_found
+    then insert into schema_objects values (p_schema_object);
+  end;
+
+  -- retrieve from or insert into SCHEMA_OBJECT_FILTER_RESULTS
+  begin
+    select  1
+    into    l_found
+    from    oracle_tools.schema_object_filter_results sofr
+    where   sofr.schema_object_filter_id = p_schema_object_filter_id
+    and     sofr.schema_object_id = p_schema_object.id;
+  exception
+    when no_data_found
+    then
+      -- update the Function Based Index with the MATCHES_SCHEMA_OBJECT_FNC function result
+      insert into schema_object_filter_results
+      ( schema_object_filter_id
+      , schema_object_id
+      )
+      values
+      ( p_schema_object_filter_id
+      , p_schema_object.id
+      );
+  end;
+
+  /*
+  -- Now the following tables have data for these parameters:
+  -- * SCHEMA_OBJECT_FILTERS (precondition)
+  -- * GENERATE_DDL_SESSIONS (precondition)
+  -- * SCHEMA_OBJECTS
+  -- * SCHEMA_OBJECT_FILTER_RESULTS
+  */
+
+  -- Ignore this entry when MATCHES_SCHEMA_OBJECT_FNC returns 0
+  begin
+    select  1
+    into    l_found
+    from    oracle_tools.schema_object_filter_results sofr
+    where   sofr.schema_object_filter_id = p_schema_object_filter_id
+    and     sofr.schema_object_id = p_schema_object.id
+    and     oracle_tools.matches_schema_object_fnc(sofr.schema_object_filter_id, sofr.schema_object_id) = 1;
+  exception
+    when no_data_found
+    then -- no match
+      l_found := 0;
+  end;
+
+  if l_found = 1
+  then
+    begin
+      insert into generate_ddl_session_schema_objects
+      ( session_id
+      , schema_object_filter_id 
+      , seq
+      , schema_object_id 
+      )
+      values
+      ( l_session_id
+      , p_schema_object_filter_id
+        -- Since objects are inserted per Oracle session
+        -- there is never a problem with another session inserting at the same time for the same session.
+      , ( select  nvl(max(gdsso.seq), 0) + 1
+          from    oracle_tools.generate_ddl_session_schema_objects gdsso
+          where   gdsso.schema_object_filter_id = p_schema_object_filter_id
+          and     gdsso.schema_object_filter_id = p_schema_object_filter_id
+        )
+      , p_schema_object.id
+      );
+    exception
+      when dup_val_on_index
       then
-        update  all_schema_objects t
-        set     t.obj = p_schema_object
-        where   t.schema_object_filter_id = p_schema_object_filter_id
-        and     t.obj.id = p_schema_object.id;
-        l_sql_rowcount := sql%rowcount;
-        
-      when 2
-      then
-        begin
-          insert into all_schema_objects
-          ( schema_object_filter_id
-          , seq
-          , obj
-          )
-          values
-          ( p_schema_object_filter_id
-            -- Since objects are inserted per Oracle session
-            -- there is never a problem with another session inserting at the same time for the same session.
-          , (select nvl(max(t.seq), 0) + 1 from all_schema_objects t where t.schema_object_filter_id = p_schema_object_filter_id)
-          , p_schema_object
-          );
-          l_sql_rowcount := sql%rowcount;
-        exception
-          when dup_val_on_index
-          then
-            if p_ignore_dup_val_on_index
-            then
-              l_sql_rowcount := 1;
-            else
-              raise_application_error
-              ( oracle_tools.pkg_ddl_error.c_duplicate_item
-              , utl_lms.format_message
-                ( 'Could not add duplicate ALL_SCHEMA_OBJECTS row with object id %s, since it already exists at (schema_object_filter_id=%s, seq=%s)'
-                , p_schema_object.id
-                , to_char(p_schema_object_filter_id)
-                , to_char(find_schema_object_by_object_id(p_schema_object.id, p_schema_object_filter_id).seq)
-                )
-              , true              
-              );
-            end if;
-        end;
-    end case;
-      
-    case l_sql_rowcount
-      when 0
-      then
-        if i_idx = 1 and l_upb = 2
+        if not p_ignore_dup_val_on_index
         then
-          null; -- will still have an insert to come
-        else
-          raise no_data_found;
+          raise_application_error
+          ( oracle_tools.pkg_ddl_error.c_duplicate_item
+          , utl_lms.format_message
+            ( 'Could not add duplicate GENERATE_DDL_SESSION_SCHEMA_OBJECTS row with object id %s, since it already exists at (schema_object_filter_id=%s, seq=%s)'
+            , p_schema_object.id
+            , to_char(p_schema_object_filter_id)
+            , to_char(find_schema_object_by_object_id(p_schema_object.id, p_schema_object_filter_id).seq)
+            )
+          , true              
+          );
         end if;
-        
-      when 1
-      then
-        exit dml_loop; -- ok
-        
-      else
-        raise too_many_rows; -- strange
-    end case;
-  end loop dml_loop;
+    end;
+  end if;
 end add;
 
 procedure add
 ( p_schema_object_cursor in t_schema_object_cursor
 , p_schema_object_filter_id in positiven
-, p_must_exist in boolean
 , p_ignore_dup_val_on_index in boolean
 )
 is
@@ -678,7 +713,6 @@ begin
         -- simple: bulk dml may improve speed but helas
         add
         ( p_schema_object => l_schema_object_tab(i_idx)
-        , p_must_exist => p_must_exist
         , p_schema_object_filter_id => p_schema_object_filter_id
         , p_ignore_dup_val_on_index => p_ignore_dup_val_on_index
         );
@@ -689,72 +723,42 @@ begin
 end add;
 
 function find_schema_object_by_seq
-( p_seq in all_schema_objects.seq%type
+( p_seq in integer
 , p_schema_object_filter_id in positiven
 )
-return all_schema_objects%rowtype
+return generate_ddl_session_schema_objects%rowtype
 is
-  l_rec all_schema_objects%rowtype;
+  l_session_id constant number := to_number(sys_context('USERENV', 'SESSIONID'));
+  l_rec generate_ddl_session_schema_objects%rowtype;
 begin
-  select  t.*
+  select  gdsso.*
   into    l_rec
-  from    all_schema_objects t
-  where   t.schema_object_filter_id = p_schema_object_filter_id
-  and     t.seq = p_seq;
+  from    oracle_tools.generate_ddl_session_schema_objects gdsso
+  where   gdsso.session_id = l_session_id
+  and     gdsso.schema_object_filter_id = p_schema_object_filter_id
+  and     gdsso.seq = p_seq;
 
   return l_rec;
 end find_schema_object_by_seq;
 
 function find_schema_object_by_object_id
-( p_id in varchar2
+( p_schema_object_id in varchar2
 , p_schema_object_filter_id in positiven
 )
-return all_schema_objects%rowtype
+return generate_ddl_session_schema_objects%rowtype
 is
-  l_rec all_schema_objects%rowtype;
+  l_session_id constant number := to_number(sys_context('USERENV', 'SESSIONID'));
+  l_rec generate_ddl_session_schema_objects%rowtype;
 begin
-  select  t.*
+  select  gdsso.*
   into    l_rec
-  from    all_schema_objects t
-  where   t.schema_object_filter_id = p_schema_object_filter_id
-  and     t.obj.id = p_id;
+  from    oracle_tools.generate_ddl_session_schema_objects gdsso
+  where   gdsso.session_id = l_session_id
+  and     gdsso.schema_object_filter_id = p_schema_object_filter_id
+  and     gdsso.schema_object_id = p_schema_object_id;
 
   return l_rec;
 end find_schema_object_by_object_id;
-
-function find_schema_ddl_by_seq
-( p_seq in all_schema_objects.seq%type
-, p_schema_object_filter_id in positiven
-)
-return all_schema_ddls%rowtype
-is
-  l_rec all_schema_ddls%rowtype;
-begin
-  select  t.*
-  into    l_rec
-  from    all_schema_ddls t
-  where   t.schema_object_filter_id = p_schema_object_filter_id
-  and     t.seq = p_seq;
-
-  return l_rec;
-end find_schema_ddl_by_seq;
-
-function find_schema_ddl_by_object_id
-( p_id in varchar2
-, p_schema_object_filter_id in positiven
-)
-return all_schema_ddls%rowtype
-is
-  l_rec all_schema_ddls%rowtype;
-begin
-  select  t.*
-  into    l_rec
-  from    all_schema_ddls t
-  where   t.schema_object_filter_id = p_schema_object_filter_id
-  and     t.ddl.obj.id = p_id;
-
-  return l_rec;
-end find_schema_ddl_by_object_id;
 
 function get_named_objects
 ( p_schema in varchar2
@@ -971,7 +975,7 @@ begin
   , p_schema_object_filter_id => l_schema_object_filter_id
   );
   p_schema_object_tab := oracle_tools.t_schema_object_tab();
-  for r in ( select t.obj from v_my_schema_objects t )
+  for r in ( select t.obj from oracle_tools.v_my_schema_objects t )
   loop
     p_schema_object_tab.extend(1);
     p_schema_object_tab(p_schema_object_tab.last) := r.obj;
@@ -1034,7 +1038,7 @@ $end
 
   commit; -- must be done before the pipe row
 
-  for r in ( select t.obj from v_my_schema_objects t )
+  for r in ( select t.obj from oracle_tools.v_my_schema_objects t )
   loop
     pipe row (r.obj);
     oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
@@ -1097,7 +1101,7 @@ begin
   ,       count(*) as nr_objects
   into    l_nr_objects_generate_ddl
   ,       l_nr_objects
-  from    v_all_schema_objects t
+  from    oracle_tools.v_all_schema_objects t
   where   t.schema_object_filter_id = p_schema_object_filter_id;
   
   return case when l_nr_objects > 0 then trunc((100 * l_nr_objects_generate_ddl) / l_nr_objects) else null end;
