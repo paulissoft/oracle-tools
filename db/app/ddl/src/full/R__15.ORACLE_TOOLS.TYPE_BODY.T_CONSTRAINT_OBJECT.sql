@@ -21,11 +21,10 @@ $end
 
   -- default constructor
   self := oracle_tools.t_constraint_object
-          ( null
+          ( null -- id
+          , null
           , p_object_schema
-          , case when p_base_object is not null then p_base_object.object_schema() end
-          , case when p_base_object is not null then p_base_object.object_type() end
-          , case when p_base_object is not null then p_base_object.object_name() end
+          , case when p_base_object is not null then p_base_object.id end
           , p_object_name
           , p_column_names
           , p_search_condition
@@ -66,6 +65,8 @@ $end
       self.column_names$ := null;
       self.search_condition$ := dbms_utility.get_hash_value(self.search_condition$, 37, 1073741824);
   end case;
+
+  oracle_tools.t_schema_object.set_id(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
@@ -226,6 +227,23 @@ exception
     raise;
 $end
 end chk;
+
+overriding member function dict_object_exists
+return integer -- 0/1
+is
+  l_count pls_integer;
+  l_owner constant all_objects.object_type%type := self.object_schema();
+  l_object_type constant all_objects.object_type%type := self.dict_object_type();
+  l_object_name constant all_objects.object_type%type := self.object_name();
+begin
+  select  sign(count(*))
+  into    l_count
+  from    all_constraints c /* this is where we are interested in */
+  where   l_object_type in ('TABLE', 'VIEW')
+  and     c.owner = l_owner
+  and     c.table_name = l_object_name;
+  return l_count;
+end;
 
 end;
 /
