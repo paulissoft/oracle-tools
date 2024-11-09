@@ -97,11 +97,9 @@ $end
         );
       schema_objects_api.add
       ( p_schema_object => l_base_object
-      , p_must_exist => null
       );
       schema_objects_api.add
       ( p_schema_object => l_constraint_object          
-      , p_must_exist => null
       );
       self.ref_object_id$ := l_constraint_object.id;
       
