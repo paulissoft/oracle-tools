@@ -22,17 +22,15 @@ $end
 
   if p_base_object is null
   then
-    self.base_object_schema$ := null;
-    self.base_object_type$ := null;
-    self.base_object_name$ := null;
+    self.base_object_id$ := null;
   else
-    self.base_object_schema$ := p_base_object.object_schema();
-    self.base_object_type$ := p_base_object.object_type();
-    self.base_object_name$ := p_base_object.object_name();
+    self.base_object_id$ := p_base_object.id;
   end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
   self.column_name$ := p_column_name;
+
+  oracle_tools.t_schema_object.set_id(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
@@ -94,6 +92,43 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.leave;
 $end
 end chk;
+
+overriding member function dict_object_exists
+return integer -- 0/1
+is
+  l_count pls_integer;
+  l_owner constant all_objects.object_type%type := self.object_schema();
+  l_object_type constant all_objects.object_type%type := self.dict_object_type();
+  l_object_name constant all_objects.object_type%type := self.object_name();
+begin
+  select  sign(count(*))
+  into    l_count
+  from    ( select  1
+            from    all_tab_comments t
+            where   l_object_type in ('TABLE', 'VIEW')
+            and     t.comments is not null
+            and     t.owner = l_owner
+            and     t.table_type = l_object_type
+            and     t.table_name = l_object_name
+            union all
+            -- materialized view comments
+            select  1
+            from    all_mview_comments m
+            where   l_object_type = 'MATERIALIZED VIEW'
+            and     m.comments is not null
+            and     m.owner = l_owner
+            and     m.mview_name = l_object_name
+            union all
+            -- column comments
+            select  1
+            from    all_col_comments c                    
+            where   l_object_type in ('TABLE', 'VIEW', 'MATERIALIZED VIEW')
+            and     c.comments is not null
+            and     c.owner = l_owner
+            and     c.table_name = l_object_name
+          );
+  return l_count;
+end;
 
 end;
 /
