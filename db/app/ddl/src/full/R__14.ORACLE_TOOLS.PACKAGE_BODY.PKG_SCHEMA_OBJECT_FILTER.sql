@@ -210,8 +210,10 @@ $end
                   );
   end case;  
 
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then  
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.print(dbug."output", 'return: %s', l_result);
+$end
   dbug.leave;
 $end
 
