@@ -30,14 +30,14 @@ procedure add
 procedure add
 ( p_schema_object in oracle_tools.t_schema_object -- The schema object to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 , p_session_id in t_session_id default get_session_id
-, p_ignore_dup_val_on_index in boolean default false
+, p_ignore_dup_val_on_index in boolean default true
 );
 /** Add a schema object to GENERATE_DDL_SESSION_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
 
 procedure add
 ( p_schema_object_cursor in t_schema_object_cursor -- The schema objects to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 , p_session_id in t_session_id default get_session_id
-, p_ignore_dup_val_on_index in boolean default false
+, p_ignore_dup_val_on_index in boolean default true
 );
 /** Add schema objects to GENERATE_DDL_SESSION_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
 
