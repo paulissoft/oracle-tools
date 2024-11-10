@@ -4486,7 +4486,14 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     p_schema_object.print();
 $end
 
-    if p_schema_object.object_type() is null
+    if p_schema_object.id is null
+    then
+      oracle_tools.pkg_ddl_error.raise_error
+      ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
+      , 'Object id should not be empty'
+      , p_schema_object.schema_object_info()
+      );
+    elsif p_schema_object.object_type() is null
     then
       oracle_tools.pkg_ddl_error.raise_error
       ( oracle_tools.pkg_ddl_error.c_object_not_valid -- GJP 2023-01-06 oracle_tools.pkg_ddl_error.c_invalid_parameters
