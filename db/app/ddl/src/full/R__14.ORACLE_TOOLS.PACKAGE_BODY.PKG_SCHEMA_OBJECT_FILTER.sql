@@ -139,8 +139,9 @@ $end
     return case when p_lwb <= p_upb then 0 else null end;
   end search;
 begin
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCHES_SCHEMA_OBJECT');
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.print
   ( dbug."input"
   , 'object: "%s"; base object: "%s"; p_schema_object_id: %s'
@@ -155,6 +156,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   , case when p_schema_object_filter is not null then p_schema_object_filter.nr_excluded_objects$ end
   );
 $end    
+$end
 
   PRAGMA INLINE (ignore_object, 'YES');
   PRAGMA INLINE (search, 'YES');
@@ -215,7 +217,7 @@ $end
 
   return l_result;
 
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
 exception
   when others
   then
@@ -1005,7 +1007,16 @@ return json_object_t
 is
   l_json_object json_object_t := json_object_t();
 begin
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SERIALIZE');
+$end
+
   serialize(p_schema_object_filter, l_json_object);
+
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+  dbug.leave;
+$end
+
   return l_json_object;
 end serialize;
 
