@@ -13,18 +13,22 @@ subtype t_schema_nn is oracle_tools.pkg_ddl_util.t_schema_nn;
 -- steps in get_schema_objects
 "named objects" constant varchar2(30 char) := 'base objects';
 "object grants" constant varchar2(30 char) := 'object grants';
-"public synonyms and comments" constant varchar2(30 char) := 'public synonyms and comments';
+"public synonyms" constant varchar2(30 char) := 'public synonyms';
+"comments" constant varchar2(30 char) := 'comments';
 "constraints" constant varchar2(30 char) := 'constraints';
-"private synonyms and triggers" constant varchar2(30 char) := 'private synonyms and triggers';
+"private synonyms" constant varchar2(30 char) := 'private synonyms';
+"triggers" constant varchar2(30 char) := 'triggers';
 "indexes" constant varchar2(30 char) := 'indexes';
 
 c_steps constant sys.odcivarchar2list :=
   sys.odcivarchar2list
   ( "named objects"                 -- no base object
   , "object grants"                 -- base object (named)
-  , "public synonyms and comments"  -- base object (named)
+  , "public synonyms"               -- base object (named)
+  , "comments"                      -- base object (named)
   , "constraints"                   -- base object (named)
-  , "private synonyms and triggers" -- base object (NOT named)
+  , "private synonyms"              -- base object (NOT named)
+  , "triggers"                      -- base object (NOT named)
   , "indexes"                       -- base object (NOT named)
   );
 
@@ -209,7 +213,7 @@ $end
         end loop;
 
       -- public synonyms and comments must depend on a base object already gathered
-      when "public synonyms and comments"
+      when "public synonyms"
       then
         for r in
         ( select  t.*
@@ -224,8 +228,30 @@ $end
                             on s.table_owner = t.obj.object_schema() and s.table_name = t.obj.object_name()
                     where   t.obj.dict_object_type() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
                     and     s.owner = 'PUBLIC'
-                    union all
-                    -- table/view comments
+                  ) t
+        )
+        loop
+          case r.object_type
+            when 'SYNONYM'
+            then
+              add
+              ( p_schema_object =>
+                  oracle_tools.t_synonym_object
+                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+                  , p_object_schema => r.object_schema
+                  , p_object_name => r.object_name
+                  )
+              , p_session_id => p_session_id
+              , p_ignore_dup_val_on_index => false
+              );
+          end case;
+        end loop;
+        
+      when "comments"
+      then
+        for r in
+        ( select  t.*
+          from    ( -- table/view comments
                     select  t.obj          as base_object
                     ,       null           as object_schema
                     ,       'COMMENT'      as object_type
@@ -264,18 +290,6 @@ $end
         )
         loop
           case r.object_type
-            when 'SYNONYM'
-            then
-              add
-              ( p_schema_object =>
-                  oracle_tools.t_synonym_object
-                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-                  , p_object_schema => r.object_schema
-                  , p_object_name => r.object_name
-                  )
-              , p_session_id => p_session_id
-              , p_ignore_dup_val_on_index => false
-              );
             when 'COMMENT'
             then
               add
@@ -409,7 +423,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
       -- these are not dependent on named objects:
       -- * private synonyms from this schema pointing to a base object in ANY schema possible
       -- * triggers from this schema pointing to a base object in ANY schema possible
-      when "private synonyms and triggers"
+      when "private synonyms"
       then
         for r in
         ( select  t.*
@@ -437,9 +451,30 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                     ,       null as column_name
                     from    obj
                     where   obj.base_object_type member of l_schema_md_object_type_tab
-                    -- no need to check on s.generated since we are interested in synonyms, not objects
-                    union all
-                    -- triggers for this schema which may point to another schema
+                  ) t
+        )
+        loop
+          add
+          ( p_schema_object =>
+              oracle_tools.t_schema_object.create_schema_object
+              ( p_object_schema => r.object_schema
+              , p_object_type => r.object_type
+              , p_object_name => r.object_name
+              , p_base_object_schema => r.base_object_schema
+              , p_base_object_type => r.base_object_type
+              , p_base_object_name => r.base_object_name
+              , p_column_name => r.column_name
+              )
+          , p_session_id => p_session_id
+          , p_ignore_dup_val_on_index => false
+          );
+        end loop;
+
+      when "triggers"
+      then
+        for r in
+        ( select  t.*
+          from    ( -- triggers for this schema which may point to another schema
                     select  t.owner as object_schema
                     ,       'TRIGGER' as object_type
                     ,       t.trigger_name as object_name
