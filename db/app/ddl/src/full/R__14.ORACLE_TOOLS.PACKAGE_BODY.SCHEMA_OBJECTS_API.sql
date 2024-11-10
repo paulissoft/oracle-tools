@@ -107,7 +107,7 @@ $end
 $end
 
   -- either insert or update GENERATE_DDL_SESSIONS
-  if get_schema_object_filter_id(p_schema_object_filter_id) is null
+  if get_schema_object_filter_id(p_session_id => p_session_id) is null
   then
     insert into generate_ddl_sessions
     ( session_id
@@ -150,6 +150,7 @@ $end
         add
         ( p_schema_object_cursor => l_cursor
         , p_session_id => p_session_id
+        , p_ignore_dup_val_on_index => false
         );
 
       -- object grants must depend on a base object already gathered (see above)
@@ -203,6 +204,7 @@ $end
               , p_grantable => r.grantable
               )
           , p_session_id => p_session_id
+          , p_ignore_dup_val_on_index => true
           );
         end loop;
 
@@ -272,6 +274,7 @@ $end
                   , p_object_name => r.object_name
                   )
               , p_session_id => p_session_id
+              , p_ignore_dup_val_on_index => false
               );
             when 'COMMENT'
             then
@@ -283,6 +286,7 @@ $end
                   , p_column_name => r.column_name
                   )
               , p_session_id => p_session_id
+              , p_ignore_dup_val_on_index => false
               );
           end case;
         end loop;
@@ -382,6 +386,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                   , p_column_names => null
                   )
               , p_session_id => p_session_id
+              , p_ignore_dup_val_on_index => false
               );
 
             when 'CONSTRAINT'
@@ -466,6 +471,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
               , p_column_name => r.column_name
               )
           , p_session_id => p_session_id
+          , p_ignore_dup_val_on_index => false
           );
         end loop;
 
@@ -515,6 +521,7 @@ $end
               , p_tablespace_name => r.tablespace_name
               )
           , p_session_id => p_session_id
+          , p_ignore_dup_val_on_index => false
           );
         end loop;
     end case;
@@ -577,7 +584,7 @@ procedure add
 , p_session_id in t_session_id default get_session_id
 )
 is
-  l_schema_object_filter_id positive := get_schema_object_filter_id(p_schema_object_filter);
+  l_schema_object_filter_id positive := get_schema_object_filter_id(p_schema_object_filter => p_schema_object_filter);
   l_hash_bucket_nr oracle_tools.schema_object_filters.hash_bucket_nr%type;
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_OBJECT_FILTER)';
@@ -633,7 +640,8 @@ procedure add
 , p_ignore_dup_val_on_index in boolean
 )
 is
-  l_schema_object_filter_id constant positive := get_schema_object_filter_id(p_session_id);
+  l_schema_object_filter_id constant positive := get_schema_object_filter_id(p_session_id => p_session_id);
+  l_schema_object_id constant oracle_tools.schema_objects.id%type := p_schema_object.id;
   l_found pls_integer;
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_OBJECT)';
@@ -654,7 +662,7 @@ $end
     select  1
     into    l_found
     from    oracle_tools.schema_objects so
-    where   so.id = p_schema_object.id;
+    where   so.id = l_schema_object_id;
   exception
     when no_data_found
     then insert into schema_objects values (p_schema_object);
@@ -666,7 +674,7 @@ $end
     into    l_found
     from    oracle_tools.schema_object_filter_results sofr
     where   sofr.schema_object_filter_id = l_schema_object_filter_id
-    and     sofr.schema_object_id = p_schema_object.id;
+    and     sofr.schema_object_id = l_schema_object_id;
   exception
     when no_data_found
     then
@@ -677,7 +685,7 @@ $end
       )
       values
       ( l_schema_object_filter_id
-      , p_schema_object.id
+      , l_schema_object_id
       );
   end;
 
@@ -695,7 +703,7 @@ $end
     into    l_found
     from    oracle_tools.schema_object_filter_results sofr
     where   sofr.schema_object_filter_id = l_schema_object_filter_id
-    and     sofr.schema_object_id = p_schema_object.id
+    and     sofr.schema_object_id = l_schema_object_id
     and     oracle_tools.matches_schema_object_fnc(sofr.schema_object_filter_id, sofr.schema_object_id) = 1;
   exception
     when no_data_found
@@ -721,7 +729,7 @@ $end
           from    oracle_tools.generate_ddl_session_schema_objects gdsso
           where   gdsso.session_id = p_session_id
         )
-      , p_schema_object.id
+      , l_schema_object_id
       );
     exception
       when dup_val_on_index
@@ -732,7 +740,7 @@ $end
           ( oracle_tools.pkg_ddl_error.c_duplicate_item
           , utl_lms.format_message
             ( 'Could not add duplicate GENERATE_DDL_SESSION_SCHEMA_OBJECTS row with object id %s, since it already exists at (session_id=%s, seq=%s)'
-            , p_schema_object.id
+            , l_schema_object_id
             , to_char(p_session_id)
             , to_char(find_schema_object_by_object_id(p_schema_object_id => p_schema_object.id, p_session_id => p_session_id).seq)
             )
