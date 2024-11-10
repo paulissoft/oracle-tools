@@ -106,7 +106,7 @@ $if oracle_tools.schema_objects_api.c_debugging $then
 $end  
 $end
 
-  -- either inert or update GENERATE_DDL_SESSIONS
+  -- either insert or update GENERATE_DDL_SESSIONS
   if get_schema_object_filter_id(p_schema_object_filter_id) is null
   then
     insert into generate_ddl_sessions
@@ -546,7 +546,7 @@ procedure cleanup
 is
   pragma autonomous_transaction;
 begin
-  delete from oracle_tools.schema_object_filters t where t.created <= (sys_extract_utc(current_timestamp) - interval '1' day);
+  delete from oracle_tools.generate_ddl_sessions t where t.created <= (sys_extract_utc(current_timestamp) - interval '2' day);
   commit;
 end cleanup;
 
@@ -579,7 +579,14 @@ procedure add
 is
   l_schema_object_filter_id positive := get_schema_object_filter_id(p_schema_object_filter);
   l_hash_bucket_nr oracle_tools.schema_object_filters.hash_bucket_nr%type;
+$if oracle_tools.schema_objects_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_OBJECT_FILTER)';
+$end
 begin
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
   -- when not found add it
   if l_schema_object_filter_id is null
   then
@@ -609,6 +616,15 @@ begin
     , p_schema_object_filter_id => l_schema_object_filter_id
     );
   end if;
+
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end add;
 
 procedure add
@@ -619,7 +635,14 @@ procedure add
 is
   l_schema_object_filter_id constant positive := get_schema_object_filter_id(p_session_id);
   l_found pls_integer;
+$if oracle_tools.schema_objects_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_OBJECT)';
+$end
 begin
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
   -- check precondition (in GENERATE_DDL_SESSIONS and thus SCHEMA_OBJECT_FILTERS)
   if l_schema_object_filter_id is null
   then
@@ -718,6 +741,14 @@ begin
         end if;
     end;
   end if;
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end add;
 
 procedure add
@@ -728,7 +759,14 @@ procedure add
 is
   l_schema_object_tab t_schema_object_tab;
   l_limit constant simple_integer := 100;
+$if oracle_tools.schema_objects_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_OBJECT CURSOR)';
+$end
 begin
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
   <<fetch_loop>>
   loop
     fetch p_schema_object_cursor bulk collect into l_schema_object_tab limit l_limit;
@@ -746,6 +784,15 @@ begin
     end if;
     exit fetch_loop when l_schema_object_tab.count < l_limit; -- netx fetch will return 0 rows
   end loop;
+
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end add;
 
 procedure add
@@ -762,7 +809,14 @@ is
     for update of
             gdsso.ddl;
   l_rowcount naturaln := 0;
+$if oracle_tools.schema_objects_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_DDL)';
+$end
 begin
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
   for r_gdsso in c_gdsso(p_schema_ddl.obj.id)
   loop
     update  generate_ddl_session_schema_objects gdsso
@@ -777,6 +831,15 @@ begin
     then null; -- ok
     else raise too_many_rows; -- strange
   end case;
+
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end add;
 
 function find_schema_object_by_seq
@@ -1020,7 +1083,14 @@ procedure get_schema_objects
 )
 is
   l_schema_object_filter_id positiven := 1;
+$if oracle_tools.schema_objects_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECTS (1)';
+$end
 begin
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
   add
   ( p_schema_object_filter => p_schema_object_filter
   , p_add_schema_objects => true
@@ -1031,6 +1101,15 @@ begin
     p_schema_object_tab.extend(1);
     p_schema_object_tab(p_schema_object_tab.last) := r.obj;
   end loop;
+
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end get_schema_objects;
 
 function get_schema_objects
