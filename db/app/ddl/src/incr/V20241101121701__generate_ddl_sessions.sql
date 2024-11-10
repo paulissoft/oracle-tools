@@ -6,15 +6,18 @@ create table generate_ddl_sessions
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   not null
-, -- per session you can use a schema object filter just once: purge if necessary
+, -- Per session just one active schema object filter:
+  -- when you update schema_object_filter_id remove all its related GENERATE_DDL_SESSION_SCHEMA_OBJECTS.
   constraint generate_ddl_sessions$pk
-  primary key (session_id, schema_object_filter_id) 
+  primary key (session_id) 
 , constraint generate_ddl_sessions$fk$1
   foreign key (schema_object_filter_id)
   references schema_object_filters(id) on delete cascade
 )
+organization index
+tablespace users
 ;
 
--- Create a descending index to speed up searching for (last) schema_object_filter_id per session
-create index generate_ddl_sessions$idx$1
-on generate_ddl_sessions(session_id, created desc);
+-- foreign key index generate_ddl_sessions$fk$1
+create index generate_ddl_sessions$fk$1
+on generate_ddl_sessions(schema_object_filter_id);
