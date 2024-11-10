@@ -426,32 +426,27 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
       when "private synonyms"
       then
         for r in
-        ( select  t.*
-          from    ( -- private synonyms for this schema which may point to another schema
-                    with obj as
-                    ( select  s.owner as object_schema
-                      ,       'SYNONYM' as object_type
-                      ,       s.synonym_name as object_name
-                      ,       obj.owner as base_object_schema
-                              -- use scalar subqueries for a (possible) better performance
-                      ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual ) as base_object_type
-                      ,       obj.object_name as base_object_name
-                      from    all_synonyms s
-                              inner join all_objects obj
-                              on obj.owner = s.table_owner and obj.object_name = s.table_name
-                      where   s.owner = l_schema
-                      and     obj.object_type not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
-                    )
-                    select  obj.object_schema
-                    ,       obj.object_type
-                    ,       obj.object_name
-                    ,       obj.base_object_schema
-                    ,       obj.base_object_type
-                    ,       obj.base_object_name
-                    ,       null as column_name
-                    from    obj
-                    where   obj.base_object_type member of l_schema_md_object_type_tab
-                  ) t
+        ( -- private synonyms for this schema which may point to another schema
+          with md_object_types as
+          ( select  /* + MATERIALIZE */ column_value as md_object_type
+            from    table(l_schema_md_object_type_tab)
+          ), obj as
+          ( select  s.owner as object_schema
+            ,       'SYNONYM' as object_type
+            ,       s.synonym_name as object_name
+            ,       obj.owner as base_object_schema
+            ,       (select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual) as base_object_type
+            ,       obj.object_name as base_object_name
+            from    all_synonyms s
+                    inner join all_objects obj
+                    on obj.owner = s.table_owner and obj.object_name = s.table_name
+            where   s.owner = l_schema
+            and     obj.object_type not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
+          )
+          select  obj.*
+          from    obj
+                  inner join md_object_types
+                  on md_object_types.md_object_type = obj.base_object_type          
         )
         loop
           add
@@ -463,7 +458,6 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
               , p_base_object_schema => r.base_object_schema
               , p_base_object_type => r.base_object_type
               , p_base_object_name => r.base_object_name
-              , p_column_name => r.column_name
               )
           , p_session_id => p_session_id
           , p_ignore_dup_val_on_index => false
