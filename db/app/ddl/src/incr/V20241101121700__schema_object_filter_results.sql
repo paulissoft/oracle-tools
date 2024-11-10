@@ -25,8 +25,18 @@ create table schema_object_filter_results
 , constraint schema_object_filter_results$fk$2
   foreign key (schema_object_id)
   references schema_objects(id) on delete cascade
-);
+)
+organization index
+tablespace users
+;
 
 -- Will we generate DDL for this one?
 create index schema_object_filter_results$idx$1
 on schema_object_filter_results(schema_object_filter_id, oracle_tools.matches_schema_object_fnc(schema_object_filter_id, schema_object_id)); 
+
+-- Foreign key index schema_object_filter_results$fk$1 not necessary
+-- since schema_object_filter_id is first part of primary key index.
+
+-- foreign key index schema_object_filter_results$fk$2
+create index schema_object_filter_results$fk$2
+on schema_object_filter_results(schema_object_id);
