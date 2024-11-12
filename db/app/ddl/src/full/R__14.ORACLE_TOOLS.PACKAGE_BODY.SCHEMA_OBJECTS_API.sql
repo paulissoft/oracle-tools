@@ -37,23 +37,6 @@ g_default_match_perc_threshold integer := 50;
 g_session_id t_session_id := to_number(sys_context('USERENV', 'SESSIONID'));
 
 function get_schema_object_filter_id
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
-)
-return positive
-is
-  l_schema_object_filter_id positive;
-begin
-  select  sof.id
-  into    l_schema_object_filter_id
-  from    oracle_tools.schema_object_filters sof
-  where   sof.obj = p_schema_object_filter;
-  return l_schema_object_filter_id;
-exception
-  when no_data_found
-  then return null;
-end get_schema_object_filter_id;  
-
-function get_schema_object_filter_id
 ( p_session_id in t_session_id
 )
 return positive
@@ -109,29 +92,6 @@ $if oracle_tools.schema_objects_api.c_debugging $then
   p_schema_object_filter.print();
 $end  
 $end
-
-  -- either insert or update GENERATE_DDL_SESSIONS
-  if get_schema_object_filter_id(p_session_id => p_session_id) is null
-  then
-    insert into generate_ddl_sessions
-    ( session_id
-    , schema_object_filter_id
-    )
-    values
-    ( p_session_id
-    , p_schema_object_filter_id
-    );
-  else
-    -- make room for new objects/ddls
-    delete
-    from    generate_ddl_session_schema_objects gdsso
-    where   gdsso.session_id = p_session_id;
-    
-    update  generate_ddl_sessions gds
-    set     gds.schema_object_filter_id = p_schema_object_filter_id
-    ,       gds.updated = sys_extract_utc(systimestamp)
-    where   gds.session_id = p_session_id;
-  end if;
 
   for i_idx in c_steps.first .. c_steps.last
   loop
@@ -427,26 +387,23 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
       then
         for r in
         ( -- private synonyms for this schema which may point to another schema
-          with md_object_types as
-          ( select  /* + MATERIALIZE */ column_value as md_object_type
-            from    table(l_schema_md_object_type_tab)
-          ), obj as
-          ( select  s.owner as object_schema
-            ,       'SYNONYM' as object_type
-            ,       s.synonym_name as object_name
-            ,       obj.owner as base_object_schema
-            ,       (select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual) as base_object_type
-            ,       obj.object_name as base_object_name
-            from    all_synonyms s
-                    inner join all_objects obj
-                    on obj.owner = s.table_owner and obj.object_name = s.table_name
-            where   s.owner = l_schema
-            and     obj.object_type not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
-          )
-          select  obj.*
-          from    obj
-                  inner join md_object_types
-                  on md_object_types.md_object_type = obj.base_object_type          
+          select  s.owner as object_schema
+          ,       'SYNONYM' as object_type
+          ,       s.synonym_name as object_name
+          ,       s.table_owner as base_object_schema
+          ,       case
+                    when s.db_link is null
+                    then ( select  nvl(max(so.obj.dict_object_type()), 'UNDEFINED')
+                           from    oracle_tools.schema_objects so
+                           where   so.obj.object_schema() = s.table_owner
+                           and     so.obj.object_name() = s.table_name
+                           and     so.obj.object_type() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
+                         )
+                    else 'UNDEFINED'
+                  end as base_object_type
+          ,       s.table_name as base_object_name
+          from    all_synonyms s
+          where   s.owner = l_schema
         )
         loop
           add
@@ -613,7 +570,9 @@ procedure add
 , p_session_id in t_session_id default get_session_id
 )
 is
-  l_schema_object_filter_id positive := get_schema_object_filter_id(p_schema_object_filter => p_schema_object_filter);
+  l_schema_object_filter_id positive;
+  l_hash_bucket constant oracle_tools.schema_object_filters.hash_bucket%type :=
+    sys.dbms_crypto.hash(p_schema_object_filter.serialize(), sys.dbms_crypto.hash_sh1);
   l_hash_bucket_nr oracle_tools.schema_object_filters.hash_bucket_nr%type;
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_OBJECT_FILTER)';
@@ -623,25 +582,54 @@ $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $end
 
+  select  max(case when sof.obj = p_schema_object_filter then sof.id end) as id
+  ,       nvl(max(sof.hash_bucket_nr), 0) + 1
+  into    l_schema_object_filter_id
+  ,       l_hash_bucket_nr
+  from    oracle_tools.schema_object_filters sof
+  where   sof.hash_bucket = l_hash_bucket;
+
   -- when not found add it
   if l_schema_object_filter_id is null
   then
-    select  nvl(max(sof.hash_bucket_nr), 0) + 1
-    into    l_hash_bucket_nr
-    from    oracle_tools.schema_object_filters sof
-    where   sys.dbms_crypto.hash(sof.obj.serialize(), 3) =
-            -- good old fashioned trick to execute this expression just once
-            ( select sys.dbms_crypto.hash(p_schema_object_filter.serialize(), 3) from dual where rownum = 1 );
-
     insert into oracle_tools.schema_object_filters
-    ( hash_bucket_nr
+    ( hash_bucket
+    , hash_bucket_nr
     , obj
     )
     values
-    ( l_hash_bucket_nr
+    ( l_hash_bucket
+    , l_hash_bucket_nr
     , p_schema_object_filter
     )
     returning id into l_schema_object_filter_id;
+  else
+    update  oracle_tools.schema_object_filters sof
+    set     sof.updated = sys_extract_utc(systimestamp)
+    where   sof.id = l_schema_object_filter_id;  
+  end if;
+
+  -- either insert or update GENERATE_DDL_SESSIONS
+  if get_schema_object_filter_id(p_session_id => p_session_id) is null
+  then
+    insert into generate_ddl_sessions
+    ( session_id
+    , schema_object_filter_id
+    )
+    values
+    ( p_session_id
+    , l_schema_object_filter_id
+    );
+  else
+    -- make room for new objects/ddls
+    delete
+    from    generate_ddl_session_schema_objects gdsso
+    where   gdsso.session_id = p_session_id;
+    
+    update  generate_ddl_sessions gds
+    set     gds.schema_object_filter_id = l_schema_object_filter_id
+    ,       gds.updated = sys_extract_utc(systimestamp)
+    where   gds.session_id = p_session_id;
   end if;
 
   if p_add_schema_objects
@@ -694,7 +682,7 @@ $end
     where   so.id = l_schema_object_id;
   exception
     when no_data_found
-    then insert into schema_objects values (p_schema_object);
+    then insert into schema_objects(id, obj) values (p_schema_object.id, p_schema_object);
   end;
 
   -- retrieve from or insert into SCHEMA_OBJECT_FILTER_RESULTS
@@ -707,14 +695,15 @@ $end
   exception
     when no_data_found
     then
-      -- update the Function Based Index with the MATCHES_SCHEMA_OBJECT_FNC function result
       insert into schema_object_filter_results
       ( schema_object_filter_id
       , schema_object_id
+      , generate_ddl
       )
       values
       ( l_schema_object_filter_id
       , l_schema_object_id
+      , ( select sof.obj.matches_schema_object(l_schema_object_id) from schema_object_filters sof where sof.id = l_schema_object_filter_id )
       );
   end;
 
@@ -726,14 +715,14 @@ $end
   -- * SCHEMA_OBJECT_FILTER_RESULTS
   */
 
-  -- Ignore this entry when MATCHES_SCHEMA_OBJECT_FNC returns 0
+  -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns 0
   begin
     select  1
     into    l_found
     from    oracle_tools.schema_object_filter_results sofr
     where   sofr.schema_object_filter_id = l_schema_object_filter_id
     and     sofr.schema_object_id = l_schema_object_id
-    and     oracle_tools.matches_schema_object_fnc(sofr.schema_object_filter_id, sofr.schema_object_id) = 1;
+    and     sofr.generate_ddl = 1;
   exception
     when no_data_found
     then -- no match
@@ -1229,7 +1218,7 @@ $end
   when no_data_found
   then
     cleanup;
-    rollback;
+    commit;
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave_on_error;
 $end
@@ -1239,7 +1228,7 @@ $end
   when others
   then
     cleanup;
-    rollback;
+    commit;
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave_on_error;
 $end
