@@ -16,7 +16,7 @@ create table generate_ddl_session_schema_objects
   foreign key (schema_object_filter_id, schema_object_id)
   references schema_object_filter_results(schema_object_filter_id, schema_object_id) on delete cascade
 , -- The lookup value GENERATE_DDL_SESSIONS.SCHEMA_OBJECT_FILTER_ID must be equal to GENERATE_DDL_SESSION_SCEHMA_OBJECTS.SCHEMA_OBJECT_FILTER_ID.
-  -- There is no simple way of doing this o SCHEMA_OBJECTS_API wil take care of that.
+  -- There is no simple way of doing this o SCHEMA_OBJECTS_API will take care of that.
   constraint generate_ddl_session_schema_objects$fk$2
   foreign key (session_id)
   references generate_ddl_sessions(session_id) on delete cascade
