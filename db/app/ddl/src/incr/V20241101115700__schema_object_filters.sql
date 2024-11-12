@@ -9,22 +9,25 @@ create table schema_object_filters
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   not null
+, updated timestamp(6)
+-- in overflow
+, obj oracle_tools.t_schema_object_filter
+, hash_bucket raw(2000) not null -- sys.dbms_crypto.hash(obj.serialize(), 3 /* HASH_SH1 */)
 , hash_bucket_nr integer
   default 1
   not null
   constraint schema_object_filters$ck$hash_bucket_nr check (hash_bucket_nr >= 1)
-, obj oracle_tools.t_schema_object_filter
 , constraint schema_object_filters$pk
   primary key (id)
+-- store unique obj instances only (but add hash_bucket_nr since theoretically two objects may have the same hash)
+, constraint schema_object_filters$uk$1
+  unique (hash_bucket, hash_bucket_nr)
 )
 organization index
 tablespace users
-including hash_bucket_nr
+including updated
 overflow tablespace users
 nested table obj.object_tab$ store as schema_object_filters$obj$object_tab$
 nested table obj.object_cmp_tab$ store as schema_object_filters$obj$object_cmp_tab$
 ;
 
--- store unique obj instances only (but add hash_bucket_nr since theoretically two objects may have the same hash)
-create unique index schema_object_filters$uk$1
-on schema_object_filters (sys.dbms_crypto.hash(obj.serialize(), 3 /* HASH_SH1 */), hash_bucket_nr);
