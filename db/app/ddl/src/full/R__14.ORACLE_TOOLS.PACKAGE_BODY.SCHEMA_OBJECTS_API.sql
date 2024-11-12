@@ -771,9 +771,11 @@ procedure add
 )
 is
   l_schema_object_filter_id positive;
+  l_clob constant clob := p_schema_object_filter.serialize();
   l_hash_bucket constant oracle_tools.schema_object_filters.hash_bucket%type :=
-    sys.dbms_crypto.hash(p_schema_object_filter.serialize(), sys.dbms_crypto.hash_sh1);
+    sys.dbms_crypto.hash(l_clob, sys.dbms_crypto.hash_sh1);
   l_hash_bucket_nr oracle_tools.schema_object_filters.hash_bucket_nr%type;
+  l_hash_buckets_equal pls_integer;
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_OBJECT_FILTER)';
 $end
@@ -786,15 +788,23 @@ $if oracle_tools.schema_objects_api.c_debugging $then
 $end
 $end
 
-  select  max(case when sof.obj = p_schema_object_filter then sof.id end) as id
+  select  max(case when dbms_lob.compare(sof.obj.serialize(), l_clob) = 0 then sof.id end) as id
   ,       nvl(max(sof.hash_bucket_nr), 0) + 1
+  ,       count(*)
   into    l_schema_object_filter_id
   ,       l_hash_bucket_nr
+  ,       l_hash_buckets_equal
   from    oracle_tools.schema_object_filters sof
   where   sof.hash_bucket = l_hash_bucket;
 
 $if oracle_tools.schema_objects_api.c_debugging $then
-  dbug.print(dbug."info", 'l_schema_object_filter_id: %s; l_hash_bucket_nr: %s', l_schema_object_filter_id, l_hash_bucket_nr);
+  dbug.print
+  ( dbug."info"
+  , 'l_schema_object_filter_id: %s; l_hash_bucket_nr: %s; l_hash_buckets_equal: %s'
+  , l_schema_object_filter_id
+  , l_hash_bucket_nr
+  , l_hash_buckets_equal
+  );
 $end
 
   -- when not found add it
