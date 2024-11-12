@@ -240,11 +240,11 @@ is
 begin
   -- ref_object first
   l_id_parts := oracle_tools.t_schema_object.split_id(self.ref_object_id$);
-  l_id_parts(4) := p_ref_object_schema;
+  l_id_parts(1) := p_ref_object_schema;
   self.ref_object_id$ := oracle_tools.t_schema_object.join_id(l_id_parts);
   -- base_object next
   l_id_parts := oracle_tools.t_schema_object.split_id(self.base_object_id$);
-  l_id_parts(4) := p_ref_object_schema;
+  l_id_parts(1) := p_ref_object_schema;
   self.base_object_id$ := oracle_tools.t_schema_object.join_id(l_id_parts);
 end ref_object_schema;
 
