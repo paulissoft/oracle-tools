@@ -943,6 +943,11 @@ deterministic
 is
   l_id_parts dbms_sql.varchar2a;
 begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SPLIT_ID');
+  dbug.print(dbug."input", 'p_id: %s', p_id);
+$end
+
   pkg_str_util.split
   ( p_str => p_id
   , p_delimiter => ':'
@@ -952,7 +957,15 @@ begin
   then
     raise program_error;
   end if;
-  return oracle_tools.t_text_tab
+  
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print(dbug."output", '1-5: %s:%s:%s:%s:%s', l_id_parts(1), l_id_parts(2), l_id_parts(3), l_id_parts(4), l_id_parts(5));
+  dbug.print(dbug."output", '6-10: %s:%s:%s:%s:%s', l_id_parts(6), l_id_parts(7), l_id_parts(8), l_id_parts(9), l_id_parts(10));
+  dbug.leave;
+$end
+
+  return
+    oracle_tools.t_text_tab
          ( l_id_parts( 1)
          , l_id_parts( 2)
          , l_id_parts( 3)
@@ -964,6 +977,7 @@ begin
          , l_id_parts( 9)
          , l_id_parts(10)
          );
+
 end split_id;
 
 static function join_id
@@ -972,21 +986,36 @@ static function join_id
 return varchar2
 deterministic
 is
+  l_id varchar2(500 byte);
 begin
   if p_id_parts.count != 10
   then
     raise program_error;
   end if;
-  return p_id_parts( 1) || ':' ||
-         p_id_parts( 2) || ':' ||
-         p_id_parts( 3) || ':' ||
-         p_id_parts( 4) || ':' ||
-         p_id_parts( 5) || ':' ||
-         p_id_parts( 6) || ':' ||
-         p_id_parts( 7) || ':' ||
-         p_id_parts( 8) || ':' ||
-         p_id_parts( 9) || ':' ||
-         p_id_parts(10);
+  
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SPLIT_ID');
+  dbug.print(dbug."input", '1-5: %s:%s:%s:%s:%s', p_id_parts(1), p_id_parts(2), p_id_parts(3), p_id_parts(4), p_id_parts(5));
+  dbug.print(dbug."input", '6-10: %s:%s:%s:%s:%s', p_id_parts(6), p_id_parts(7), p_id_parts(8), p_id_parts(9), p_id_parts(10));
+$end
+  
+  l_id := p_id_parts( 1) || ':' ||
+          p_id_parts( 2) || ':' ||
+          p_id_parts( 3) || ':' ||
+          p_id_parts( 4) || ':' ||
+          p_id_parts( 5) || ':' ||
+          p_id_parts( 6) || ':' ||
+          p_id_parts( 7) || ':' ||
+          p_id_parts( 8) || ':' ||
+          p_id_parts( 9) || ':' ||
+          p_id_parts(10);
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print(dbug."output", 'return: %s', l_id);
+  dbug.leave;
+$end
+
+  return l_id;
 end join_id;
 
 end;
