@@ -36,7 +36,12 @@ deterministic
 is
   l_result simple_integer := 0;
 
-  function ignore_object(p_object_type in varchar2, p_object_name in varchar2)
+  function ignore_object
+  ( p_object_type in varchar2
+  , p_object_name in varchar2
+  , p_base_object_type in varchar2
+  , p_base_object_name in varchar2
+  )
   return integer
   is
   begin
@@ -52,8 +57,11 @@ is
         -- JAVA$CLASS$MD5$TABLE
         when p_object_type in ('TABLE') and p_object_name like 'JAVA$CLASS$MD5$TABLE'
         then 1
+        -- nested tables
+        when p_object_type in ('TABLE') and p_object_name like 'SYSNT%' escape '\'
+        then 1        
         -- nested table indexes
-        when p_object_type in ('INDEX') and p_object_name like 'SYSNT%' escape '\'
+        when p_object_type in ('INDEX') and p_base_object_name like 'SYSNT%' escape '\'
         then 1        
         -- no AQ indexes/views
         when p_object_type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and p_object_name like 'AQ$%' escape '\'
@@ -171,7 +179,7 @@ $end
     -- exclude certain (semi-)dependent objects
     when p_base_object_type is not null and
          p_base_object_name is not null and
-         ignore_object(p_base_object_type, p_base_object_name) = 1
+         ignore_object(p_base_object_type, p_base_object_name, null, null) = 1
     then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
        dbug.print(dbug."info", 'case 1');
@@ -181,7 +189,7 @@ $end
     -- exclude certain named objects
     when p_object_type is not null and
          p_object_name is not null and
-         ignore_object(p_object_type, p_object_name) = 1
+         ignore_object(p_object_type, p_object_name, p_base_object_type, p_base_object_name) = 1
     then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
        dbug.print(dbug."info", 'case 2');

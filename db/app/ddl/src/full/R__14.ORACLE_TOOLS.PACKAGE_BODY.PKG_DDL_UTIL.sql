@@ -1448,8 +1448,11 @@ $end
     -- JAVA$CLASS$MD5$TABLE
     add(oracle_tools.t_text_tab('TABLE'), 'JAVA$CLASS$MD5$TABLE');
 
-    -- nested table indexes
-    add(oracle_tools.t_text_tab('INDEX'), 'SYSNT%');
+    -- nested tables
+    add(oracle_tools.t_text_tab('TABLE'), 'SYSNT%');
+    
+    -- nested table indexes but here we must compare on base_object_name
+    -- add(oracle_tools.t_text_tab('INDEX'), 'SYSNT%');
 
     -- no AQ indexes/views
     add(oracle_tools.t_text_tab('INDEX', 'VIEW', 'OBJECT_GRANT'), 'AQ$%');

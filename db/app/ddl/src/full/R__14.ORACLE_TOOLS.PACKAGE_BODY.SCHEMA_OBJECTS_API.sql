@@ -375,6 +375,7 @@ $end
   l_schema_md_object_type_tab constant oracle_tools.t_text_tab :=
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
   l_schema_object_tab oracle_tools.t_schema_object_tab;
+  l_all_schema_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
 
   type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
 
@@ -703,11 +704,13 @@ $end
         ;
     end case;
 
-    add
-    ( p_schema_object_tab => l_schema_object_tab
-    , p_session_id => p_session_id 
-    , p_schema_object_filter_id => p_schema_object_filter_id
-    );
+    if l_all_schema_object_tab.count = 0
+    then
+      l_all_schema_object_tab := l_schema_object_tab;
+    elsif l_schema_object_tab.count > 0
+    then
+      l_all_schema_object_tab := l_all_schema_object_tab multiset union all l_schema_object_tab;
+    end if;
 
     oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
     
@@ -715,6 +718,12 @@ $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave;
 $end    
   end loop;
+
+  add
+  ( p_schema_object_tab => l_all_schema_object_tab
+  , p_session_id => p_session_id 
+  , p_schema_object_filter_id => p_schema_object_filter_id
+  );
 
   cleanup;
 
