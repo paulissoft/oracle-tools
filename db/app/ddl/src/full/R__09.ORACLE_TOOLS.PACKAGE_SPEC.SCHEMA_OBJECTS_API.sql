@@ -60,13 +60,13 @@ function find_schema_object_by_object_id
 )
 return generate_ddl_session_schema_objects%rowtype;
 /** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by obj.id(). **/
-
+/*
 function get_named_objects
 ( p_schema in varchar2
 )
 return oracle_tools.t_schema_object_tab
 pipelined;
-
+*/
 function get_schema_objects
 ( p_schema in varchar2 default user
 , p_object_type in varchar2 default null
