@@ -334,17 +334,14 @@ $end
     ,       t.seq
     ,       p_schema_object_filter_id
     ,       t.schema_object_id 
-    from    ( select  t.schema_object_id 
+    from    ( select  t.id as schema_object_id
               ,       rownum + l_last_seq as seq
-              from    ( select  distinct
-                                t.id as schema_object_id
-                        from    table(p_schema_object_tab) t -- may contain duplicates (constraints)
-                      ) t
+              from    table(p_schema_object_tab) t -- may contain duplicates (constraints)
                       inner join schema_object_filter_results sofr
                       on sofr.schema_object_filter_id = p_schema_object_filter_id and
-                         sofr.schema_object_id = t.schema_object_id and
+                         sofr.schema_object_id = t.id and
                          sofr.generate_ddl = 1 -- ignore objects that do not need to be generated
-              where   ( p_session_id, t.schema_object_id ) not in
+              where   ( p_session_id, t.id ) not in
                       ( select  /* GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 */
                                 gdsso.session_id
                         ,       gdsso.schema_object_id

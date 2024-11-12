@@ -48,7 +48,13 @@ is
         then 0
         -- no dropped tables
         when p_object_type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and p_object_name like 'BIN$%' escape '\'
+        then 1        
+        -- JAVA$CLASS$MD5$TABLE
+        when p_object_type in ('TABLE') and p_object_name like 'JAVA$CLASS$MD5$TABLE'
         then 1
+        -- nested table indexes
+        when p_object_type in ('INDEX') and p_object_name like 'SYSNT%' escape '\'
+        then 1        
         -- no AQ indexes/views
         when p_object_type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and p_object_name like 'AQ$%' escape '\'
         then 1
