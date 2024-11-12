@@ -267,6 +267,9 @@ $end
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print(dbug."input", 'p_session_id: %s; p_schema_object_filter_id: %s', p_session_id, p_schema_object_filter_id);
+$end  
 $end
 
   -- insert into SCHEMA_OBJECTS
@@ -278,6 +281,10 @@ $end
     ,       value(t) as obj
     from    table(p_schema_object_tab) t
     where   t.id not in ( select so.id from oracle_tools.schema_objects so );
+
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print(dbug."info", '# rows inserted into schema_objects: %s', sql%rowcount);
+$end  
 
   -- insert into SCHEMA_OBJECT_FILTER_RESULTS
   insert into schema_object_filter_results
@@ -296,6 +303,10 @@ $end
               from    schema_object_filter_results
             )
     and     sof.id = p_schema_object_filter_id;
+
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print(dbug."info", '# rows inserted into schema_object_filter_results: %s', sql%rowcount);
+$end  
 
   /*
   -- Now the following tables have data for these parameters:
@@ -340,6 +351,10 @@ $end
                         from    generate_ddl_session_schema_objects gdsso
                       )              
             ) t;
+
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print(dbug."info", '# rows inserted into generate_ddl_session_schema_objects: %s', sql%rowcount);
+$end  
   
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;
@@ -765,6 +780,10 @@ $end
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print(dbug."input", 'p_add_schema_objects: %s', p_add_schema_objects);
+  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+$end
 $end
 
   select  max(case when sof.obj = p_schema_object_filter then sof.id end) as id
@@ -773,6 +792,10 @@ $end
   ,       l_hash_bucket_nr
   from    oracle_tools.schema_object_filters sof
   where   sof.hash_bucket = l_hash_bucket;
+
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print(dbug."info", 'l_schema_object_filter_id: %s; l_hash_bucket_nr: %s', l_schema_object_filter_id, l_hash_bucket_nr);
+$end
 
   -- when not found add it
   if l_schema_object_filter_id is null
@@ -794,6 +817,10 @@ $end
     where   sof.id = l_schema_object_filter_id;  
   end if;
 
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print(dbug."info", 'l_schema_object_filter_id: %s', l_schema_object_filter_id);
+$end
+
   -- either insert or update GENERATE_DDL_SESSIONS
   if get_schema_object_filter_id(p_session_id => p_session_id) is null
   then
@@ -805,16 +832,27 @@ $end
     ( p_session_id
     , l_schema_object_filter_id
     );
+$if oracle_tools.schema_objects_api.c_debugging $then
+    dbug.print(dbug."info", '# rows inserted into generate_ddl_sessions: %s', sql%rowcount);
+$end
   else
     -- make room for new objects/ddls
     delete
     from    generate_ddl_session_schema_objects gdsso
     where   gdsso.session_id = p_session_id;
     
+$if oracle_tools.schema_objects_api.c_debugging $then
+    dbug.print(dbug."info", '# rows deleted from generate_ddl_session_schema_objects: %s', sql%rowcount);
+$end
+
     update  generate_ddl_sessions gds
     set     gds.schema_object_filter_id = l_schema_object_filter_id
     ,       gds.updated = sys_extract_utc(systimestamp)
     where   gds.session_id = p_session_id;
+    
+$if oracle_tools.schema_objects_api.c_debugging $then
+    dbug.print(dbug."info", '# rows updated for generate_ddl_sessions: %s', sql%rowcount);
+$end
   end if;
 
   if p_add_schema_objects
