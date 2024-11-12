@@ -13,10 +13,9 @@ subtype t_schema_nn is oracle_tools.pkg_ddl_util.t_schema_nn;
 -- steps in get_schema_objects
 "named objects" constant varchar2(30 char) := 'base objects';
 "object grants" constant varchar2(30 char) := 'object grants';
-"public synonyms" constant varchar2(30 char) := 'public synonyms';
+"synonyms" constant varchar2(30 char) := 'synonyms';
 "comments" constant varchar2(30 char) := 'comments';
 "constraints" constant varchar2(30 char) := 'constraints';
-"private synonyms" constant varchar2(30 char) := 'private synonyms';
 "triggers" constant varchar2(30 char) := 'triggers';
 "indexes" constant varchar2(30 char) := 'indexes';
 
@@ -24,10 +23,9 @@ c_steps constant sys.odcivarchar2list :=
   sys.odcivarchar2list
   ( "named objects"                 -- no base object
   , "object grants"                 -- base object (named)
-  , "public synonyms"               -- base object (named)
+  , "synonyms"                      -- base object (named)
   , "comments"                      -- base object (named)
   , "constraints"                   -- base object (named)
-  , "private synonyms"              -- base object (NOT named)
   , "triggers"                      -- base object (NOT named)
   , "indexes"                       -- base object (NOT named)
   );
@@ -172,41 +170,6 @@ $end
           );
         end loop;
 
-      -- public synonyms and comments must depend on a base object already gathered
-      when "public synonyms"
-      then
-        for r in
-        ( select  t.*
-          from    ( -- public synonyms for all our objects
-                    select  t.obj          as base_object
-                    ,       s.owner        as object_schema
-                    ,       'SYNONYM'      as object_type
-                    ,       s.synonym_name as object_name
-                    ,       null           as column_name
-                    from    oracle_tools.v_my_named_schema_objects t
-                            inner join all_synonyms s
-                            on s.table_owner = t.obj.object_schema() and s.table_name = t.obj.object_name()
-                    where   t.obj.dict_object_type() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
-                    and     s.owner = 'PUBLIC'
-                  ) t
-        )
-        loop
-          case r.object_type
-            when 'SYNONYM'
-            then
-              add
-              ( p_schema_object =>
-                  oracle_tools.t_synonym_object
-                  ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-                  , p_object_schema => r.object_schema
-                  , p_object_name => r.object_name
-                  )
-              , p_session_id => p_session_id
-              , p_ignore_dup_val_on_index => false
-              );
-          end case;
-        end loop;
-        
       when "comments"
       then
         for r in
@@ -383,7 +346,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
       -- these are not dependent on named objects:
       -- * private synonyms from this schema pointing to a base object in ANY schema possible
       -- * triggers from this schema pointing to a base object in ANY schema possible
-      when "private synonyms"
+      when "synonyms"
       then
         for r in
         ( -- private synonyms for this schema which may point to another schema
@@ -403,7 +366,8 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                   end as base_object_type
           ,       s.table_name as base_object_name
           from    all_synonyms s
-          where   s.owner = l_schema
+          where   ( s.owner = 'PUBLIC' and s.table_owner = l_schema ) -- public synonyms
+          or      ( s.owner = l_schema ) -- private synonyms
         )
         loop
           add
