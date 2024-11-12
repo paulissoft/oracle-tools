@@ -93,7 +93,6 @@
 ,ALL_SCHEMA_OBJECTS
 ,SCHEMA_OBJECTS_API
 ,SCHEMA_OBJECT_FILTERS$SEQ
-,MATCHES_SCHEMA_OBJECT_FNC
     </db.object.names>
     <db.test.phase>test</db.test.phase>
   </properties>
