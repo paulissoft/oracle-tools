@@ -254,6 +254,100 @@ exception
 $end
 end get_named_objects;
 
+procedure add
+( p_schema_object_tab in oracle_tools.t_schema_object_tab
+, p_session_id in t_session_id
+, p_schema_object_filter_id in positiven
+)
+is
+  l_last_seq generate_ddl_session_schema_objects.seq%type;
+$if oracle_tools.schema_objects_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_OBJECTS)';
+$end
+begin
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
+  -- insert into SCHEMA_OBJECTS
+  insert into schema_objects
+  ( id
+  , obj
+  )
+    select  t.id
+    ,       value(t) as obj
+    from    table(p_schema_object_tab) t
+    where   t.id not in ( select so.id from oracle_tools.schema_objects so );
+
+  -- insert into SCHEMA_OBJECT_FILTER_RESULTS
+  insert into schema_object_filter_results
+  ( schema_object_filter_id
+  , schema_object_id
+  , generate_ddl
+  )
+    select  p_schema_object_filter_id
+    ,       t.id as schema_object_id
+    ,       sof.obj.matches_schema_object(t.id) as generate_ddl
+    from    table(p_schema_object_tab) t
+            cross join schema_object_filters sof
+    where   ( p_schema_object_filter_id, t.id ) not in
+            ( select  schema_object_filter_id
+              ,       schema_object_id
+              from    schema_object_filter_results
+            )
+    and     sof.id = p_schema_object_filter_id;
+
+  /*
+  -- Now the following tables have data for these parameters:
+  -- * SCHEMA_OBJECT_FILTERS (precondition)
+  -- * GENERATE_DDL_SESSIONS (precondition)
+  -- * SCHEMA_OBJECTS
+  -- * SCHEMA_OBJECT_FILTER_RESULTS
+  */
+
+  select  nvl(max(gdsso.seq), 0)
+  into    l_last_seq
+  from    oracle_tools.generate_ddl_session_schema_objects gdsso
+  where   gdsso.session_id = p_session_id;
+
+  -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns 0
+  insert into generate_ddl_session_schema_objects
+  ( session_id
+  , seq
+  , schema_object_filter_id 
+  , schema_object_id 
+  )
+    select  p_session_id
+    -- Since objects are inserted per Oracle session
+    -- there is never a problem with another session inserting at the same time for the same session.
+    ,       t.seq
+    ,       p_schema_object_filter_id
+    ,       t.schema_object_id 
+    from    ( select  t.id as schema_object_id 
+              ,       rownum + l_last_seq as seq
+              from    table(p_schema_object_tab) t
+                      inner join schema_object_filter_results sofr
+                      on sofr.schema_object_filter_id = p_schema_object_filter_id and
+                         sofr.schema_object_id = t.id and
+                         sofr.generate_ddl = 1 -- ignore objects that do not need to be generated
+              where   ( p_session_id, t.id ) not in
+                      ( select  /* GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 */
+                                schema_object_filter_id 
+                        ,       schema_object_id
+                        from    schema_object_filter_results
+                      )              
+            ) t;
+  
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end add;
+
 procedure add_schema_objects
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
 , p_session_id in t_session_id
@@ -265,7 +359,7 @@ $if oracle_tools.schema_objects_api.c_tracing $then
 $end  
   l_schema_md_object_type_tab constant oracle_tools.t_text_tab :=
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
-  l_schema_object_tab oracle_tools.t_schema_object_tab;
+  l_named_schema_object_tab oracle_tools.t_schema_object_tab;
 
   type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
 
@@ -307,14 +401,14 @@ $end
       then
         get_named_objects
         ( p_schema => l_schema
-        , p_schema_object_tab => l_schema_object_tab 
+        , p_schema_object_tab => l_named_schema_object_tab 
         );      
-        if l_schema_object_tab.count > 0
+        if l_named_schema_object_tab.count > 0
         then
-          for i_idx in l_schema_object_tab.first .. l_schema_object_tab.last
+          for i_idx in l_named_schema_object_tab.first .. l_named_schema_object_tab.last
           loop
             add
-            ( p_schema_object => l_schema_object_tab(i_idx)
+            ( p_schema_object => l_named_schema_object_tab(i_idx)
             , p_session_id => p_session_id
             , p_ignore_dup_val_on_index => false
             );
