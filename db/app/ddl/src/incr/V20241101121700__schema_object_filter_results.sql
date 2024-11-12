@@ -1,20 +1,10 @@
-create function matches_schema_object_fnc(p_schema_object_filter_id in number, p_schema_object_id in varchar2)
-return integer
-deterministic
-is
-begin
-  for r in ( select t.obj from schema_object_filters t where t.id = p_schema_object_filter_id )
-  loop
-    return r.obj.matches_schema_object(p_schema_object_id);
-  end loop;
-  raise no_data_found;
-end matches_schema_object_fnc;
-/
-
 create table schema_object_filter_results
 ( schema_object_filter_id integer not null
 , schema_object_id varchar2(500 byte) not null
-, created timestamp(6) 
+, generate_ddl number(1, 0) -- must be schema_objects.obj.matches_schema_object(schema_object_id)
+  not null
+  constraint schema_object_filter_results$ck$generate_ddl check (generate_ddl in (0, 1))
+, created timestamp(6)
   default sys_extract_utc(systimestamp)
   not null
 , constraint schema_object_filter_results$pk
@@ -29,10 +19,6 @@ create table schema_object_filter_results
 organization index
 tablespace users
 ;
-
--- Will we generate DDL for this one?
-create index schema_object_filter_results$idx$1
-on schema_object_filter_results(schema_object_filter_id, oracle_tools.matches_schema_object_fnc(schema_object_filter_id, schema_object_id)); 
 
 -- Foreign key index schema_object_filter_results$fk$1 not necessary
 -- since schema_object_filter_id is first part of primary key index.
