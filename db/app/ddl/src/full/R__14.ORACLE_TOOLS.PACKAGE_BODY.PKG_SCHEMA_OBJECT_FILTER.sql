@@ -36,13 +36,33 @@ deterministic
 is
   l_result simple_integer := 0;
 
+  function is_nested_table
+  ( p_object_name in varchar2
+  )
+  return boolean
+  is
+    l_found pls_integer;
+  begin
+    select  1
+    into    l_found
+    from    all_tables t
+    where   t.table_name = p_object_name
+    and     t.nested = 'YES'; -- Exclude nested tables, their DDL is part of their parent table.
+    return true;
+  exception
+    when no_data_found
+    then return false;
+  end;
+    
   function ignore_object
   ( p_object_type in varchar2
   , p_object_name in varchar2
+  , p_base_object_name in varchar2 default null
   )
   return integer
   is
   begin
+    PRAGMA INLINE (is_nested_table, 'YES');
     return
       case
         when p_object_type is null
@@ -50,16 +70,13 @@ is
         when p_object_name is null
         then 0
         -- no dropped tables
-        when p_object_type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and p_object_name like 'BIN$%' escape '\'
+        when p_object_type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and p_object_name like 'BIN$%' -- escape '\'
         then 1        
         -- JAVA$CLASS$MD5$TABLE
-        when p_object_type in ('TABLE') and p_object_name like 'JAVA$CLASS$MD5$TABLE'
+        when p_object_type in ('TABLE') and p_object_name like 'JAVA$CLASS$MD5$TABLE' -- escape '\'
         then 1
-        -- nested tables
-        when p_object_type in ('TABLE') and p_object_name like 'SYSNT%' escape '\'
-        then 1        
         -- no AQ indexes/views
-        when p_object_type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and p_object_name like 'AQ$%' escape '\'
+        when p_object_type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and p_object_name like 'AQ$%' -- escape '\'
         then 1
         -- no Flashback archive tables/indexes
         when p_object_type in ('TABLE', 'INDEX') and p_object_name like 'SYS\_FBA\_%' escape '\'
@@ -71,7 +88,7 @@ is
         when p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYS\_PLSQL\_%' escape '\'
         then 1
         -- see http://orasql.org/2012/04/28/a-funny-fact-about-collect/
-        when p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYSTP%' escape '\'
+        when p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYSTP%' -- escape '\'
         then 1
         -- no datapump tables
         when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_SQL\_FILE\_SCHEMA%' escape '\'
@@ -87,12 +104,17 @@ is
         then 1
         -- no Flyway stuff and other Oracle things
         when p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and
-             ( p_object_name like 'schema_version%' or
-               p_object_name like 'flyway_schema_history%' or
-               p_object_name like 'CREATE$JAVA$LOB$TABLE%' )
+             ( p_object_name like 'schema\_version%' escape '\' or
+               p_object_name like 'flyway\_schema\_history%' escape '\' or
+               p_object_name like 'CREATE$JAVA$LOB$TABLE%' /*escape '\'*/ )
         then 1
         -- no identity column sequences
-        when p_object_type in ('SEQUENCE', 'OBJECT_GRANT') and p_object_name like 'ISEQ$$%' escape '\'
+        when p_object_type in ('SEQUENCE', 'OBJECT_GRANT') and p_object_name like 'ISEQ$$%' -- escape '\'
+        then 1
+        -- nested tables
+        -- nested table indexes but here we must compare on base_object_name
+        when p_object_type in ('TABLE', 'INDEX') and
+             is_nested_table(case when p_object_type = 'TABLE' then p_object_name else p_base_object_name end)
         then 1
         else 0
       end;
@@ -184,7 +206,7 @@ $end
     -- exclude certain named objects
     when p_object_type is not null and
          p_object_name is not null and
-         ignore_object(p_object_type, p_object_name) = 1
+         ignore_object(p_object_type, p_object_name, p_base_object_name) = 1
     then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
        dbug.print(dbug."info", 'case 2');
