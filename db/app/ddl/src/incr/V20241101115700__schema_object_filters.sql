@@ -9,6 +9,8 @@ create table schema_object_filters
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   not null
+, last_modification_time_schema date -- last modification time of any object in this schema (obj.schema)
+  not null
 , updated timestamp(6)
 -- in overflow
 , obj oracle_tools.t_schema_object_filter
@@ -31,3 +33,4 @@ nested table obj.object_tab$ store as schema_object_filters$obj$object_tab$
 nested table obj.object_cmp_tab$ store as schema_object_filters$obj$object_cmp_tab$
 ;
 
+alter table schema_object_filters nologging;
