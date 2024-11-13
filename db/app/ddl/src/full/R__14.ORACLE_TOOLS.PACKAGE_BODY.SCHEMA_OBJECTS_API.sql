@@ -272,8 +272,8 @@ $if oracle_tools.schema_objects_api.c_debugging $then
 $end  
 $end
 
-  -- insert into SCHEMA_OBJECTS
-  insert into schema_objects
+  -- insert (append) into SCHEMA_OBJECTS
+  insert /*+ APPEND */ into schema_objects
   ( id
   , obj
   )
@@ -374,7 +374,7 @@ $if oracle_tools.schema_objects_api.c_tracing $then
 $end  
   l_schema_md_object_type_tab constant oracle_tools.t_text_tab :=
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
-  l_schema_object_tab oracle_tools.t_schema_object_tab;
+  l_tmp_schema_object_tab oracle_tools.t_schema_object_tab;
   l_all_schema_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
 
   type t_excluded_tables_tab is table of boolean index by all_tables.table_name%type;
@@ -407,7 +407,8 @@ $end
   for i_idx in c_steps.first .. c_steps.last
   loop
     l_step := c_steps(i_idx);
-    l_schema_object_tab := oracle_tools.t_schema_object_tab();
+    -- essential to keep this line here
+    l_tmp_schema_object_tab := oracle_tools.t_schema_object_tab();
 
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.enter(l_module_name || '.' || l_step);
@@ -418,7 +419,7 @@ $end
       then
         get_named_objects
         ( p_schema => l_schema
-        , p_schema_object_tab => l_schema_object_tab 
+        , p_schema_object_tab => l_all_schema_object_tab -- first step so add to l_all_schema_object_tab
         );      
 
       -- object grants must depend on a base object already gathered (see above)
@@ -450,7 +451,7 @@ $end
                 , p_grantable => p.grantable
                 )
         bulk collect
-        into    l_schema_object_tab
+        into    l_tmp_schema_object_tab
         from    oracle_tools.v_my_named_schema_objects t
                 inner join prv p
                 on p.table_schema = t.obj.object_schema() and p.table_name = t.obj.object_name()
@@ -467,7 +468,7 @@ $end
                 , p_column_name => t.column_name
                 )
         bulk collect
-        into    l_schema_object_tab                  
+        into    l_tmp_schema_object_tab                  
         from    ( -- table/view comments
                   select  t.obj          as base_object
                   ,       null           as object_schema
@@ -584,12 +585,12 @@ $end
           end if;
 $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
 
-          l_schema_object_tab.extend(1);
+          l_tmp_schema_object_tab.extend(1);
 
           case r.object_type
             when 'REF_CONSTRAINT'
             then
-              l_schema_object_tab(l_schema_object_tab.last) :=
+              l_tmp_schema_object_tab(l_tmp_schema_object_tab.last) :=
                 oracle_tools.t_ref_constraint_object
                 ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
                 , p_object_schema => r.object_schema
@@ -600,7 +601,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
 
             when 'CONSTRAINT'
             then
-              l_schema_object_tab(l_schema_object_tab.last) :=
+              l_tmp_schema_object_tab(l_tmp_schema_object_tab.last) :=
                 oracle_tools.t_constraint_object
                 ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
                 , p_object_schema => r.object_schema
@@ -636,7 +637,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                 , p_base_object_name => s.table_name
                 )
         bulk collect
-        into    l_schema_object_tab
+        into    l_tmp_schema_object_tab
         from    all_synonyms s
         where   ( s.owner = 'PUBLIC' and s.table_owner = l_schema ) -- public synonyms
         or      ( s.owner = l_schema ); -- private synonyms
@@ -653,7 +654,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                 , p_column_name => t.column_name
                 )
         bulk collect
-        into    l_schema_object_tab
+        into    l_tmp_schema_object_tab
         from    ( -- triggers for this schema which may point to another schema
                   select  t.owner as object_schema
                   ,       'TRIGGER' as object_type
@@ -689,7 +690,7 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                 , p_tablespace_name => i.tablespace_name
                 )
         bulk collect
-        into    l_schema_object_tab
+        into    l_tmp_schema_object_tab
         from    all_indexes i
         where   i.owner = l_schema
                 -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
@@ -704,12 +705,13 @@ $end
         ;
     end case;
 
-    if l_all_schema_object_tab.count = 0
+    if l_tmp_schema_object_tab.count > 0
     then
-      l_all_schema_object_tab := l_schema_object_tab;
-    elsif l_schema_object_tab.count > 0
-    then
-      l_all_schema_object_tab := l_all_schema_object_tab multiset union all l_schema_object_tab;
+      for i_object_idx in l_tmp_schema_object_tab.first .. l_tmp_schema_object_tab.last
+      loop
+        l_all_schema_object_tab.extend(1);
+        l_all_schema_object_tab(l_all_schema_object_tab.last) := l_tmp_schema_object_tab(i_object_idx);
+      end loop;
     end if;
 
     oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
@@ -776,6 +778,17 @@ procedure add
 , p_session_id in t_session_id default get_session_id
 )
 is
+  cursor c_sof(b_schema_object_filter_id in positive)
+  is
+    select  sof.last_modification_time_schema
+    from    oracle_tools.schema_object_filters sof
+    where   sof.id = b_schema_object_filter_id
+    for update of
+            sof.updated
+    ,       sof.last_modification_time_schema;
+
+  l_last_modification_time_schema_old oracle_tools.schema_object_filters.last_modification_time_schema%type;
+  l_last_modification_time_schema_new oracle_tools.schema_object_filters.last_modification_time_schema%type;
   l_schema_object_filter_id positive;
   l_clob constant clob := p_schema_object_filter.serialize();
   l_hash_bucket constant oracle_tools.schema_object_filters.hash_bucket%type :=
@@ -813,6 +826,34 @@ $if oracle_tools.schema_objects_api.c_debugging $then
   );
 $end
 
+  /*
+  ** API_CALL_STACK_PKG before compilation:
+  **
+  ** OBJECT_TYPE  CREATED           LAST_DDL_TIME     TIMESTAMP           REMARK
+  ** -----------  -------           -------------     ---------           ------
+  ** PACKAGE      07/12/23 15:56:32 08/12/23 11:49:56 2023-12-08:11:49:56
+  ** PACKAGE BODY 07/12/23 15:58:43 08/12/23 11:50:02 2023-12-08:11:50:02
+  **
+  ** After compile body:
+  **
+  ** OBJECT_TYPE  CREATED           LAST_DDL_TIME     TIMESTAMP
+  ** -----------  -------           -------------     ---------
+  ** PACKAGE      07/12/23 15:56:32 08/12/23 11:49:56 2023-12-08:11:49:56 no change
+  ** PACKAGE BODY 07/12/23 15:58:43 13/11/24 09:11:02 2023-12-08:11:50:02 LAST_DDL_TIME changed
+  **
+  ** After compile specification:
+  **
+  ** OBJECT_TYPE  CREATED           LAST_DDL_TIME     TIMESTAMP
+  ** -----------  -------           -------------     ---------
+  ** PACKAGE      07/12/23 15:56:32 13/11/24 09:12:38 2023-12-08:11:49:56 LAST_DDL_TIME changed
+  ** PACKAGE BODY 07/12/23 15:58:43 13/11/24 09:12:39 2023-12-08:11:50:02 LAST_DDL_TIME changed (1 sec later)
+  */
+
+  select  max(o.last_ddl_time)
+  into    l_last_modification_time_schema_new
+  from    all_objects o
+  where   o.owner = p_schema_object_filter.schema;
+  
   -- when not found add it
   if l_schema_object_filter_id is null
   then
@@ -820,17 +861,33 @@ $end
     ( hash_bucket
     , hash_bucket_nr
     , obj
+    , last_modification_time_schema
     )
     values
     ( l_hash_bucket
     , l_hash_bucket_nr
     , p_schema_object_filter
+    , l_last_modification_time_schema_new
     )
     returning id into l_schema_object_filter_id;
   else
+    open c_sof(l_schema_object_filter_id);
+    fetch c_sof into l_last_modification_time_schema_old;
+    if c_sof%notfound
+    then raise program_error; -- should not happen
+    end if;
+    if l_last_modification_time_schema_old <> l_last_modification_time_schema_new
+    then
+      -- we must recalculate p_schema_object_filter.matches_schema_object() for every object
+      delete
+      from    oracle_tools.schema_object_filter_results sofr
+      where   sofr.schema_object_filter_id = l_schema_object_filter_id;
+    end if;
     update  oracle_tools.schema_object_filters sof
-    set     sof.updated = sys_extract_utc(systimestamp)
-    where   sof.id = l_schema_object_filter_id;  
+    set     sof.last_modification_time_schema = l_last_modification_time_schema_new
+    ,       sof.updated = sys_extract_utc(systimestamp)
+    where   current of c_sof;
+    close c_sof;
   end if;
 
 $if oracle_tools.schema_objects_api.c_debugging $then
