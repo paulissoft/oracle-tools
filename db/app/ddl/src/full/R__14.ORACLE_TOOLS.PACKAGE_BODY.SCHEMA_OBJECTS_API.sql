@@ -445,7 +445,7 @@ $end
         )
         -- grants for all our objects
         select  oracle_tools.t_object_grant_object
-                ( p_base_object => t.obj
+                ( p_base_object => value(mnso)
                 , p_object_schema => null
                 , p_grantee => p.grantee
                 , p_privilege => p.privilege
@@ -453,13 +453,13 @@ $end
                 )
         bulk collect
         into    l_tmp_schema_object_tab
-        from    oracle_tools.v_my_named_schema_objects t
+        from    oracle_tools.v_my_named_schema_objects mnso
                 inner join prv p
-                on p.table_schema = t.obj.object_schema() and p.table_name = t.obj.object_name()
-        where   t.obj.object_type() not in ( 'PACKAGE_BODY'
-                                           , 'TYPE_BODY'
-                                           , 'MATERIALIZED_VIEW'
-                                           ); -- grants are on underlying tables
+                on p.table_schema = mnso.object_schema() and p.table_name = mnso.object_name()
+        where   mnso.object_type() not in ( 'PACKAGE_BODY'
+                                          , 'TYPE_BODY'
+                                          , 'MATERIALIZED_VIEW'
+                                          ); -- grants are on underlying tables
         
       when "comments"
       then
@@ -471,36 +471,36 @@ $end
         bulk collect
         into    l_tmp_schema_object_tab                  
         from    ( -- table/view comments
-                  select  t.obj          as base_object
+                  select  value(mnso)    as base_object
                   ,       null           as object_schema
                   ,       null           as object_name
                   ,       null           as column_name
-                  from    oracle_tools.v_my_named_schema_objects t
+                  from    oracle_tools.v_my_named_schema_objects mnso
                           inner join all_tab_comments t
-                          on t.owner = t.obj.object_schema() and t.table_type = t.obj.object_type() and t.table_name = t.obj.object_name()
-                  where   t.obj.object_type() in ('TABLE', 'VIEW')
+                          on t.owner = mnso.object_schema() and t.table_type = mnso.object_type() and t.table_name = mnso.object_name()
+                  where   mnso.object_type() in ('TABLE', 'VIEW')
                   and     t.comments is not null
                   union all
                   -- materialized view comments
-                  select  t.obj          as base_object
+                  select  value(mnso)    as base_object
                   ,       null           as object_schema
                   ,       null           as object_name
                   ,       null           as column_name
-                  from    oracle_tools.v_my_named_schema_objects t
+                  from    oracle_tools.v_my_named_schema_objects mnso
                           inner join all_mview_comments m
-                          on m.owner = t.obj.object_schema() and m.mview_name = t.obj.object_name()
-                  where   t.obj.dict_object_type() = 'MATERIALIZED VIEW'
+                          on m.owner = mnso.object_schema() and m.mview_name = mnso.object_name()
+                  where   mnso.dict_object_type() = 'MATERIALIZED VIEW'
                   and     m.comments is not null
                   union all
                   -- column comments
-                  select  t.obj          as base_object
+                  select  value(mnso)    as base_object
                   ,       null           as object_schema
                   ,       null           as object_name
                   ,       c.column_name  as column_name
-                  from    oracle_tools.v_my_named_schema_objects t
+                  from    oracle_tools.v_my_named_schema_objects mnso
                           inner join all_col_comments c
-                          on c.owner = t.obj.object_schema() and c.table_name = t.obj.object_name()
-                  where   t.obj.dict_object_type() in ('TABLE', 'VIEW', 'MATERIALIZED VIEW')
+                          on c.owner = mnso.object_schema() and c.table_name = mnso.object_name()
+                  where   mnso.dict_object_type() in ('TABLE', 'VIEW', 'MATERIALIZED VIEW')
                   and     c.comments is not null
                 ) t;
 
@@ -510,7 +510,7 @@ $end
         for r in
         ( -- constraints for objects in the same schema
           select  t.*
-          from    ( select  t.obj as base_object
+          from    ( select  value(mnso) as base_object
                     ,       c.owner as object_schema
                     ,       case when c.constraint_type = 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
                     ,       c.constraint_name as object_name
@@ -529,10 +529,10 @@ $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pk
                               else null
                             end as any_column_name
 $end                          
-                    from    oracle_tools.v_my_named_schema_objects t
+                    from    oracle_tools.v_my_named_schema_objects mnso
                             inner join all_constraints c /* this is where we are interested in */
-                            on c.owner = t.obj.object_schema() and c.table_name = t.obj.object_name()
-                    where   t.obj.object_type() in ('TABLE', 'VIEW')
+                            on c.owner = mnso.object_schema() and c.table_name = mnso.object_name()
+                    where   mnso.object_type() in ('TABLE', 'VIEW')
                             /* Type of constraint definition:
                                C (check constraint on a table)
                                P (primary key)
@@ -1215,12 +1215,10 @@ $end
   ( p_schema_object_filter => p_schema_object_filter
   , p_add_schema_objects => true
   );
-  p_schema_object_tab := oracle_tools.t_schema_object_tab();
-  for r in ( select t.obj from oracle_tools.v_my_schema_objects t )
-  loop
-    p_schema_object_tab.extend(1);
-    p_schema_object_tab(p_schema_object_tab.last) := r.obj;
-  end loop;
+  select  value(t) as obj
+  bulk collect
+  into    p_schema_object_tab
+  from    oracle_tools.v_my_schema_objects t;
 
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;
@@ -1287,7 +1285,7 @@ $end
 
   commit; -- must be done before the pipe row
 
-  for r in ( select t.obj from oracle_tools.v_my_schema_objects t )
+  for r in ( select value(t) as obj from oracle_tools.v_my_schema_objects t )
   loop
     pipe row (r.obj);
     oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
