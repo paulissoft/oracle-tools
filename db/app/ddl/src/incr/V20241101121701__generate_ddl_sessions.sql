@@ -19,6 +19,8 @@ organization index
 tablespace users
 ;
 
+alter table generate_ddl_sessions nologging;
+
 -- foreign key index generate_ddl_sessions$fk$1
 create index generate_ddl_sessions$fk$1
 on generate_ddl_sessions(schema_object_filter_id);
