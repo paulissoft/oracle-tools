@@ -26,6 +26,8 @@ nested table ddl.ddl_tab store as generate_ddl_session_schema_objects$ddl$ddl_ta
 ( nested table text store as generate_ddl_session_schema_objects$ddl$ddl_tab$text_tab )
 ;
 
+alter table generate_ddl_session_schema_objects nologging;
+
 -- foreign key index generate_ddl_session_schema_objects$fk$1
 create index generate_ddl_session_schema_objects$fk$1
 on generate_ddl_session_schema_objects(schema_object_filter_id, schema_object_id);
