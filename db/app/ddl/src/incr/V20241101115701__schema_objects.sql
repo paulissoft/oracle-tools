@@ -7,6 +7,8 @@ create table schema_objects
 , constraint schema_objects$ck$obj check (obj is not null and obj.id = id)
 );
 
+alter table schema_objects nologging;
+
 create index schema_objects$idx$1
 on schema_objects (obj.object_schema(), obj.object_name(), obj.object_type());
 
