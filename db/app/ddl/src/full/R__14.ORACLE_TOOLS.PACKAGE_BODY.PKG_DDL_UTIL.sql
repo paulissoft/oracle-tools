@@ -4967,6 +4967,7 @@ $end
   /*
   -- Help functions to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
   */
+  /**/
   function get_schema_ddl
   ( p_schema in varchar2 default user
   , p_object_type in varchar2 default null
