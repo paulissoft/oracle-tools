@@ -272,8 +272,8 @@ $if oracle_tools.schema_objects_api.c_debugging $then
 $end  
 $end
 
-  -- insert (append) into SCHEMA_OBJECTS
-  insert /*+ APPEND */ into schema_objects
+  -- insert into SCHEMA_OBJECTS
+  insert into schema_objects
   ( id
   , obj
   )
@@ -709,13 +709,9 @@ $end
 
     if l_tmp_schema_object_tab.count > 0
     then
-      for i_object_idx in l_tmp_schema_object_tab.first .. l_tmp_schema_object_tab.last
-      loop
-        l_all_schema_object_tab.extend(1);
-        l_all_schema_object_tab(l_all_schema_object_tab.last) := l_tmp_schema_object_tab(i_object_idx);
-      end loop;
+      -- this is real fast
+      l_all_schema_object_tab := l_all_schema_object_tab multiset union all l_tmp_schema_object_tab;
     end if;
-
     oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
     
 $if oracle_tools.schema_objects_api.c_tracing $then
