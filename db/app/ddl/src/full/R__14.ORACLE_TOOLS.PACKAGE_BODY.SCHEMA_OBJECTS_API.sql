@@ -273,6 +273,7 @@ $end
 $end
 
   -- insert into SCHEMA_OBJECTS
+  -- Note: do not use APPEND hint since that is slow or causes problems
   insert into schema_objects
   ( id
   , obj
