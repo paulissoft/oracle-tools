@@ -361,7 +361,9 @@ Help functions to get the DDL belonging to a list of allowed objects returned by
 
 function get_schema_ddl
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
 , p_schema_object_tab in oracle_tools.t_schema_object_tab
+$end
 , p_transform_param_list in varchar2 default c_transform_param_list
 )
 return oracle_tools.t_schema_ddl_tab
@@ -425,9 +427,14 @@ Remark 2: A call to display_ddl_schema() with a database linke will invoke set_d
 **/
 
 function sort_objects_by_deps
+$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
 ( p_schema_object_tab in oracle_tools.t_schema_object_tab
 , p_schema in t_schema_nn default user
 )
+$else
+( p_schema in t_schema_nn default user
+)
+$end
 return oracle_tools.t_schema_object_tab
 pipelined;
 
