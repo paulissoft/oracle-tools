@@ -37,7 +37,8 @@ is
   l_result simple_integer := 0;
 
   function is_nested_table
-  ( p_object_name in varchar2
+  ( p_object_schema in varchar2
+  , p_object_name in varchar2
   )
   return boolean
   is
@@ -46,7 +47,8 @@ is
     select  1
     into    l_found
     from    all_tables t
-    where   t.table_name = p_object_name
+    where   t.owner = p_object_schema
+    and     t.table_name = p_object_name
     and     t.nested = 'YES'; -- Exclude nested tables, their DDL is part of their parent table.
     return true;
   exception
@@ -114,7 +116,7 @@ is
         -- nested tables
         -- nested table indexes but here we must compare on base_object_name
         when p_object_type in ('TABLE', 'INDEX') and
-             is_nested_table(case when p_object_type = 'TABLE' then p_object_name else p_base_object_name end)
+             is_nested_table(p_schema_object_filter.schema, case when p_object_type = 'TABLE' then p_object_name else p_base_object_name end)
         then 1
         else 0
       end;
