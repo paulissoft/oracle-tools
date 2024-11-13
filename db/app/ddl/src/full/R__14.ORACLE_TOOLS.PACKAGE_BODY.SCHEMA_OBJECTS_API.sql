@@ -624,16 +624,18 @@ $end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_
                 , p_object_name => s.synonym_name
                 , p_base_object_schema => s.table_owner
                 , p_base_object_type =>
-                    case
-                      when s.db_link is null
-                      then ( select  nvl(max(so.obj.dict_object_type()), 'UNDEFINED')
-                             from    oracle_tools.schema_objects so
-                             where   so.obj.object_schema() = s.table_owner
-                             and     so.obj.object_name() = s.table_name
-                             and     so.obj.object_type() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
-                           )
-                      else 'UNDEFINED'
-                    end
+                    nvl
+                    ( case
+                        when s.db_link is null
+                        then ( select  max(so.obj.dict_object_type())
+                               from    oracle_tools.schema_objects so
+                               where   so.obj.object_schema() = s.table_owner
+                               and     so.obj.object_name() = s.table_name
+                               and     so.obj.object_type() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
+                             )
+                      end
+                    , 'TABLE' -- assume its a table when the object could not be found (in this database schema)
+                    )
                 , p_base_object_name => s.table_name
                 )
         bulk collect
