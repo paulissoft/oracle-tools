@@ -20,6 +20,8 @@ organization index
 tablespace users
 ;
 
+alter table schema_object_filter_results nologging;
+
 -- Foreign key index schema_object_filter_results$fk$1 not necessary
 -- since schema_object_filter_id is first part of primary key index.
 
