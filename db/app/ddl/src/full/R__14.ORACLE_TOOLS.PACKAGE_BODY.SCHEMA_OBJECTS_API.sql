@@ -1163,6 +1163,44 @@ exception
 $end
 end add;
 
+procedure add
+( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab
+)
+is
+  l_session_id constant t_session_id := g_session_id;
+  l_limit constant simple_integer := 100;
+  l_schema_object_id_tab dbms_sql.varchar2a;
+$if oracle_tools.schema_objects_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_DDL CURSOR)';
+$end
+begin
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
+  if p_schema_ddl_tab.count > 0
+  then
+    for i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
+    loop
+      l_schema_object_id_tab(i_idx) := p_schema_ddl_tab(i_idx).obj.id;
+    end loop;
+    forall i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
+      update  generate_ddl_session_schema_objects gdsso
+      set     gdsso.ddl = p_schema_ddl_tab(i_idx)
+      where   gdsso.session_id = l_session_id
+      and     gdsso.schema_object_id = l_schema_object_id_tab(i_idx);
+  end if;
+
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end add;
+
 function find_schema_object_by_seq
 ( p_seq in integer
 , p_session_id in t_session_id

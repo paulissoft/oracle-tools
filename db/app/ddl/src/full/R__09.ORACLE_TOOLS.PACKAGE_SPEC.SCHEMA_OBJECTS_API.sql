@@ -9,6 +9,14 @@ type t_schema_object_rec is record
 
 type t_schema_object_cursor is ref cursor return t_schema_object_rec;
 
+type t_schema_ddl_rec is record
+( session_id generate_ddl_session_schema_objects.session_id%type -- key #1 from GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 
+, schema_object_id generate_ddl_session_schema_objects.schema_object_id%type -- key #2 from GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 
+, ddl oracle_tools.t_schema_ddl
+);
+
+type t_schema_ddl_cursor is ref cursor return t_schema_ddl_rec;
+
 subtype t_session_id is generate_ddl_session_schema_objects.session_id%type;
    
 procedure set_session_id
@@ -44,6 +52,11 @@ procedure add
 procedure add
 ( p_schema_ddl in oracle_tools.t_schema_ddl
 , p_session_id in t_session_id default get_session_id
+);
+/** Update the record in table GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
+
+procedure add
+( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab
 );
 /** Update the record in table GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
 

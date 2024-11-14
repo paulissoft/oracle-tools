@@ -336,6 +336,8 @@ function fetch_ddl
 return sys.ku$_ddls
 pipelined;
 
+$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then    
+
 /**
 
 Help function to get the DDL belonging to a list of allowed objects returned by get_schema_objects().
@@ -361,13 +363,24 @@ Help functions to get the DDL belonging to a list of allowed objects returned by
 
 function get_schema_ddl
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
 , p_schema_object_tab in oracle_tools.t_schema_object_tab
-$end
 , p_transform_param_list in varchar2 default c_transform_param_list
 )
 return oracle_tools.t_schema_ddl_tab
 pipelined;
+
+$else -- $if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then    
+
+/**
+Help functions to get the DDL belonging to a list of allowed objects returned by get_schema_objects().
+**/
+
+procedure get_schema_ddl
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_transform_param_list in varchar2 default c_transform_param_list
+);
+
+$end -- $if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then    
 
 procedure set_display_ddl_schema_args
 ( p_exclude_objects in clob
