@@ -1183,12 +1183,15 @@ $end
     for i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
     loop
       l_schema_object_id_tab(i_idx) := p_schema_ddl_tab(i_idx).obj.id;
+      /*
     end loop;
     forall i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
+      */
       update  generate_ddl_session_schema_objects gdsso
       set     gdsso.ddl = p_schema_ddl_tab(i_idx)
       where   gdsso.session_id = l_session_id
       and     gdsso.schema_object_id = l_schema_object_id_tab(i_idx);
+    end loop;
   end if;
 
 $if oracle_tools.schema_objects_api.c_tracing $then
