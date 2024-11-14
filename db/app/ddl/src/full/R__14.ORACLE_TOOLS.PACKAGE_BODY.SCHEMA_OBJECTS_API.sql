@@ -1140,6 +1140,7 @@ $end
 
   for r_gdsso in c_gdsso(p_schema_ddl.obj.id)
   loop
+    -- ORA-12899: value too large for column "ORACLE_TOOLS"."GENERATE_DDL_SESSION_SCHEMA_OBJECTS"."DDL"
     update  generate_ddl_session_schema_objects gdsso
     set     gdsso.ddl = p_schema_ddl
     where   current of c_gdsso;
@@ -1167,9 +1168,10 @@ procedure add
 ( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab
 )
 is
+  l_schema_object_id_tab dbms_sql.varchar2a;
   l_session_id constant t_session_id := g_session_id;
   l_limit constant simple_integer := 100;
-  l_schema_object_id_tab dbms_sql.varchar2a;
+
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_DDL CURSOR)';
 $end
@@ -1180,18 +1182,18 @@ $end
 
   if p_schema_ddl_tab.count > 0
   then
+    -- ORA-12899: value too large for column "ORACLE_TOOLS"."GENERATE_DDL_SESSION_SCHEMA_OBJECTS"."DDL"
     for i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
     loop
       l_schema_object_id_tab(i_idx) := p_schema_ddl_tab(i_idx).obj.id;
-      /*
     end loop;
-    forall i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
-      */
-      update  generate_ddl_session_schema_objects gdsso
-      set     gdsso.ddl = p_schema_ddl_tab(i_idx)
-      where   gdsso.session_id = l_session_id
-      and     gdsso.schema_object_id = l_schema_object_id_tab(i_idx);
-    end loop;
+    begin
+      forall i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
+        update  generate_ddl_session_schema_objects gdsso
+        set     gdsso.ddl = p_schema_ddl_tab(i_idx)
+        where   gdsso.session_id = l_session_id
+        and     gdsso.schema_object_id = l_schema_object_id_tab(i_idx);
+    end;
   end if;
 
 $if oracle_tools.schema_objects_api.c_tracing $then
