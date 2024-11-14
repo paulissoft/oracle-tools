@@ -131,7 +131,7 @@ subtype t_object_name is varchar2(128 byte);
 subtype t_object_name_nn is t_object_name not null;
 
 -- key: owner.object_type.object_name[.grantee]
-subtype t_object is varchar2(1000 byte);
+subtype t_object is varchar2(500 byte);
 subtype t_object_nn is t_object not null;
 
 subtype t_numeric_boolean is natural; -- must be null, 0 or 1

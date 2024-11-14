@@ -181,7 +181,7 @@ static function get_id
 return varchar2
 deterministic result_cache
 is
-  l_id varchar2(4000 char) := null;
+  l_id varchar2(500 byte) := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_ID');

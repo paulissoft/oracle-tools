@@ -10,8 +10,7 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
   type t_object_dependency_tab is table of t_object_natural_tab index by t_object;
 
   type t_object_lookup_rec is record
-  ( count t_numeric_boolean default 0
-  , schema_ddl oracle_tools.t_schema_ddl
+  ( schema_ddl oracle_tools.t_schema_ddl
   , ready boolean default false -- pipe row has been issued
   );
 
@@ -2442,9 +2441,6 @@ $end
               , true
               );
           end;
-
-          -- the normal stuff
-          p_object_lookup_tab(p_object_key).count := p_object_lookup_tab(p_object_key).count + 1;
         end if; -- if not(p_object_lookup_tab(p_object_key).ready)
       exception
         when no_data_found
@@ -5412,6 +5408,10 @@ $end
                 then
                   pipe row (l_object_lookup_tab(l_object_key).schema_ddl);
                   l_object_lookup_tab(l_object_key).ready := true;
+                  schema_objects_api.add
+                  ( p_schema_ddl => l_object_lookup_tab(l_object_key).schema_ddl
+                  );
+                  l_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
                   begin
                     l_nr_objects_countdown := l_nr_objects_countdown - 1;
 
