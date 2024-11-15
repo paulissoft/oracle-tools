@@ -5050,6 +5050,10 @@ $end -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance
   is
     l_program constant t_module := 'GET_SCHEMA_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+    e_no_ddl_to_generate exception;
+$end    
+
     -- GJP 2022-12-15
 
     -- DBMS_METADATA DDL generation with SCHEMA_EXPORT export does not provide CONSTRAINTS AS ALTER.
@@ -5066,6 +5070,9 @@ $end
     l_constraint_lookup_tab t_constraint_lookup_tab;
     l_object_key t_object;
     l_nr_objects_countdown positiven := 1; -- any value > 0 will do, see init()
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    l_start_time pls_integer;
+$end    
 
     cursor c_params
     ( b_schema in varchar2
@@ -5245,6 +5252,10 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
         end loop;
       end if;
 $else
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'oracle_tools.schema_objects_api.get_session_id: %s', oracle_tools.schema_objects_api.get_session_id);
+$end      
+      
       for r in ( select value(t) as obj from oracle_tools.v_my_schema_objects_no_ddl_yet t )
       loop
         add_schema_object(r.obj);
@@ -5257,7 +5268,11 @@ $end
         when value_error
         then
           -- no objects to lookup
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
           raise no_data_found;
+$else
+          raise e_no_ddl_to_generate;
+$end
       end;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -5307,7 +5322,7 @@ $end
 
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     init(p_schema_object_tab);
-$else    
+$else
     init;
 $end    
 
@@ -5317,6 +5332,10 @@ $end
                      , p_target_desc => l_program
                      , p_totalwork => l_object_lookup_tab.count
                      );
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    l_start_time := dbms_utility.get_time;
+$end    
 
     -- GJP 2022-12-17 Note SCHEMA_EXPORT.
     -- Under some circumstances just a SCHEMA_EXPORT does not do the job,
@@ -5433,7 +5452,7 @@ $end
                 end if;
 
                 if not(l_object_lookup_tab(l_object_key).ready)
-                then
+                then                  
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
                   pipe row (l_object_lookup_tab(l_object_key).schema_ddl);
 $else
@@ -5443,7 +5462,14 @@ $end
                   l_object_lookup_tab(l_object_key).ready := true;
                   l_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-                  dbug.print(dbug."info", '# objects to go: %s (after %s)', l_nr_objects_countdown-1, l_object_key);
+                  dbug.print
+                  ( dbug."info"
+                  , '# objects to go: %s (after %s milliseconds for object %s)'
+                  , l_nr_objects_countdown-1
+                  , (dbms_utility.get_time - l_start_time) * 10
+                  , l_object_key
+                  );
+                  l_start_time := dbms_utility.get_time;
 $end         
                   begin
                     l_nr_objects_countdown := l_nr_objects_countdown - 1;
