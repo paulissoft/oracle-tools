@@ -14,9 +14,6 @@ c_start_stop_msg_framework constant boolean := true; -- it may be irritating whe
 Package to define some constants that can be used in conditional compiling.
 **/
 
--- https://github.com/paulissoft/oracle-tools/issues/182
-c_improve_ddl_generation_performance constant boolean := true;
-
 end cfg_pkg;
 /
 

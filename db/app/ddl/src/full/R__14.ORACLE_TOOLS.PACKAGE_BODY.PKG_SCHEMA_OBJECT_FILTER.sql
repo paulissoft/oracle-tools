@@ -59,67 +59,79 @@ is
   function ignore_object
   ( p_object_type in varchar2
   , p_object_name in varchar2
+  , p_base_object_type in varchar2 default null
   , p_base_object_name in varchar2 default null
   )
   return integer
   is
+    l_case pls_integer;
   begin
     PRAGMA INLINE (is_nested_table, 'YES');
-    return
+    l_case :=
       case
         when p_object_type is null
-        then 0        
+        then -1
         when p_object_name is null
-        then 0
+        then -2
         -- no dropped tables
         when p_object_type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and p_object_name like 'BIN$%' -- escape '\'
         then 1        
         -- JAVA$CLASS$MD5$TABLE
         when p_object_type in ('TABLE') and p_object_name like 'JAVA$CLASS$MD5$TABLE' -- escape '\'
-        then 1
+        then 2
         -- no AQ indexes/views
         when p_object_type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and p_object_name like 'AQ$%' -- escape '\'
-        then 1
+        then 3
         -- no Flashback archive tables/indexes
         when p_object_type in ('TABLE', 'INDEX') and p_object_name like 'SYS\_FBA\_%' escape '\'
-        then 1
+        then 4
         -- no system generated indexes
         when p_object_type in ('INDEX') and p_object_name like 'SYS\_C%' escape '\'
-        then 1
+        then 5
         -- no generated types by declaring pl/sql table types in package specifications
         when p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYS\_PLSQL\_%' escape '\'
-        then 1
+        then 6
         -- see http://orasql.org/2012/04/28/a-funny-fact-about-collect/
         when p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYSTP%' -- escape '\'
-        then 1
+        then 7
         -- no datapump tables
         when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_SQL\_FILE\_SCHEMA%' escape '\'
-        then 1
+        then 8
         -- no datapump tables
         when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DDL' escape '\'
-        then 1
+        then 9
         -- no datapump tables
         when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DML' escape '\'
-        then 1
+        then 10
         -- no Oracle generated datapump tables
         when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_EXPORT\_FULL\_%' escape '\'
-        then 1
+        then 11
         -- no Flyway stuff and other Oracle things
         when p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and
              ( p_object_name like 'schema\_version%' escape '\' or
                p_object_name like 'flyway\_schema\_history%' escape '\' or
                p_object_name like 'CREATE$JAVA$LOB$TABLE%' /*escape '\'*/ )
-        then 1
+        then 12
         -- no identity column sequences
         when p_object_type in ('SEQUENCE', 'OBJECT_GRANT') and p_object_name like 'ISEQ$$%' -- escape '\'
-        then 1
+        then 13
         -- nested tables
         -- nested table indexes but here we must compare on base_object_name
         when p_object_type in ('TABLE', 'INDEX') and
              is_nested_table(p_schema_object_filter.schema, case when p_object_type = 'TABLE' then p_object_name else p_base_object_name end)
-        then 1
+        then 14
         else 0
       end;
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+      dbug.print
+      ( dbug."input"
+      , 'object: "%s"; base object: "%s"; ignore_object case: %s'
+      , p_object_type || ':' || p_object_name
+      , p_base_object_type || ':' || p_base_object_name
+      , l_case
+      );
+$end      
+    return l_case;  
   end ignore_object;
 
   function search(p_lwb in naturaln, p_upb in naturaln)
@@ -198,7 +210,7 @@ $end
     -- exclude certain (semi-)dependent objects
     when p_base_object_type is not null and
          p_base_object_name is not null and
-         ignore_object(p_base_object_type, p_base_object_name) = 1
+         ignore_object(p_base_object_type, p_base_object_name) >= 1
     then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
        dbug.print(dbug."info", 'case 1');
@@ -208,7 +220,7 @@ $end
     -- exclude certain named objects
     when p_object_type is not null and
          p_object_name is not null and
-         ignore_object(p_object_type, p_object_name, p_base_object_name) = 1
+         ignore_object(p_object_type, p_object_name, p_base_object_type, p_base_object_name) >= 1
     then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
        dbug.print(dbug."info", 'case 2');

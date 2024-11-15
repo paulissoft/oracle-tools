@@ -27,6 +27,7 @@ declare
     , 'SCHEMA_OBJECT_FILTER_RESULTS'
     , 'GENERATE_DDL_SESSIONS'
     , 'GENERATE_DDL_SESSION_SCHEMA_OBJECTS'
+    , 'GENERATE_DDL_SESSION_SCHEMA_DDLS'
     );
   l_view_tab sys.odcivarchar2list :=
     sys.odcivarchar2list

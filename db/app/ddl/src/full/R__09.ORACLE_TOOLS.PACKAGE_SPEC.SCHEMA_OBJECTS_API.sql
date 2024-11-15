@@ -57,6 +57,7 @@ procedure add
 
 procedure add
 ( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab
+, p_session_id in t_session_id default get_session_id
 );
 /** Update the record in table GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
 

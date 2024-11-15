@@ -1121,15 +1121,6 @@ procedure add
 , p_session_id in t_session_id
 )
 is
-  cursor c_gdsso(b_schema_object_id in generate_ddl_session_schema_objects.schema_object_id%type)
-  is
-    select  1
-    from    oracle_tools.generate_ddl_session_schema_objects gdsso
-    where   gdsso.session_id = p_session_id
-    and     gdsso.schema_object_id = b_schema_object_id
-    for update of
-            gdsso.ddl;
-  l_rowcount naturaln := 0;
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_DDL)';
 $end
@@ -1138,20 +1129,22 @@ $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $end
 
-  for r_gdsso in c_gdsso(p_schema_ddl.obj.id)
-  loop
-    -- ORA-12899: value too large for column "ORACLE_TOOLS"."GENERATE_DDL_SESSION_SCHEMA_OBJECTS"."DDL"
-    update  generate_ddl_session_schema_objects gdsso
-    set     gdsso.ddl = p_schema_ddl
-    where   current of c_gdsso;
-    l_rowcount := l_rowcount + 1;
-  end loop;
-  case l_rowcount
+  insert into generate_ddl_session_schema_ddls
+  ( session_id
+  , schema_object_id
+  , seq
+  , ddl
+  )
+    select  p_session_id as session_id
+    ,       p_schema_ddl.obj.id as schema_object_id
+    ,       rownum as seq
+    ,       value(t) as ddl
+    from    table(p_schema_ddl.ddl_tab) t;
+    
+  case sql%rowcount
     when 0
     then raise no_data_found;
-    when 1
-    then null; -- ok
-    else raise too_many_rows; -- strange
+    else null;
   end case;
 
 $if oracle_tools.schema_objects_api.c_tracing $then
@@ -1166,10 +1159,9 @@ end add;
 
 procedure add
 ( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab
+, p_session_id in t_session_id
 )
 is
-  l_schema_object_id_tab dbms_sql.varchar2a;
-  l_session_id constant t_session_id := g_session_id;
   l_limit constant simple_integer := 100;
 
 $if oracle_tools.schema_objects_api.c_tracing $then
@@ -1185,15 +1177,11 @@ $end
     -- ORA-12899: value too large for column "ORACLE_TOOLS"."GENERATE_DDL_SESSION_SCHEMA_OBJECTS"."DDL"
     for i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
     loop
-      l_schema_object_id_tab(i_idx) := p_schema_ddl_tab(i_idx).obj.id;
+      add
+      ( p_schema_ddl => p_schema_ddl_tab(i_idx)
+      , p_session_id => p_session_id
+      );
     end loop;
-    begin
-      forall i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
-        update  generate_ddl_session_schema_objects gdsso
-        set     gdsso.ddl = p_schema_ddl_tab(i_idx)
-        where   gdsso.session_id = l_session_id
-        and     gdsso.schema_object_id = l_schema_object_id_tab(i_idx);
-    end;
   end if;
 
 $if oracle_tools.schema_objects_api.c_tracing $then

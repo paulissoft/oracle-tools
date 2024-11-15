@@ -7,7 +7,6 @@ create table generate_ddl_session_schema_objects
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   not null  
-, ddl oracle_tools.t_schema_ddl
 , constraint generate_ddl_session_schema_objects$pk
   primary key (session_id, seq)
 , constraint generate_ddl_session_schema_objects$uk$1
@@ -20,10 +19,7 @@ create table generate_ddl_session_schema_objects
   constraint generate_ddl_session_schema_objects$fk$2
   foreign key (session_id)
   references generate_ddl_sessions(session_id) on delete cascade
-, constraint all_schema_ddls$ck$1 check (ddl is null or ddl.obj is null or ddl.obj.id = schema_object_id) -- only ddl for this schema object
 )
-nested table ddl.ddl_tab store as generate_ddl_session_schema_objects$ddl$ddl_tab
-( nested table text store as generate_ddl_session_schema_objects$ddl$ddl_tab$text_tab )
 ;
 
 alter table generate_ddl_session_schema_objects nologging;

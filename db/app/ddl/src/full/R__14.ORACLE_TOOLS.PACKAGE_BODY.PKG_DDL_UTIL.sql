@@ -2950,7 +2950,7 @@ $end
   return oracle_tools.t_schema_ddl_tab
   pipelined
   is
-$if oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then    
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
     pragma autonomous_transaction;
 $end
 
@@ -2966,7 +2966,7 @@ $end
       );
     l_network_link all_db_links.db_link%type := null;
     l_cursor sys_refcursor;
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     l_schema_object_tab oracle_tools.t_schema_object_tab;
 $end    
     -- GJP 2022-12-31 Not used
@@ -3042,7 +3042,7 @@ $end
 
       open l_cursor for 'select t.schema_ddl from oracle_tools.v_display_ddl_schema@' || l_network_link || ' t';
     else -- local
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then    
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
       /* GPA 27-10-2016
          The queries below may invoke the objects clause twice.
          Now if it that means invoking get_schema_ddl() twice that may be costly.
@@ -3069,7 +3069,7 @@ $end
         open l_cursor for
           select  s.schema_ddl
           from
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
                   ( select  value(s) as schema_ddl
                     from    table
                             ( oracle_tools.pkg_ddl_util.get_schema_ddl
@@ -3080,7 +3080,7 @@ $if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
                             ) s
                   ) s
 $else                  
-                  ( select  s.ddl as schema_ddl
+                  ( select  s.schema_ddl
                     from    oracle_tools.v_my_schema_ddls s
                   ) s
 $end                              
@@ -3090,7 +3090,7 @@ $end
                     ,       rownum as nr
                     from    table
                             ( oracle_tools.pkg_ddl_util.sort_objects_by_deps
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
                               ( l_schema_object_tab
                               , p_schema
                               )
@@ -3107,7 +3107,7 @@ $end
       else
         -- normal stuff: no network link, no dependency sorting
         open l_cursor for
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
           select  value(s) as schema_ddl
           from    table
                   ( oracle_tools.pkg_ddl_util.get_schema_ddl
@@ -3117,7 +3117,8 @@ $if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
                     )
                   ) s
 $else
-          select  s.ddl as schema_ddl
+          select  s.obj
+          ,       s.schema_ddl
           from    oracle_tools.v_my_schema_ddls s
 $end                    
           order by
@@ -4977,7 +4978,7 @@ $end
       end if;
   end fetch_ddl;
 
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then    
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
 
   /*
   -- Help functions to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
@@ -5037,14 +5038,14 @@ $if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
   return oracle_tools.t_schema_ddl_tab
   pipelined
 
-$else -- $if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then    
+$else -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
 
   procedure get_schema_ddl
   ( p_schema_object_filter in oracle_tools.t_schema_object_filter
   , p_transform_param_list in varchar2
   )
 
-$end -- $if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then    
+$end -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
 
   is
     l_program constant t_module := 'GET_SCHEMA_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
@@ -5056,7 +5057,7 @@ $end -- $if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
     -- Solve that by adding the individual objects as well but quitting as soon as possible.
 
     l_use_schema_export t_numeric_boolean_nn := 0;
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     l_schema_object_tab oracle_tools.t_schema_object_tab := null;
 $else    
     l_schema_ddl_tab oracle_tools.t_schema_ddl_tab := oracle_tools.t_schema_ddl_tab();
@@ -5069,7 +5070,7 @@ $end
     cursor c_params
     ( b_schema in varchar2
     , b_use_schema_export in t_numeric_boolean_nn
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     , b_schema_object_tab in oracle_tools.t_schema_object_tab
 $end    
     ) is
@@ -5121,7 +5122,7 @@ $end
                   ,       t.grantee()
                   ,       t.privilege()
                   ,       t.grantable()
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
                   from    table(b_schema_object_tab) t
 $else
                   from    oracle_tools.v_my_schema_objects_no_ddl_yet t
@@ -5179,7 +5180,7 @@ $end
     l_longops_rec t_longops_rec;
 
     procedure init
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     ( p_schema_object_tab in oracle_tools.t_schema_object_tab
     )
 $end    
@@ -5235,7 +5236,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.enter(g_package_prefix || l_program || '.INIT');
 $end
 
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
       if p_schema_object_tab is not null and p_schema_object_tab.count > 0
       then
         for i_idx in p_schema_object_tab.first .. p_schema_object_tab.last
@@ -5287,6 +5288,15 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     );
 $end
 
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.print
+    ( dbug."info"
+    , 'schema_objects_api.match_perc(): %s; schema_objects_api.match_perc_threshold(): %s'
+    , schema_objects_api.match_perc()
+    , schema_objects_api.match_perc_threshold()
+    );
+$end
+
     -- now we can calculate the percentage matches (after get_schema_objects)
     l_use_schema_export :=
       case
@@ -5295,7 +5305,7 @@ $end
         else 0
       end;
 
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     init(p_schema_object_tab);
 $else    
     init;
@@ -5334,7 +5344,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       );
 $end
 
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
       -- sanity check
       if mod(i_use_schema_export, 2) = 0 and l_schema_object_tab is null and p_schema_object_tab is null
@@ -5347,7 +5357,7 @@ $end
       open c_params
       ( p_schema_object_filter.schema()
       , mod(i_use_schema_export, 2) -- so it will always be 0 or 1
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
       , case mod(i_use_schema_export, 2)
           when 0 then nvl(l_schema_object_tab, p_schema_object_tab) -- yes, first l_schema_object_tab, see end of params_loop
           else null -- not relevant for SCHEMA_EXPORT
@@ -5424,7 +5434,7 @@ $end
 
                 if not(l_object_lookup_tab(l_object_key).ready)
                 then
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then    
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
                   pipe row (l_object_lookup_tab(l_object_key).schema_ddl);
 $else
                   l_schema_ddl_tab.extend(1);
@@ -5432,12 +5442,11 @@ $else
 $end                  
                   l_object_lookup_tab(l_object_key).ready := true;
                   l_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+                  dbug.print(dbug."info", '# objects to go: %s (after %s)', l_nr_objects_countdown-1, l_object_key);
+$end         
                   begin
                     l_nr_objects_countdown := l_nr_objects_countdown - 1;
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-                    dbug.print(dbug."info", '# objects to go: %s', l_nr_objects_countdown);
-$end         
                   exception
                     when value_error -- tried to set it to 0 (it is positiven i.e. always > 0): we are ready
                     then
@@ -5487,9 +5496,9 @@ $end
       --    just output the objects with missing DDL (better than to throw an exception)
       --    and add a comment (-- No DDL retrieved.)
 
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
-      if i_use_schema_export = l_use_schema_export
+      if i_use_schema_export = l_use_schema_export -- first iteration
       then
         if l_use_schema_export = 1 -- case 1, next iteration uses l_schema_object_tab
         then
@@ -5506,7 +5515,15 @@ $end
       loop
         if not(l_object_lookup_tab(l_object_key).ready)
         then
-          if i_use_schema_export != l_use_schema_export
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          dbug.print
+          ( dbug."info"
+          , 'No DDL %sfor object key: %s'
+          , case when i_use_schema_export = l_use_schema_export then 'yet ' end
+          , l_object_key
+          );
+$end        
+          if i_use_schema_export != l_use_schema_export -- second iteration
           then
             -- case 2
             -- add comment otherwise the schema DDL table is empty and will this object never be displayed
@@ -5515,7 +5532,7 @@ $end
             , p_text => '-- No DDL retrieved.'
             );
 
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
             pipe row (l_object_lookup_tab(l_object_key).schema_ddl);
 $else
             l_schema_ddl_tab.extend(1);
@@ -5524,7 +5541,7 @@ $end
             l_object_lookup_tab(l_object_key).ready := true;
             l_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
             
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
           elsif l_use_schema_export = 1
           then
             -- case 1
@@ -5541,7 +5558,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
     end loop outer_loop;
 
-$if oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then    
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
 
     schema_objects_api.add
     ( p_schema_ddl_tab => l_schema_ddl_tab
@@ -5558,7 +5575,7 @@ $end
 
     cleanup;
 
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then    
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
     return; -- essential for a pipelined function
 $end    
   exception
@@ -5896,7 +5913,7 @@ $end
   -- Sort objects on dependencies
   */
   function sort_objects_by_deps
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
   ( p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_schema in t_schema_nn
   )
@@ -6057,13 +6074,13 @@ $end
       )
       select  t1.*
       from    deps t1
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
               inner join ( select value(t2) as obj from table(p_schema_object_tab) t2 ) t2
 $else              
               inner join ( select value(t2) as obj from oracle_tools.v_my_schema_objects_no_ddl_yet t2 ) t2
 $end              
               on t2.obj = t1.obj
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
               inner join ( select value(t3) as ref_obj from table(p_schema_object_tab) t3 ) t3
 $else              
               inner join ( select value(t3) as ref_obj from oracle_tools.v_my_schema_objects_no_ddl_yet t3 ) t3
@@ -6095,7 +6112,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.print(dbug."input", 'p_schema: %s', p_schema);
 $end
 
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
     if p_schema_object_tab.count > 0
     then
@@ -8329,7 +8346,7 @@ $end
     l_idx pls_integer;
 
     l_schema t_schema;    
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     l_schema_object_tab1 oracle_tools.t_schema_object_tab;
     l_schema_object_tab2 oracle_tools.t_schema_object_tab;
 $end    
@@ -8388,7 +8405,7 @@ $end
       into    l_schema_object_tab2
       from    table
               ( oracle_tools.pkg_ddl_util.sort_objects_by_deps
-$if not oracle_tools.cfg_pkg.c_improve_ddl_generation_performance $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
                 ( p_schema_object_tab => l_schema_object_tab1
                 , p_schema => g_owner
                 )
