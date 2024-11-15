@@ -5508,7 +5508,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                   ( dbug."info"
                   , '# objects to go: %s (after %s milliseconds for object %s)'
                   , l_nr_objects_countdown-1
-                  , (dbms_utility.get_time - l_start_time) * 10
+                  , lpad(to_char((dbms_utility.get_time - l_start_time) * 10, 'fm9999990'), 7) -- right aligned
                   , l_object_key
                   );
                   l_start_time := dbms_utility.get_time;
