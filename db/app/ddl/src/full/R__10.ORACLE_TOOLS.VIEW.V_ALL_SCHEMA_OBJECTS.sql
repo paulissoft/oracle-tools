@@ -12,7 +12,8 @@ select  gdsso.session_id
                  from    oracle_tools.generate_ddl_session_schema_ddls gdssd
                  where   gdssd.session_id = gdsso.session_id
                  and     gdssd.schema_object_id = gdsso.schema_object_id
-                 and     gdssd.seq = 1                 
+                 and     gdssd.seq = 1
+                 and     gdssd.ddl is not null
                )
           then 0
           else 1
