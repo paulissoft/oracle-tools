@@ -1192,7 +1192,7 @@ $end
             ( -20000
             , utl_lms.format_message
               ( 'This session schema object could not be inserted: session_id=%s, seq=%s, schema_object_id=%s'
-              , r.session_id
+              , to_char(r.session_id)
               , to_char(r.seq)
               , r.schema_object_id
               )
