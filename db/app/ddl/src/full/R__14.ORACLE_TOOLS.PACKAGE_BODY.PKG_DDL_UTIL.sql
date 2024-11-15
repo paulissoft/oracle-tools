@@ -434,6 +434,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 
 $end
 
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
+
   /*
   -- see depth-first search algorithm in https://en.wikipedia.org/wiki/Topological_sorting
   --
@@ -620,6 +622,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       raise;
 $end
   end dsort;
+
+$end -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
   function get_host(p_network_link in varchar2)
   return varchar2
@@ -5976,15 +5980,12 @@ $end
   /*
   -- Sort objects on dependencies
   */
-  function sort_objects_by_deps
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+
+  function sort_objects_by_deps
   ( p_schema_object_tab in oracle_tools.t_schema_object_tab
   , p_schema in t_schema_nn
   )
-$else
-  ( p_schema in t_schema_nn
-  )
-$end
   return oracle_tools.t_schema_object_tab
   pipelined
   is
@@ -6138,17 +6139,9 @@ $end
       )
       select  t1.*
       from    deps t1
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
               inner join ( select value(t2) as obj from table(p_schema_object_tab) t2 ) t2
-$else              
-              inner join ( select value(t2) as obj from oracle_tools.v_my_schema_objects/*_no_ddl_yet*/ t2 ) t2
-$end              
               on t2.obj = t1.obj
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
               inner join ( select value(t3) as ref_obj from table(p_schema_object_tab) t3 ) t3
-$else              
-              inner join ( select value(t3) as ref_obj from oracle_tools.v_my_schema_objects/*_no_ddl_yet*/ t3 ) t3
-$end              
               on t3.ref_obj = t1.ref_obj
     ;
 
@@ -6176,8 +6169,6 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."input", 'p_schema: %s', p_schema);
 $end
 
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-
     if p_schema_object_tab.count > 0
     then
       for i_idx in p_schema_object_tab.first .. p_schema_object_tab.last
@@ -6187,17 +6178,6 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
         l_object_dependency_tab(p_schema_object_tab(i_idx).id) := c_object_no_dependencies_tab;
       end loop;
     end if;
-
-$else
-
-    for r in ( select value(t) as obj from oracle_tools.v_my_schema_objects/*_no_ddl_yet*/ t )
-    loop
-      l_schema_object_lookup_tab(r.obj.id) := r.obj;
-      -- objects without dependencies must be part of this list too
-      l_object_dependency_tab(r.obj.id) := c_object_no_dependencies_tab;
-    end loop;
-
-$end
 
     for r in c_dependencies
     loop
@@ -6313,6 +6293,92 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       raise;
 $end
   end sort_objects_by_deps;
+
+$else
+
+  function sort_objects_by_deps
+  ( p_schema in t_schema_nn
+  )
+  return oracle_tools.t_schema_object_tab
+  pipelined
+  is
+    l_program constant t_module := 'SORT_OBJECTS_BY_DEPS';
+
+    -- dbms_application_info stuff
+    l_longops_rec t_longops_rec := oracle_tools.api_longops_pkg.longops_init(p_target_desc => l_program, p_units => 'objects');
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || l_program);
+    dbug.print(dbug."input", 'p_schema: %s', p_schema);
+$end
+
+    for r in
+    ( with deps as 
+      ( select  /*+ MATERIALIZE */
+                dep.referenced_owner || ':' || dep.referenced_type || dep.referenced_name as dict_object_id
+        ,       count(*) as nr_deps
+        from    all_dependencies dep
+        where   dep.referenced_owner = p_schema
+        group by
+                dep.referenced_owner
+        ,       dep.referenced_type
+        ,       dep.referenced_name
+      ), objs as
+      ( select  /*+ MATERIALIZE */
+                value(obj) as schema_object
+        ,       obj.object_schema() || ':' || obj.dict_object_type() || ':' || obj.object_name() as dict_object_id
+        from    oracle_tools.v_my_schema_objects/*_no_ddl_yet*/ obj
+      )
+      select    objs.schema_object
+      from      objs left outer join deps on deps.dict_object_id = objs.dict_object_id
+      order by
+                objs.schema_object.object_type_order() asc
+      ,         deps.nr_deps desc nulls last -- the more dependencies the earlier it should be listed
+    )
+    loop
+      pipe row(r.schema_object);
+
+      oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+    end loop;
+
+    -- 100%
+    oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+$end
+
+    return; -- essential for a pipelined function
+
+  exception
+    when no_data_needed
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave;
+$end
+      null; -- not a real error, just a way to some cleanup
+
+    when no_data_found -- verdwijnt anders in het niets omdat het een pipelined function betreft die al data ophaalt
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave_on_error;
+$end
+      -- GJP 2022-12-29
+$if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
+      oracle_tools.pkg_ddl_error.reraise_error(l_program);
+$else      
+      null;
+$end      
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end sort_objects_by_deps;
+
+$end -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
 
   procedure migrate_schema_ddl
   ( p_source in oracle_tools.t_schema_ddl
