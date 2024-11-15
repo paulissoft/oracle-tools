@@ -1064,7 +1064,7 @@ $end
         else
           l_text_tab.extend(1);
           l_text_tab(l_text_tab.last) := l_buffer;
-        end loop;
+        end if;
       end loop;
     end if;
   end if;
