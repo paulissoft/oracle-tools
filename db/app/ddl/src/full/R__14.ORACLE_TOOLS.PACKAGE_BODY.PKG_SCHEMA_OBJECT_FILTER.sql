@@ -36,7 +36,6 @@ deterministic
 is
   l_result simple_integer := 0;
 
-/*
   function is_nested_table
   ( p_object_schema in varchar2
   , p_object_name in varchar2
@@ -45,18 +44,21 @@ is
   is
     l_found pls_integer;
   begin
-    select  1
-    into    l_found
-    from    all_tables t
-    where   t.owner = p_object_schema
-    and     t.table_name = p_object_name
-    and     t.nested = 'YES'; -- Exclude nested tables, their DDL is part of their parent table.
+    if p_object_name not like 'SYSNT%' -- always treat them as nested table
+    then
+      -- otherwise use dictionary
+      select  1
+      into    l_found
+      from    all_tables t
+      where   t.owner = p_object_schema
+      and     t.table_name = p_object_name
+      and     t.nested = 'YES'; -- Exclude nested tables, their DDL is part of their parent table.
+    end if;
     return true;
   exception
     when no_data_found
     then return false;
   end;
-*/
 
   function ignore_object
   ( p_object_type in varchar2
@@ -119,14 +121,12 @@ is
         then 13
         -- nested tables
         -- nested table indexes but here we must compare on base_object_name
-        when p_object_type = 'TABLE' and
-             -- is_nested_table(p_schema_object_filter.schema, case when p_object_type = 'TABLE' then p_object_name else p_base_object_name end)
-             p_object_name like 'SYSNT%' -- escape '\'
+        when p_object_type in ('TABLE', 'INDEX') and
+             is_nested_table
+             ( p_schema_object_filter.schema
+             , case when p_object_type = 'TABLE' then p_object_name else p_base_object_name end
+             )
         then 14
-        when p_object_type = 'INDEX' and
-             -- is_nested_table(p_schema_object_filter.schema, case when p_object_type = 'TABLE' then p_object_name else p_base_object_name end)
-             p_base_object_name like 'SYSNT%' -- escape '\'
-        then 15
         else 0
       end;
 $if oracle_tools.pkg_schema_object_filter.c_tracing $then
