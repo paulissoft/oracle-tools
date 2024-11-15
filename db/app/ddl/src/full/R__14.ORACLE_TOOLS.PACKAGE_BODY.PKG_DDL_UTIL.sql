@@ -2952,6 +2952,11 @@ $end
   is
 $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
     pragma autonomous_transaction;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    l_count pls_integer;
+$end  
+
 $end
 
     l_schema_object_filter oracle_tools.t_schema_object_filter :=
@@ -3042,7 +3047,8 @@ $end
 
       open l_cursor for 'select t.schema_ddl from oracle_tools.v_display_ddl_schema@' || l_network_link || ' t';
     else -- local
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+
       /* GPA 27-10-2016
          The queries below may invoke the objects clause twice.
          Now if it that means invoking get_schema_ddl() twice that may be costly.
@@ -3052,16 +3058,36 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
       ( p_schema_object_filter => l_schema_object_filter
       , p_schema_object_tab => l_schema_object_tab
       );
+      
 $else
+
       oracle_tools.schema_objects_api.add
       ( p_schema_object_filter => l_schema_object_filter
       , p_add_schema_objects => true
       );
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      select count(*) into l_count from oracle_tools.v_my_schema_objects;
+      dbug.print
+      ( dbug."info"
+      , 'oracle_tools.schema_objects_api.get_session_id: %s; # schema objects: %s'
+      , oracle_tools.schema_objects_api.get_session_id
+      , l_count
+      );
+$end      
       get_schema_ddl
       ( p_schema_object_filter => l_schema_object_filter
       , p_transform_param_list => p_transform_param_list
       );
       commit;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      select count(*) into l_count from oracle_tools.v_my_schema_ddls;
+      dbug.print
+      ( dbug."info"
+      , 'oracle_tools.schema_objects_api.get_session_id: %s; # schema object ddls: %s'
+      , oracle_tools.schema_objects_api.get_session_id
+      , l_count
+      );
+$end      
 $end
 
       if nvl(p_sort_objects_by_deps, 0) != 0
@@ -3140,6 +3166,10 @@ $end
     <<fetch_loop>>
     loop
       fetch l_cursor bulk collect into l_schema_ddl_tab limit c_fetch_limit;    
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'l_schema_ddl_tab.count: %s', l_schema_ddl_tab.count);
+$end
 
       if l_schema_ddl_tab.count > 0
       then
@@ -5128,7 +5158,7 @@ $end
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
                   from    table(b_schema_object_tab) t
 $else
-                  from    oracle_tools.v_my_schema_objects_no_ddl_yet t
+                  from    oracle_tools.v_my_schema_objects_no_ddl_yet t -- here we are only interested in schema objects without DDL
 $end
                   where   b_use_schema_export = 0
                 )
@@ -5251,7 +5281,8 @@ $else
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print(dbug."info", 'oracle_tools.schema_objects_api.get_session_id: %s', oracle_tools.schema_objects_api.get_session_id);
 $end      
-      
+
+      -- here we are only interested in schema objects without DDL
       for r in ( select value(t) as obj from oracle_tools.v_my_schema_objects_no_ddl_yet t )
       loop
         add_schema_object(r.obj);
@@ -6109,13 +6140,13 @@ $end
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
               inner join ( select value(t2) as obj from table(p_schema_object_tab) t2 ) t2
 $else              
-              inner join ( select value(t2) as obj from oracle_tools.v_my_schema_objects_no_ddl_yet t2 ) t2
+              inner join ( select value(t2) as obj from oracle_tools.v_my_schema_objects/*_no_ddl_yet*/ t2 ) t2
 $end              
               on t2.obj = t1.obj
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
               inner join ( select value(t3) as ref_obj from table(p_schema_object_tab) t3 ) t3
 $else              
-              inner join ( select value(t3) as ref_obj from oracle_tools.v_my_schema_objects_no_ddl_yet t3 ) t3
+              inner join ( select value(t3) as ref_obj from oracle_tools.v_my_schema_objects/*_no_ddl_yet*/ t3 ) t3
 $end              
               on t3.ref_obj = t1.ref_obj
     ;
@@ -6158,7 +6189,7 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
 $else
 
-    for r in ( select value(t) as obj from oracle_tools.v_my_schema_objects_no_ddl_yet t )
+    for r in ( select value(t) as obj from oracle_tools.v_my_schema_objects/*_no_ddl_yet*/ t )
     loop
       l_schema_object_lookup_tab(r.obj.id) := r.obj;
       -- objects without dependencies must be part of this list too
