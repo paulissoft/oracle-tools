@@ -6334,6 +6334,7 @@ $end
       order by
                 objs.schema_object.object_type_order() asc
       ,         deps.nr_deps desc nulls last -- the more dependencies the earlier it should be listed
+      ,         objs.dict_object_id asc
     )
     loop
       pipe row(r.schema_object);
