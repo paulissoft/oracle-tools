@@ -1133,6 +1133,19 @@ $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $end
 
+  -- input checks
+  case
+    when p_schema_ddl is null
+    then raise value_error;
+    when p_schema_ddl.obj is null
+    then raise value_error;
+    when p_schema_ddl.obj.id is null
+    then raise value_error;
+    when p_session_id is null
+    then raise value_error;
+    else null;
+  end case;
+
   begin
     savepoint spt;
     insert into generate_ddl_session_schema_ddls
