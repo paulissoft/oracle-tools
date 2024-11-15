@@ -3209,7 +3209,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
-    return;
+    return; -- essential for a pipelined function
 
   exception
     when no_data_needed
@@ -5062,7 +5062,7 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     loop
       pipe row (r.obj);
     end loop;
-    return;
+    return; -- essential for a pipelined function
   end get_schema_ddl;
 
   function get_schema_ddl
@@ -5518,6 +5518,7 @@ $end
                     -- every object in l_object_lookup_tab is ready
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                       dbug.print(dbug."info", 'all schema DDL fetched');
+                      dbug.leave; -- because there is a dbug.enter/dbug.leave in the outer_loop
 $end
                       exit outer_loop;
                   end;
@@ -5629,7 +5630,7 @@ $end
       end loop;
       
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.leave;
+      dbug.leave;      
 $end
     end loop outer_loop;
 
@@ -5645,11 +5646,11 @@ $end
     -- overall
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
 
+    cleanup;
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
-
-    cleanup;
 
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
     return; -- essential for a pipelined function
@@ -5667,25 +5668,22 @@ $end
     then
       cleanup;
       -- GJP 2022-12-29
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+      dbug.leave_on_error;
+$else      
+      dbug.leave;
+$end      
+$end
+
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
       -- old code: reraise error
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.leave_on_error;
-$end
 $if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
 $else
       raise;
-$end
-
-$else -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-
-      -- new code: ignore error
-      
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.leave;
 $end
 
 $end -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
