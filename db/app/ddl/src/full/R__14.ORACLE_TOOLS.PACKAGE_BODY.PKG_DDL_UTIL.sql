@@ -518,7 +518,7 @@ $end
     l_n t_object;
     l_m t_object;
   begin
-$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'TSORT');
 $end
 
@@ -557,6 +557,7 @@ $end
     while l_unmarked_nodes.count > 0 /* J */
     loop
       /* L */
+      PRAGMA INLINE (visit, 'YES');
       visit
       ( p_graph => p_graph
       , p_n => l_unmarked_nodes.first /* K */
@@ -568,7 +569,7 @@ $end
       exit when p_error_n is not null;
     end loop;
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."output", 'p_error_n: %s', p_error_n);
     dbug.leave;
   exception
@@ -586,12 +587,13 @@ $end
   is
     l_error_n t_object;
   begin
-$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'DSORT');
 $end
 
     while true
     loop
+      PRAGMA INLINE (tsort, 'YES');
       tsort(p_graph, p_result, l_error_n);
 
       exit when l_error_n is null; -- successful: stop
@@ -609,7 +611,7 @@ $end
       end if;
     end loop;
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
@@ -6237,6 +6239,7 @@ $end
       end if;
     end loop;
 
+    PRAGMA INLINE (dsort, 'YES');
     dsort(l_object_dependency_tab, l_object_by_dep_tab);
 
     if l_object_by_dep_tab.count > 0
