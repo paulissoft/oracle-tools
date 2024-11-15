@@ -6169,7 +6169,7 @@ $end
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := oracle_tools.api_longops_pkg.longops_init(p_target_desc => l_program, p_units => 'objects');
   begin
-$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
     dbug.print(dbug."input", 'p_schema: %s', p_schema);
 $end
@@ -6263,7 +6263,7 @@ $end
         exception
           when no_data_found
           then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
             dbug.on_error;
 $end
             null;
@@ -6277,7 +6277,7 @@ $end
     -- 100%
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
@@ -6286,14 +6286,14 @@ $end
   exception
     when no_data_needed
     then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
       null; -- not a real error, just a way to some cleanup
 
     when no_data_found -- verdwijnt anders in het niets omdat het een pipelined function betreft die al data ophaalt
     then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       -- GJP 2022-12-29
@@ -6303,7 +6303,7 @@ $else
       null;
 $end      
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     when others
     then
       dbug.leave_on_error;
