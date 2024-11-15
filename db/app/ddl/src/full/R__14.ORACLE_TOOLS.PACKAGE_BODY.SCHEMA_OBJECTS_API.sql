@@ -1121,6 +1121,10 @@ procedure add
 , p_session_id in t_session_id
 )
 is
+  -- ORA-00910: specified length too long for its datatype
+  e_specified_length_too_long_for_its_datatype exception;
+  pragma exception_init(e_specified_length_too_long_for_its_datatype, -910);
+  
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_DDL)';
 $end
@@ -1129,17 +1133,63 @@ $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $end
 
-  insert into generate_ddl_session_schema_ddls
-  ( session_id
-  , schema_object_id
-  , seq
-  , ddl
-  )
-    select  p_session_id as session_id
-    ,       p_schema_ddl.obj.id as schema_object_id
-    ,       rownum as seq
-    ,       value(t) as ddl
-    from    table(p_schema_ddl.ddl_tab) t;
+  begin
+    savepoint spt;
+    insert into generate_ddl_session_schema_ddls
+    ( session_id
+    , schema_object_id
+    , seq
+    , ddl
+    )
+      select  p_session_id as session_id
+      ,       p_schema_ddl.obj.id as schema_object_id
+      ,       rownum as seq
+      ,       value(t) as ddl
+      from    table(p_schema_ddl.ddl_tab) t;
+  exception
+    when e_specified_length_too_long_for_its_datatype
+    then
+      -- do it record by record to give better feedback
+      rollback to spt;
+      for r in
+      ( select  p_session_id as session_id
+        ,       p_schema_ddl.obj.id as schema_object_id
+        ,       rownum as seq
+        ,       value(t) as ddl
+        from    table(p_schema_ddl.ddl_tab) t
+      )
+      loop
+        begin
+          insert into generate_ddl_session_schema_ddls
+          ( session_id
+          , schema_object_id
+          , seq
+          , ddl
+          )
+          values
+          ( r.session_id
+          , r.schema_object_id
+          , r.seq
+          , r.ddl
+          );
+        exception
+          when others
+          then
+            raise_application_error
+            ( -20000
+            , utl_lms.format_message
+              ( 'This session schema object could not be inserted: session_id=%s, seq=%s, schema_object_id=%s'
+              , r.session_id
+              , to_char(r.seq)
+              , r.schema_object_id
+              )
+            , true
+            );
+        end;
+      end loop;
+      
+      raise; -- the original error
+  end;
     
   case sql%rowcount
     when 0
