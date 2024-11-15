@@ -3143,8 +3143,7 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
                     )
                   ) s
 $else
-          select  s.obj
-          ,       s.schema_ddl
+          select  s.schema_ddl
           from    oracle_tools.v_my_schema_ddls s
 $end                    
           order by
