@@ -127,6 +127,8 @@ is
              , case when p_object_type = 'TABLE' then p_object_name else p_base_object_name end
              )
         then 14
+        when p_object_type in ('TYPE_SPEC') and p_object_name like 'SYS\_YOID%' escape '\'
+        then 15 -- ORACLE_TOOLS:TYPE_SPEC:SYS_YOID0000142575$:::::::
         else 0
       end;
 $if oracle_tools.pkg_schema_object_filter.c_tracing $then
