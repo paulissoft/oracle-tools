@@ -122,9 +122,9 @@ is
         then 14
         else 0
       end;
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
       dbug.print
-      ( dbug."input"
+      ( dbug."info"
       , 'object: "%s"; base object: "%s"; ignore_object case: %s'
       , p_object_type || ':' || p_object_name
       , p_base_object_type || ':' || p_base_object_name
