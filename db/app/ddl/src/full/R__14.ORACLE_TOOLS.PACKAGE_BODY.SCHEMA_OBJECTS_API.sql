@@ -262,7 +262,7 @@ procedure add
 is
   l_last_seq generate_ddl_session_schema_objects.seq%type;
 $if oracle_tools.schema_objects_api.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_OBJECTS)';
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_OBJECT_TAB)';
 $end
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
@@ -795,7 +795,7 @@ is
   l_hash_bucket_nr oracle_tools.schema_object_filters.hash_bucket_nr%type;
   l_hash_buckets_equal pls_integer;
 $if oracle_tools.schema_objects_api.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_OBJECT_FILTER)';
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_OBJECT_FILTER)';
 $end
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
@@ -956,7 +956,7 @@ is
   l_schema_object_id constant oracle_tools.schema_objects.id%type := p_schema_object.id;
   l_found pls_integer;
 $if oracle_tools.schema_objects_api.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_OBJECT)';
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_OBJECT)';
 $end
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
@@ -1081,7 +1081,7 @@ is
   l_schema_object_tab t_schema_object_tab;
   l_limit constant simple_integer := 100;
 $if oracle_tools.schema_objects_api.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_OBJECT CURSOR)';
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_OBJECT_CURSOR)';
 $end
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
@@ -1122,7 +1122,7 @@ procedure add
 )
 is
 $if oracle_tools.schema_objects_api.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_DDL)';
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_DDL)';
 $end
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
@@ -1165,7 +1165,7 @@ is
   l_limit constant simple_integer := 100;
 
 $if oracle_tools.schema_objects_api.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (SCHEMA_DDL CURSOR)';
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_DDL_TAB)';
 $end
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
