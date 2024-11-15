@@ -13,10 +13,9 @@ select  gdsso.session_id
                  where   gdssd.session_id = gdsso.session_id
                  and     gdssd.schema_object_id = gdsso.schema_object_id
                  and     gdssd.seq = 1
-                 and     gdssd.ddl is not null
                )
-          then 0
-          else 1
+          then 1
+          else 0
         end as ddl_generated
 from    oracle_tools.generate_ddl_session_schema_objects gdsso
         inner join oracle_tools.schema_objects so
