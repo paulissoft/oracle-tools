@@ -5556,6 +5556,16 @@ $end
       
       close c_params;
 
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
+
+      -- every time params change: flush to generate_ddl_session_schema_ddls
+      schema_objects_api.add
+      ( p_schema_ddl_tab => l_schema_ddl_tab
+      );
+      l_schema_ddl_tab.delete;
+
+$end
+
       -- Apparently we are not done.
       -- 1) first iteration (i_use_schema_export = l_use_schema_export) with SCHEMA_EXPORT:
       --    construct a schema object list with just the missing objects and
@@ -5631,7 +5641,8 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     schema_objects_api.add
     ( p_schema_ddl_tab => l_schema_ddl_tab
     );
-
+    l_schema_ddl_tab.delete;
+    
 $end
 
     -- overall
