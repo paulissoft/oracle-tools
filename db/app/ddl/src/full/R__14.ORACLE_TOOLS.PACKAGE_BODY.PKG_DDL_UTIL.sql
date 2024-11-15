@@ -5050,10 +5050,6 @@ $end -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance
   is
     l_program constant t_module := 'GET_SCHEMA_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-    e_no_ddl_to_generate exception;
-$end    
-
     -- GJP 2022-12-15
 
     -- DBMS_METADATA DDL generation with SCHEMA_EXPORT export does not provide CONSTRAINTS AS ALTER.
@@ -5268,11 +5264,7 @@ $end
         when value_error
         then
           -- no objects to lookup
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
           raise no_data_found;
-$else
-          raise e_no_ddl_to_generate;
-$end
       end;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -5616,15 +5608,29 @@ $end
     when no_data_found
     then
       cleanup;
+      -- GJP 2022-12-29
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+
+      -- old code: reraise error
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
-      -- GJP 2022-12-29
 $if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
       oracle_tools.pkg_ddl_error.reraise_error(l_program);
-$else      
-      null;
-$end      
+$else
+      raise;
+$end
+
+$else -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+
+      -- new code: ignore error
+      
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave;
+$end
+
+$end -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
     when others
     then
