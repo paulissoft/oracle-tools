@@ -5294,11 +5294,25 @@ $end
       end loop;
 $end
 
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", '# schema objects to generate DDL for: %s', l_object_lookup_tab.count);
+$end      
+
       begin
         l_nr_objects_countdown := l_object_lookup_tab.count;
       exception
         when value_error
         then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+          -- here we are only interested in schema objects without DDL
+          for r in ( select value(t) as obj from oracle_tools.v_my_schema_objects/*_no_ddl_yet*/ t )
+          loop
+            add_schema_object(r.obj);
+          end loop;
+          dbug.print(dbug."info", '# schema objects: %s', l_object_lookup_tab.count);
+$end      
+$end
           -- no objects to lookup
           raise no_data_found;
       end;
