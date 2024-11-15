@@ -5335,6 +5335,13 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     );
 $end
 
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+
+    -- only use schema export when necessary but first try per object type and some other parameters
+    oracle_tools.schema_objects_api.default_match_perc_threshold(null);
+
+$end
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print
     ( dbug."info"
