@@ -12,22 +12,38 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   case
+    /* T_COMMENT_DDL */
     when p_obj is of (oracle_tools.t_comment_object) then p_schema_ddl := oracle_tools.t_comment_ddl(p_obj, p_ddl_tab);
+    /* T_CONSTRAINT_DDL */
+    when p_obj is of (oracle_tools.t_constraint_object) then p_schema_ddl := oracle_tools.t_constraint_ddl(p_obj, p_ddl_tab);    
+    /* T_INDEX_DDL */
     when p_obj is of (oracle_tools.t_index_object) then p_schema_ddl := oracle_tools.t_index_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_object_grant_object) then p_schema_ddl := oracle_tools.t_object_grant_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_procobj_object) then p_schema_ddl := oracle_tools.t_procobj_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_refresh_group_object) then p_schema_ddl := oracle_tools.t_refresh_group_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_constraint_object) then p_schema_ddl := oracle_tools.t_constraint_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_synonym_object) then p_schema_ddl := oracle_tools.t_synonym_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_table_object) then p_schema_ddl := oracle_tools.t_table_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_type_spec_object) then p_schema_ddl := oracle_tools.t_type_spec_ddl(p_obj, p_ddl_tab);
+    /* T_MATERIALIZED_VIEW_DDL */
     when p_obj is of (oracle_tools.t_materialized_view_object) then p_schema_ddl := oracle_tools.t_materialized_view_ddl(p_obj, p_ddl_tab);
+    /* T_OBJECT_GRANT_DDL */
+    when p_obj is of (oracle_tools.t_object_grant_object) then p_schema_ddl := oracle_tools.t_object_grant_ddl(p_obj, p_ddl_tab);
+    /* T_PROCOBJ_DDL */
+    when p_obj is of (oracle_tools.t_procobj_object) then p_schema_ddl := oracle_tools.t_procobj_ddl(p_obj, p_ddl_tab);
+    /* T_REFRESH_GROUP_DDL */
+    when p_obj is of (oracle_tools.t_refresh_group_object) then p_schema_ddl := oracle_tools.t_refresh_group_ddl(p_obj, p_ddl_tab);
+    /* T_SEQUENCE_DDL */
     when p_obj is of (oracle_tools.t_sequence_object) then p_schema_ddl := oracle_tools.t_sequence_ddl(p_obj, p_ddl_tab);
-    -- GPA 2017-03-27 #142494703 The DDL generator should remove leading whitespace before WHEN clauses in triggers because that generates differences.
-    when p_obj is of (oracle_tools.t_trigger_object) then p_schema_ddl := oracle_tools.t_trigger_ddl(p_obj, p_ddl_tab);
+    /* T_SYNONYM_DDL */
+    when p_obj is of (oracle_tools.t_synonym_object) then p_schema_ddl := oracle_tools.t_synonym_ddl(p_obj, p_ddl_tab);
     -- oracle_tools.t_table_column_object inherits from oracle_tools.t_type_attribute_object
+    /* T_TABLE_COLUMN_DDL */
     when p_obj is of (oracle_tools.t_table_column_object) then p_schema_ddl := oracle_tools.t_table_column_ddl(p_obj, p_ddl_tab);
+    /* T_TABLE_DDL */
+    when p_obj is of (oracle_tools.t_table_object) then p_schema_ddl := oracle_tools.t_table_ddl(p_obj, p_ddl_tab);
+    /* T_TRIGGER_DDL */
+    when p_obj is of (oracle_tools.t_trigger_object) then p_schema_ddl := oracle_tools.t_trigger_ddl(p_obj, p_ddl_tab);
+    /* T_TYPE_ATTRIBUTE_DDL */
     when p_obj is of (oracle_tools.t_type_attribute_object) then p_schema_ddl := oracle_tools.t_type_attribute_ddl(p_obj, p_ddl_tab);
+    /* T_TYPE_METHOD_DDL */
+    when p_obj is of (oracle_tools.t_type_method_object) then p_schema_ddl := oracle_tools.t_type_method_ddl(p_obj, p_ddl_tab);
+    /* T_TYPE_SPEC_DDL */
+    when p_obj is of (oracle_tools.t_type_spec_object) then p_schema_ddl := oracle_tools.t_type_spec_ddl(p_obj, p_ddl_tab);
+    -- GPA 2017-03-27 #142494703 The DDL generator should remove leading whitespace before WHEN clauses in triggers because that generates differences.
     else p_schema_ddl := oracle_tools.t_schema_ddl(p_obj, p_ddl_tab);
   end case;
 

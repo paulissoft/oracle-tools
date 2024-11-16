@@ -4962,6 +4962,10 @@ $end
 
     l_transform_param_tab t_transform_param_tab;
   begin
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+    dbug.enter(g_package_prefix || 'FETCH_DDL');
+$end    
+
     get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
     
     md_open
@@ -4991,6 +4995,10 @@ $end
     end loop fetch_loop;
 
     md_close(l_handle);
+    
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+    dbug.leave;
+$end    
   exception
     when no_data_needed
     then
@@ -4998,6 +5006,9 @@ $end
       then
         md_close(l_handle);
       end if;
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+      dbug.leave;
+$end    
       
     when others
     then
@@ -5007,8 +5018,14 @@ $end
       end if;
       if p_object_type = 'SCHEMA_EXPORT'
       then
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+        dbug.leave;
+$end    
         null;
       else
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+        dbug.leave_on_error;
+$end    
         raise;
       end if;
   end fetch_ddl;

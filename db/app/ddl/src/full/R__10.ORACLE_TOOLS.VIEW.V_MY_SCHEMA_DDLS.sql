@@ -2,7 +2,7 @@ CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDLS" BEQUEATH CURRENT_USER A
 select  aso.session_id
 ,       aso.schema_object_id
 ,       aso.obj
-,       oracle_tools.t_schema_ddl
+,       oracle_tools.t_schema_ddl.create_schema_ddl
         ( aso.obj
         , cast
           ( multiset
