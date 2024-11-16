@@ -47,7 +47,7 @@ c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
 -- 0: none, 1: standard, 2: verbose, 3: even more verbose
 c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $else 0 $end; -- never change the last value
 c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
-c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 1 $else false $end; -- idem
+c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 
 /*
 -- Start of bugs/features (oldest first)
@@ -347,6 +347,7 @@ $end
 , p_params_object_name_tab in oracle_tools.t_text_tab -- dbms_metadata filter for object names
 , p_params_base_object_name_tab in oracle_tools.t_text_tab -- dbms_metadata filter for base object names
 , p_params_nr_objects in integer -- dbms_metadata filter for number of objects
+, p_add_no_ddl_retrieved in boolean
 , p_schema_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
 );
 /** Get the schema DDL. **/
