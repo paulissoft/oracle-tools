@@ -62,7 +62,8 @@ procedure add
 /** Update the record in table GENERATE_DDL_SESSION_SCHEMA_DDLS. **/
 
 procedure add
-( p_object_type in varchar2
+( p_transform_param_list in varchar2
+, p_object_type in varchar2
 , p_object_schema in varchar2
 , p_base_object_schema in varchar2
 , p_object_name_tab in oracle_tools.t_text_tab

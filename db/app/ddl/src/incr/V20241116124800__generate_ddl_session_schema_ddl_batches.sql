@@ -3,7 +3,8 @@ create table generate_ddl_session_schema_ddl_batches
 , seq integer not null -- Primary key #2 (sequence within parent)
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
-  not null  
+  not null
+, transform_param_list varchar2(4000 byte) -- parameter from pkg_ddl_util.get_schema_ddl
 -- select list from cursor c_params in body pkg_ddl_util
 , object_type varchar2(30 byte)
 , object_schema varchar2(128 byte)
