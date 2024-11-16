@@ -356,6 +356,11 @@ $end
 /** Get the schema DDL. **/
 
 procedure ddl_batch_process
+( p_session_id in integer
+, p_add_no_ddl_retrieved in boolean
+);
+
+procedure ddl_batch_process
 ( p_submit in boolean
 , p_session_id in integer
 );
