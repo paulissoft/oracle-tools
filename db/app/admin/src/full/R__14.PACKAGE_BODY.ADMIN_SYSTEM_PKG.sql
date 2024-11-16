@@ -96,5 +96,42 @@ begin
   return;
 end show_locked_objects;  
 
+function does_session_exist
+( p_sid in number -- the session id
+, p_serial# in number default null -- the serial number
+)
+return integer -- 0 (false) or 1 (true)
+is
+  l_found pls_integer;
+begin
+  select  1
+  into    l_found
+  from    v$session s
+  where   s.sid = p_sid
+  and     s.serial# = p_serial#;
+  return 1;
+exception
+  when no_data_found
+  then return 0;
+end does_session_exist;  
+
+function does_session_exist
+( p_audsid in number -- the v$session.audsid value as returned by sys_context('USERENV', 'SESSIONID')
+)
+return integer -- 0 (false) or 1 (true)
+is
+  l_found pls_integer;
+begin
+  select  1
+  into    l_found
+  from    v$session s
+  where   s.audsid = p_audsid;
+  return 1;
+exception
+  when no_data_found
+  then return 0;
+end does_session_exist;  
+
+
 end admin_system_pkg;
 /
