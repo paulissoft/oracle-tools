@@ -3257,116 +3257,6 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
   end get_schema_ddl;
 
-  procedure ddl_batch_process
-  ( p_session_id in integer
-  , p_add_no_ddl_retrieved in boolean default false 
-  )
-  is
-    -- ORA-00054: resource busy and acquire with NOWAIT specified or timeout expired
-    e_resource_busy exception;
-    pragma exception_init(e_resource_busy, -54);
-
-    l_start_time constant binary_integer := dbms_utility.get_time;
-    l_max_elapsed constant binary_integer := 5 * 60;
-
-    l_min_seq integer;
-    l_max_seq integer;
-    l_schema_object_filter oracle_tools.t_schema_object_filter;
-    l_add_no_ddl_retrieved constant pls_integer := case when p_add_no_ddl_retrieved then 1 else 0 end;
-
-    cursor c_gdssdb(b_seq in integer)
-    is
-      select  gdssdb.*
-      from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-      where   gdssdb.session_id = p_session_id
-      and     gdssdb.seq = b_seq
-      for update skip locked;
-  begin
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS (1)');
-    dbug.print(dbug."input", 'p_session_id: %s; p_add_no_ddl_retrieved: %s', p_session_id, dbug.cast_to_varchar2(p_add_no_ddl_retrieved));
-$end
-
-    -- wait for maximum l_max_elapsed seconds for all batches except 'SCHEMA_EXPORT' to be removed
-    if p_add_no_ddl_retrieved
-    then
-      loop
-        select  count(*)
-        into    l_max_seq
-        from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-        where   gdssdb.session_id = p_session_id
-        and     gdssdb.object_type <> 'SCHEMA_EXPORT';
-
-        exit when l_max_seq = 0;
-
-        if (dbms_utility.get_time - l_start_time) / 100 >= l_max_elapsed
-        then
-          raise e_resource_busy;
-        end if;
-        
-        dbms_session.sleep(10);
-      end loop;
-    end if;
-
-    select  nvl(min(gdssdb.seq), 1)
-    ,       nvl(max(gdssdb.seq), 0)
-    into    l_min_seq
-    ,       l_max_seq
-    from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-    where   gdssdb.session_id = p_session_id
-    and     ( ( l_add_no_ddl_retrieved = 0 and gdssdb.object_type <> 'SCHEMA_EXPORT' ) or
-              ( l_add_no_ddl_retrieved = 1 and gdssdb.object_type =  'SCHEMA_EXPORT' )
-            );
-
-    select  sof.obj
-    into    l_schema_object_filter
-    from    generate_ddl_sessions gds
-            inner join schema_object_filters sof
-            on sof.id = gds.schema_object_filter_id
-    where   gds.session_id = p_session_id;
-
-    <<process_loop>>
-    for i_seq in l_min_seq .. l_max_seq
-    loop
-      for r_gdssdb in c_gdssdb(i_seq)
-      loop
-        begin
-          get_schema_ddl
-          ( p_schema => l_schema_object_filter.schema()
-          , p_transform_param_list => r_gdssdb.transform_param_list
-          , p_params_object_type => r_gdssdb.object_type
-          , p_params_object_schema => r_gdssdb.object_schema
-          , p_params_base_object_schema => r_gdssdb.base_object_schema
-          , p_params_object_name_tab => r_gdssdb.object_name_tab
-          , p_params_base_object_name_tab => r_gdssdb.base_object_name_tab
-          , p_params_nr_objects => r_gdssdb.nr_objects
-          , p_add_no_ddl_retrieved => p_add_no_ddl_retrieved
-          );
-        exception
-          when no_data_found -- there may be no DDL to generate
-          then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-            dbug.on_error;
-$end            
-            null;
-        end;
-        
-        delete
-        from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-        where   current of c_gdssdb;
-      end loop;
-      commit; -- should be here
-    end loop process_loop;
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.leave;
-  exception
-    when others
-    then
-      dbug.leave_on_error;
-      raise;
-$end
-  end ddl_batch_process;
-
   /* PUBLIC ROUTINES */
 
   function display_ddl_schema
@@ -5520,6 +5410,116 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     l_schema_ddl_tab.delete;
 $end
   end get_schema_ddl;
+
+  procedure ddl_batch_process
+  ( p_session_id in integer
+  , p_add_no_ddl_retrieved in boolean
+  )
+  is
+    -- ORA-00054: resource busy and acquire with NOWAIT specified or timeout expired
+    e_resource_busy exception;
+    pragma exception_init(e_resource_busy, -54);
+
+    l_start_time constant binary_integer := dbms_utility.get_time;
+    l_max_elapsed constant binary_integer := 5 * 60;
+
+    l_min_seq integer;
+    l_max_seq integer;
+    l_schema_object_filter oracle_tools.t_schema_object_filter;
+    l_add_no_ddl_retrieved constant pls_integer := case when p_add_no_ddl_retrieved then 1 else 0 end;
+
+    cursor c_gdssdb(b_seq in integer)
+    is
+      select  gdssdb.*
+      from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
+      where   gdssdb.session_id = p_session_id
+      and     gdssdb.seq = b_seq
+      for update skip locked;
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS (1)');
+    dbug.print(dbug."input", 'p_session_id: %s; p_add_no_ddl_retrieved: %s', p_session_id, dbug.cast_to_varchar2(p_add_no_ddl_retrieved));
+$end
+
+    -- wait for maximum l_max_elapsed seconds for all batches except 'SCHEMA_EXPORT' to be removed
+    if p_add_no_ddl_retrieved
+    then
+      loop
+        select  count(*)
+        into    l_max_seq
+        from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
+        where   gdssdb.session_id = p_session_id
+        and     gdssdb.object_type <> 'SCHEMA_EXPORT';
+
+        exit when l_max_seq = 0;
+
+        if (dbms_utility.get_time - l_start_time) / 100 >= l_max_elapsed
+        then
+          raise e_resource_busy;
+        end if;
+        
+        dbms_session.sleep(10);
+      end loop;
+    end if;
+
+    select  nvl(min(gdssdb.seq), 1)
+    ,       nvl(max(gdssdb.seq), 0)
+    into    l_min_seq
+    ,       l_max_seq
+    from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
+    where   gdssdb.session_id = p_session_id
+    and     ( ( l_add_no_ddl_retrieved = 0 and gdssdb.object_type <> 'SCHEMA_EXPORT' ) or
+              ( l_add_no_ddl_retrieved = 1 and gdssdb.object_type =  'SCHEMA_EXPORT' )
+            );
+
+    select  sof.obj
+    into    l_schema_object_filter
+    from    generate_ddl_sessions gds
+            inner join schema_object_filters sof
+            on sof.id = gds.schema_object_filter_id
+    where   gds.session_id = p_session_id;
+
+    <<process_loop>>
+    for i_seq in l_min_seq .. l_max_seq
+    loop
+      for r_gdssdb in c_gdssdb(i_seq)
+      loop
+        begin
+          get_schema_ddl
+          ( p_schema => l_schema_object_filter.schema()
+          , p_transform_param_list => r_gdssdb.transform_param_list
+          , p_params_object_type => r_gdssdb.object_type
+          , p_params_object_schema => r_gdssdb.object_schema
+          , p_params_base_object_schema => r_gdssdb.base_object_schema
+          , p_params_object_name_tab => r_gdssdb.object_name_tab
+          , p_params_base_object_name_tab => r_gdssdb.base_object_name_tab
+          , p_params_nr_objects => r_gdssdb.nr_objects
+          , p_add_no_ddl_retrieved => p_add_no_ddl_retrieved
+          );
+        exception
+          when no_data_found -- there may be no DDL to generate
+          then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+            dbug.on_error;
+$end            
+            null;
+        end;
+        
+        delete
+        from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
+        where   current of c_gdssdb;
+      end loop;
+      commit; -- should be here
+    end loop process_loop;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end ddl_batch_process;
 
   procedure ddl_batch_process
   ( p_submit in boolean
