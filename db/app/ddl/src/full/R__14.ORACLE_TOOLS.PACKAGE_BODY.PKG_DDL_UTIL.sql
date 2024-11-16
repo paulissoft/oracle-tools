@@ -3353,8 +3353,12 @@ $end
         end if;
         close c_gdssdb;
       exception
-        when e_resource_busy
-        then close c_gdssdb;
+        when others
+        then
+          close c_gdssdb;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          dbug.on_error;
+$end
       end;
     end loop process_loop;
     -- will implicitly commit in a batch job
