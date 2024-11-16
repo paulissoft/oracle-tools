@@ -59,7 +59,18 @@ procedure add
 ( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab
 , p_session_id in t_session_id default get_session_id
 );
-/** Update the record in table GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
+/** Update the record in table GENERATE_DDL_SESSION_SCHEMA_DDLS. **/
+
+procedure add
+( p_object_type in varchar2
+, p_object_schema in varchar2
+, p_base_object_schema in varchar2
+, p_object_name_tab in oracle_tools.t_text_tab
+, p_base_object_name_tab in oracle_tools.t_text_tab
+, p_nr_objects in integer
+, p_session_id in t_session_id default get_session_id
+);
+/** Update the record in table GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES. **/
 
 function find_schema_object_by_seq
 ( p_seq in integer default 1 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, seq)

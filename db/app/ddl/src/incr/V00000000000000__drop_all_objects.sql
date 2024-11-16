@@ -28,6 +28,7 @@ declare
     , 'GENERATE_DDL_SESSIONS'
     , 'GENERATE_DDL_SESSION_SCHEMA_OBJECTS'
     , 'GENERATE_DDL_SESSION_SCHEMA_DDLS'
+    , 'GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES'
     );
   l_view_tab sys.odcivarchar2list :=
     sys.odcivarchar2list

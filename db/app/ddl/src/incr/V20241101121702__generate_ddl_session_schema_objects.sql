@@ -20,6 +20,8 @@ create table generate_ddl_session_schema_objects
   foreign key (session_id)
   references generate_ddl_sessions(session_id) on delete cascade
 )
+organization index
+tablespace users
 ;
 
 alter table generate_ddl_session_schema_objects nologging;

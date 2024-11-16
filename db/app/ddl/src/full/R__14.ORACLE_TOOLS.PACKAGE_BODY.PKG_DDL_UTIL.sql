@@ -2940,11 +2940,12 @@ $end
   end remap_schema;
 
   procedure get_schema_ddl_init
-  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+  ( p_schema in varchar2
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
 $end  
   , p_params_object_type in varchar2 -- metadata object type
+  , p_params_object_schema in varchar2 -- metadata object schema
   , p_params_base_object_schema in varchar2 -- base object schema
   , p_params_object_name_tab in oracle_tools.t_text_tab -- object names
   , p_params_base_object_name_tab in oracle_tools.t_text_tab -- base object names
@@ -2962,10 +2963,15 @@ $end
     )
     is
     begin
-      if p_params_object_type = 'SCHEMA_EXPORT' or
-         p_schema_object.object_type() = p_params_object_type
+      if ( p_params_object_type = 'SCHEMA_EXPORT' or
+           p_params_object_type is null or
+           p_schema_object.object_type() = p_params_object_type
+         ) and
+         ( p_params_object_schema is null or
+           p_schema_object.object_schema() = p_params_object_schema
+         ) 
       then
-        p_schema_object.chk(p_schema_object_filter.schema());
+        p_schema_object.chk(p_schema);
 
         l_object_key := p_schema_object.id;
 
@@ -3054,12 +3060,13 @@ $end
   end get_schema_ddl_init;
 
   procedure get_schema_ddl
-  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+  ( p_schema in varchar2
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
 $end  
   , p_transform_param_list in varchar2
   , p_params_object_type in varchar2 -- metadata object type
+  , p_params_object_schema in varchar2 -- metadata object schema
   , p_params_base_object_schema in varchar2 -- base object schema
   , p_params_object_name_tab in oracle_tools.t_text_tab -- object names
   , p_params_base_object_name_tab in oracle_tools.t_text_tab -- base object names
@@ -3085,7 +3092,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print
     ( dbug."input"
     , 'p_schema: %s; p_transform_param_list: %s; p_params_object_type: %s; p_params_base_object_schema: %s'
-    , p_schema_object_filter.schema()
+    , p_schema
     , p_transform_param_list
     , p_params_object_type
     , p_params_base_object_schema
@@ -3095,17 +3102,18 @@ $end
     p_schema_ddl_tab := oracle_tools.t_schema_ddl_tab();    
 
     get_schema_ddl_init
-    ( p_schema_object_filter
+    ( p_schema => p_schema
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-    , p_schema_object_tab
+    , p_schema_object_tab => p_schema_object_tab
 $end    
-    , p_params_object_type
-    , p_params_base_object_schema
-    , p_params_object_name_tab
-    , p_params_base_object_name_tab
-    , p_object_lookup_tab
-    , p_constraint_lookup_tab
-    , p_nr_objects_countdown
+    , p_params_object_type => p_params_object_type
+    , p_params_object_schema => p_params_object_schema
+    , p_params_base_object_schema => p_params_base_object_schema
+    , p_params_object_name_tab => p_params_object_name_tab
+    , p_params_base_object_name_tab => p_params_base_object_name_tab
+    , p_object_lookup_tab => p_object_lookup_tab
+    , p_constraint_lookup_tab => p_constraint_lookup_tab
+    , p_nr_objects_countdown => p_nr_objects_countdown
     );
 
     l_longops_rec := oracle_tools.api_longops_pkg.longops_init
@@ -3125,7 +3133,7 @@ $end
       from    table
               ( oracle_tools.pkg_ddl_util.fetch_ddl
                 ( p_object_type => p_params_object_type
-                , p_object_schema => p_schema_object_filter.schema()
+                , p_object_schema => p_params_object_schema
                 , p_object_name_tab => p_params_object_name_tab
                 , p_base_object_schema => p_params_base_object_schema
                 , p_base_object_name_tab => p_params_base_object_name_tab
@@ -3136,7 +3144,7 @@ $end
     loop
       begin
         parse_object
-        ( p_schema => p_schema_object_filter.schema()
+        ( p_schema => p_schema
         , p_constraint_lookup_tab => p_constraint_lookup_tab
         , p_object_lookup_tab => p_object_lookup_tab
         , p_ku$_ddl => r.obj
@@ -5342,41 +5350,58 @@ $end
   end fetch_ddl;
 
   procedure get_schema_ddl
-  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+  ( p_schema in varchar2
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
 $end  
   , p_transform_param_list in varchar2
   , p_params_object_type in varchar2 -- metadata object type
+  , p_params_object_schema in varchar2 -- metadata object schema
   , p_params_base_object_schema in varchar2 -- base object schema
   , p_params_object_name_tab in oracle_tools.t_text_tab -- object names
   , p_params_base_object_name_tab in oracle_tools.t_text_tab -- base object names
   , p_params_nr_objects in integer
   , p_add_no_ddl_retrieved in boolean
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
   , p_schema_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
+$end  
   )
   is
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+    l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
+$end    
     l_object_lookup_tab t_object_lookup_tab; -- list of all objects
     l_constraint_lookup_tab t_constraint_lookup_tab;
     l_nr_objects_countdown positiven := 1;
   begin
     get_schema_ddl
-    ( p_schema_object_filter
+    ( p_schema => p_schema
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-    , p_schema_object_tab
+    , p_schema_object_tab => p_schema_object_tab
 $end  
-    , p_transform_param_list
-    , p_params_object_type
-    , p_params_base_object_schema
-    , p_params_object_name_tab
-    , p_params_base_object_name_tab
-    , p_params_nr_objects
-    , p_add_no_ddl_retrieved
-    , p_schema_ddl_tab
-    , l_object_lookup_tab
-    , l_constraint_lookup_tab
-    , l_nr_objects_countdown
+    , p_transform_param_list => p_transform_param_list
+    , p_params_object_type => p_params_object_type
+    , p_params_object_schema => p_params_object_schema
+    , p_params_base_object_schema => p_params_base_object_schema
+    , p_params_object_name_tab => p_params_object_name_tab
+    , p_params_base_object_name_tab => p_params_base_object_name_tab
+    , p_params_nr_objects => p_params_nr_objects
+    , p_add_no_ddl_retrieved => p_add_no_ddl_retrieved
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+    , p_schema_ddl_tab => p_schema_ddl_tab
+$else
+    , p_schema_ddl_tab => l_schema_ddl_tab
+$end
+    , p_object_lookup_tab => l_object_lookup_tab
+    , p_constraint_lookup_tab => l_constraint_lookup_tab
+    , p_nr_objects_countdown => l_nr_objects_countdown
     );
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
+    schema_objects_api.add
+    ( p_schema_ddl_tab => l_schema_ddl_tab
+    );
+    l_schema_ddl_tab.delete;
+$end
   end get_schema_ddl;
   
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
@@ -5459,12 +5484,11 @@ $end -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance
     l_use_schema_export t_numeric_boolean_nn := 0;
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     l_schema_object_tab oracle_tools.t_schema_object_tab := null;
+    l_schema_ddl_tab oracle_tools.t_schema_ddl_tab := null;
     l_object_lookup_tab t_object_lookup_tab; -- list of all objects
     l_constraint_lookup_tab t_constraint_lookup_tab;
     l_nr_objects_countdown positiven := 1;
     l_object_key t_object;
-$else    
-    l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
 $end    
 
     cursor c_params
@@ -5681,19 +5705,20 @@ $end
           r_params := l_params_tab(l_params_idx);
 
           get_schema_ddl
-          ( p_schema_object_filter => p_schema_object_filter
+          ( p_schema => p_schema_object_filter.schema()
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
           , p_schema_object_tab => p_schema_object_tab
 $end  
           , p_transform_param_list => p_transform_param_list
           , p_params_object_type => r_params.object_type
+          , p_params_object_schema => r_params.object_schema
           , p_params_base_object_schema => r_params.base_object_schema
           , p_params_object_name_tab => r_params.object_name_tab
           , p_params_base_object_name_tab => r_params.base_object_name_tab
           , p_params_nr_objects => r_params.nr_objects
-          , p_schema_ddl_tab => l_schema_ddl_tab
           , p_add_no_ddl_retrieved => (i_use_schema_export != l_use_schema_export) -- second iteration
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+          , p_schema_ddl_tab => l_schema_ddl_tab
           , p_object_lookup_tab => l_object_lookup_tab
           , p_constraint_lookup_tab => l_constraint_lookup_tab
           , p_nr_objects_countdown => l_nr_objects_countdown
@@ -5715,16 +5740,6 @@ $end
       end loop params_loop;
       
       close c_params;
-
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
-
-      -- every time params change: flush to generate_ddl_session_schema_ddls
-      schema_objects_api.add
-      ( p_schema_ddl_tab => l_schema_ddl_tab
-      );
-      l_schema_ddl_tab.delete;
-
-$end
 
       -- Apparently we are not done.
       -- 1) first iteration (i_use_schema_export = l_use_schema_export) with SCHEMA_EXPORT:
@@ -5771,15 +5786,6 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;      
 $end
     end loop outer_loop;
-
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
-
-    schema_objects_api.add
-    ( p_schema_ddl_tab => l_schema_ddl_tab
-    );
-    l_schema_ddl_tab.delete;
-    
-$end
 
     cleanup;
 

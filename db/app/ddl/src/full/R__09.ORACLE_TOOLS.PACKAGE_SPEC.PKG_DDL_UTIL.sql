@@ -337,18 +337,21 @@ return sys.ku$_ddls
 pipelined;
 
 procedure get_schema_ddl
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
+( p_schema in varchar2
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 , p_schema_object_tab in oracle_tools.t_schema_object_tab
 $end  
 , p_transform_param_list in varchar2
 , p_params_object_type in varchar2 -- dbms_metadata filter for metadata object type
+, p_params_object_schema in varchar2 -- metadata object schema
 , p_params_base_object_schema in varchar2 -- dbms_metadata filter for base object schema
 , p_params_object_name_tab in oracle_tools.t_text_tab -- dbms_metadata filter for object names
 , p_params_base_object_name_tab in oracle_tools.t_text_tab -- dbms_metadata filter for base object names
 , p_params_nr_objects in integer -- dbms_metadata filter for number of objects
 , p_add_no_ddl_retrieved in boolean
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
 , p_schema_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
+$end  
 );
 /** Get the schema DDL. **/
 

@@ -13,6 +13,10 @@ create table generate_ddl_session_schema_ddls
   references generate_ddl_session_schema_objects(session_id, schema_object_id) on delete cascade
 , constraint generate_ddl_session_schema_ddls$ck$1 check (ddl is not null)
 )
+organization index
+tablespace users
+including created
+overflow tablespace users
 nested table ddl.text store as generate_ddl_session_schema_ddls$ddl$text
 ;
 

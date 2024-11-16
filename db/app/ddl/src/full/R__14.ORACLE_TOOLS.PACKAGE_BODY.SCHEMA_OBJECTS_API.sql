@@ -1257,6 +1257,39 @@ exception
 $end
 end add;
 
+procedure add
+( p_object_type in varchar2
+, p_object_schema in varchar2
+, p_base_object_schema in varchar2
+, p_object_name_tab in oracle_tools.t_text_tab
+, p_base_object_name_tab in oracle_tools.t_text_tab
+, p_nr_objects in integer
+, p_session_id in t_session_id default get_session_id
+)
+is
+begin
+  insert into oracle_tools.generate_ddl_session_schema_ddl_batches
+  ( session_id
+  , seq
+  , object_type
+  , object_schema
+  , base_object_schema
+  , object_name_tab
+  , base_object_name_tab
+  , nr_objects
+  )
+  values
+  ( p_session_id
+  , (select nvl(max(gdssdb.seq), 0) + 1 from oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb where gdssdb.session_id = p_session_id)
+  , p_object_type
+  , p_object_schema
+  , p_base_object_schema
+  , p_object_name_tab
+  , p_base_object_name_tab
+  , p_nr_objects
+  );
+end add;
+
 function find_schema_object_by_seq
 ( p_seq in integer
 , p_session_id in t_session_id
