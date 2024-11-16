@@ -3280,16 +3280,14 @@ $end
       from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
       where   gdssdb.session_id = p_session_id
       and     gdssdb.seq = b_seq
-      for update nowait;
-      
-    r_gdssdb c_gdssdb%rowtype;
+      for update skip locked;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS (1)');
     dbug.print(dbug."input", 'p_session_id: %s; p_add_no_ddl_retrieved: %s', p_session_id, dbug.cast_to_varchar2(p_add_no_ddl_retrieved));
 $end
 
-  -- wait for maximum l_max_elapsed seconds for all batches except 'SCHEMA_EXPORT' to be removed
+    -- wait for maximum l_max_elapsed seconds for all batches except 'SCHEMA_EXPORT' to be removed
     if p_add_no_ddl_retrieved
     then
       loop
@@ -3330,11 +3328,9 @@ $end
     <<process_loop>>
     for i_seq in l_min_seq .. l_max_seq
     loop
-      begin
-        open c_gdssdb(i_seq);
-        fetch c_gdssdb into r_gdssdb;
-        if c_gdssdb%found
-        then
+      for r_gdssdb in c_gdssdb(i_seq)
+      loop
+        begin
           get_schema_ddl
           ( p_schema => l_schema_object_filter.schema()
           , p_transform_param_list => r_gdssdb.transform_param_list
@@ -3346,22 +3342,21 @@ $end
           , p_params_nr_objects => r_gdssdb.nr_objects
           , p_add_no_ddl_retrieved => p_add_no_ddl_retrieved
           );
-          
-          delete
-          from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-          where   current of c_gdssdb;
-        end if;
-        close c_gdssdb;
-      exception
-        when others
-        then
-          close c_gdssdb;
+        exception
+          when no_data_found -- there may be no DDL to generate
+          then
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          dbug.on_error;
-$end
-      end;
+            dbug.on_error;
+$end            
+            null;
+        end;
+        
+        delete
+        from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
+        where   current of c_gdssdb;
+      end loop;
+      commit; -- should be here
     end loop process_loop;
-    -- will implicitly commit in a batch job
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
@@ -3519,10 +3514,12 @@ $end
       , p_transform_param_list => p_transform_param_list
       );
       commit; -- this is the moment that jobs will run
+      /*
       ddl_batch_process(p_submit => false, p_session_id => oracle_tools.schema_objects_api.get_session_id);
       commit;
       ddl_batch_process(p_session_id => oracle_tools.schema_objects_api.get_session_id, p_add_no_ddl_retrieved => true);
       commit;
+      */
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       select count(*) into l_count from oracle_tools.v_my_schema_ddls;
@@ -5543,6 +5540,7 @@ $end
       , what => utl_lms.format_message
                 ( 'begin
   oracle_tools.pkg_ddl_util.ddl_batch_process(p_submit => false, p_session_id => %s);
+  commit;
 exception
   when others /* never let this job start again due to an error */
   then rollback;
@@ -5552,6 +5550,7 @@ end;'
       );
       -- no commit here
     else
+      oracle_tools.schema_objects_api.set_session_id(p_session_id);
       ddl_batch_process
       ( p_session_id => p_session_id
       , p_add_no_ddl_retrieved => false
@@ -5958,7 +5957,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
     end loop outer_loop;
 
-    ddl_batch_process(true, oracle_tools.schema_objects_api.get_session_id);
+--    ddl_batch_process(true, oracle_tools.schema_objects_api.get_session_id);
 
     cleanup;
 
