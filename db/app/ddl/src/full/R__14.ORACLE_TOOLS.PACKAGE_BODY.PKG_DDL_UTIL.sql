@@ -5500,7 +5500,7 @@ $end
           when no_data_found -- there may be no DDL to generate
           then
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-            dbug.on_error;
+            dbug.print(dbug."info", 'NO_DATA_FOUND error ignored because there are no more schema objects to generate DDL for');
 $end            
             null;
         end;
