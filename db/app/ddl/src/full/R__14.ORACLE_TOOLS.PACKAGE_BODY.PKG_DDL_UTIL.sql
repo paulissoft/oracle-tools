@@ -63,6 +63,8 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
 
   c_object_no_dependencies_tab constant t_object_natural_tab := get_object_no_dependencies_tab; -- initialisation
 
+  "SCHEMA_EXPORT" constant all_objects.object_type%type := 'SCHEMA_EXPORT';
+  
   "schema_version" constant user_objects.object_name%type := 'schema_version';
 
   "flyway_schema_history" constant user_objects.object_name%type := 'flyway_schema_history';
@@ -267,6 +269,8 @@ $end
   c_transform_param_tab constant t_transform_param_tab := default_transform_param_tab;
 
   g_ddl_tab sys.ku$_ddls; -- should be package global for better performance
+
+  g_parallel_level natural := null; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
 
   /* PRIVATE ROUTINES */
 
@@ -1808,7 +1812,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
                ,p_base_object_schema);
 $end
 
-    if p_object_type = 'SCHEMA_EXPORT'
+    if p_object_type = "SCHEMA_EXPORT"
     then
       -- Use filters to specify the schema. See SCHEMA_EXPORT_OBJECTS for a complete overview.
       dbms_metadata$set_filter(handle => p_handle, name => 'SCHEMA', value => p_object_schema);
@@ -1997,7 +2001,7 @@ $end
       then
         set_exclude_name_expr(p_object_type => p_object_type, p_name => 'EXCLUDE_NAME_EXPR');
       end if;
-    end if; -- if p_object_type = 'SCHEMA_EXPORT'
+    end if; -- if p_object_type = "SCHEMA_EXPORT"
 
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
     dbug.leave;
@@ -2172,7 +2176,7 @@ $end
     -- ORA-06502: PL/SQL: numeric or value error
     -- LPX-00210: expected '<' instead of '\'
 
-    if p_object_type = 'SCHEMA_EXPORT'
+    if p_object_type = "SCHEMA_EXPORT"
     then
       md_set_transform_param
       ( p_transform_handle => dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
@@ -2963,7 +2967,7 @@ $end
     )
     is
     begin
-      if ( p_object_type = 'SCHEMA_EXPORT' or
+      if ( p_object_type = "SCHEMA_EXPORT" or
            p_object_type is null or
            p_schema_object.object_type() = p_object_type
          ) and
@@ -5337,7 +5341,7 @@ $end
       then
         md_close(l_handle);
       end if;
-      if p_object_type = 'SCHEMA_EXPORT'
+      if p_object_type = "SCHEMA_EXPORT"
       then
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
         dbug.leave;
@@ -5406,6 +5410,14 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 $end
   end get_schema_ddl;
 
+  procedure set_parallel_level
+  ( p_parallel_level in natural
+  )
+  is
+  begin
+    g_parallel_level := p_parallel_level;
+  end set_parallel_level;
+
   procedure ddl_batch_process
   is
     l_session_id constant integer := to_number(sys_context('USERENV', 'SESSIONID'));
@@ -5432,7 +5444,7 @@ end;'
       , to_char(l_session_id)
       );
     l_status number;
-    l_seq_schema_export oracle_tools.generate_ddl_session_schema_ddl_batchesseq%type;
+    l_seq_schema_export oracle_tools.generate_ddl_session_schema_ddl_batches.seq%type;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS (2)');
@@ -5487,7 +5499,7 @@ $end
       select  gdssdb.seq
       into    l_seq_schema_export
       from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-      where   gdssdb.object_type = 'SCHEMA_EXPORT'
+      where   gdssdb.object_type = "SCHEMA_EXPORT"
       and     gdssdb.session_id = l_session_id;
 
       oracle_tools.pkg_ddl_util.ddl_batch_process
@@ -5548,7 +5560,7 @@ $end
           , p_object_name_tab => r_gdssdb.object_name_tab
           , p_base_object_name_tab => r_gdssdb.base_object_name_tab
           , p_nr_objects => r_gdssdb.nr_objects
-          , p_add_no_ddl_retrieved => p_add_no_ddl_retrieved
+          , p_add_no_ddl_retrieved => (r_gdssdb.object_type = "SCHEMA_EXPORT")
           );
         exception
           when no_data_found -- there may be no DDL to generate
@@ -5677,7 +5689,7 @@ $end
       ,       base_object_name_tab
       ,       nr_objects
       from    ( with src as
-                ( select  'SCHEMA_EXPORT' as object_type
+                ( select  "SCHEMA_EXPORT" as object_type
                   ,       b_schema as object_schema
                   ,       null as object_name
                   ,       null as base_object_schema
@@ -5758,7 +5770,7 @@ $end
       order by
               case object_schema when 'PUBLIC' then 0 when b_schema then 1 else 2 end -- PUBLIC synonyms first
       ,       case object_type
-                when 'SCHEMA_EXPORT' then 0
+                when "SCHEMA_EXPORT" then 0
                 else 1
               end -- SCHEMA_EXPORT next
       ,       object_type

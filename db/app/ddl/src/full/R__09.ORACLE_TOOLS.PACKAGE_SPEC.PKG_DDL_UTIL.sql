@@ -342,18 +342,26 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 , p_schema_object_tab in oracle_tools.t_schema_object_tab
 $end  
 , p_transform_param_list in varchar2
-, p_params_object_type in varchar2 -- dbms_metadata filter for metadata object type
-, p_params_object_schema in varchar2 -- metadata object schema
-, p_params_base_object_schema in varchar2 -- dbms_metadata filter for base object schema
-, p_params_object_name_tab in oracle_tools.t_text_tab -- dbms_metadata filter for object names
-, p_params_base_object_name_tab in oracle_tools.t_text_tab -- dbms_metadata filter for base object names
-, p_params_nr_objects in integer -- dbms_metadata filter for number of objects
+, p_object_type in varchar2 -- dbms_metadata filter for metadata object type
+, p_object_schema in varchar2 -- metadata object schema
+, p_base_object_schema in varchar2 -- dbms_metadata filter for base object schema
+, p_object_name_tab in oracle_tools.t_text_tab -- dbms_metadata filter for object names
+, p_base_object_name_tab in oracle_tools.t_text_tab -- dbms_metadata filter for base object names
+, p_nr_objects in integer -- dbms_metadata filter for number of objects
 , p_add_no_ddl_retrieved in boolean
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
 , p_schema_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
 $end  
 );
 /** Get the schema DDL. **/
+
+procedure set_parallel_level
+( p_parallel_level in natural default null
+);
+/**
+Set the number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
+See also DBMS_PARALLEL_EXECUTE.RUN_TASK.
+**/
 
 procedure ddl_batch_process;
 /** Invokes DBMS_PARALLEL_EXECUTE to process GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES for the current session. **/
