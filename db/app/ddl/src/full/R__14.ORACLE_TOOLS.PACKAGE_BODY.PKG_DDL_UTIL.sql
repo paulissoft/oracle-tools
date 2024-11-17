@@ -3007,7 +3007,7 @@ $end
             end if;
           end if;
         end if;
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       else
         dbug.print
         ( dbug."info"
@@ -5481,77 +5481,85 @@ end;]'
       , to_char(l_session_id)
       );
     l_status number;
-    l_seq_min oracle_tools.generate_ddl_session_schema_ddl_batches.seq%type;
-    l_seq_max oracle_tools.generate_ddl_session_schema_ddl_batches.seq%type;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS');
 $end
- 
-    -- Create the TASK
-    dbms_parallel_execute.create_task(l_task_name);
 
-    begin
-      dbms_parallel_execute.create_chunks_by_sql(l_task_name, l_chunk_sql, false);
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."info", 'starting dbms_parallel_execute.run_task');
-$end
-
-      -- Execute the DML in parallel
-      dbms_parallel_execute.run_task
-      ( l_task_name
-      , l_sql_stmt
-      , dbms_sql.native
-      , parallel_level => g_parallel_level
-      );
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."info", 'stopped dbms_parallel_execute.run_task');
-$end
-
-      -- If there is error, RESUME it for at most 2 times.
-      for i_try in 1..2
-      loop
-        l_status := dbms_parallel_execute.task_status(l_task_name);
-        exit when l_status = dbms_parallel_execute.finished;
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-        dbug.print(dbug."info", 'dbms_parallel_execute.resume_task (try: %s, status: %s)', i_try, l_status);
-$end
-        dbms_parallel_execute.resume_task(l_task_name);
-      end loop;
- 
-      -- Done with processing; drop the task
-      dbms_parallel_execute.drop_task(l_task_name);
-    exception
-      when others
-      then
-        -- On error also done with processing; drop the task
-        dbms_parallel_execute.drop_task(l_task_name);
-        raise;      
-    end;
-
-    -- there may be some work to do
-    begin
-      select  min(gdssdb.seq)
-      ,       max(gdssdb.seq)
-      into    l_seq_min
-      ,       l_seq_max
+    -- SCHEMA_EXPORT first
+    <<schema_export_loop>>
+    for r in
+    ( select  gdssdb.seq
       from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-      where   gdssdb.session_id = l_session_id;
+      where   gdssdb.object_type in ('SCHEMA_EXPORT')
+      and     gdssdb.session_id = l_session_id
+    )
+    loop
+      begin
+        -- try again all variants
+        oracle_tools.pkg_ddl_util.ddl_batch_process
+        ( p_session_id => l_session_id
+        , p_start_id => r.seq
+        , p_end_id => r.seq
+        );
+      exception
+        when no_data_found -- comes from procedure call (indirectly from get_schema_ddl_init)
+        then
+          null;
+      end;
+    end loop schema_export_loop;
 
-      -- try again all variants
-      oracle_tools.pkg_ddl_util.ddl_batch_process
-      ( p_session_id => l_session_id
-      , p_start_id => l_seq_min
-      , p_end_id => l_seq_max
-      );
-    exception
-      when no_data_found -- comes from procedure call (indirectly from get_schema_ddl_init)
-      then
-        null;
-    end;
+    <<rest_loop>>
+    for r in
+    ( select  1
+      from    oracle_tools.v_my_schema_objects_no_ddl_yet
+      where   rownum = 1
+    )
+    loop
+      -- Create the TASK for all but SCHEMA_EXPORT
+      dbms_parallel_execute.create_task(l_task_name);
+
+      begin
+        dbms_parallel_execute.create_chunks_by_sql(l_task_name, l_chunk_sql, false);
+
+  $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        dbug.print(dbug."info", 'starting dbms_parallel_execute.run_task');
+  $end
+
+        -- Execute the DML in parallel
+        dbms_parallel_execute.run_task
+        ( l_task_name
+        , l_sql_stmt
+        , dbms_sql.native
+        , parallel_level => g_parallel_level
+        );
+
+  $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        dbug.print(dbug."info", 'stopped dbms_parallel_execute.run_task');
+  $end
+
+        -- If there is error, RESUME it for at most 2 times.
+        for i_try in 1..2
+        loop
+          l_status := dbms_parallel_execute.task_status(l_task_name);
+          exit when l_status = dbms_parallel_execute.finished;
+
+  $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          dbug.print(dbug."info", 'dbms_parallel_execute.resume_task (try: %s, status: %s)', i_try, l_status);
+  $end
+          dbms_parallel_execute.resume_task(l_task_name);
+        end loop;
+   
+        -- Done with processing; drop the task
+        dbms_parallel_execute.drop_task(l_task_name);
+      exception
+        when others
+        then
+          -- On error also done with processing; drop the task
+          dbms_parallel_execute.drop_task(l_task_name);
+          raise;      
+      end;
+    end loop rest_loop;
     
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -5815,10 +5823,8 @@ $end
               case object_schema when 'PUBLIC' then 0 when b_schema then 1 else 2 end -- PUBLIC synonyms first
       ,       case object_type
                 when "SCHEMA_EXPORT"
-                then 0 -- expensive
-                when 'TABLE' -- also expensive
-                then 1
-                else 2
+                then 0 -- will get all
+                else 1
               end
       ,       object_type
       ,       object_schema
@@ -5849,12 +5855,21 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     );
 $end
 
+/*
+
+1 - 00:06        (default parallel)
+2 - 00:07:14.513 (serial)
+3 - SCHEMA_EXPORT
+*/
+
+/*
 $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
     -- only use schema export when necessary but first try per object type and some other parameters
     oracle_tools.schema_objects_api.default_match_perc_threshold(null);
 
 $end
+*/
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print
