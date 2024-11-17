@@ -5461,7 +5461,7 @@ $end
 select  gdssdb.seq as start_id
 ,       gdssdb.seq as end_id
 from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-where   gdssdb.object_type not in ('SCHEMA_EXPORT', 'TABLE')
+where   gdssdb.object_type not in ('SCHEMA_EXPORT')
 and     gdssdb.session_id = to_number(sys_context('USERENV', 'SESSIONID'))]';
     -- Here we substitute the session id into the statement since it may be executed by another session.
     l_sql_stmt constant varchar2(1000 byte) :=
@@ -5480,7 +5480,8 @@ end;]'
       , to_char(l_session_id)
       );
     l_status number;
-    l_seq_schema_export oracle_tools.generate_ddl_session_schema_ddl_batches.seq%type;
+    l_seq_min oracle_tools.generate_ddl_session_schema_ddl_batches.seq%type;
+    l_seq_max oracle_tools.generate_ddl_session_schema_ddl_batches.seq%type;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS');
@@ -5532,19 +5533,21 @@ $end
 
     -- there may be some work to do
     begin
-      select  gdssdb.seq
-      into    l_seq_schema_export
+      select  min(gdssdb.seq)
+      ,       max(gdssdb.seq)
+      into    l_seq_min
+      ,       l_seq_max
       from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-      where   gdssdb.object_type = "SCHEMA_EXPORT"
-      and     gdssdb.session_id = l_session_id;
+      where   gdssdb.session_id = l_session_id;
 
+      -- try again all variants
       oracle_tools.pkg_ddl_util.ddl_batch_process
       ( p_session_id => l_session_id
-      , p_start_id => 1 -- just in case some DBMS_PARALLEL_CHUNK did not work correctly
-      , p_end_id => l_seq_schema_export
+      , p_start_id => l_seq_min
+      , p_end_id => l_seq_max
       );
     exception
-      when no_data_found -- may come from select or procedure call
+      when no_data_found -- comes from procedure call (indirectly from get_schema_ddl_init)
       then
         null;
     end;
