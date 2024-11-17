@@ -270,7 +270,7 @@ $end
 
   g_ddl_tab sys.ku$_ddls; -- should be package global for better performance
 
-  -- GJP: since DBMS_METADATA needs to warm up there is no need to have several sessios at the same time
+  -- GJP: since DBMS_METADATA needs to warm up there is no need to have several sessions at the same time
   g_parallel_level natural := 0; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
 
   /* PRIVATE ROUTINES */
