@@ -3006,6 +3006,15 @@ $end
             end if;
           end if;
         end if;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      else
+        dbug.print
+        ( dbug."info"
+        , 'skipping this schema object: (type=%s, schema=%s)'
+        , p_schema_object.object_type()
+        , p_schema_object.object_schema()
+        );
+$end
       end if;
     exception
       when others
@@ -3018,6 +3027,14 @@ $end
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
+    dbug.print
+    ( dbug."input"
+    , 'p_schema: %s; p_object_type: %s; p_object_schema: %s; p_base_object_schema: %s'
+    , p_schema
+    , p_object_type
+    , p_object_schema
+    , p_base_object_schema
+    );
 $end
 
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
@@ -5504,7 +5521,7 @@ $end
 
       oracle_tools.pkg_ddl_util.ddl_batch_process
       ( p_session_id => l_session_id
-      , p_start_id => l_seq_schema_export
+      , p_start_id => 1 -- just in case some DBMS_PARALLEL_CHUNK did not work correctly
       , p_end_id => l_seq_schema_export
       );
     exception
@@ -5529,15 +5546,12 @@ $end
   , p_end_id in number
   )
   is
-    l_min_seq constant pls_integer := p_start_id;
-    l_max_seq constant pls_integer := p_end_id;
-
-    cursor c_gdssdb(b_seq in integer)
+    cursor c_gdssdb
     is
       select  gdssdb.*
       from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
       where   gdssdb.session_id = p_session_id
-      and     gdssdb.seq = b_seq
+      and     gdssdb.seq between p_start_id and p_end_id
       for update;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -5545,38 +5559,37 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."input", 'p_session_id: %s; p_start_id: %s; p_end_id: %s', p_session_id, p_start_id, p_end_id);
 $end
 
-    <<process_loop>>
-    for i_seq in l_min_seq .. l_max_seq
+    -- essential when in another process
+    oracle_tools.schema_objects_api.set_session_id(p_session_id);
+
+    for r_gdssdb in c_gdssdb
     loop
-      for r_gdssdb in c_gdssdb(i_seq)
-      loop
-        begin
-          get_schema_ddl
-          ( p_schema => r_gdssdb.schema
-          , p_transform_param_list => r_gdssdb.transform_param_list
-          , p_object_type => r_gdssdb.object_type
-          , p_object_schema => r_gdssdb.object_schema
-          , p_base_object_schema => r_gdssdb.base_object_schema
-          , p_object_name_tab => r_gdssdb.object_name_tab
-          , p_base_object_name_tab => r_gdssdb.base_object_name_tab
-          , p_nr_objects => r_gdssdb.nr_objects
-          , p_add_no_ddl_retrieved => (r_gdssdb.object_type = "SCHEMA_EXPORT")
-          );
-        exception
-          when no_data_found -- there may be no DDL to generate
-          then
+      begin
+        get_schema_ddl
+        ( p_schema => r_gdssdb.schema
+        , p_transform_param_list => r_gdssdb.transform_param_list
+        , p_object_type => r_gdssdb.object_type
+        , p_object_schema => r_gdssdb.object_schema
+        , p_base_object_schema => r_gdssdb.base_object_schema
+        , p_object_name_tab => r_gdssdb.object_name_tab
+        , p_base_object_name_tab => r_gdssdb.base_object_name_tab
+        , p_nr_objects => r_gdssdb.nr_objects
+        , p_add_no_ddl_retrieved => (r_gdssdb.object_type = "SCHEMA_EXPORT")
+        );
+      exception
+        when no_data_found -- there may be no DDL to generate
+        then
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-            dbug.print(dbug."info", 'NO_DATA_FOUND error ignored because there are no more schema objects to generate DDL for');
+          dbug.print(dbug."info", 'NO_DATA_FOUND error ignored because there are no more schema objects to generate DDL for');
 $end            
-            null;
-        end;
+          null;
+      end;
         
-        delete
-        from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-        where   current of c_gdssdb;
-      end loop;
-      commit; -- should be here
-    end loop process_loop;
+      delete
+      from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
+      where   current of c_gdssdb;
+    end loop;
+    commit; -- should be here
     
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
