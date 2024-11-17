@@ -5466,7 +5466,7 @@ and     gdssdb.session_id = to_number(sys_context('USERENV', 'SESSIONID'))]';
     -- Here we substitute the session id into the statement since it may be executed by another session.
     l_sql_stmt constant varchar2(1000 byte) :=
       utl_lms.format_message
-      ( '
+      ( q'[
 begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   dbug.activate('LOG4PLSQL', true);
@@ -5476,7 +5476,7 @@ $end
   , p_start_id => :start_id
   , p_end_id => :end_id
   );
-end;'
+end;]'
       , to_char(l_session_id)
       );
     l_status number;
@@ -5571,6 +5571,9 @@ $end
       from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
       where   gdssdb.session_id = p_session_id
       and     gdssdb.seq between p_start_id and p_end_id
+      order by
+              gdssdb.session_id
+      ,       gdssdb.seq
       for update;
   begin
     -- essential when in another process
