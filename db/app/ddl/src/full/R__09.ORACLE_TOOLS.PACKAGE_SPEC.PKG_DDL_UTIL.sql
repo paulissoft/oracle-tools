@@ -151,6 +151,11 @@ subtype t_network_link_nn is t_network_link not null;
 
 type t_transform_param_tab is table of boolean index by varchar2(4000 char);
 
+procedure get_transform_param_tab
+( p_transform_param_list in varchar2
+, p_transform_param_tab out nocopy t_transform_param_tab
+);
+
 procedure md_open
 ( p_object_type in t_metadata_object_type
 , p_object_schema in varchar2
