@@ -2175,27 +2175,22 @@ $end
     -- ORA-06502: PL/SQL: numeric or value error
     -- LPX-00210: expected '<' instead of '\'
 
-    if p_object_type = "SCHEMA_EXPORT"
+    if p_transform_to_ddl
     then
-      md_set_transform_param
-      ( p_transform_handle => case
-                                when p_transform_to_ddl
-                                then dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
-                                else dbms_metadata.session_transform 
-                              end
-      , p_use_object_type_param => true
-      , p_transform_param_tab => p_transform_param_tab
-      );
-    else
-      md_set_transform_param
-      ( p_transform_handle => case
-                                when p_transform_to_ddl
-                                then dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
-                                else dbms_metadata.session_transform 
-                              end
-      , p_object_type_tab => oracle_tools.t_text_tab(p_object_type)
-      , p_transform_param_tab => p_transform_param_tab
-      );
+      if p_object_type = "SCHEMA_EXPORT"
+      then
+        md_set_transform_param
+        ( p_transform_handle => dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
+        , p_use_object_type_param => true
+        , p_transform_param_tab => p_transform_param_tab
+        );
+      else
+        md_set_transform_param
+        ( p_transform_handle => dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
+        , p_object_type_tab => oracle_tools.t_text_tab(p_object_type)
+        , p_transform_param_tab => p_transform_param_tab
+        );
+      end if;
     end if;
     md_set_filter
     ( p_object_type => p_object_type
