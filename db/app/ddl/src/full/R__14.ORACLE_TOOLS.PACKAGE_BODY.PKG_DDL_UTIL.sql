@@ -5813,9 +5813,12 @@ $end
       order by
               case object_schema when 'PUBLIC' then 0 when b_schema then 1 else 2 end -- PUBLIC synonyms first
       ,       case object_type
-                when "SCHEMA_EXPORT" then 0
-                else 1
-              end -- SCHEMA_EXPORT next
+                when "SCHEMA_EXPORT"
+                then 0 -- expensive
+                when 'TABLE' -- also expensive
+                then 1
+                else 2
+              end
       ,       object_type
       ,       object_schema
       ,       base_object_schema
