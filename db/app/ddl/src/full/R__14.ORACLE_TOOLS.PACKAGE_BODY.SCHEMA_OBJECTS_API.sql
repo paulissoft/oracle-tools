@@ -1258,7 +1258,8 @@ $end
 end add;
 
 procedure add
-( p_transform_param_list in varchar2
+( p_object_schema in varchar2
+, p_transform_param_list in varchar2
 , p_object_type in varchar2
 , p_object_schema in varchar2
 , p_base_object_schema in varchar2
@@ -1272,6 +1273,7 @@ begin
   insert into oracle_tools.generate_ddl_session_schema_ddl_batches
   ( session_id
   , seq
+  , object_schema
   , transform_param_list
   , object_type
   , object_schema
@@ -1283,6 +1285,7 @@ begin
   values
   ( p_session_id
   , (select nvl(max(gdssdb.seq), 0) + 1 from oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb where gdssdb.session_id = p_session_id)
+  , p_object_schema
   , p_transform_param_list
   , p_object_type
   , p_object_schema

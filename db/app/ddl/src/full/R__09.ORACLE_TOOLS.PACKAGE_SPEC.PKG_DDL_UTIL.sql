@@ -355,15 +355,15 @@ $end
 );
 /** Get the schema DDL. **/
 
-procedure ddl_batch_process
-( p_session_id in integer
-, p_add_no_ddl_retrieved in boolean
-);
+procedure ddl_batch_process;
+/** Invokes DBMS_PARALLEL_EXECUTE to process GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES for the current session. **/
 
 procedure ddl_batch_process
-( p_submit in boolean
-, p_session_id in integer
+( p_session_id in integer
+, p_start_id in number
+, p_end_id in number
 );
+/** Processes GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES for this session within this range. **/
 
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
 

@@ -2944,11 +2944,11 @@ $end
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
 $end  
-  , p_params_object_type in varchar2 -- metadata object type
-  , p_params_object_schema in varchar2 -- metadata object schema
-  , p_params_base_object_schema in varchar2 -- base object schema
-  , p_params_object_name_tab in oracle_tools.t_text_tab -- object names
-  , p_params_base_object_name_tab in oracle_tools.t_text_tab -- base object names
+  , p_object_type in varchar2 -- metadata object type
+  , p_object_schema in varchar2 -- metadata object schema
+  , p_base_object_schema in varchar2 -- base object schema
+  , p_object_name_tab in oracle_tools.t_text_tab -- object names
+  , p_base_object_name_tab in oracle_tools.t_text_tab -- base object names
   , p_object_lookup_tab in out nocopy t_object_lookup_tab -- list of all objects
   , p_constraint_lookup_tab in out nocopy t_constraint_lookup_tab
   , p_nr_objects_countdown in out nocopy positiven
@@ -2963,12 +2963,12 @@ $end
     )
     is
     begin
-      if ( p_params_object_type = 'SCHEMA_EXPORT' or
-           p_params_object_type is null or
-           p_schema_object.object_type() = p_params_object_type
+      if ( p_object_type = 'SCHEMA_EXPORT' or
+           p_object_type is null or
+           p_schema_object.object_type() = p_object_type
          ) and
-         ( p_params_object_schema is null or
-           p_schema_object.object_schema() = p_params_object_schema
+         ( p_object_schema is null or
+           p_schema_object.object_schema() = p_object_schema
          ) 
       then
         p_schema_object.chk(p_schema);
@@ -3065,12 +3065,12 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
 $end  
   , p_transform_param_list in varchar2
-  , p_params_object_type in varchar2 -- metadata object type
-  , p_params_object_schema in varchar2 -- metadata object schema
-  , p_params_base_object_schema in varchar2 -- base object schema
-  , p_params_object_name_tab in oracle_tools.t_text_tab -- object names
-  , p_params_base_object_name_tab in oracle_tools.t_text_tab -- base object names
-  , p_params_nr_objects in integer
+  , p_object_type in varchar2 -- metadata object type
+  , p_object_schema in varchar2 -- metadata object schema
+  , p_base_object_schema in varchar2 -- base object schema
+  , p_object_name_tab in oracle_tools.t_text_tab -- object names
+  , p_base_object_name_tab in oracle_tools.t_text_tab -- base object names
+  , p_nr_objects in integer
   , p_add_no_ddl_retrieved in boolean
   , p_schema_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
   , p_object_lookup_tab in out nocopy t_object_lookup_tab -- list of all objects
@@ -3091,11 +3091,11 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
     dbug.print
     ( dbug."input"
-    , 'p_schema: %s; p_transform_param_list: %s; p_params_object_type: %s; p_params_base_object_schema: %s'
+    , 'p_schema: %s; p_transform_param_list: %s; p_object_type: %s; p_base_object_schema: %s'
     , p_schema
     , p_transform_param_list
-    , p_params_object_type
-    , p_params_base_object_schema
+    , p_object_type
+    , p_base_object_schema
     );
 $end
 
@@ -3106,11 +3106,11 @@ $end
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     , p_schema_object_tab => p_schema_object_tab
 $end    
-    , p_params_object_type => p_params_object_type
-    , p_params_object_schema => p_params_object_schema
-    , p_params_base_object_schema => p_params_base_object_schema
-    , p_params_object_name_tab => p_params_object_name_tab
-    , p_params_base_object_name_tab => p_params_base_object_name_tab
+    , p_object_type => p_object_type
+    , p_object_schema => p_object_schema
+    , p_base_object_schema => p_base_object_schema
+    , p_object_name_tab => p_object_name_tab
+    , p_base_object_name_tab => p_base_object_name_tab
     , p_object_lookup_tab => p_object_lookup_tab
     , p_constraint_lookup_tab => p_constraint_lookup_tab
     , p_nr_objects_countdown => p_nr_objects_countdown
@@ -3132,11 +3132,11 @@ $end
     ( select  value(t) as obj
       from    table
               ( oracle_tools.pkg_ddl_util.fetch_ddl
-                ( p_object_type => p_params_object_type
-                , p_object_schema => p_params_object_schema
-                , p_object_name_tab => p_params_object_name_tab
-                , p_base_object_schema => p_params_base_object_schema
-                , p_base_object_name_tab => p_params_base_object_name_tab
+                ( p_object_type => p_object_type
+                , p_object_schema => p_object_schema
+                , p_object_name_tab => p_object_name_tab
+                , p_base_object_schema => p_base_object_schema
+                , p_base_object_name_tab => p_base_object_name_tab
                 , p_transform_param_list => p_transform_param_list
                 )
               ) t
@@ -3403,14 +3403,9 @@ $end
       ( p_schema_object_filter => l_schema_object_filter
       , p_transform_param_list => p_transform_param_list
       );
-      commit; -- this is the moment that jobs will run
-      /*
-      ddl_batch_process(p_submit => false, p_session_id => oracle_tools.schema_objects_api.get_session_id);
       commit;
-      ddl_batch_process(p_session_id => oracle_tools.schema_objects_api.get_session_id, p_add_no_ddl_retrieved => true);
+      ddl_batch_process;
       commit;
-      */
-
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       select count(*) into l_count from oracle_tools.v_my_schema_ddls;
       dbug.print
@@ -5362,12 +5357,12 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
 $end  
   , p_transform_param_list in varchar2
-  , p_params_object_type in varchar2 -- metadata object type
-  , p_params_object_schema in varchar2 -- metadata object schema
-  , p_params_base_object_schema in varchar2 -- base object schema
-  , p_params_object_name_tab in oracle_tools.t_text_tab -- object names
-  , p_params_base_object_name_tab in oracle_tools.t_text_tab -- base object names
-  , p_params_nr_objects in integer
+  , p_object_type in varchar2 -- metadata object type
+  , p_object_schema in varchar2 -- metadata object schema
+  , p_base_object_schema in varchar2 -- base object schema
+  , p_object_name_tab in oracle_tools.t_text_tab -- object names
+  , p_base_object_name_tab in oracle_tools.t_text_tab -- base object names
+  , p_nr_objects in integer
   , p_add_no_ddl_retrieved in boolean
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
   , p_schema_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
@@ -5387,12 +5382,12 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     , p_schema_object_tab => p_schema_object_tab
 $end  
     , p_transform_param_list => p_transform_param_list
-    , p_params_object_type => p_params_object_type
-    , p_params_object_schema => p_params_object_schema
-    , p_params_base_object_schema => p_params_base_object_schema
-    , p_params_object_name_tab => p_params_object_name_tab
-    , p_params_base_object_name_tab => p_params_base_object_name_tab
-    , p_params_nr_objects => p_params_nr_objects
+    , p_object_type => p_object_type
+    , p_object_schema => p_object_schema
+    , p_base_object_schema => p_base_object_schema
+    , p_object_name_tab => p_object_name_tab
+    , p_base_object_name_tab => p_base_object_name_tab
+    , p_nr_objects => p_nr_objects
     , p_add_no_ddl_retrieved => p_add_no_ddl_retrieved
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     , p_schema_ddl_tab => p_schema_ddl_tab
@@ -5412,21 +5407,118 @@ $end
   end get_schema_ddl;
 
   procedure ddl_batch_process
+  is
+    l_session_id constant integer := to_number(sys_context('USERENV', 'SESSIONID'));
+    l_task_name constant varchar2(100 byte) := 'DDL_BATCH-' || to_char(l_session_id);
+    -- Chunk the table by GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES.SEQ
+    -- Use always the same SQL.
+    l_chunk_sql constant varchar2(1000 byte) := q'[
+select  gdssdb.seq as start_id
+,       gdssdb.seq as end_id
+from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
+where   gdssdb.object_type <> 'SCHEMA_EXPORT'
+and     gdssdb.session_id = to_number(sys_context('USERENV', 'SESSIONID'))]';
+    -- Here we substitute the session id into the statement since it may be executed by another session.
+    l_sql_stmt constant varchar2(1000 byte) :=
+      utl_lms.format_message
+      ( '
+begin
+  oracle_tools.pkg_ddl_util.ddl_batch_process
+  ( p_session_id => %s
+  , p_start_id => :start_id
+  , p_end_id => :end_id
+  );
+end;'
+      , to_char(l_session_id)
+      );
+    l_status number;
+    l_seq_schema_export oracle_tools.generate_ddl_session_schema_ddl_batchesseq%type;
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS (2)');
+$end
+ 
+    -- Create the TASK
+    dbms_parallel_execute.create_task(l_task_name);
+
+    begin
+      dbms_parallel_execute.create_chunks_by_sql(l_task_name, l_chunk_sql, false);
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'starting dbms_parallel_execute.run_task');
+$end
+
+      -- Execute the DML in parallel
+      dbms_parallel_execute.run_task
+      ( l_task_name
+      , l_sql_stmt
+      , dbms_sql.native
+      , parallel_level => g_parallel_level
+      );
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'stopped dbms_parallel_execute.run_task');
+$end
+
+      -- If there is error, RESUME it for at most 2 times.
+      for i_try in 1..2
+      loop
+        l_status := dbms_parallel_execute.task_status(l_task_name);
+        exit when l_status = dbms_parallel_execute.finished;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        dbug.print(dbug."info", 'dbms_parallel_execute.resume_task (try: %s, status: %s)', i_try, l_status);
+$end
+        dbms_parallel_execute.resume_task(l_task_name);
+      end loop;
+ 
+      -- Done with processing; drop the task
+      dbms_parallel_execute.drop_task(l_task_name);
+    exception
+      when others
+      then
+        -- On error also done with processing; drop the task
+        dbms_parallel_execute.drop_task(l_task_name);
+        raise;      
+    end;
+
+    -- there may be some work to do
+    begin
+      select  gdssdb.seq
+      into    l_seq_schema_export
+      from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
+      where   gdssdb.object_type = 'SCHEMA_EXPORT'
+      and     gdssdb.session_id = l_session_id;
+
+      oracle_tools.pkg_ddl_util.ddl_batch_process
+      ( p_session_id => l_session_id
+      , p_start_id => l_seq_schema_export
+      , p_end_id => l_seq_schema_export
+      );
+    exception
+      when no_data_found -- may come from select or procedure call
+      then
+        null;
+    end;
+    
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end ddl_batch_process;
+  
+  procedure ddl_batch_process
   ( p_session_id in integer
-  , p_add_no_ddl_retrieved in boolean
+  , p_start_id in number
+  , p_end_id in number
   )
   is
-    -- ORA-00054: resource busy and acquire with NOWAIT specified or timeout expired
-    e_resource_busy exception;
-    pragma exception_init(e_resource_busy, -54);
-
-    l_start_time constant binary_integer := dbms_utility.get_time;
-    l_max_elapsed constant binary_integer := 5 * 60;
-
-    l_min_seq integer;
-    l_max_seq integer;
-    l_schema_object_filter oracle_tools.t_schema_object_filter;
-    l_add_no_ddl_retrieved constant pls_integer := case when p_add_no_ddl_retrieved then 1 else 0 end;
+    l_min_seq constant pls_integer := p_start_id;
+    l_max_seq constant pls_integer := p_end_id;
 
     cursor c_gdssdb(b_seq in integer)
     is
@@ -5434,50 +5526,12 @@ $end
       from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
       where   gdssdb.session_id = p_session_id
       and     gdssdb.seq = b_seq
-      for update skip locked;
+      for update;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS (1)');
-    dbug.print(dbug."input", 'p_session_id: %s; p_add_no_ddl_retrieved: %s', p_session_id, dbug.cast_to_varchar2(p_add_no_ddl_retrieved));
+    dbug.print(dbug."input", 'p_session_id: %s; p_start_id: %s; p_end_id: %s', p_session_id, p_start_id, p_end_id);
 $end
-
-    -- wait for maximum l_max_elapsed seconds for all batches except 'SCHEMA_EXPORT' to be removed
-    if p_add_no_ddl_retrieved
-    then
-      loop
-        select  count(*)
-        into    l_max_seq
-        from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-        where   gdssdb.session_id = p_session_id
-        and     gdssdb.object_type <> 'SCHEMA_EXPORT';
-
-        exit when l_max_seq = 0;
-
-        if (dbms_utility.get_time - l_start_time) / 100 >= l_max_elapsed
-        then
-          raise e_resource_busy;
-        end if;
-        
-        dbms_session.sleep(10);
-      end loop;
-    end if;
-
-    select  nvl(min(gdssdb.seq), 1)
-    ,       nvl(max(gdssdb.seq), 0)
-    into    l_min_seq
-    ,       l_max_seq
-    from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-    where   gdssdb.session_id = p_session_id
-    and     ( ( l_add_no_ddl_retrieved = 0 and gdssdb.object_type <> 'SCHEMA_EXPORT' ) or
-              ( l_add_no_ddl_retrieved = 1 and gdssdb.object_type =  'SCHEMA_EXPORT' )
-            );
-
-    select  sof.obj
-    into    l_schema_object_filter
-    from    generate_ddl_sessions gds
-            inner join schema_object_filters sof
-            on sof.id = gds.schema_object_filter_id
-    where   gds.session_id = p_session_id;
 
     <<process_loop>>
     for i_seq in l_min_seq .. l_max_seq
@@ -5486,14 +5540,14 @@ $end
       loop
         begin
           get_schema_ddl
-          ( p_schema => l_schema_object_filter.schema()
+          ( p_schema => r_gdssdb.schema
           , p_transform_param_list => r_gdssdb.transform_param_list
-          , p_params_object_type => r_gdssdb.object_type
-          , p_params_object_schema => r_gdssdb.object_schema
-          , p_params_base_object_schema => r_gdssdb.base_object_schema
-          , p_params_object_name_tab => r_gdssdb.object_name_tab
-          , p_params_base_object_name_tab => r_gdssdb.base_object_name_tab
-          , p_params_nr_objects => r_gdssdb.nr_objects
+          , p_object_type => r_gdssdb.object_type
+          , p_object_schema => r_gdssdb.object_schema
+          , p_base_object_schema => r_gdssdb.base_object_schema
+          , p_object_name_tab => r_gdssdb.object_name_tab
+          , p_base_object_name_tab => r_gdssdb.base_object_name_tab
+          , p_nr_objects => r_gdssdb.nr_objects
           , p_add_no_ddl_retrieved => p_add_no_ddl_retrieved
           );
         exception
@@ -5511,51 +5565,6 @@ $end
       end loop;
       commit; -- should be here
     end loop process_loop;
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.leave;
-  exception
-    when others
-    then
-      dbug.leave_on_error;
-      raise;
-$end
-  end ddl_batch_process;
-
-  procedure ddl_batch_process
-  ( p_submit in boolean
-  , p_session_id in integer
-  )
-  is
-    l_job binary_integer;
-  begin
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS (2)');
-    dbug.print(dbug."input", 'p_submit: %s; p_session_id: %s', dbug.cast_to_varchar2(p_submit), p_session_id);
-$end
-
-    if p_submit
-    then
-      dbms_job.submit
-      ( job => l_job
-      , what => utl_lms.format_message
-                ( 'begin
-  oracle_tools.pkg_ddl_util.ddl_batch_process(p_submit => false, p_session_id => %s);
-  commit;
-exception
-  when others /* never let this job start again due to an error */
-  then rollback;
-end;'
-                , to_char(p_session_id)
-                )
-      );
-      -- no commit here
-    else
-      oracle_tools.schema_objects_api.set_session_id(p_session_id);
-      ddl_batch_process
-      ( p_session_id => p_session_id
-      , p_add_no_ddl_retrieved => false
-      );
-    end if;
     
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -5872,12 +5881,12 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
           ( p_schema => p_schema_object_filter.schema()
           , p_schema_object_tab => p_schema_object_tab
           , p_transform_param_list => p_transform_param_list
-          , p_params_object_type => r_params.object_type
-          , p_params_object_schema => r_params.object_schema
-          , p_params_base_object_schema => r_params.base_object_schema
-          , p_params_object_name_tab => r_params.object_name_tab
-          , p_params_base_object_name_tab => r_params.base_object_name_tab
-          , p_params_nr_objects => r_params.nr_objects
+          , p_object_type => r_params.object_type
+          , p_object_schema => r_params.object_schema
+          , p_base_object_schema => r_params.base_object_schema
+          , p_object_name_tab => r_params.object_name_tab
+          , p_base_object_name_tab => r_params.base_object_name_tab
+          , p_nr_objects => r_params.nr_objects
           , p_add_no_ddl_retrieved => (i_use_schema_export != l_use_schema_export) -- second iteration
           , p_schema_ddl_tab => l_schema_ddl_tab
           , p_object_lookup_tab => l_object_lookup_tab
@@ -5894,7 +5903,8 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 $else
           -- insert into generate_ddl_session_schema_ddl_batches
           oracle_tools.schema_objects_api.add
-          ( p_transform_param_list => p_transform_param_list
+          ( p_schema => p_schema_object_filter.schema()
+          , p_transform_param_list => p_transform_param_list
           , p_object_type => r_params.object_type
           , p_object_schema => r_params.object_schema
           , p_base_object_schema => r_params.base_object_schema
