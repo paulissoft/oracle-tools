@@ -148,6 +148,30 @@ subtype t_objects is clob;
 subtype t_network_link is all_db_links.db_link%type;
 subtype t_network_link_nn is t_network_link not null;
 
+
+type t_transform_param_tab is table of boolean index by varchar2(4000 char);
+
+procedure md_open
+( p_object_type in t_metadata_object_type
+, p_object_schema in varchar2
+, p_object_name_tab in oracle_tools.t_text_tab
+, p_base_object_schema in varchar2
+, p_base_object_name_tab in oracle_tools.t_text_tab
+, p_transform_param_tab in t_transform_param_tab
+, p_transform_to_ddl in boolean default true
+, p_handle out number
+);
+
+procedure md_fetch_ddl
+( p_handle in number
+, p_split_grant_statement in boolean
+, p_ddl_tab out nocopy sys.ku$_ddls
+);
+
+procedure md_close
+( p_handle in out number
+);
+
 function display_ddl_schema
 ( p_schema in t_schema_nn default user -- The schema name.
 , p_new_schema in t_schema default null -- The new schema name.
