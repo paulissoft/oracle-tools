@@ -35,8 +35,6 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
 
   subtype t_longops_rec is oracle_tools.api_longops_pkg.t_longops_rec;
 
-  type t_transform_param_tab is table of boolean index by varchar2(4000 char);
-
   /* CONSTANTS/VARIABLES */
 
   -- a simple check to ensure the euro sign gets not scrambled, i.e. whether generate_ddl.pl can write down unicode characters
@@ -2020,6 +2018,7 @@ $end
   , p_base_object_schema in varchar2
   , p_base_object_name_tab in oracle_tools.t_text_tab
   , p_transform_param_tab in t_transform_param_tab
+  , p_transform_to_ddl in boolean default true
   , p_handle out number
   )
   is
@@ -2179,13 +2178,21 @@ $end
     if p_object_type = "SCHEMA_EXPORT"
     then
       md_set_transform_param
-      ( p_transform_handle => dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
+      ( p_transform_handle => case
+                                when p_transform_to_ddl
+                                then dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
+                                else dbms_metadata.session_transform 
+                              end
       , p_use_object_type_param => true
       , p_transform_param_tab => p_transform_param_tab
       );
     else
       md_set_transform_param
-      ( p_transform_handle => dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
+      ( p_transform_handle => case
+                                when p_transform_to_ddl
+                                then dbms_metadata.add_transform(handle => p_handle, name => 'DDL')
+                                else dbms_metadata.session_transform 
+                              end
       , p_object_type_tab => oracle_tools.t_text_tab(p_object_type)
       , p_transform_param_tab => p_transform_param_tab
       );
@@ -2343,6 +2350,34 @@ $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
       raise;
 $end
   end md_fetch_ddl;
+
+  procedure md_fetch_ddl
+  ( p_handle in number
+  , p_split_grant_statement in boolean
+  , p_ddl_tab out nocopy sys.ku$_ddls
+  )
+  is
+  begin
+    md_fetch_ddl
+    ( p_handle
+    , p_split_grant_statement
+    );
+    p_ddl_tab := g_ddl_tab;
+  end md_fetch_ddl;
+
+  procedure md_close
+  ( p_handle in out number
+  )
+  is
+  begin
+    -- reset to the default
+    if p_handle is not null
+    then
+      dbms_metadata.close(p_handle);
+      p_handle := null;
+    end if;
+    g_ddl_tab := null;
+  end md_close;
 
   procedure parse_object
   ( p_schema in varchar2
@@ -2530,20 +2565,6 @@ $if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
 $end
       raise;
   end parse_object;
-
-  procedure md_close
-  ( p_handle in out number
-  )
-  is
-  begin
-    -- reset to the default
-    if p_handle is not null
-    then
-      dbms_metadata.close(p_handle);
-      p_handle := null;
-    end if;
-    g_ddl_tab := null;
-  end md_close;
 
   procedure remove_ddl
   ( p_object_schema in varchar2
@@ -5845,10 +5866,9 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
 /*
-
-1 - 00:06        (default parallel)
-2 - 00:07:14.513 (serial)
-3 - 00:09:42.663 SCHEMA_EXPORT
+1 - 00:06:06 (default parallel)
+2 - 00:07:14 (serial)
+3 - 00:09:42 SCHEMA_EXPORT
 */
 
 $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
