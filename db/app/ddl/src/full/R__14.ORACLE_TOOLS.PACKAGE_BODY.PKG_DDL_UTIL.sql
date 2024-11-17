@@ -3278,6 +3278,22 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
   end get_schema_ddl;
 
+  procedure session_init
+  is
+  begin
+    -- ensure unicode keeps working
+    if unistr('\20AC') <> c_euro_sign
+    then
+      raise value_error;
+    end if;
+
+    dbms_lob.createtemporary(g_clob, true);
+
+    select global_name.global_name into g_dbname from global_name;
+
+    i_object_exclude_name_expr_tab;
+  end session_init;
+
   /* PUBLIC ROUTINES */
 
   function display_ddl_schema
@@ -5445,13 +5461,16 @@ $end
 select  gdssdb.seq as start_id
 ,       gdssdb.seq as end_id
 from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-where   gdssdb.object_type <> 'SCHEMA_EXPORT'
+where   gdssdb.object_type not in ('SCHEMA_EXPORT', 'TABLE')
 and     gdssdb.session_id = to_number(sys_context('USERENV', 'SESSIONID'))]';
     -- Here we substitute the session id into the statement since it may be executed by another session.
     l_sql_stmt constant varchar2(1000 byte) :=
       utl_lms.format_message
       ( '
 begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+  dbug.activate('LOG4PLSQL', true);
+$end      
   oracle_tools.pkg_ddl_util.ddl_batch_process
   ( p_session_id => %s
   , p_start_id => :start_id
@@ -5464,7 +5483,7 @@ end;'
     l_seq_schema_export oracle_tools.generate_ddl_session_schema_ddl_batches.seq%type;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS (2)');
+    dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS');
 $end
  
     -- Create the TASK
@@ -5554,13 +5573,18 @@ $end
       and     gdssdb.seq between p_start_id and p_end_id
       for update;
   begin
+    -- essential when in another process
+    if oracle_tools.schema_objects_api.get_session_id = p_session_id
+    then
+      null; -- OK
+    else
+      oracle_tools.schema_objects_api.set_session_id(p_session_id);
+    end if;
+    
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS (1)');
+    dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS (' || p_start_id || '-' || p_end_id || ')');
     dbug.print(dbug."input", 'p_session_id: %s; p_start_id: %s; p_end_id: %s', p_session_id, p_start_id, p_end_id);
 $end
-
-    -- essential when in another process
-    oracle_tools.schema_objects_api.set_session_id(p_session_id);
 
     for r_gdssdb in c_gdssdb
     loop
@@ -9052,17 +9076,7 @@ $end
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
 begin
-  -- ensure unicode kees working
-  if unistr('\20AC') <> c_euro_sign
-  then
-    raise value_error;
-  end if;
-
-  dbms_lob.createtemporary(g_clob, true);
-
-  select global_name.global_name into g_dbname from global_name;
-
-  i_object_exclude_name_expr_tab;
+  session_init;
 end pkg_ddl_util;
 /
 
