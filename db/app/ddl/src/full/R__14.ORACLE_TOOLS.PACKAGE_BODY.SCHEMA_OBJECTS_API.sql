@@ -708,13 +708,21 @@ $end
         ;
     end case;
 
+$if oracle_tools.schema_objects_api.c_tracing $then
+    dbug.print(dbug."info", 'cardinality(l_tmp_schema_object_tab): %s', cardinality(l_tmp_schema_object_tab));
+$end
+
     if l_tmp_schema_object_tab.count > 0
     then
       -- this is real fast
       l_all_schema_object_tab := l_all_schema_object_tab multiset union all l_tmp_schema_object_tab;
     end if;
     oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
-    
+
+$if oracle_tools.schema_objects_api.c_tracing $then
+    dbug.print(dbug."info", 'cardinality(l_all_schema_object_tab): %s', cardinality(l_all_schema_object_tab));
+$end    
+
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave;
 $end    
