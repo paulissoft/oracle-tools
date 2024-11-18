@@ -742,26 +742,13 @@ $end
     raise;
 end add_schema_objects;
 
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-
 procedure cleanup
 is
-begin
-  null;
-end;
-
-$else
-
-procedure cleanup
-is
-begin
   pragma autonomous_transaction;
 begin
   delete from oracle_tools.generate_ddl_sessions t where t.created <= (sys_extract_utc(current_timestamp) - interval '2' day);
   commit;
 end cleanup;
-
-$end -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
 -- PUBLIC
 
