@@ -3,6 +3,36 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."SCHEMA_OBJECTS_API" AUTHID CURRENT_USE
 c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
 c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 
+subtype t_session_id is generate_ddl_session_schema_objects.session_id%type;  
+
+procedure set_session_id
+( p_session_id in t_session_id
+);
+/** Set the session id for saving/retrieving on GENERATE_DDL_SESSIONS and GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
+
+function get_session_id
+return t_session_id;
+/** Get the session id for saving/retrieving on GENERATE_DDL_SESSIONS and GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
+
+procedure get_schema_objects
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
+);
+
+procedure default_match_perc_threshold
+( p_match_perc_threshold in integer
+);
+
+function match_perc
+( p_session_id in t_session_id default get_session_id
+)
+return integer
+deterministic;
+
+function match_perc_threshold
+return integer
+deterministic;
+
 $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
 
 type t_schema_object_rec is record
@@ -18,17 +48,6 @@ type t_schema_ddl_rec is record
 );
 
 type t_schema_ddl_cursor is ref cursor return t_schema_ddl_rec;
-
-subtype t_session_id is generate_ddl_session_schema_objects.session_id%type;
-   
-procedure set_session_id
-( p_session_id in t_session_id
-);
-/** Set the session id for saving/retrieving on GENERATE_DDL_SESSIONS and GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
-
-function get_session_id
-return t_session_id;
-/** Get the session id for saving/retrieving on GENERATE_DDL_SESSIONS and GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
 
 procedure add
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter -- the schema object filter
@@ -103,25 +122,6 @@ function get_schema_objects
 return oracle_tools.t_schema_object_tab
 pipelined;
 
-procedure get_schema_objects
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
-);
-
-procedure default_match_perc_threshold
-( p_match_perc_threshold in integer
-);
-
-function match_perc
-( p_session_id in t_session_id default get_session_id
-)
-return integer
-deterministic;
-
-function match_perc_threshold
-return integer
-deterministic;
-
 $if oracle_tools.cfg_pkg.c_testing $then
 
 -- test functions
@@ -137,7 +137,7 @@ procedure ut_get_schema_object_filter;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
-$end -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+$end -- $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
 
 END SCHEMA_OBJECTS_API;
 /
