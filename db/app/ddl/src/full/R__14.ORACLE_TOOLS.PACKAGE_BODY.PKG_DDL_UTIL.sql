@@ -3389,13 +3389,12 @@ $end
   return oracle_tools.t_schema_ddl_tab
   pipelined
   is
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
     pragma autonomous_transaction;
 
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     l_count pls_integer;
 $end  
-
 $end
 
     l_schema_object_filter oracle_tools.t_schema_object_filter :=

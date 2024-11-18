@@ -3,6 +3,20 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."SCHEMA_OBJECTS_API" AUTHID CURRENT_USE
 c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
 c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 
+type t_schema_object_rec is record
+( obj oracle_tools.t_schema_object
+);
+
+type t_schema_object_cursor is ref cursor return t_schema_object_rec;
+
+type t_schema_ddl_rec is record
+( session_id generate_ddl_session_schema_objects.session_id%type -- key #1 from GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 
+, schema_object_id generate_ddl_session_schema_objects.schema_object_id%type -- key #2 from GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 
+, ddl oracle_tools.t_schema_ddl
+);
+
+type t_schema_ddl_cursor is ref cursor return t_schema_ddl_rec;
+
 subtype t_session_id is generate_ddl_session_schema_objects.session_id%type;  
 
 procedure set_session_id
@@ -31,6 +45,20 @@ procedure get_schema_objects
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 );
 
+function find_schema_object_by_seq
+( p_seq in integer default 1 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, seq)
+, p_session_id in t_session_id default get_session_id
+)
+return generate_ddl_session_schema_objects%rowtype;
+/** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by seq. **/
+
+function find_schema_object_by_object_id
+( p_schema_object_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id())
+, p_session_id in t_session_id default get_session_id
+)
+return generate_ddl_session_schema_objects%rowtype;
+/** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by obj.id(). **/
+
 procedure default_match_perc_threshold
 ( p_match_perc_threshold in integer
 );
@@ -46,20 +74,6 @@ return integer
 deterministic;
 
 $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
-
-type t_schema_object_rec is record
-( obj oracle_tools.t_schema_object
-);
-
-type t_schema_object_cursor is ref cursor return t_schema_object_rec;
-
-type t_schema_ddl_rec is record
-( session_id generate_ddl_session_schema_objects.session_id%type -- key #1 from GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 
-, schema_object_id generate_ddl_session_schema_objects.schema_object_id%type -- key #2 from GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 
-, ddl oracle_tools.t_schema_ddl
-);
-
-type t_schema_ddl_cursor is ref cursor return t_schema_ddl_rec;
 
 procedure add
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter -- the schema object filter
@@ -107,20 +121,6 @@ procedure add
 , p_session_id in t_session_id default get_session_id
 );
 /** Update the record in table GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES. **/
-
-function find_schema_object_by_seq
-( p_seq in integer default 1 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, seq)
-, p_session_id in t_session_id default get_session_id
-)
-return generate_ddl_session_schema_objects%rowtype;
-/** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by seq. **/
-
-function find_schema_object_by_object_id
-( p_schema_object_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id())
-, p_session_id in t_session_id default get_session_id
-)
-return generate_ddl_session_schema_objects%rowtype;
-/** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by obj.id(). **/
 
 $if oracle_tools.cfg_pkg.c_testing $then
 

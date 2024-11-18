@@ -744,10 +744,16 @@ end add_schema_objects;
 
 procedure cleanup
 is
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
   pragma autonomous_transaction;
+$end  
 begin
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
   delete from oracle_tools.generate_ddl_sessions t where t.created <= (sys_extract_utc(current_timestamp) - interval '2' day);
   commit;
+$else
+  null;
+$end
 end cleanup;
 
 -- PUBLIC
