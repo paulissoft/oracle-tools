@@ -199,7 +199,6 @@ $end
 begin
 $if oracle_tools.pkg_schema_object_filter.c_tracing $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCHES_SCHEMA_OBJECT');
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.print
   ( dbug."input"
   , 'object: "%s"; base object: "%s"; p_schema_object_id: %s'
@@ -213,7 +212,6 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   , case when p_schema_object_filter is not null and p_schema_object_filter.object_tab$ is not null then p_schema_object_filter.object_tab$.count end
   , case when p_schema_object_filter is not null then p_schema_object_filter.nr_excluded_objects$ end
   );
-$end    
 $end
 
   PRAGMA INLINE (ignore_object, 'YES');
@@ -229,8 +227,8 @@ $else
          ignore_object(p_base_object_type, p_base_object_name) >= 1
 $end         
     then
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-       dbug.print(dbug."info", 'case 1');
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+      dbug.print(dbug."info", 'case 1');
 $end
       l_result := 0;
 
@@ -244,8 +242,8 @@ $else
 $end
 
     then
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-       dbug.print(dbug."info", 'case 2');
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+      dbug.print(dbug."info", 'case 2');
 $end
       l_result := 0;
 
@@ -254,14 +252,23 @@ $end
          p_schema_object_filter.object_tab$ is null or
          p_schema_object_filter.object_tab$.count = 0
     then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+      dbug.print(dbug."info", 'case 3');
+$end
       l_result := 1;
 
     when search(1, p_schema_object_filter.nr_excluded_objects$) = 1
     then
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+      dbug.print(dbug."info", 'case 4');
+$end
       -- any exclusion match; return 0
       l_result := 0;
 
     else
+$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+      dbug.print(dbug."info", 'case 5');
+$end
       -- check for inclusion match
       l_result := nvl
                   ( search
@@ -278,9 +285,7 @@ $end
   end case;  
 
 $if oracle_tools.pkg_schema_object_filter.c_tracing $then  
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.print(dbug."output", 'return: %s', l_result);
-$end
   dbug.leave;
 $end
 
