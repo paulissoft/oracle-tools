@@ -2379,7 +2379,11 @@ $end
   end md_close;
 
   procedure parse_object
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+$else  
   ( p_schema in varchar2
+$end  
   , p_constraint_lookup_tab in t_constraint_lookup_tab
   , p_object_lookup_tab in out nocopy t_object_lookup_tab
   , p_ku$_ddl in out nocopy sys.ku$_ddl
@@ -2400,8 +2404,10 @@ $end
     l_ddl_text varchar2(32767 char) := null;
     l_exclude_name_expr_tab oracle_tools.t_text_tab;
     l_schema_object oracle_tools.t_schema_object;
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
     l_my_schema_object generate_ddl_session_schema_objects%rowtype;
-    l_generate_ddl pls_integer := 0;
+    l_generate_ddl pls_integer;
+$end    
 
     procedure cleanup
     is
@@ -2421,7 +2427,11 @@ $end
 
     parse_ddl
     ( p_ku$_ddl
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+    , p_schema_object_filter.schema()
+$else    
     , p_schema
+$end    
     , p_object_lookup_tab
     , p_constraint_lookup_tab
     , l_verb
@@ -2461,7 +2471,11 @@ $end
         );
 
       -- check the object type (base object set if necessary and so on)
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+      l_schema_object.chk(p_schema_object_filter.schema());
+$else      
       l_schema_object.chk(p_schema);
+$end      
 
       p_object_key := l_schema_object.id;
 
@@ -2474,7 +2488,11 @@ $end
           );
 
           begin
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+            p_object_lookup_tab(p_object_key).schema_ddl.chk(p_schema_object_filter.schema());
+$else            
             p_object_lookup_tab(p_object_key).schema_ddl.chk(p_schema);
+$end            
           exception
             when others
             then
@@ -2491,16 +2509,27 @@ $end
       exception
         when no_data_found
         then
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
           begin
             l_my_schema_object := oracle_tools.schema_objects_api.find_schema_object_by_object_id(p_object_key);
+            l_generate_ddl := 1;
           exception
             when no_data_found
             then l_generate_ddl := 0;
           end;
+$end          
           case
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+            when p_schema_object_filter.matches_schema_object
+                 ( p_schema_object_id => p_object_key
+                 ) = 0 -- object not but on purpose
+            then
+              p_object_key := null;
+$else          
             when l_generate_ddl = 0 -- object not but on purpose
             then
               p_object_key := null;
+$end
 
             when l_verb in ('DBMS_JAVA.START_IMPORT', 'DBMS_JAVA.IMPORT_TEXT_CHUNK', 'DBMS_JAVA.IMPORT_RAW_CHUNK', 'DBMS_JAVA.END_IMPORT') or
                  l_object_type in ('PROCACT_SCHEMA', 'PROCACT_SYSTEM', 'JAVA_CLASS')                 
@@ -3102,11 +3131,10 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
   end get_schema_ddl_init;
 
-  procedure get_schema_ddl
-  ( p_schema in varchar2
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+  procedure get_schema_ddl
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
   , p_schema_object_tab in oracle_tools.t_schema_object_tab
-$end  
   , p_transform_param_list in varchar2
   , p_object_type in varchar2 -- metadata object type
   , p_object_schema in varchar2 -- metadata object schema
@@ -3120,6 +3148,23 @@ $end
   , p_constraint_lookup_tab in out nocopy t_constraint_lookup_tab
   , p_nr_objects_countdown in out nocopy positiven
   )
+$else  
+  procedure get_schema_ddl
+  ( p_schema in varchar2
+  , p_transform_param_list in varchar2
+  , p_object_type in varchar2 -- metadata object type
+  , p_object_schema in varchar2 -- metadata object schema
+  , p_base_object_schema in varchar2 -- base object schema
+  , p_object_name_tab in oracle_tools.t_text_tab -- object names
+  , p_base_object_name_tab in oracle_tools.t_text_tab -- base object names
+  , p_nr_objects in integer
+  , p_add_no_ddl_retrieved in boolean
+  , p_schema_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
+  , p_object_lookup_tab in out nocopy t_object_lookup_tab -- list of all objects
+  , p_constraint_lookup_tab in out nocopy t_constraint_lookup_tab
+  , p_nr_objects_countdown in out nocopy positiven
+  )
+$end  
   is
     l_program constant t_module := 'GET_SCHEMA_DDL (1)'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
     
@@ -3135,7 +3180,11 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print
     ( dbug."input"
     , 'p_schema: %s; p_transform_param_list: %s; p_object_type: %s; p_base_object_schema: %s'
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+    , p_schema_object_filter.schema()
+$else
     , p_schema
+$end
     , p_transform_param_list
     , p_object_type
     , p_base_object_schema
@@ -3145,9 +3194,11 @@ $end
     p_schema_ddl_tab := oracle_tools.t_schema_ddl_tab();    
 
     get_schema_ddl_init
-    ( p_schema => p_schema
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+    ( p_schema => p_schema_object_filter.schema()
     , p_schema_object_tab => p_schema_object_tab
+$else    
+    ( p_schema => p_schema
 $end    
     , p_object_type => p_object_type
     , p_object_schema => p_object_schema
@@ -3187,7 +3238,11 @@ $end
     loop
       begin
         parse_object
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+        ( p_schema_object_filter => p_schema_object_filter
+$else        
         ( p_schema => p_schema
+$end        
         , p_constraint_lookup_tab => p_constraint_lookup_tab
         , p_object_lookup_tab => p_object_lookup_tab
         , p_ku$_ddl => r.obj
@@ -5410,23 +5465,37 @@ $end
       end if;
   end fetch_ddl;
 
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+
+  procedure get_schema_ddl
+  ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+  , p_schema_object_tab in oracle_tools.t_schema_object_tab
+  , p_transform_param_list in varchar2
+  , p_object_type in varchar2 -- dbms_metadata filter for metadata object type
+  , p_object_schema in varchar2 -- metadata object schema
+  , p_base_object_schema in varchar2 -- dbms_metadata filter for base object schema
+  , p_object_name_tab in oracle_tools.t_text_tab -- dbms_metadata filter for object names
+  , p_base_object_name_tab in oracle_tools.t_text_tab -- dbms_metadata filter for base object names
+  , p_nr_objects in integer -- dbms_metadata filter for number of objects
+  , p_add_no_ddl_retrieved in boolean
+  , p_schema_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
+  )
+
+$else
+
   procedure get_schema_ddl
   ( p_schema in varchar2
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-  , p_schema_object_tab in oracle_tools.t_schema_object_tab
-$end  
   , p_transform_param_list in varchar2
-  , p_object_type in varchar2 -- metadata object type
+  , p_object_type in varchar2 -- dbms_metadata filter for metadata object type
   , p_object_schema in varchar2 -- metadata object schema
-  , p_base_object_schema in varchar2 -- base object schema
-  , p_object_name_tab in oracle_tools.t_text_tab -- object names
-  , p_base_object_name_tab in oracle_tools.t_text_tab -- base object names
-  , p_nr_objects in integer
+  , p_base_object_schema in varchar2 -- dbms_metadata filter for base object schema
+  , p_object_name_tab in oracle_tools.t_text_tab -- dbms_metadata filter for object names
+  , p_base_object_name_tab in oracle_tools.t_text_tab -- dbms_metadata filter for base object names
+  , p_nr_objects in integer -- dbms_metadata filter for number of objects
   , p_add_no_ddl_retrieved in boolean
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
-  , p_schema_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
-$end  
   )
+
+$end -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
   is
 $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
@@ -5436,9 +5505,11 @@ $end
     l_nr_objects_countdown positiven := 1;
   begin
     get_schema_ddl
-    ( p_schema => p_schema
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+    ( p_schema_object_filter => p_schema_object_filter
     , p_schema_object_tab => p_schema_object_tab
+$else    
+    ( p_schema => p_schema
 $end  
     , p_transform_param_list => p_transform_param_list
     , p_object_type => p_object_type
@@ -5994,7 +6065,7 @@ $end
 
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
           get_schema_ddl
-          ( p_schema => p_schema_object_filter.schema()
+          ( p_schema_object_filter => p_schema_object_filter
           , p_schema_object_tab => p_schema_object_tab
           , p_transform_param_list => p_transform_param_list
           , p_object_type => r_params.object_type
