@@ -14,6 +14,18 @@ function get_session_id
 return t_session_id;
 /** Get the session id for saving/retrieving on GENERATE_DDL_SESSIONS and GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
 
+function get_schema_objects
+( p_schema in varchar2 default user
+, p_object_type in varchar2 default null
+, p_object_names in varchar2 default null
+, p_object_names_include in integer default null
+, p_grantor_is_schema in integer default 0
+, p_exclude_objects in clob default null
+, p_include_objects in clob default null
+)
+return oracle_tools.t_schema_object_tab
+pipelined;
+
 procedure get_schema_objects
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
@@ -109,18 +121,6 @@ function find_schema_object_by_object_id
 )
 return generate_ddl_session_schema_objects%rowtype;
 /** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by obj.id(). **/
-
-function get_schema_objects
-( p_schema in varchar2 default user
-, p_object_type in varchar2 default null
-, p_object_names in varchar2 default null
-, p_object_names_include in integer default null
-, p_grantor_is_schema in integer default 0
-, p_exclude_objects in clob default null
-, p_include_objects in clob default null
-)
-return oracle_tools.t_schema_object_tab
-pipelined;
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
