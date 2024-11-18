@@ -384,6 +384,8 @@ $end
 );
 /** Get the schema DDL. **/
 
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+
 procedure set_parallel_level
 ( p_parallel_level in natural default null
 );
@@ -404,6 +406,8 @@ procedure ddl_batch_process
 , p_rollback in boolean default false
 );
 /** Processes GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES for this session within this range. **/
+
+$end
 
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
 
