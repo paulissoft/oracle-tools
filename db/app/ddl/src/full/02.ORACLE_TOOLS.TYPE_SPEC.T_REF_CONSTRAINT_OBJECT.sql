@@ -1,5 +1,5 @@
 CREATE TYPE "ORACLE_TOOLS"."T_REF_CONSTRAINT_OBJECT" authid current_user under oracle_tools.t_constraint_object
-( ref_object$ oracle_tools.t_constraint_object -- referenced primary / unique key constraint whose base object is the referencing table / view
+( ref_object_id$ varchar2(500 byte)
 , constructor function t_ref_constraint_object
   ( self in out nocopy oracle_tools.t_ref_constraint_object
   , p_base_object in oracle_tools.t_named_object
@@ -12,6 +12,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_REF_CONSTRAINT_OBJECT" authid current_user under o
   return self as result
 -- begin of getter(s)
 , overriding member function object_type return varchar2 deterministic
+, member function ref_object_id return varchar2 deterministic
 , member function ref_object_schema return varchar2 deterministic
 , member function ref_object_type return varchar2 deterministic
 , member function ref_object_name return varchar2 deterministic

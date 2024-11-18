@@ -1,6 +1,6 @@
 CREATE TYPE "ORACLE_TOOLS"."T_DDL" authid current_user as object
 ( ddl#$ integer
-, verb$ varchar2(4000 char)
+, verb$ varchar2(4000 byte)
 , text oracle_tools.t_text_tab
 , constructor function t_ddl
   ( self in out nocopy oracle_tools.t_ddl

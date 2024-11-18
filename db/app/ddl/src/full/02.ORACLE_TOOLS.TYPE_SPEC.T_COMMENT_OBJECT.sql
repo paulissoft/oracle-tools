@@ -1,5 +1,5 @@
 CREATE TYPE "ORACLE_TOOLS"."T_COMMENT_OBJECT" authid current_user under oracle_tools.t_dependent_or_granted_object
-( column_name$ varchar2(128 char)
+( column_name$ varchar2(128 byte)
 , constructor function t_comment_object
   ( self in out nocopy oracle_tools.t_comment_object
   , p_base_object in oracle_tools.t_named_object
@@ -15,6 +15,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_COMMENT_OBJECT" authid current_user under oracle_t
   ( self in oracle_tools.t_comment_object
   , p_schema in varchar2
   )
+, overriding member function dict_object_exists return integer -- 0/1
 )
 final;
 /

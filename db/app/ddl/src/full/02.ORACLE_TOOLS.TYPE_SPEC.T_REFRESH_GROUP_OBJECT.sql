@@ -6,6 +6,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_REFRESH_GROUP_OBJECT" authid current_user under or
   )
   return self as result
 , overriding member function object_type return varchar2 deterministic
+, overriding member function dict_object_exists return integer -- 0/1
 )
 final;
 /

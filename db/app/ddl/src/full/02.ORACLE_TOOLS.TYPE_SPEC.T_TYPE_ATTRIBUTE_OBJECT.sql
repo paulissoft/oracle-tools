@@ -40,6 +40,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_TYPE_ATTRIBUTE_OBJECT" authid current_user under o
 , member function char_used return varchar2 deterministic
 -- end of getter(s)/setter(s)
 , final member function data_type return varchar2 deterministic
+, overriding member function dict_object_exists return integer -- 0/1
 )
 not final;
 /
