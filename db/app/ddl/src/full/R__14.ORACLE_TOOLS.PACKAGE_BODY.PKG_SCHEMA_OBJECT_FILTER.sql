@@ -145,7 +145,7 @@ $end
     return l_case;  
   end ignore_object;
 
-$end
+$end -- $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
   function search(p_lwb in naturaln, p_upb in naturaln)
   return natural
