@@ -1,5 +1,5 @@
-CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDLS" BEQUEATH CURRENT_USER AS
-select  aso.session_id
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDLS" ("SESSION_ID", "SCHEMA_OBJECT_ID", "OBJ", "SCHEMA_DDL") BEQUEATH CURRENT_USER AS 
+  select  aso.session_id
 ,       aso.schema_object_id
 ,       aso.obj
 ,       oracle_tools.t_schema_ddl.create_schema_ddl
@@ -24,5 +24,5 @@ and     aso.ddl_generated = 1
 order by
         -- unique key
         aso.session_id
-,       aso.schema_object_id
-;
+,       aso.schema_object_id;
+

@@ -1,5 +1,6 @@
-CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_OBJECTS_NO_DDL_YET" OF "ORACLE_TOOLS"."T_SCHEMA_OBJECT" WITH OBJECT IDENTIFIER ("ID") BEQUEATH CURRENT_USER AS
-select  aso.obj
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_OBJECTS_NO_DDL_YET" OF "ORACLE_TOOLS"."T_SCHEMA_OBJECT"
+  WITH OBJECT IDENTIFIER ("ID") BEQUEATH CURRENT_USER  AS 
+  select  aso.obj
 from    oracle_tools.v_all_schema_objects aso
 where   aso.session_id =
         -- use old trick to invoke get_session_id just once
