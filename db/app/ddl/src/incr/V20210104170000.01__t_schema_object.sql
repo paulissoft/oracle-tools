@@ -120,21 +120,32 @@ create type oracle_tools.t_schema_object authid current_user as object
   , p_base_object_schema in varchar2
   , p_base_object_type in varchar2
   )
-  return number
+  return varchar2
   /*
+    Equivalent of order by from cursor c_params in package body PKG_DDL_UTIL:
+    
+    cursor c_params is
+      select  ...
+      order by
+              case object_schema when 'PUBLIC' then 0 when b_schema then 1 else 2 end -- PUBLIC synonyms first
+      ,       case object_type
+                when 'SCHEMA_EXPORT' then 0
+                else 1
+              end -- SCHEMA_EXPORT next
+      ,       object_type
+      ,       object_schema
+      ,       base_object_schema
+      
     case p_object_schema
       when 'PUBLIC'
-      then 0
+      then '0'
       when 'SCHEMA_EXPORT'
-      then 1
-      else 2 +
-           case when p_object_type = 'TYPE_SPEC' then 1 else is_a_repeatable(nvl(p_base_object_type, p_object_type)) end +
-           object_type_order(nvl(p_base_object_type, p_object_type)) / 100 +
-           nvl(object_type_order(p_base_object_type), 0) / 10000
+      then '1'
+      else '2' || '|' || rpad(p_object_type, 30) || '|' || rpad(p_object_schema, 128) || '|' || p_base_object_schema
     end
   */
   deterministic /*result_cache*/
-, final member function ddl_batch_order return number deterministic /*result_cache*/
+, final member function ddl_batch_order return varchar2 deterministic /*result_cache*/
 )
 not instantiable
 not final]';

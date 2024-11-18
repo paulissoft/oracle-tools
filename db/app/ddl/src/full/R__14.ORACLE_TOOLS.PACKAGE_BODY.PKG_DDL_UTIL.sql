@@ -3496,6 +3496,7 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
       ( p_schema_object_filter => l_schema_object_filter
       , p_schema_object_tab => l_schema_object_tab
       );
+      commit;
       
 $else
 
@@ -5664,13 +5665,17 @@ $end
       and     ( p_start_id is null or
                 p_end_id is null or
                 ( gdssdb.object_type <> 'SCHEMA_EXPORT' and
-                  trunc
-                  ( oracle_tools.t_schema_object.ddl_batch_order
-                    ( p_object_schema => gdssdb.object_schema
-                    , p_object_type => gdssdb.object_type 
-                    , p_base_object_schema => gdssdb.base_object_schema 
-                    , p_base_object_type => gdssdb.base_object_type 
-                    ) 
+                  to_number
+                  ( substr
+                    ( oracle_tools.t_schema_object.ddl_batch_order
+                      ( p_object_schema => gdssdb.object_schema
+                      , p_object_type => gdssdb.object_type 
+                      , p_base_object_schema => gdssdb.base_object_schema 
+                      , p_base_object_type => gdssdb.base_object_type 
+                      )
+                    , 1
+                    , 1
+                    )
                   ) between p_start_id and p_end_id
                 )
               )
