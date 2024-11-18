@@ -334,7 +334,7 @@ Oracle 11g has a (object as supertype).chk() syntax but Oracle 10i not.
 So we invoke package procedure from the type bodies.
 
 **/
-  
+
 function is_dependent_object_type
 ( p_object_type in t_metadata_object_type
 )
@@ -539,7 +539,7 @@ return t_md_object_type_tab
 deterministic;
 
 /**
- 
+
 Return a list of DBMS_METADATA object types.
 
 **/
