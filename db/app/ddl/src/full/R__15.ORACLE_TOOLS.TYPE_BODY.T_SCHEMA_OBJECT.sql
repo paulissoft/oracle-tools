@@ -1038,7 +1038,7 @@ begin
       when 'SCHEMA_EXPORT'
       then 1
       else 2 +
-           is_a_repeatable(nvl(p_base_object_type, p_object_type)) +
+           case when p_object_type = 'TYPE_SPEC' then 1 else is_a_repeatable(nvl(p_base_object_type, p_object_type)) end +
            object_type_order(nvl(p_base_object_type, p_object_type)) / 100 +
            nvl(object_type_order(p_base_object_type), 0) / 10000
     end;

@@ -3459,7 +3459,7 @@ $end
       , p_transform_param_list => p_transform_param_list
       );
       commit;
-      --ddl_batch_process;
+      ddl_batch_process;
       commit;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       select count(*) into l_count from oracle_tools.v_my_schema_ddls;
@@ -5475,14 +5475,6 @@ $end
   is
     l_session_id constant integer := to_number(sys_context('USERENV', 'SESSIONID'));
     l_task_name constant varchar2(100 byte) := 'DDL_BATCH-' || to_char(l_session_id);
-    -- Chunk the table by GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES.SEQ
-    -- Use always the same SQL.
-    l_chunk_sql constant varchar2(1000 byte) := q'[
-select  gdssdb.seq as start_id
-,       gdssdb.seq as end_id
-from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-where   gdssdb.object_type not in ('SCHEMA_EXPORT')
-and     gdssdb.session_id = to_number(sys_context('USERENV', 'SESSIONID'))]';
     -- Here we substitute the session id into the statement since it may be executed by another session.
     l_sql_stmt constant varchar2(1000 byte) :=
       utl_lms.format_message
@@ -5511,7 +5503,13 @@ $end
     dbms_parallel_execute.create_task(l_task_name);
 
     begin
-      dbms_parallel_execute.create_chunks_by_sql(l_task_name, l_chunk_sql, false);
+      dbms_parallel_execute.create_chunks_by_number_col
+      ( task_name => l_task_name
+      , table_owner => 'ORACLE_TOOLS'
+      , table_name => 'V_MY_GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES'
+      , table_column => 'DDL_BATCH_GROUP'
+      , chunk_size => 1
+      );
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print(dbug."info", 'starting dbms_parallel_execute.run_task');
@@ -5552,27 +5550,18 @@ $end
     end;
 
     -- the rest including SCHEMA_EXPORT next
-    <<schema_export_loop>>
-    for r in
-    ( select  min(gdssdb.seq) as seq_min
-      ,       max(gdssdb.seq) as seq_max
-      from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-      where   gdssdb.session_id = l_session_id
-    )
-    loop
-      begin
-        -- try again all variants
-        oracle_tools.pkg_ddl_util.ddl_batch_process
-        ( p_session_id => l_session_id
-        , p_start_id => r.seq_min
-        , p_end_id => r.seq_max
-        );
-      exception
-        when no_data_found -- comes from procedure call (indirectly from get_schema_ddl_init)
-        then
-          null;
-      end;
-    end loop schema_export_loop;
+    begin
+      -- try again all variants
+      oracle_tools.pkg_ddl_util.ddl_batch_process
+      ( p_session_id => l_session_id
+      , p_start_id => null
+      , p_end_id => null
+      );
+    exception
+      when no_data_found -- comes from procedure call (indirectly from get_schema_ddl_init)
+      then
+        null;
+    end;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -5591,19 +5580,26 @@ $end
   , p_rollback in boolean
   )
   is
-    cursor c_gdssdb
+    cursor c_gdssdb_with_start_end
+    is
+      select  gdssdb.*
+      from    oracle_tools.v_my_generate_ddl_session_schema_ddl_batches gdssdb -- filter on session_id already part of view
+      where   gdssdb.ddl_batch_group between p_start_id and p_end_id
+      order by
+              gdssdb.session_id
+      ,       gdssdb.seq
+      for update;
+      
+    cursor c_gdssdb_without_start_end
     is
       select  gdssdb.*
       from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-      where   gdssdb.session_id = p_session_id
-      and     gdssdb.seq between p_start_id and p_end_id
+      where   gdssdb.session_id = (select oracle_tools.schema_objects_api.get_session_id from dual where rownum = 1) -- old trick
       order by
               gdssdb.session_id
       ,       gdssdb.seq
       for update;
   begin
-    savepoint spt;
-
     -- essential when in another process
     if oracle_tools.schema_objects_api.get_session_id = p_session_id
     then
@@ -5611,39 +5607,72 @@ $end
     else
       oracle_tools.schema_objects_api.set_session_id(p_session_id);
     end if;
-    
+
+    savepoint spt;
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS (' || p_start_id || '-' || p_end_id || ')');
     dbug.print(dbug."input", 'p_session_id: %s; p_start_id: %s; p_end_id: %s', p_session_id, p_start_id, p_end_id);
 $end
 
-    for r_gdssdb in c_gdssdb
-    loop
-      begin
-        get_schema_ddl
-        ( p_schema => r_gdssdb.schema
-        , p_transform_param_list => r_gdssdb.transform_param_list
-        , p_object_type => r_gdssdb.object_type
-        , p_object_schema => r_gdssdb.object_schema
-        , p_base_object_schema => r_gdssdb.base_object_schema
-        , p_object_name_tab => r_gdssdb.object_name_tab
-        , p_base_object_name_tab => r_gdssdb.base_object_name_tab
-        , p_nr_objects => r_gdssdb.nr_objects
-        , p_add_no_ddl_retrieved => (r_gdssdb.object_type = "SCHEMA_EXPORT")
-        );
-      exception
-        when no_data_found -- there may be no DDL to generate
-        then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          dbug.print(dbug."info", 'NO_DATA_FOUND error ignored because there are no more schema objects to generate DDL for');
-$end            
-          null;
-      end;
-        
-      delete
-      from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
-      where   current of c_gdssdb;
-    end loop;
+    if p_start_id is not null and p_end_id is not null
+    then
+      for r_gdssdb in c_gdssdb_with_start_end
+      loop
+        begin
+          get_schema_ddl
+          ( p_schema => r_gdssdb.schema
+          , p_transform_param_list => r_gdssdb.transform_param_list
+          , p_object_type => r_gdssdb.object_type
+          , p_object_schema => r_gdssdb.object_schema
+          , p_base_object_schema => r_gdssdb.base_object_schema
+          , p_object_name_tab => r_gdssdb.object_name_tab
+          , p_base_object_name_tab => r_gdssdb.base_object_name_tab
+          , p_nr_objects => r_gdssdb.nr_objects
+          , p_add_no_ddl_retrieved => (r_gdssdb.object_type = "SCHEMA_EXPORT")
+          );
+        exception
+          when no_data_found -- there may be no DDL to generate
+          then
+  $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+            dbug.print(dbug."info", 'NO_DATA_FOUND error ignored because there are no more schema objects to generate DDL for');
+  $end            
+            null;
+        end;
+          
+        delete
+        from    oracle_tools.v_my_generate_ddl_session_schema_ddl_batches gdssdb
+        where   current of c_gdssdb_with_start_end;
+      end loop;
+
+      for r_gdssdb in c_gdssdb_without_start_end
+      loop
+        begin
+          get_schema_ddl
+          ( p_schema => r_gdssdb.schema
+          , p_transform_param_list => r_gdssdb.transform_param_list
+          , p_object_type => r_gdssdb.object_type
+          , p_object_schema => r_gdssdb.object_schema
+          , p_base_object_schema => r_gdssdb.base_object_schema
+          , p_object_name_tab => r_gdssdb.object_name_tab
+          , p_base_object_name_tab => r_gdssdb.base_object_name_tab
+          , p_nr_objects => r_gdssdb.nr_objects
+          , p_add_no_ddl_retrieved => (r_gdssdb.object_type = "SCHEMA_EXPORT")
+          );
+        exception
+          when no_data_found -- there may be no DDL to generate
+          then
+  $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+            dbug.print(dbug."info", 'NO_DATA_FOUND error ignored because there are no more schema objects to generate DDL for');
+  $end            
+            null;
+        end;
+          
+        delete
+        from    oracle_tools.v_my_generate_ddl_session_schema_ddl_batches gdssdb
+        where   current of c_gdssdb_without_start_end;
+      end loop;
+    end if;
     -- should be here
     if p_rollback
     then rollback to spt;
@@ -5845,6 +5874,7 @@ $end
                 ,       t.base_object_type
               )
       order by
+              -- no trunc needed here
               oracle_tools.t_schema_object.ddl_batch_order
               ( p_object_schema => object_schema
               , p_object_type => object_type 
