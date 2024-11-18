@@ -5847,6 +5847,16 @@ $end
                 ,       t.base_object_type
               )
       order by
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+              case object_schema when 'PUBLIC' then 0 when b_schema then 1 else 2 end -- PUBLIC synonyms first
+      ,       case object_type
+                when 'SCHEMA_EXPORT' then 0
+                else 1
+              end -- SCHEMA_EXPORT next
+      ,       object_type
+      ,       object_schema
+      ,       base_object_schema
+$else      
               -- no trunc needed here
               oracle_tools.t_schema_object.ddl_batch_order
               ( p_object_schema => object_schema
@@ -5854,6 +5864,7 @@ $end
               , p_base_object_schema => base_object_schema 
               , p_base_object_type => base_object_type 
               )
+$end              
     ;
 
     type t_params_tab is table of c_params%rowtype;
