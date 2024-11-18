@@ -64,9 +64,10 @@ procedure add
 procedure add
 ( p_schema in varchar2
 , p_transform_param_list in varchar2
-, p_object_type in varchar2
 , p_object_schema in varchar2
+, p_object_type in varchar2
 , p_base_object_schema in varchar2
+, p_base_object_type in varchar2
 , p_object_name_tab in oracle_tools.t_text_tab
 , p_base_object_name_tab in oracle_tools.t_text_tab
 , p_nr_objects in integer

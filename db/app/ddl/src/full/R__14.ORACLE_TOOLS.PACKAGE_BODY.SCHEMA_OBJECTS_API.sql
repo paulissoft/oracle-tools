@@ -1260,9 +1260,10 @@ end add;
 procedure add
 ( p_schema in varchar2
 , p_transform_param_list in varchar2
-, p_object_type in varchar2
 , p_object_schema in varchar2
+, p_object_type in varchar2
 , p_base_object_schema in varchar2
+, p_base_object_type in varchar2
 , p_object_name_tab in oracle_tools.t_text_tab
 , p_base_object_name_tab in oracle_tools.t_text_tab
 , p_nr_objects in integer
@@ -1275,9 +1276,10 @@ begin
   , seq
   , schema
   , transform_param_list
-  , object_type
   , object_schema
+  , object_type
   , base_object_schema
+  , base_object_type
   , object_name_tab
   , base_object_name_tab
   , nr_objects
@@ -1287,9 +1289,10 @@ begin
   , (select nvl(max(gdssdb.seq), 0) + 1 from oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb where gdssdb.session_id = p_session_id)
   , p_schema
   , p_transform_param_list
-  , p_object_type
   , p_object_schema
+  , p_object_type
   , p_base_object_schema
+  , p_base_object_type
   , p_object_name_tab
   , p_base_object_name_tab
   , p_nr_objects
