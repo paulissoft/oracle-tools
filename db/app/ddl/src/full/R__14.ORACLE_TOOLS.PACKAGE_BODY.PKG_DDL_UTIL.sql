@@ -62,7 +62,7 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
   c_object_no_dependencies_tab constant t_object_natural_tab := get_object_no_dependencies_tab; -- initialisation
 
   "SCHEMA_EXPORT" constant all_objects.object_type%type := 'SCHEMA_EXPORT';
-  
+
   "schema_version" constant user_objects.object_name%type := 'schema_version';
 
   "flyway_schema_history" constant user_objects.object_name%type := 'flyway_schema_history';
@@ -760,7 +760,7 @@ $end
       );
 
       r_con t_con;
-      
+
       procedure add_user_constraint
       is
       begin
@@ -943,7 +943,7 @@ $end
         */
 
         p_object_name := null; -- the constraint name
-        
+
         l_pos1 := instr(l_constraint, '(');
         l_pos2 := instr(l_constraint, ')', -1); -- get the last parenthesis
         if l_pos1 > 0 and l_pos2 > l_pos1
@@ -1461,7 +1461,7 @@ $end
 
     -- nested tables
     add(oracle_tools.t_text_tab('TABLE'), 'SYSNT%');
-    
+
     -- nested table indexes but here we must compare on base_object_name
     -- add(oracle_tools.t_text_tab('INDEX'), 'SYSNT%');
 
@@ -1527,7 +1527,7 @@ $end
         for i_idx in l_line_tab.first .. l_line_tab.last
         loop
           l_line_tab(i_idx) := upper(trim(l_line_tab(i_idx)));
-          
+
           continue when l_line_tab(i_idx) is null;
 
           if "+-" is null
@@ -1663,7 +1663,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
 $end
       null;
   end dbms_metadata$set_transform_param;
-    
+
   procedure dbms_metadata$set_filter(handle in number, name in varchar2, value in varchar2)
   is
   begin
@@ -3010,9 +3010,9 @@ $end
   )
   is
     l_program constant t_module := 'GET_SCHEMA_DDL_INIT';
-    
+
     l_object_key t_object;
-    
+
     procedure add_schema_object
     ( p_schema_object in oracle_tools.t_schema_object
     )
@@ -3167,7 +3167,7 @@ $else
 $end  
   is
     l_program constant t_module := 'GET_SCHEMA_DDL (1)'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
-    
+
     l_object_key t_object;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     l_start_time pls_integer;
@@ -3497,7 +3497,7 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
       , p_schema_object_tab => l_schema_object_tab
       );
       commit;
-      
+
 $else
 
       oracle_tools.schema_objects_api.add
@@ -5392,7 +5392,7 @@ $end
     -- ORA-06512: at "SYS.DBMS_METADATA", line 1225
     -- ORA-04092: cannot COMMIT in a trigger
     pragma autonomous_transaction;
-    
+
     l_handle number := null;
 
     l_transform_param_tab t_transform_param_tab;
@@ -5402,7 +5402,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
 $end    
 
     get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
-    
+
     md_open
     ( p_object_type => p_object_type
     , p_object_schema => p_object_schema
@@ -5428,9 +5428,9 @@ $end
         end loop;
       end if;
     end loop fetch_loop;
-    
+
     md_close(l_handle);
-    
+
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
     dbug.leave;
 $end    
@@ -5444,7 +5444,7 @@ $end
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
       dbug.leave;
 $end    
-      
+
     when others
     then
       if l_handle is not null
@@ -5615,7 +5615,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
         dbms_parallel_execute.resume_task(l_task_name);
       end loop;
- 
+
       -- Done with processing; drop the task
       dbms_parallel_execute.drop_task(l_task_name);
     exception
@@ -5649,7 +5649,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       raise;
 $end
   end ddl_batch_process;
-  
+
   procedure ddl_batch_process
   ( p_session_id in integer
   , p_start_id in number
@@ -5721,18 +5721,18 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end            
           null;
       end;
-        
+
       delete
       from    oracle_tools.v_my_generate_ddl_session_schema_ddl_batches gdssdb
       where   current of c_gdssdb;
     end loop;
-    
+
     -- commit/rollback should be here
     if p_rollback
     then rollback to spt;
     else commit;
     end if;
-    
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
@@ -6039,7 +6039,7 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
       end if;
 
 $end
-          
+
       open c_params
       ( p_schema_object_filter.schema()
       , mod(i_use_schema_export, 2) -- so it will always be 0 or 1
@@ -6059,7 +6059,7 @@ $end
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.print(dbug."debug", 'l_params_tab.count: %s', l_params_tab.count);
 $end
-        
+
         l_params_idx := l_params_tab.first;
         <<param_loop>>
         loop
@@ -6107,10 +6107,10 @@ $else
 $end          
           l_params_idx := l_params_tab.next(l_params_idx);
         end loop param_loop;
-        
+
         exit params_loop when l_params_tab.count < g_max_fetch; -- next fetch will return 0
       end loop params_loop;
-      
+
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
       -- Apparently we are not done.
@@ -6230,7 +6230,7 @@ $end
     , p_str_tab => g_include_objects
     );
   end set_display_ddl_schema_args;
-  
+
   procedure get_display_ddl_schema_args
   ( p_exclude_objects out nocopy dbms_sql.varchar2a
   , p_include_objects out nocopy dbms_sql.varchar2a
@@ -6240,7 +6240,7 @@ $end
     p_exclude_objects := g_exclude_objects;
     p_include_objects := g_include_objects;
   end get_display_ddl_schema_args;
-  
+
   procedure set_display_ddl_schema_args
   ( p_schema in t_schema_nn
   , p_new_schema in t_schema
@@ -6288,7 +6288,7 @@ $end
     ( p_exclude_objects => p_exclude_objects
     , p_include_objects => p_include_objects
     );
- 
+
     l_statement :=
       utl_lms.format_message
       ( '
@@ -6365,10 +6365,10 @@ $end
     dbms_sql.variable_value(l_cursor, ':b09', l_sqlcode);
     dbms_sql.variable_value(l_cursor, ':b10', l_sqlerrm);
     dbms_sql.variable_value(l_cursor, ':b11', l_error_backtrace);
-    
+
     oracle_tools.api_pkg.dbms_output_flush(l_network_link);
     cleanup;
-    
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
@@ -6377,7 +6377,7 @@ $end
     then    
       oracle_tools.api_pkg.dbms_output_flush(l_network_link);
       cleanup;
-      
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print(dbug."error", 'remote error: %s', l_sqlcode);
       dbug.print(dbug."error", 'remote error message: %s', l_sqlerrm);
@@ -7236,13 +7236,13 @@ $end
     begin
       -- 1: ALTER TABLE "ORACLE_TOOLS"."DEMO_CONSTRAINT_LOOKUP" ADD CONSTRAINT "DEMO_CONSTRAINT_LOOKUP_PK" PRIMARY KEY ("CONSTRAINT_NAME") ENABLE
       -- 2: ALTER TABLE "ORACLE_TOOLS"."DEMO_CONSTRAINT_LOOKUP" ADD CONSTRAINT "DEMO_CONSTRAINT_LOOKUP_PK" PRIMARY KEY ("CONSTRAINT_NAME")
-      
+
       -- GJP 2021-08-27 Ignore this special case
       -- 1: <NULL>
       -- 2: ALTER TRIGGER "ORACLE_TOOLS"."UI_APEX_MESSAGES_TRG" ENABLE
 
       -- USING INDEX "ORACLE_TOOLS"."EBA_INTRACK_ERROR_LOOKUP_PK"
-      
+
       return
         case
           when ltrim(p_line) like 'PCTFREE %' 
@@ -7288,7 +7288,7 @@ $end
     loop
       l_line1 := case when l_idx1 <= p_last1 and p_line1_tab.exists(l_idx1) then normalize(p_line1_tab(l_idx1)) else null end;
       l_line2 := case when l_idx2 <= p_last2 and p_line2_tab.exists(l_idx2) then normalize(p_line2_tab(l_idx2)) else null end;
-      
+
       if ( l_line1 is null and l_line2 is null ) or l_line1 = l_line2
       then
         null; -- lines equal
@@ -7299,7 +7299,7 @@ $end
       l_idx1 := l_idx1 + 1;
       l_idx2 := l_idx2 + 1;
     end loop line_loop;
-    
+
     return null; -- ok
   end show_diff;
 
@@ -7322,7 +7322,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
     l_result := show_diff(p_line1_tab, p_first1, p_last1, p_line2_tab, p_first2, p_last2);
-    
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     if l_result is not null
     then
@@ -7483,7 +7483,7 @@ $end
   begin
     -- so p_schema_object_filter.match_perc() >= p_schema_object_filter.match_perc_threshold() will always be false meaning no SCHEMA_EXPORT will be used
     oracle_tools.pkg_schema_object_filter.default_match_perc_threshold(null);
-    
+
     get_transform_param_tab
     ( p_transform_param_list => c_transform_param_list_testing
     , p_transform_param_tab => l_transform_param_tab
@@ -7494,7 +7494,7 @@ $end
     , p_transform_param_tab => l_transform_param_tab
     ); -- for get_source    
   end ut_disable_schema_export;
-  
+
   procedure ut_enable_schema_export
   is
   begin
@@ -7928,7 +7928,7 @@ $end
       ( show_diff(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2)
       , l_program || '#' || p_owner || '#' || p_object_type || '#' || p_object_name || '#' || p_try || '#eq'
       ).to_be_null();
-      
+
       dbms_lob.trim(p_clob, 0);
     end compare_source;
 
@@ -8075,7 +8075,7 @@ $end
     for i_try in l_lwb .. l_upb
     loop
       dbms_lob.trim(l_clob1, 0);
-      
+
       -- ddl for all objects
       for r_text in
       ( select t.obj.object_schema() as object_schema
