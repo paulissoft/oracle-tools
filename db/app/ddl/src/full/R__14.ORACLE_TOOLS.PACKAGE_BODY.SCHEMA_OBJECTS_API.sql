@@ -400,9 +400,9 @@ $end
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
-$if oracle_tools.schema_objects_api.c_debugging $then
+--$if oracle_tools.schema_objects_api.c_debugging $then
   p_schema_object_filter.print();
-$end  
+--$end  
 $end
 
   for i_idx in c_steps.first .. c_steps.last
@@ -413,6 +413,12 @@ $end
 
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.enter(l_module_name || '.' || l_step);
+    dbug.print
+    ( dbug."info"
+    , 'p_session: %s; schema_objects_api.get_session_id: %s'
+    , p_session_id
+    , schema_objects_api.get_session_id
+    );
 $end    
 
     case l_step
