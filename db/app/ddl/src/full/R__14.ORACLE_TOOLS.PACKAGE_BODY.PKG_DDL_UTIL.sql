@@ -268,7 +268,11 @@ $end
 
   g_ddl_tab sys.ku$_ddls; -- should be package global for better performance
 
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+
   g_parallel_level natural := null; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
+
+$end
 
   /* PRIVATE ROUTINES */
 
@@ -5461,6 +5465,8 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 $end
   end get_schema_ddl;
 
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+
   procedure set_parallel_level
   ( p_parallel_level in natural
   )
@@ -5661,6 +5667,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       raise;
 $end
   end ddl_batch_process;
+
+$end -- $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
 
