@@ -3,7 +3,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."SCHEMA_OBJECTS_API" AUTHID CURRENT_USE
 c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
 c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
 
 type t_schema_object_rec is record
 ( obj oracle_tools.t_schema_object
