@@ -119,7 +119,7 @@ static function object_type_order
 ( p_object_type in varchar2
 )
 return integer
-deterministic result_cache
+deterministic /*result_cache*/
 is
 begin
   return
@@ -179,7 +179,7 @@ static function get_id
 , p_grantable in varchar2
 )
 return varchar2
-deterministic result_cache
+deterministic /*result_cache*/
 is
   l_id varchar2(500 byte) := null;
 begin
@@ -389,7 +389,7 @@ static function dict2metadata_object_type
 ( p_dict_object_type in varchar2
 )
 return varchar2
-deterministic result_cache
+deterministic /*result_cache*/
 is
   l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
 begin
@@ -773,7 +773,7 @@ static function is_a_repeatable
 ( p_object_type in varchar2
 )
 return integer
-deterministic result_cache
+deterministic /*result_cache*/
 is
 begin
   -- See generate_ddl.pl documentatation
@@ -861,7 +861,7 @@ static function dict_object_type
 ( p_object_type in varchar2
 )
 return varchar2
-deterministic result_cache
+deterministic /*result_cache*/
 is
   l_dict_object_type oracle_tools.pkg_ddl_util.t_dict_object_type;
   l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
@@ -1017,6 +1017,38 @@ $end
 
   return l_id;
 end join_id;
+
+static function ddl_batch_order
+( p_object_schema in varchar2
+, p_object_type in varchar2
+, p_base_object_schema in varchar2
+, p_base_object_type in varchar2
+)
+return number
+deterministic /*result_cache*/
+is
+begin
+  -- examples
+  -- a) 2.0600 for a TABLE (no repeatable)
+  -- b) 2.0616 for an INDEX having TABLE as its base type
+  return
+    case p_object_schema
+      when 'PUBLIC'
+      then 0
+      when 'SCHEMA_EXPORT'
+      then 1
+      else 2 +
+           is_a_repeatable(nvl(p_base_object_type, p_object_type)) +
+           object_type_order(nvl(p_base_object_type, p_object_type)) / 100 +
+           nvl(object_type_order(p_base_object_type), 0) / 10000
+    end;
+end ddl_batch_order;
+
+final member function ddl_batch_order return number deterministic /*result_cache*/
+is
+begin
+  return oracle_tools.t_schema_object.ddl_batch_order(self.object_schema(), self.object_type(), self.base_object_schema(), self.base_object_type());
+end ddl_batch_order;
 
 end;
 /

@@ -3459,7 +3459,7 @@ $end
       , p_transform_param_list => p_transform_param_list
       );
       commit;
-      ddl_batch_process;
+      --ddl_batch_process;
       commit;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       select count(*) into l_count from oracle_tools.v_my_schema_ddls;
@@ -5470,6 +5470,8 @@ $end
   end set_parallel_level;
 
   procedure ddl_batch_process
+  ( p_rollback in boolean
+  )
   is
     l_session_id constant integer := to_number(sys_context('USERENV', 'SESSIONID'));
     l_task_name constant varchar2(100 byte) := 'DDL_BATCH-' || to_char(l_session_id);
@@ -5493,9 +5495,11 @@ $end
   ( p_session_id => %s
   , p_start_id => :start_id
   , p_end_id => :end_id
+  , p_rollback => %s
   );
 end;]'
       , to_char(l_session_id)
+      , case when p_rollback then 'true' else 'false' end
       );
     l_status number;
   begin
@@ -5584,6 +5588,7 @@ $end
   ( p_session_id in integer
   , p_start_id in number
   , p_end_id in number
+  , p_rollback in boolean
   )
   is
     cursor c_gdssdb
@@ -5597,6 +5602,8 @@ $end
       ,       gdssdb.seq
       for update;
   begin
+    savepoint spt;
+
     -- essential when in another process
     if oracle_tools.schema_objects_api.get_session_id = p_session_id
     then
@@ -5637,7 +5644,11 @@ $end
       from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb
       where   current of c_gdssdb;
     end loop;
-    commit; -- should be here
+    -- should be here
+    if p_rollback
+    then rollback to spt;
+    else commit;
+    end if;
     
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -5743,9 +5754,10 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     , b_schema_object_tab in oracle_tools.t_schema_object_tab
 $end    
     ) is
-      select  object_type
-      ,       object_schema
+      select  object_schema
+      ,       object_type
       ,       base_object_schema
+      ,       base_object_type
       ,       object_name_tab
       ,       base_object_name_tab
       ,       nr_objects
@@ -5753,6 +5765,7 @@ $end
                 ( select  "SCHEMA_EXPORT" as object_type
                   ,       b_schema as object_schema
                   ,       null as object_name
+                  ,       null as base_object_type
                   ,       null as base_object_schema
                   ,       null as base_object_name
                   ,       null as column_name -- to get the count right
@@ -5773,6 +5786,7 @@ $end
                             then null
                             else t.object_name()
                           end as object_name
+                  ,       t.base_object_type()
                   ,       case
                             when t.object_type() in ('INDEX', 'TRIGGER')
                             then null
@@ -5798,9 +5812,10 @@ $else
 $end
                   where   b_use_schema_export = 0
                 )
-                select  t.object_type
-                ,       t.object_schema
+                select  t.object_schema
+                ,       t.object_type
                 ,       t.base_object_schema
+                ,       t.base_object_type
                 ,       cast
                         ( multiset
                           ( select  l.object_name
@@ -5824,16 +5839,18 @@ $end
                 ,       count(*) as nr_objects
                 from    src t
                 group by
-                        t.object_type
-                ,       t.object_schema
+                        t.object_schema
+                ,       t.object_type
                 ,       t.base_object_schema
+                ,       t.base_object_type
               )
       order by
-              case object_schema when 'PUBLIC' then 0 when b_schema then 1 else 2 end -- PUBLIC synonyms first
-      ,       nr_objects desc -- the more objects, the earlier the parallel chunk must start        
-      ,       object_type
-      ,       object_schema
-      ,       base_object_schema
+              oracle_tools.t_schema_object.ddl_batch_order
+              ( p_object_schema => object_schema
+              , p_object_type => object_type 
+              , p_base_object_schema => base_object_schema 
+              , p_base_object_type => base_object_type 
+              )
     ;
 
     type t_params_tab is table of c_params%rowtype;
@@ -5936,10 +5953,11 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
         end
 $end        
       );
+      fetch c_params bulk collect into l_params_tab;
+      close c_params;
 
       <<params_loop>>
       loop
-        fetch c_params bulk collect into l_params_tab limit g_max_fetch;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.print(dbug."debug", 'l_params_tab.count: %s', l_params_tab.count);
@@ -5981,9 +5999,10 @@ $else
           oracle_tools.schema_objects_api.add
           ( p_schema => p_schema_object_filter.schema()
           , p_transform_param_list => p_transform_param_list
-          , p_object_type => r_params.object_type
           , p_object_schema => r_params.object_schema
+          , p_object_type => r_params.object_type
           , p_base_object_schema => r_params.base_object_schema
+          , p_base_object_type => r_params.base_object_type
           , p_object_name_tab => r_params.object_name_tab
           , p_base_object_name_tab => r_params.base_object_name_tab
           , p_nr_objects => r_params.nr_objects
@@ -5995,8 +6014,6 @@ $end
         exit params_loop when l_params_tab.count < g_max_fetch; -- next fetch will return 0
       end loop params_loop;
       
-      close c_params;
-
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
       -- Apparently we are not done.

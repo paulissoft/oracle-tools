@@ -7,9 +7,10 @@ create table generate_ddl_session_schema_ddl_batches
 , schema varchar2(128 byte)
 , transform_param_list varchar2(4000 byte) -- parameter from pkg_ddl_util.get_schema_ddl
 -- select list from cursor c_params in body pkg_ddl_util
-, object_type varchar2(30 byte)
 , object_schema varchar2(128 byte)
+, object_type varchar2(30 byte)
 , base_object_schema varchar2(128 byte)
+, base_object_type varchar2(30 byte)
 , object_name_tab oracle_tools.t_text_tab
 , base_object_name_tab oracle_tools.t_text_tab
 , nr_objects integer

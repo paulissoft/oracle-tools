@@ -32,7 +32,7 @@ create type oracle_tools.t_schema_object authid current_user as object
 , static function object_type_order
   ( p_object_type in varchar2
   )
-  return integer deterministic result_cache
+  return integer deterministic /*result_cache*/
 , final member function object_type_order return integer deterministic
 , static function get_id
   ( p_object_schema in varchar2
@@ -46,7 +46,7 @@ create type oracle_tools.t_schema_object authid current_user as object
   , p_privilege in varchar2 default null
   , p_grantable in varchar2 default null
   )
-  return varchar2 deterministic result_cache
+  return varchar2 deterministic /*result_cache*/
 , static procedure set_id
   ( p_schema_object in out nocopy oracle_tools.t_schema_object
   )
@@ -55,7 +55,7 @@ create type oracle_tools.t_schema_object authid current_user as object
   ( p_dict_object_type in varchar2
   )
   return varchar2
-  deterministic result_cache
+  deterministic /*result_cache*/
 , final member function dict2metadata_object_type return varchar2 deterministic
 , member procedure print
   ( self in oracle_tools.t_schema_object
@@ -90,14 +90,14 @@ create type oracle_tools.t_schema_object authid current_user as object
   ( p_object_type in varchar2
   )
   return integer
-  deterministic result_cache
+  deterministic /*result_cache*/
 , member function is_a_repeatable return integer deterministic
 , final member function fq_object_name return varchar2 deterministic
 , static function dict_object_type
   ( p_object_type in varchar2
   )
   return varchar2
-  deterministic result_cache
+  deterministic /*result_cache*/
 , member function dict_object_type return varchar2 deterministic
 , member procedure chk
   ( self in oracle_tools.t_schema_object
@@ -114,6 +114,27 @@ create type oracle_tools.t_schema_object authid current_user as object
   )
   return varchar2 deterministic
 , not instantiable member function dict_object_exists return integer -- 0/1
+, static function ddl_batch_order
+  ( p_object_schema in varchar2
+  , p_object_type in varchar2
+  , p_base_object_schema in varchar2
+  , p_base_object_type in varchar2
+  )
+  return number
+  /*
+    case p_object_schema
+      when 'PUBLIC'
+      then 0
+      when 'SCHEMA_EXPORT'
+      then 1
+      else 2 +
+           is_a_repeatable(nvl(p_base_object_type, p_object_type)) +
+           object_type_order(nvl(p_base_object_type, p_object_type)) / 100 +
+           nvl(object_type_order(p_base_object_type), 0) / 10000
+    end
+  */
+  deterministic /*result_cache*/
+, final member function ddl_batch_order return number deterministic /*result_cache*/
 )
 not instantiable
 not final]';
