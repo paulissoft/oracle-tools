@@ -1043,6 +1043,8 @@ is
   -- ORA-00910: specified length too long for its datatype
   e_specified_length_too_long_for_its_datatype exception;
   pragma exception_init(e_specified_length_too_long_for_its_datatype, -910);
+
+  l_ddl oracle_tools.t_ddl;
   
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_DDL)';
@@ -1064,6 +1066,23 @@ $end
     then raise value_error;
     else null;
   end case;
+
+  if cardinality(p_schema_ddl.ddl_tab) > 0
+  then
+    for i_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
+    loop
+      l_ddl := p_schema_ddl.ddl_tab(i_idx);
+      if l_ddl is null or l_ddl.text is null or l_ddl.text.count = 0 or l_ddl.text(1) like l_ddl.verb$ || ' %'
+      then
+        null; -- OK
+      else
+$if oracle_tools.schema_objects_api.c_tracing $then
+        l_ddl.print;
+$end        
+        raise program_error;
+      end if;
+    end loop;
+  end if;
 
   begin
     savepoint spt;
