@@ -426,46 +426,23 @@ $end
       then
         get_named_objects
         ( p_schema => l_schema
-        , p_schema_object_tab => l_all_schema_object_tab -- first step so add to l_all_schema_object_tab
-        );      
+        , p_schema_object_tab => l_tmp_schema_object_tab
+        );
+        -- so they will be part of v_my_schema_objects from this point on
+        add
+        ( p_schema_object_tab => l_tmp_schema_object_tab
+        , p_session_id => p_session_id 
+        , p_schema_object_filter_id => p_schema_object_filter_id
+        );
+        l_tmp_schema_object_tab.delete;
 
       -- object grants must depend on a base object already gathered (see above)
       when "object grants"
       then
-        -- before Oracle 12 there was no type column in all_tab_privs
-        with prv as -- use this clause to speed up the query for <owner>
-        ( -- several grantors may have executed the same grant statement
-          select  p.table_schema
-          ,       p.table_name
-          ,       p.grantee
-          ,       p.privilege
-          ,       max(p.grantable) as grantable -- YES comes after NO
-          from    all_tab_privs p
-          where   p.table_schema = l_schema
-          and     ( l_grantor_is_schema = 0 or p.grantor = l_schema )
-          group by
-                  p.table_schema
-          ,       p.table_name
-          ,       p.grantee
-          ,       p.privilege
-        )
-        -- grants for all our objects
-        select  oracle_tools.t_object_grant_object
-                ( p_base_object => value(mnso)
-                , p_object_schema => null
-                , p_grantee => p.grantee
-                , p_privilege => p.privilege
-                , p_grantable => p.grantable
-                )
+        select  value(dogo)
         bulk collect
-        into    l_tmp_schema_object_tab
-        from    oracle_tools.v_my_named_schema_objects mnso
-                inner join prv p
-                on p.table_schema = mnso.object_schema() and p.table_name = mnso.object_name()
-        where   mnso.object_type() not in ( 'PACKAGE_BODY'
-                                          , 'TYPE_BODY'
-                                          , 'MATERIALIZED_VIEW'
-                                          ); -- grants are on underlying tables
+        into    l_tmp_schema_object_tab                  
+        from    oracle_tools.v_my_dependent_or_granted_objects dogo;
         
       when "comments"
       then

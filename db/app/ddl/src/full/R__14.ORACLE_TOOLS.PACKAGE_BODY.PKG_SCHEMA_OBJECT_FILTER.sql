@@ -227,7 +227,7 @@ $else
          ignore_object(p_base_object_type, p_base_object_name) >= 1
 $end         
     then
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then  
       dbug.print(dbug."info", 'case 1');
 $end
       l_result := 0;
@@ -242,7 +242,7 @@ $else
 $end
 
     then
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then  
       dbug.print(dbug."info", 'case 2');
 $end
       l_result := 0;
@@ -252,21 +252,21 @@ $end
          p_schema_object_filter.object_tab$ is null or
          p_schema_object_filter.object_tab$.count = 0
     then
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then  
       dbug.print(dbug."info", 'case 3');
 $end
       l_result := 1;
 
     when search(1, p_schema_object_filter.nr_excluded_objects$) = 1
     then
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then  
       dbug.print(dbug."info", 'case 4');
 $end
       -- any exclusion match; return 0
       l_result := 0;
 
     else
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then  
       dbug.print(dbug."info", 'case 5');
 $end
       -- check for inclusion match
@@ -1101,7 +1101,7 @@ is
   l_line_tab dbms_sql.varchar2a;
 begin
 -- !!! DO NOT use oracle_tools.pkg_schema_object_filter.c_debugging HERE !!!
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then  
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
 
   oracle_tools.pkg_str_util.split

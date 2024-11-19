@@ -5550,7 +5550,7 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
   ( p_rollback in boolean
   )
   is
-    l_session_id constant integer := to_number(sys_context('USERENV', 'SESSIONID'));
+    l_session_id constant integer := oracle_tools.schema_objects_api.get_session_id;
     l_task_name constant varchar2(100 byte) := 'DDL_BATCH-' || to_char(l_session_id);
     -- Here we substitute the session id into the statement since it may be executed by another session.
     l_sql_stmt constant varchar2(1000 byte) :=
@@ -6448,7 +6448,7 @@ $end
     -- PLS-00994: Cursor Variables cannot be declared as part of a package
     g_cursor := dbms_sql.to_cursor_number(l_cursor);  
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.print(dbug."info", 'sid: %s; g_cursor: %s', sys_context('userenv','sid'), g_cursor);
+    dbug.print(dbug."info", 'sid: %s; g_cursor: %s', sys_context('USERENV','SID'), g_cursor);
 $end
   end set_display_ddl_schema_args_r;
 
@@ -6475,7 +6475,7 @@ $end
 
     -- PLS-00994: Cursor Variables cannot be declared as part of a package
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.print(dbug."info", 'sid: %s; g_cursor: %s', sys_context('userenv','sid'), g_cursor);
+    dbug.print(dbug."info", 'sid: %s; g_cursor: %s', sys_context('USERENV','SID'), g_cursor);
 $end
     if g_cursor is null
     then
