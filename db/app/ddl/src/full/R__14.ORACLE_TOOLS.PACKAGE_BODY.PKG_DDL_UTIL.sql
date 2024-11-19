@@ -2290,9 +2290,11 @@ $end
             );
             if l_line_tab.count > 0
             then
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
               -- free and nullify the ddlText so a copy will not create a new temporary on the fly
               dbms_lob.freetemporary(g_ddl_tab(i_ku$ddls_idx).ddlText);
               g_ddl_tab(i_ku$ddls_idx).ddlText := null;
+$end              
 
               for i_idx in l_line_tab.first .. l_line_tab.last
               loop
@@ -2412,11 +2414,15 @@ $end
     procedure cleanup
     is
     begin
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
       if p_ku$_ddl.ddlText is not null
       then
         dbms_lob.freetemporary(p_ku$_ddl.ddlText);
         p_ku$_ddl.ddlText := null;
       end if;
+$else
+      null;
+$end      
     end cleanup;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
@@ -3265,7 +3271,9 @@ $end
             p_schema_ddl_tab.extend(1);
             p_schema_ddl_tab(p_schema_ddl_tab.last) := p_object_lookup_tab(l_object_key).schema_ddl;
             p_object_lookup_tab(l_object_key).ready := true;
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
             p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
+$end            
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
             dbug.print
             ( dbug."info"
@@ -3336,7 +3344,9 @@ $end
           p_schema_ddl_tab.extend(1);
           p_schema_ddl_tab(p_schema_ddl_tab.last) := p_object_lookup_tab(l_object_key).schema_ddl;
           p_object_lookup_tab(l_object_key).ready := true;
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
           p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
+$end          
         end if;          
         l_object_key := p_object_lookup_tab.next(l_object_key);
       end loop;
@@ -3872,6 +3882,8 @@ $end
       , p_target_desc => l_program
       );
 
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+
     procedure free_memory
     ( p_schema_ddl_tab in out nocopy oracle_tools.t_schema_ddl_tab
     )
@@ -3895,6 +3907,8 @@ $end
         end loop;
       end if;
     end free_memory;
+
+$end
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -3955,7 +3969,9 @@ $end
                 )
               ) s
       ;
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
       free_memory(l_source_schema_ddl_tab);
+$end      
     end if;
 
     if p_schema_target is null
@@ -3997,7 +4013,9 @@ $end
                 )
               ) t
       ;
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
       free_memory(l_target_schema_ddl_tab);
+$end      
     end if;
 
     for r_schema_ddl in
