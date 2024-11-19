@@ -1028,9 +1028,6 @@ return varchar2
 deterministic /*result_cache*/
 is
 begin
-  -- examples
-  -- a) 2.0600 for a TABLE (no repeatable)
-  -- b) 2.0616 for an INDEX having TABLE as its base type
   return
     case p_object_schema
       when 'PUBLIC'
