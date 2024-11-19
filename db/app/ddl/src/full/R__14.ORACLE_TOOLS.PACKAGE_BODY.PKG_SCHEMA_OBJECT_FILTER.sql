@@ -983,7 +983,7 @@ $end
              p_object_type is null -- can be any of the above                 
           then
             -- Add entries for each dependent object type and
-            -- let oracle_tools.t_schema_object.id() decide about setting the base object type
+            -- let oracle_tools.t_schema_object.id decide about setting the base object type
             -- inside add_item().
             for i_object_type_idx in l_dependent_md_object_type_tab.first .. l_dependent_md_object_type_tab.last
             loop

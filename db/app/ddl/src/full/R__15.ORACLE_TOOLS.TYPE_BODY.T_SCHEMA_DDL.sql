@@ -109,7 +109,7 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL (1)');
-  dbug.print(dbug."input", 'self.obj.id(): %s; self.ddl_tab.count: %s; p_text.count: %s', self.obj.id(), self.ddl_tab.count, case when p_text is not null then p_text.count end);
+  dbug.print(dbug."input", 'self.obj.id: %s; self.ddl_tab.count: %s; p_text.count: %s', self.obj.id, self.ddl_tab.count, case when p_text is not null then p_text.count end);
 $end
 
   self.ddl_tab.extend(1);

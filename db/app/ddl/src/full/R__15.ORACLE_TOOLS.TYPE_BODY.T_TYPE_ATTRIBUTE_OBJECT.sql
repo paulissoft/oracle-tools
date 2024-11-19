@@ -20,8 +20,8 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR');
   dbug.print
   ( dbug."input"
-  , 'p_base_object.id(): %s; p_member#: %s; p_member_name: %s; p_data_type_name: %s; p_data_type_mod: %s'
-  , p_base_object.id()
+  , 'p_base_object.id: %s; p_member#: %s; p_member_name: %s; p_data_type_name: %s; p_data_type_mod: %s'
+  , p_base_object.id
   , p_member#
   , p_member_name
   , p_data_type_name

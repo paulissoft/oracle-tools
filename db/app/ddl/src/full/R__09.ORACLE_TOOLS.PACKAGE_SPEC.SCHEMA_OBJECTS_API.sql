@@ -53,11 +53,11 @@ return generate_ddl_session_schema_objects%rowtype;
 /** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by seq. **/
 
 function find_schema_object_by_object_id
-( p_schema_object_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id())
+( p_schema_object_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id)
 , p_session_id in t_session_id default get_session_id
 )
 return generate_ddl_session_schema_objects%rowtype;
-/** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by obj.id(). **/
+/** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by obj.id. **/
 
 procedure default_match_perc_threshold
 ( p_match_perc_threshold in integer

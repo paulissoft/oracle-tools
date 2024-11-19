@@ -22,7 +22,7 @@ So you can get DDL for a DEPENDENT or GRANTED object ONLY by specifying its BASE
 The method is named PARTIAL since only (BASE) OBJECT TYPE and (BASE) OBJECT NAME are used to match.
 2. the new COMPLETE method is more fine grained and works by specifying a unique identification for each named, dependent or granted object you want to include or exclude.
 So now you can just retrieve one constraint, not all constraints for a table.
-The unique identification is the static object type T_SCHEMA_OBJECT.ID() function.
+The unique identification is the static object type T_SCHEMA_OBJECT.GET_ID() function.
 This method is named COMPLETE since all fields of an identification can be used, like COLUMN of a COMMENT, GRANTEE of an OBJECT_GRANT and so on.
 
 These two methods can be combined.
