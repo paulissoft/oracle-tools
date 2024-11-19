@@ -133,7 +133,7 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
         then 15 -- ORACLE_TOOLS:TYPE_SPEC:SYS_YOID0000142575$:::::::
         else 0
       end;
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
       dbug.print
       ( dbug."info"
       , 'object type/name: "%s"; base object type/name: "%s"; ignore_object case: %s'
@@ -197,7 +197,7 @@ $end
     return case when p_lwb <= p_upb then 0 else null end;
   end search;
 begin
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCHES_SCHEMA_OBJECT');
   dbug.print
   ( dbug."input"
@@ -284,14 +284,14 @@ $end
                   );
   end case;  
 
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then  
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then  
   dbug.print(dbug."output", 'return: %s', l_result);
   dbug.leave;
 $end
 
   return l_result;
 
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
 exception
   when others
   then
@@ -748,9 +748,8 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
   end add_items;
 begin
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT');
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT');
   dbug.print
   ( dbug."input"
   , 'p_schema: %s; p_object_type: %s; p_object_names: %s; p_object_names_include: %s; p_grantor_is_schema: %s'
@@ -766,7 +765,6 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   , dbms_lob.getlength(p_exclude_objects)
   , dbms_lob.getlength(p_include_objects)
   );
-$end  
 $end
 
   -- old functionality
@@ -1030,9 +1028,6 @@ $end
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   print(p_schema_object_filter);
-$end
-
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
   dbug.leave;
 exception
   when others
@@ -1081,13 +1076,13 @@ return json_object_t
 is
   l_json_object json_object_t := json_object_t();
 begin
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SERIALIZE');
 $end
 
   serialize(p_schema_object_filter, l_json_object);
 
-$if oracle_tools.pkg_schema_object_filter.c_tracing $then
+$if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.leave;
 $end
 

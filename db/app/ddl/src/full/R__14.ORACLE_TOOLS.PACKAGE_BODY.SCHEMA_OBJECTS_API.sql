@@ -439,10 +439,22 @@ $end
       -- object grants must depend on a base object already gathered (see above)
       when "object grants"
       then
-        select  value(dogo)
+        select  oracle_tools.t_object_grant_object
+                ( p_base_object => value(mnso)
+                , p_object_schema => null
+                , p_grantee => p.grantee
+                , p_privilege => p.privilege
+                , p_grantable => p.grantable
+                )
         bulk collect
         into    l_tmp_schema_object_tab                  
-        from    oracle_tools.v_my_dependent_or_granted_objects dogo;
+        from    oracle_tools.v_my_named_schema_objects mnso
+                inner join oracle_tools.v_my_object_grants_dict p
+                on p.table_schema = mnso.object_schema() and p.table_name = mnso.object_name()
+        where   mnso.object_type() not in ( 'PACKAGE_BODY'
+                                          , 'TYPE_BODY'
+                                          , 'MATERIALIZED_VIEW' -- grants are on underlying tables
+                                          ); 
         
       when "comments"
       then
