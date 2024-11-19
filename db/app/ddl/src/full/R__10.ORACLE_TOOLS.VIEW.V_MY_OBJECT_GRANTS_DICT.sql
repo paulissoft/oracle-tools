@@ -1,6 +1,6 @@
 CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_OBJECT_GRANTS_DICT" BEQUEATH CURRENT_USER AS 
-  select  p.table_schema
-,       p.table_name
+  select  p.table_schema as base_object_schema
+,       p.table_name as base_object_name
 ,       p.grantee
 ,       p.privilege
         -- several grantors may have executed the same grant statement
@@ -12,5 +12,4 @@ group by
         p.table_schema
 ,       p.table_name
 ,       p.grantee
-,       p.privilege
-
+,       p.privilege;

@@ -450,7 +450,7 @@ $end
         into    l_tmp_schema_object_tab                  
         from    oracle_tools.v_my_named_schema_objects mnso
                 inner join oracle_tools.v_my_object_grants_dict p
-                on p.table_schema = mnso.object_schema() and p.table_name = mnso.object_name()
+                on p.base_object_schema = mnso.object_schema() and p.base_object_name = mnso.object_name()
         where   mnso.object_type() not in ( 'PACKAGE_BODY'
                                           , 'TYPE_BODY'
                                           , 'MATERIALIZED_VIEW' -- grants are on underlying tables
@@ -459,45 +459,18 @@ $end
       when "comments"
       then
         select  oracle_tools.t_comment_object
-                ( p_base_object => treat(t.base_object as oracle_tools.t_named_object)
-                , p_object_schema => t.object_schema
-                , p_column_name => t.column_name
+                ( p_base_object => treat(value(mnso) as oracle_tools.t_named_object)
+                , p_object_schema => c.object_schema
+                , p_column_name => c.column_name
                 )
         bulk collect
         into    l_tmp_schema_object_tab                  
-        from    ( -- table/view comments
-                  select  value(mnso)    as base_object
-                  ,       null           as object_schema
-                  ,       null           as object_name
-                  ,       null           as column_name
-                  from    oracle_tools.v_my_named_schema_objects mnso
-                          inner join all_tab_comments t
-                          on t.owner = mnso.object_schema() and t.table_type = mnso.object_type() and t.table_name = mnso.object_name()
-                  where   mnso.object_type() in ('TABLE', 'VIEW')
-                  and     t.comments is not null
-                  union all
-                  -- materialized view comments
-                  select  value(mnso)    as base_object
-                  ,       null           as object_schema
-                  ,       null           as object_name
-                  ,       null           as column_name
-                  from    oracle_tools.v_my_named_schema_objects mnso
-                          inner join all_mview_comments m
-                          on m.owner = mnso.object_schema() and m.mview_name = mnso.object_name()
-                  where   mnso.dict_object_type() = 'MATERIALIZED VIEW'
-                  and     m.comments is not null
-                  union all
-                  -- column comments
-                  select  value(mnso)    as base_object
-                  ,       null           as object_schema
-                  ,       null           as object_name
-                  ,       c.column_name  as column_name
-                  from    oracle_tools.v_my_named_schema_objects mnso
-                          inner join all_col_comments c
-                          on c.owner = mnso.object_schema() and c.table_name = mnso.object_name()
-                  where   mnso.dict_object_type() in ('TABLE', 'VIEW', 'MATERIALIZED VIEW')
-                  and     c.comments is not null
-                ) t;
+        from    oracle_tools.v_my_named_schema_objects mnso
+                inner join oracle_tools.v_my_comments_dict c
+                on c.base_object_schema = mnso.object_schema() and
+                   c.base_object_type = mnso.object_type() and
+                   c.base_object_name = mnso.object_name() and
+                   mnso.dict_object_type() in ('TABLE', 'VIEW', 'MATERIALIZED VIEW');
 
       -- constraints must depend on a base object already gathered
       when "constraints"
@@ -506,81 +479,18 @@ $end
         ( -- constraints for objects in the same schema
           select  t.*
           from    ( select  value(mnso) as base_object
-                    ,       c.owner as object_schema
-                    ,       case when c.constraint_type = 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
-                    ,       c.constraint_name as object_name
+                    ,       c.object_schema
+                    ,       c.object_type
+                    ,       c.object_name
                     ,       c.constraint_type
                     ,       c.search_condition
-$if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
-                    ,       case c.constraint_type
-                              when 'C'
-                              then ( select  cc.column_name
-                                     from    all_cons_columns cc
-                                     where   cc.owner = c.owner
-                                     and     cc.table_name = c.table_name
-                                     and     cc.constraint_name = c.constraint_name
-                                     and     rownum = 1
-                                   )
-                              else null
-                            end as any_column_name
-$end                          
                     from    oracle_tools.v_my_named_schema_objects mnso
-                            inner join all_constraints c /* this is where we are interested in */
-                            on c.owner = mnso.object_schema() and c.table_name = mnso.object_name()
+                            inner join oracle_tools.v_my_constraints_dict c /* this is where we are interested in */
+                            on c.base_object_schema = mnso.object_schema() and c.base_object_name = mnso.object_name()
                     where   mnso.object_type() in ('TABLE', 'VIEW')
-                            /* Type of constraint definition:
-                               C (check constraint on a table)
-                               P (primary key)
-                               U (unique key)
-                               R (referential integrity)
-                               V (with check option, on a view)
-                               O (with read only, on a view)
-                            */
-                    and     c.constraint_type in ('C', 'P', 'U', 'R')
-$if oracle_tools.pkg_ddl_util.c_exclude_system_constraints $then
-                    and     c.generated = 'USER NAME'
-$end
-$if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and not(oracle_tools.pkg_ddl_util.c_#138707615_1) $then
-                            -- exclude system generated not null constraints
-                    and     ( c.generated <> 'GENERATED NAME' or -- constraint_name not like 'SYS\_C%' escape '\' or
-                              c.constraint_type <> 'C' or
-                              -- column is the only column in the check constraint and must be nullable
-                              ( 1, 'Y' ) in
-                              ( select  count(tc.column_name)
-                                ,       max(tc.nullable)
-                                from    all_tab_columns tc
-                                where   tc.owner = c.owner
-                                and     tc.table_name = c.table_name
-                                and     tc.constraint_name = c.constraint_name
-                              )
-                            )
-$end
                   ) t
         )
         loop
-$if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
-          -- We do NOT want a NOT NULL constraint, named or not.
-          -- Since search_condition is a LONG we must use PL/SQL to filter
-          if r.search_condition is not null and
-             r.any_column_name is not null and
-             r.search_condition = '"' || r.any_column_name || '" IS NOT NULL'
-          then
-            -- This is a not null constraint.
-            -- Since search_condition has only one column, any column name is THE column name.
-$if oracle_tools.schema_objects_api.c_debugging $then
-            dbug.print
-            ( dbug."info"
-            , 'ignoring not null constraint: owner: %s; table: %s; constraint: %s; search_condition: %s'
-            , r.object_schema
-            , r.base_object.object_name()
-            , r.object_name
-            , r.search_condition
-            );
-$end
-            continue;
-          end if;
-$end -- $if oracle_tools.pkg_ddl_util.c_exclude_not_null_constraints and oracle_tools.pkg_ddl_util.c_#138707615_1 $then
-
           l_tmp_schema_object_tab.extend(1);
 
           case r.object_type
