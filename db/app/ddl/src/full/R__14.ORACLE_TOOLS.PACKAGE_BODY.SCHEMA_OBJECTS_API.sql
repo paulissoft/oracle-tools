@@ -1043,12 +1043,26 @@ is
   -- ORA-00910: specified length too long for its datatype
   e_specified_length_too_long_for_its_datatype exception;
   pragma exception_init(e_specified_length_too_long_for_its_datatype, -910);
-
-  l_ddl oracle_tools.t_ddl;
   
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_DDL)';
 $end
+
+  procedure chk
+  ( p_ddl in oracle_tools.t_ddl
+  )
+  is
+  begin
+    if p_ddl is null or p_ddl.text is null or p_ddl.text.count = 0 or p_ddl.text(1) like p_ddl.verb$ || ' %'
+    then
+      null; -- OK
+    else
+$if oracle_tools.schema_objects_api.c_tracing $then
+      p_ddl.print;
+$end        
+      raise program_error;
+    end if;
+  end chk;
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
@@ -1071,16 +1085,7 @@ $end
   then
     for i_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
     loop
-      l_ddl := p_schema_ddl.ddl_tab(i_idx);
-      if l_ddl is null or l_ddl.text is null or l_ddl.text.count = 0 or l_ddl.text(1) like l_ddl.verb$ || ' %'
-      then
-        null; -- OK
-      else
-$if oracle_tools.schema_objects_api.c_tracing $then
-        l_ddl.print;
-$end        
-        raise program_error;
-      end if;
+      chk(p_schema_ddl.ddl_tab(i_idx));
     end loop;
   end if;
 
@@ -1097,6 +1102,22 @@ $end
       ,       rownum as seq
       ,       value(t) as ddl
       from    table(p_schema_ddl.ddl_tab) t;
+
+    for r in
+    ( select  schema_object_id
+      ,       ddl
+      from    generate_ddl_session_schema_ddls
+      where   session_id = p_session_id
+      and     ddl is not null
+    )
+    loop
+      begin
+        chk(r.ddl);
+      exception
+        when others
+        then raise_application_error(-20000, 'schema_object_id: ' || r.schema_object_id, true);
+      end;
+    end loop;
   exception
     when e_specified_length_too_long_for_its_datatype
     then
