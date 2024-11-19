@@ -1,4 +1,4 @@
-CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_OBJECT_GRANTS_DICT" BEQUEATH CURRENT_USER AS 
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_OBJECT_GRANTS_DICT" ("BASE_OBJECT_SCHEMA", "BASE_OBJECT_NAME", "GRANTEE", "PRIVILEGE", "GRANTABLE") BEQUEATH CURRENT_USER AS 
   select  p.table_schema as base_object_schema
 ,       p.table_name as base_object_name
 ,       p.grantee
@@ -13,3 +13,4 @@ group by
 ,       p.table_name
 ,       p.grantee
 ,       p.privilege;
+

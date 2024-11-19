@@ -15,6 +15,7 @@
   
   <properties>
     <flyway.table>schema_version_tools_ddl</flyway.table>
+    <db.full.force.view>yes</db.full.force.view>
     <db.generate.full.strip.source.schema>0</db.generate.full.strip.source.schema>
     <db.object.names.include>1</db.object.names.include>
     <db.object.names>F_GENERATE_DDL

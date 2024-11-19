@@ -1,5 +1,5 @@
-CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_COMMENTS_DICT" BEQUEATH CURRENT_USER AS 
-  select  c.*
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_COMMENTS_DICT" ("BASE_OBJECT_SCHEMA", "BASE_OBJECT_TYPE", "BASE_OBJECT_NAME", "COLUMN_NAME") BEQUEATH CURRENT_USER AS 
+  select  c."BASE_OBJECT_SCHEMA",c."BASE_OBJECT_TYPE",c."BASE_OBJECT_NAME",c."COLUMN_NAME"
 from    ( -- table/view comments
           select  t.owner             as base_object_schema
           ,       t.table_type        as base_object_type
@@ -29,3 +29,4 @@ from    ( -- table/view comments
           from    all_col_comments c
           where   c.comments is not null
         ) c;
+

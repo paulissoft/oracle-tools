@@ -1,5 +1,5 @@
-CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_CONSTRAINTS_DICT" BEQUEATH CURRENT_USER AS
-  select t.*
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_CONSTRAINTS_DICT" ("OBJECT_SCHEMA", "OBJECT_TYPE", "OBJECT_NAME", "BASE_OBJECT_SCHEMA", "BASE_OBJECT_NAME", "CONSTRAINT_TYPE", "SEARCH_CONDITION") BEQUEATH CURRENT_USER AS 
+  select t."OBJECT_SCHEMA",t."OBJECT_TYPE",t."OBJECT_NAME",t."BASE_OBJECT_SCHEMA",t."BASE_OBJECT_NAME",t."CONSTRAINT_TYPE",t."SEARCH_CONDITION"
 from    ( select  c.owner as object_schema
           ,       case when c.constraint_type = 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
           ,       c.constraint_name as object_name
@@ -18,3 +18,4 @@ from    ( select  c.owner as object_schema
                   */
                   c.constraint_type in ('C', 'P', 'U', 'R')
         ) t;
+
