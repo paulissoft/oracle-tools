@@ -3625,6 +3625,11 @@ $end
       then
         for i_idx in l_schema_ddl_tab.first .. l_schema_ddl_tab.last
         loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then        
+          dbug.print(dbug."info", 'about to print l_schema_ddl_tab(%s)', i_idx);
+          l_schema_ddl_tab(i_idx).print;
+$end          
+          
           if p_network_link is not null
           then
             l_schema_ddl_tab(i_idx).obj.network_link(p_network_link);
