@@ -3167,7 +3167,6 @@ $else
   , p_base_object_name_tab in oracle_tools.t_text_tab -- base object names
   , p_nr_objects in integer
   , p_add_no_ddl_retrieved in boolean
-  , p_schema_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
   , p_object_lookup_tab in out nocopy t_object_lookup_tab -- list of all objects
   , p_constraint_lookup_tab in out nocopy t_constraint_lookup_tab
   , p_nr_objects_countdown in out nocopy positiven
@@ -3199,7 +3198,9 @@ $end
     );
 $end
 
-    p_schema_ddl_tab := oracle_tools.t_schema_ddl_tab();    
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+    p_schema_ddl_tab := oracle_tools.t_schema_ddl_tab();
+$end    
 
     get_schema_ddl_init
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
@@ -3270,9 +3271,13 @@ $end
 
           if not(p_object_lookup_tab(l_object_key).ready)
           then                  
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
             p_schema_ddl_tab.extend(1);
             p_schema_ddl_tab(p_schema_ddl_tab.last) := p_object_lookup_tab(l_object_key).schema_ddl;
             p_schema_ddl_tab(p_schema_ddl_tab.last).chk(p_schema);
+$else
+            oracle_tools.schema_objects_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
+$end
             p_object_lookup_tab(l_object_key).ready := true;
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
             p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
@@ -3344,9 +3349,13 @@ $end
           , p_text => '-- No DDL retrieved.'
           );
 
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
           p_schema_ddl_tab.extend(1);
           p_schema_ddl_tab(p_schema_ddl_tab.last) := p_object_lookup_tab(l_object_key).schema_ddl;
           p_schema_ddl_tab(p_schema_ddl_tab.last).chk(p_schema);
+$else
+          oracle_tools.schema_objects_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
+$end          
           p_object_lookup_tab(l_object_key).ready := true;
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
           p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
@@ -5524,9 +5533,6 @@ $else
 
 $end -- $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
   is
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-    l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
-$end    
     l_object_lookup_tab t_object_lookup_tab; -- list of all objects
     l_constraint_lookup_tab t_constraint_lookup_tab;
     l_nr_objects_countdown positiven := 1;
@@ -5548,19 +5554,11 @@ $end
     , p_add_no_ddl_retrieved => p_add_no_ddl_retrieved
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     , p_schema_ddl_tab => p_schema_ddl_tab
-$else
-    , p_schema_ddl_tab => l_schema_ddl_tab
 $end
     , p_object_lookup_tab => l_object_lookup_tab
     , p_constraint_lookup_tab => l_constraint_lookup_tab
     , p_nr_objects_countdown => l_nr_objects_countdown
     );
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then    
-    schema_objects_api.add
-    ( p_schema_ddl_tab => l_schema_ddl_tab
-    );
-    l_schema_ddl_tab.delete;
-$end
   end get_schema_ddl;
 
 $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
