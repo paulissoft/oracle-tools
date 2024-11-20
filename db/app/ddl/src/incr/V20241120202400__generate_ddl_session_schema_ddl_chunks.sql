@@ -16,8 +16,6 @@ create table generate_ddl_session_schema_ddl_chunks
   foreign key (session_id, schema_object_id, ddl#)
   references generate_ddl_session_schema_ddls(session_id, schema_object_id, ddl#) on delete cascade
 )
-organization index
-tablespace users
 ;
 
 alter table generate_ddl_session_schema_ddl_chunks nologging;
