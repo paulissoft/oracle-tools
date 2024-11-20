@@ -85,7 +85,7 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   g_loopback constant varchar2(10 char) := 'LOOPBACK';
 
-  c_transform_param_list_testing constant varchar2(4000 char) :=
+  c_transform_param_list_testing constant varchar2(4000 byte) :=
     -- c_transform_param_list = 'CONSTRAINTS,CONSTRAINTS_AS_ALTER,FORCE,PRETTY,REF_CONSTRAINTS,SEGMENT_ATTRIBUTES,TABLESPACE'
     '-CONSTRAINTS_AS_ALTER,-SEGMENT_ATTRIBUTES';
 
@@ -2864,6 +2864,7 @@ $end
         loop
           p_ddl.text_tab(i_idx) := modify_ddl_text(p_ddl_text => p_ddl.text_tab(i_idx), p_schema => p_schema, p_new_schema => p_new_schema);
         end loop;
+        p_ddl.chk();
       else
         -- GJP 2021-09-02
         -- The replacement will change the length and it may either become too big or too small
@@ -3271,6 +3272,7 @@ $end
           then                  
             p_schema_ddl_tab.extend(1);
             p_schema_ddl_tab(p_schema_ddl_tab.last) := p_object_lookup_tab(l_object_key).schema_ddl;
+            p_schema_ddl_tab(p_schema_ddl_tab.last).chk(p_schema);
             p_object_lookup_tab(l_object_key).ready := true;
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
             p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
@@ -3295,14 +3297,14 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
                 dbug.print(dbug."info", 'all schema DDL fetched');
 $end
                 exit fetch_loop;
-              end;
-            end if;
+            end;
           end if;
+        end if;
 
-          oracle_tools.api_longops_pkg.longops_show(l_longops_rec, 0);
-        exception
-          when oracle_tools.pkg_ddl_error.e_object_not_found
-          then
+        oracle_tools.api_longops_pkg.longops_show(l_longops_rec, 0);
+      exception
+        when oracle_tools.pkg_ddl_error.e_object_not_found
+        then
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           l_object_key := p_object_lookup_tab.first;
           <<object_loop>>
@@ -3344,6 +3346,7 @@ $end
 
           p_schema_ddl_tab.extend(1);
           p_schema_ddl_tab(p_schema_ddl_tab.last) := p_object_lookup_tab(l_object_key).schema_ddl;
+          p_schema_ddl_tab(p_schema_ddl_tab.last).chk(p_schema);
           p_object_lookup_tab(l_object_key).ready := true;
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
           p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory

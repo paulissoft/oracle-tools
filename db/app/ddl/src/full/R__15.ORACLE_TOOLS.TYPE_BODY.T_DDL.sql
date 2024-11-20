@@ -233,7 +233,19 @@ member procedure set_text_tab
 )
 is
 begin
-  self.text_tab := p_text_tab;
+  case
+    when p_text_tab is null
+    then self.text_tab := null;
+    when p_text_tab.count = 0
+    then self.text_tab := oracle_tools.t_text_tab();
+    else
+      self.text_tab := oracle_tools.t_text_tab();
+      for i_idx in p_text_tab.first .. p_text_tab.last
+      loop
+        self.text_tab.extend(1);
+        self.text_tab(self.text_tab.last) := p_text_tab(i_idx);
+      end loop;
+  end case;
   chk();
 end set_text_tab;
 

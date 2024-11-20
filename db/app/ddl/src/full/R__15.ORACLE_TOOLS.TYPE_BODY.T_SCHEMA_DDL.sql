@@ -327,6 +327,7 @@ $end
       if self.ddl_tab(i_idx).text_tab is null or self.ddl_tab(i_idx).text_tab.count = 0
       then
         oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'There is no ddl text for ddl statement ' || i_idx, self.obj.schema_object_info());
+        self.ddl_tab(i_idx).chk();
       end if;
     end loop;
   end if;
