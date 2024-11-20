@@ -3049,6 +3049,8 @@ $end
           , p_schema_ddl => p_object_lookup_tab(l_object_key).schema_ddl
           );
 
+          p_object_lookup_tab(l_object_key).schema_ddl.chk(null);
+          
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           p_schema_object.print();
 $end
@@ -3270,7 +3272,8 @@ $end
           end if;
 
           if not(p_object_lookup_tab(l_object_key).ready)
-          then                  
+          then
+            p_object_lookup_tab(l_object_key).schema_ddl.chk(null);
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
             p_schema_ddl_tab.extend(1);
             p_schema_ddl_tab(p_schema_ddl_tab.last) := p_object_lookup_tab(l_object_key).schema_ddl;
@@ -3348,7 +3351,8 @@ $end
           ( p_verb => '--'
           , p_text => '-- No DDL retrieved.'
           );
-
+          p_object_lookup_tab(l_object_key).schema_ddl.chk();
+          
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
           p_schema_ddl_tab.extend(1);
           p_schema_ddl_tab(p_schema_ddl_tab.last) := p_object_lookup_tab(l_object_key).schema_ddl;
