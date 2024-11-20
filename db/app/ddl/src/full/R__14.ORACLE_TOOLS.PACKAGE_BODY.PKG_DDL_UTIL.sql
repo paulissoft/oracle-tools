@@ -3351,7 +3351,7 @@ $end
           ( p_verb => '--'
           , p_text => '-- No DDL retrieved.'
           );
-          p_object_lookup_tab(l_object_key).schema_ddl.chk();
+          p_object_lookup_tab(l_object_key).schema_ddl.chk(null);
           
 $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
           p_schema_ddl_tab.extend(1);
