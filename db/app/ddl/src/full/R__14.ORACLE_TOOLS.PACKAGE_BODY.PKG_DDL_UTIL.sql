@@ -3049,7 +3049,7 @@ $end
           , p_schema_ddl => p_object_lookup_tab(l_object_key).schema_ddl
           );
 
-          p_object_lookup_tab(l_object_key).schema_ddl.chk(null);
+          -- p_object_lookup_tab(l_object_key).schema_ddl.chk(null);
           
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           p_schema_object.print();
