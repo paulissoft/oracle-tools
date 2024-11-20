@@ -119,6 +119,7 @@ $end
     , p_verb => p_verb
     , p_text_tab => p_text_tab
     );
+  self.chk(null);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
@@ -316,7 +317,10 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
-  self.obj.chk(p_schema);
+  if p_schema is not null
+  then
+    self.obj.chk(p_schema);
+  end if;
 
   if self.ddl_tab is null or self.ddl_tab.count = 0
   then

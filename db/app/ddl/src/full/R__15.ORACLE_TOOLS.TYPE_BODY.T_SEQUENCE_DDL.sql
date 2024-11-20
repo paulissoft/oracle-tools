@@ -48,6 +48,8 @@ $else
 
 $end
 
+  self.chk(null);
+
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
 $end
