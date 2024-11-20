@@ -2624,14 +2624,14 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       , l_idx
       , p_schema_ddl_tab(l_idx).obj.object_schema()
       , p_schema_ddl_tab(l_idx).obj.object_type()
-      , p_schema_ddl_tab(l_idx).ddl_tab(1).text(1)
+      , p_schema_ddl_tab(l_idx).ddl_tab(1).text_tab(1)
       );
 $end
 
       if ( ( p_schema_ddl_tab(l_idx).obj.object_schema() is null and p_object_schema is null ) or
            p_schema_ddl_tab(l_idx).obj.object_schema() = p_object_schema ) and
          p_schema_ddl_tab(l_idx).obj.object_type() = p_object_type and
-         p_schema_ddl_tab(l_idx).ddl_tab(1).text(1) like p_filter escape '\'
+         p_schema_ddl_tab(l_idx).ddl_tab(1).text_tab(1) like p_filter escape '\'
       then
         for i_idx in l_idx + 1 .. p_schema_ddl_tab.last
         loop
@@ -2854,15 +2854,15 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'REMAP_SCHEMA (2)');
 $end
 
-    if p_ddl.text is not null and p_ddl.text.count > 0 
+    if p_ddl.text_tab is not null and p_ddl.text_tab.count > 0 
     then
       if length(p_schema) = length(p_new_schema)
       then
         -- GJP 2021-09-02
-        -- The replacement will not change the length: do not change p_ddl.text itself just its elements
-        for i_idx in p_ddl.text.first .. p_ddl.text.last
+        -- The replacement will not change the length: do not change p_ddl.text_tab itself just its elements
+        for i_idx in p_ddl.text_tab.first .. p_ddl.text_tab.last
         loop
-          p_ddl.text(i_idx) := modify_ddl_text(p_ddl_text => p_ddl.text(i_idx), p_schema => p_schema, p_new_schema => p_new_schema);
+          p_ddl.text_tab(i_idx) := modify_ddl_text(p_ddl_text => p_ddl.text_tab(i_idx), p_schema => p_schema, p_new_schema => p_new_schema);
         end loop;
       else
         -- GJP 2021-09-02
@@ -2870,7 +2870,7 @@ $end
         -- (remainder empty which will cause compare problems).
 
         -- GJP 2021-09-03
-        -- It is not sufficient to replace the individual chunks from p_ddl.text since
+        -- It is not sufficient to replace the individual chunks from p_ddl.text_tab since
         -- those are not lines, but just chunks. This will give a problem if the old schema starts at index i and ends at index i+1.
         -- In that case it will not be replaced.
         --
@@ -2883,7 +2883,7 @@ $end
 
         -- See A
         oracle_tools.pkg_str_util.text2clob
-        ( pi_text_tab => p_ddl.text
+        ( pi_text_tab => p_ddl.text_tab
         , pio_clob => g_clob
         , pi_append => false -- trim g_clob first
         );
@@ -2912,11 +2912,12 @@ $end
         end if;
 
         -- See E
-        p_ddl.text :=
-          oracle_tools.pkg_str_util.clob2text
+        p_ddl.set_text_tab
+        ( oracle_tools.pkg_str_util.clob2text
           ( pi_clob => g_clob
           , pi_trim => 0
-          );
+          )
+        );
       end if;
     end if;
 
@@ -4358,7 +4359,7 @@ $end
               -- this is a comment
               null;
             else
-              execute_ddl(p_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).text, p_network_link);
+              execute_ddl(p_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).text_tab, p_network_link);
             end if;
           end loop;
         end if;
@@ -4627,7 +4628,7 @@ order by
 
         dbms_lob.trim(l_table_ddl_clob, 0);
         oracle_tools.pkg_str_util.text2clob
-        ( pi_text_tab => p_schema_ddl.ddl_tab(1).text -- CREATE TABLE statement
+        ( pi_text_tab => p_schema_ddl.ddl_tab(1).text_tab -- CREATE TABLE statement
         , pio_clob => l_table_ddl_clob
         , pi_append => false
         );
@@ -4803,7 +4804,7 @@ $end
                 l_member_ddl := oracle_tools.t_table_column_ddl(l_member_object, oracle_tools.t_ddl_tab());
                 l_member_ddl.add_ddl
                 ( p_verb => 'ALTER'
-                , p_text => oracle_tools.pkg_str_util.clob2text(l_member_ddl_clob)
+                , p_text_tab => oracle_tools.pkg_str_util.clob2text(l_member_ddl_clob)
                 );
 
                 l_start := l_pos; -- next start position for search
@@ -6958,8 +6959,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
     dbug.enter(g_package_prefix || 'MIGRATE_SCHEMA_DDL');
 $end
 
-    oracle_tools.pkg_str_util.text2clob(p_source.ddl_tab(1).text, l_source_text);
-    oracle_tools.pkg_str_util.text2clob(p_target.ddl_tab(1).text, l_target_text);
+    oracle_tools.pkg_str_util.text2clob(p_source.ddl_tab(1).text_tab, l_source_text);
+    oracle_tools.pkg_str_util.text2clob(p_target.ddl_tab(1).text_tab, l_target_text);
 
     oracle_tools.pkg_str_util.compare
     ( p_source => l_source_text
@@ -6976,7 +6977,7 @@ $end
 
     p_schema_ddl.add_ddl
     ( p_verb => '--'
-    , p_text => lines2text(l_line_tab)
+    , p_text_tab => lines2text(l_line_tab)
     );
 
     cleanup;
@@ -7862,7 +7863,7 @@ $end
         );
       for r in
       ( with src as
-        (        select u.text
+        (        select u.text_tab
           ,      row_number() over (partition by t.obj.object_schema(), t.obj.object_type() order by t.obj.object_name()) as seq
           from   table
                  ( oracle_tools.pkg_ddl_util.display_ddl_schema
@@ -7882,12 +7883,12 @@ $end
           ,      table(t.ddl_tab) u
           where  t.obj.object_type() <> 'OBJECT_GRANT'
         )
-        select  src.text
+        select  src.text_tab
         from    src
         where   src.seq = 1
       )
       loop
-        oracle_tools.pkg_str_util.text2clob(r.text, p_clob, true); -- append to p_clob
+        oracle_tools.pkg_str_util.text2clob(r.text_tab, p_clob, true); -- append to p_clob
         oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
       end loop;
       if l_longops_rec.sofar = 0
@@ -8104,7 +8105,7 @@ $end
       ( select t.obj.object_schema() as object_schema
         ,      t.obj.object_name() as object_name
         ,      t.obj.object_type() as object_type
-        ,      u.text
+        ,      u.text_tab
         from   table
                ( oracle_tools.pkg_ddl_util.display_ddl_schema
                  ( p_schema => g_owner
@@ -8167,7 +8168,7 @@ $end
           );
         end if;
 
-        oracle_tools.pkg_str_util.text2clob(r_text.text, l_clob1, true);
+        oracle_tools.pkg_str_util.text2clob(r_text.text_tab, l_clob1, true);
 
         l_prev_object_schema := r_text.object_schema;
         l_prev_object_type := r_text.object_type;
@@ -8536,7 +8537,7 @@ $end
         ( select t.obj.object_schema() as object_schema
           ,      t.obj.object_type() as object_type
           ,      t.obj.object_name() as object_name
-          ,      u.text
+          ,      u.text_tab
           from   table
                  ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
                    ( p_object_type => oracle_tools.t_schema_object.dict2metadata_object_type(r.object_type)
@@ -8578,15 +8579,15 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
           , r_text.object_type
           , r_text.object_name
           );
-          if r_text.text is not null and r_text.text.count > 0
+          if r_text.text_tab is not null and r_text.text_tab.count > 0
           then
-            for i_line_idx in r_text.text.first .. r_text.text.last
+            for i_line_idx in r_text.text_tab.first .. r_text.text_tab.last
             loop
-              dbug.print(dbug."info", 'line1: %s', r_text.text(i_line_idx));
+              dbug.print(dbug."info", 'line1: %s', r_text.text_tab(i_line_idx));
             end loop;
           end if;
 $end
-          oracle_tools.pkg_str_util.text2clob(r_text.text, l_clob1, true);
+          oracle_tools.pkg_str_util.text2clob(r_text.text_tab, l_clob1, true);
         end loop;
 
         -- Copy all lines from l_clob1 to l_line1_tab but skip empty lines for comments.

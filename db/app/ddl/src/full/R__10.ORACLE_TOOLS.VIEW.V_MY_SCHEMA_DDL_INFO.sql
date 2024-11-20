@@ -11,7 +11,7 @@ CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDL_INFO" ("OBJECT_SCHE
 ,       t.obj.grantable() as grantable
 ,       u.ddl#() as ddl#
 ,       u.verb() as verb
-,       u.text as ddl_text
+,       u.text_tab as ddl_text
 from    table
         ( oracle_tools.pkg_ddl_util.display_ddl_schema
           ( p_schema => user

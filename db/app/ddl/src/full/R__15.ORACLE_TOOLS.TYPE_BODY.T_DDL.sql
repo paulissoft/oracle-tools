@@ -4,7 +4,7 @@ constructor function t_ddl
 ( self in out nocopy oracle_tools.t_ddl
 , p_ddl# in integer
 , p_verb in varchar2
-, p_text in oracle_tools.t_text_tab
+, p_text_tab in oracle_tools.t_text_tab
 )
 return self as result
 is
@@ -15,7 +15,7 @@ $end
 
   self.ddl#$ := p_ddl#;
   self.verb$ := p_verb;
-  self.text := p_text;
+  set_text_tab(p_text_tab);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -56,13 +56,13 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   , 'ddl#: %s; verb: %s; cardinality: %s'
   , self.ddl#()
   , self.verb()
-  , case when self.text is not null then self.text.count end
+  , case when self.text_tab is not null then self.text_tab.count end
   );
 --$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  if self.text is not null and self.text.count > 0
+  if self.text_tab is not null and self.text_tab.count > 0
   then
     oracle_tools.pkg_str_util.text2clob
-    ( pi_text_tab => self.text
+    ( pi_text_tab => self.text_tab
     , pio_clob => l_clob
     , pi_append => false
     );
@@ -224,8 +224,43 @@ end compare;
 member procedure text_to_compare( self in oracle_tools.t_ddl, p_text_tab out nocopy oracle_tools.t_text_tab )
 is
 begin
-  p_text_tab := self.text;
+  p_text_tab := self.text_tab;
 end text_to_compare;
+
+member procedure set_text_tab
+( self in out nocopy oracle_tools.t_ddl
+, p_text_tab in oracle_tools.t_text_tab
+)
+is
+begin
+  self.text_tab := p_text_tab;
+  chk();
+end set_text_tab;
+
+member procedure chk
+( self in oracle_tools.t_ddl
+)
+is
+begin
+  if self is null or
+     self.text_tab is null or
+     self.text_tab.count = 0 or
+     self.verb$ not in ('CREATE', 'GRANT', 'AUDIT', 'ALTER') or
+     self.text_tab(1) like self.verb$ || ' %'
+  then
+    null; -- OK
+  else
+    oracle_tools.pkg_ddl_error.raise_error
+    ( oracle_tools.pkg_ddl_error.c_ddl_not_correct
+    , 'First line should start with AUDIT, ALTER, CREATE or GRANT.'
+    , utl_lms.format_message
+      ('verb=%s; line=%s'
+      , self.verb$
+      , case when cardinality(self.text_tab) > 0 then self.text_tab(1) end
+      )
+    );
+  end if;
+end chk;
 
 end;
 /

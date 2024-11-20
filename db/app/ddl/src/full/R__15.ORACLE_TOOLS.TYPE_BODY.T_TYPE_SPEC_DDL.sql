@@ -93,7 +93,7 @@ $end
         self.add_ddl
         ( p_verb => l_type_attribute_ddl.ddl_tab(i_idx).verb()
           -- the schema is
-        , p_text => l_type_attribute_ddl.ddl_tab(i_idx).text
+        , p_text_tab => l_type_attribute_ddl.ddl_tab(i_idx).text_tab
         );
       end loop;
     end if;

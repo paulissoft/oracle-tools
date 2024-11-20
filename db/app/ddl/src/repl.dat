@@ -1,0 +1,3 @@
+s/\bp_text\(/p_text_tab\(/goi;
+s/\bp_text\.(count|first|last|next|previous)/'p_text_tab.' || $1/egoi;
+s/\btext\./text_tab.\(/goi;

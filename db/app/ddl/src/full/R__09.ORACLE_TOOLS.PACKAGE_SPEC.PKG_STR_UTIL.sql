@@ -8,11 +8,21 @@ String utilities.
 
 c_debugging constant naturaln := 0; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
 
+subtype t_sql_string is varchar2(1000 char); -- will always fit into varchar2(4000 byte), suitable for a database column
+c_sql_string_size constant naturaln := 1000;
+
+subtype t_plsql_string is varchar2(8000 char); -- will always fit into varchar2(32767 byte)
+c_plsql_string_size constant naturaln := 8000;
+
+-- DBMS_SQL: type varchar2a is table of varchar2(32767) index by binary_integer;
+subtype t_max_varchar2 is varchar2(32767);
+c_max_varchar2_size constant pls_integer := 32767;
+
 type t_clob_tab is table of clob;
 
 function dbms_lob_substr
 ( p_clob in clob
-, p_amount in naturaln := 32767
+, p_amount in naturaln := c_plsql_string_size
 , p_offset in positiven := 1
 , p_check in varchar2 default 'O' -- check for buffer (O)verflow and/or (L)ength returned equal to the amount requested
 )
@@ -30,7 +40,7 @@ This function corrects that.
 
 function dbms_lob$substr
 ( p_clob in clob
-, p_amount in naturaln := 32767
+, p_amount in naturaln := c_plsql_string_size
 , p_offset in positiven := 1
 )
 return varchar2;

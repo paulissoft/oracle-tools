@@ -98,7 +98,7 @@ $end
                     u.verb() || ';' ||
                     replace(t.obj.schema_object_info(), ':', ';') || ';' ||
                     u.ddl#() || chr(10) as ddl_info
-            ,       u.text
+            ,       u.text_tab
             from    table
                     ( oracle_tools.pkg_ddl_util.display_ddl_schema
                       ( p_schema => pi_source_schema
@@ -123,7 +123,7 @@ $end
                     u.verb() || ';' ||
                     replace(t.obj.schema_object_info(), ':', ';') || ';' ||
                     u.ddl#() || chr(10) as ddl_info
-            ,       u.text
+            ,       u.text_tab
             from    table
                     ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
                       ( p_object_type => pi_object_type

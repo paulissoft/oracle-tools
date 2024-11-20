@@ -17,7 +17,7 @@ organization index
 tablespace users
 including created
 overflow tablespace users
-nested table ddl.text store as generate_ddl_session_schema_ddls$ddl$text
+nested table ddl.text_tab store as generate_ddl_session_schema_ddls$ddl$text_tab
 ;
 
 alter table generate_ddl_session_schema_ddls nologging;

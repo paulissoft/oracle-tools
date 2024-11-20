@@ -1,8 +1,5 @@
 CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_STR_UTIL" IS
 
-c_max_varchar2_length constant pls_integer := 32767;
-subtype t_max_varchar2 is varchar2(32767 char);
-
 g_clob clob;
 
 g_package_prefix constant varchar2(61) := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.';
@@ -55,7 +52,7 @@ $end
     raise program_error;
   end if;
 
-  -- read till this entry is full (during testing I got 32764 instead of c_max_varchar2_length)
+  -- read till this entry is full (during testing I got 32764 instead of c_max_varchar2_size)
   <<buffer_loop>>
   while l_amount > 0
   loop
@@ -197,7 +194,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >
       dbug.print(dbug."info", 'l_start: %s; l_pos: %s', l_start, l_pos);
 $end
 
-      l_amount := case when l_pos > 0 then l_pos - l_start else c_max_varchar2_length end;
+      l_amount := case when l_pos > 0 then l_pos - l_start else c_max_varchar2_size end;
       p_str_tab(p_str_tab.count+1) :=
         dbms_lob_substr
         ( p_clob => p_str
@@ -1041,30 +1038,21 @@ $end
 
     if l_first <= l_last
     then
-      for i_chunk in 1 .. ceil((l_last - l_first + 1) / 4000)
+      for i_chunk in 1 .. ceil((l_last - l_first + 1) / c_sql_string_size)
       loop
         l_buffer :=
           dbms_lob_substr
           ( p_clob => pi_clob
-          , p_offset => l_first + (i_chunk-1) * 4000
+          , p_offset => l_first + (i_chunk-1) * c_sql_string_size
           , p_amount => case
-                          when i_chunk < ceil((l_last - l_first + 1) / 4000)
-                          then 4000
-                          else (l_last - l_first + 1) - (i_chunk-1) * 4000
+                          when i_chunk < ceil((l_last - l_first + 1) / c_sql_string_size)
+                          then c_sql_string_size
+                          else (l_last - l_first + 1) - (i_chunk-1) * c_sql_string_size
                         end
           , p_check => 'OL'              
           );
-        -- CREATE TYPE "ORACLE_TOOLS"."T_TEXT_TAB" AS TABLE OF VARCHAR2(4000 BYTE)
-        if lengthb(l_buffer) > 4000 
-        then        
-          l_text_tab.extend(1);
-          l_text_tab(l_text_tab.last) := substr(l_buffer, 1+0*2000, 2000);
-          l_text_tab.extend(1);
-          l_text_tab(l_text_tab.last) := substr(l_buffer, 1+1*2000, 2000);
-        else
-          l_text_tab.extend(1);
-          l_text_tab(l_text_tab.last) := l_buffer;
-        end if;
+        l_text_tab.extend(1);
+        l_text_tab(l_text_tab.last) := l_buffer;
       end loop;
     end if;
   end if;
@@ -1085,16 +1073,16 @@ is
 begin
   dbms_lob.trim(g_clob_test, 0);
 
-  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', c_max_varchar2_length, 'a')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', c_max_varchar2_size, 'a')));
   dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob("crlf"));
-  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', c_max_varchar2_length, 'b')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', c_max_varchar2_size, 'b')));
 
   for i_part in 1..3
   loop
     for i_case in 1..5 -- include 32768 as well
     loop
-      l_str_act := dbms_lob_substr(g_clob_test, c_max_varchar2_length-4 + i_case, 1+c_max_varchar2_length*(i_part-1));
-      l_str_exp := dbms_lob.substr(g_clob_test, c_max_varchar2_length-4 + i_case, 1+c_max_varchar2_length*(i_part-1));
+      l_str_act := dbms_lob_substr(g_clob_test, c_max_varchar2_size-4 + i_case, 1+c_max_varchar2_size*(i_part-1));
+      l_str_exp := dbms_lob.substr(g_clob_test, c_max_varchar2_size-4 + i_case, 1+c_max_varchar2_size*(i_part-1));
       if i_case = 1 or i_part = 3
       then
         ut.expect(l_str_act, 'test contents dbms_lob_substr ' || i_part || '.' || i_case).to_equal(l_str_exp);
@@ -1203,27 +1191,27 @@ procedure split
   ut.expect(l_str_tab(2), 'test 5.3').to_equal('efgh');
 
   dbms_lob.trim(g_clob_test, 0);
-  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', c_max_varchar2_length, 'a')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', c_max_varchar2_size, 'a')));
   dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob("crlf"));
-  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', c_max_varchar2_length, 'b')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', c_max_varchar2_size, 'b')));
 
   split(g_clob_test, "crlf", l_str_tab);
 
-  ut.expect(dbms_lob.getlength(g_clob_test), 'test 6.0').to_equal(c_max_varchar2_length * 2 + 2);
+  ut.expect(dbms_lob.getlength(g_clob_test), 'test 6.0').to_equal(c_max_varchar2_size * 2 + 2);
   ut.expect(l_str_tab.count, 'test 6.1').to_equal(2);
-  ut.expect(l_str_tab(1), 'test 6.2').to_equal(rpad('a', c_max_varchar2_length, 'a'));
-  ut.expect(l_str_tab(2), 'test 6.3').to_equal(rpad('b', c_max_varchar2_length, 'b'));
+  ut.expect(l_str_tab(1), 'test 6.2').to_equal(rpad('a', c_max_varchar2_size, 'a'));
+  ut.expect(l_str_tab(2), 'test 6.3').to_equal(rpad('b', c_max_varchar2_size, 'b'));
 
   dbms_lob.trim(g_clob_test, 0);
-  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', c_max_varchar2_length, 'a')));
-  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', c_max_varchar2_length, 'b')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', c_max_varchar2_size, 'a')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', c_max_varchar2_size, 'b')));
 
   split(g_clob_test, null, l_str_tab);
 
-  ut.expect(dbms_lob.getlength(g_clob_test), 'test 7.0').to_equal(c_max_varchar2_length * 2);
+  ut.expect(dbms_lob.getlength(g_clob_test), 'test 7.0').to_equal(c_max_varchar2_size * 2);
   ut.expect(l_str_tab.count, 'test 7.1').to_equal(2);
-  ut.expect(l_str_tab(1), 'test 7.2').to_equal(rpad('a', c_max_varchar2_length, 'a'));
-  ut.expect(l_str_tab(2), 'test 7.3').to_equal(rpad('b', c_max_varchar2_length, 'b'));
+  ut.expect(l_str_tab(1), 'test 7.2').to_equal(rpad('a', c_max_varchar2_size, 'a'));
+  ut.expect(l_str_tab(2), 'test 7.3').to_equal(rpad('b', c_max_varchar2_size, 'b'));
 end;
 
 procedure ut_split3
@@ -1271,24 +1259,24 @@ procedure split
   ut.expect(l_str_tab(2), 'test 5.3').to_equal(to_clob('efgh'));
 
   dbms_lob.trim(g_clob_test, 0);
-  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', c_max_varchar2_length, 'a')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', c_max_varchar2_size, 'a')));
   dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob("crlf"));
-  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', c_max_varchar2_length, 'b')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', c_max_varchar2_size, 'b')));
 
   split(g_clob_test, "crlf", l_str_tab);
 
-  ut.expect(dbms_lob.getlength(g_clob_test), 'test 6.0').to_equal(c_max_varchar2_length * 2 + 2);
+  ut.expect(dbms_lob.getlength(g_clob_test), 'test 6.0').to_equal(c_max_varchar2_size * 2 + 2);
   ut.expect(l_str_tab.count, 'test 6.1').to_equal(2);
-  ut.expect(l_str_tab(1), 'test 6.2').to_equal(to_clob(rpad('a', c_max_varchar2_length, 'a')));
-  ut.expect(l_str_tab(2), 'test 6.3').to_equal(to_clob(rpad('b', c_max_varchar2_length, 'b')));
+  ut.expect(l_str_tab(1), 'test 6.2').to_equal(to_clob(rpad('a', c_max_varchar2_size, 'a')));
+  ut.expect(l_str_tab(2), 'test 6.3').to_equal(to_clob(rpad('b', c_max_varchar2_size, 'b')));
 
   dbms_lob.trim(g_clob_test, 0);
-  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', c_max_varchar2_length, 'a')));
-  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', c_max_varchar2_length, 'b')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('a', c_max_varchar2_size, 'a')));
+  dbms_lob.append(dest_lob => g_clob_test, src_lob => to_clob(rpad('b', c_max_varchar2_size, 'b')));
 
   split(g_clob_test, null, l_str_tab);
 
-  ut.expect(dbms_lob.getlength(g_clob_test), 'test 7.0').to_equal(c_max_varchar2_length * 2);
+  ut.expect(dbms_lob.getlength(g_clob_test), 'test 7.0').to_equal(c_max_varchar2_size * 2);
   ut.expect(l_str_tab.count, 'test 7.1').to_equal(1);
   ut.expect(l_str_tab(1), 'test 7.2').to_equal(g_clob_test);
 end;

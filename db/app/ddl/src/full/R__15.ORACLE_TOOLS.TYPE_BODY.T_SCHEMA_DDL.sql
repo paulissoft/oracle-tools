@@ -103,13 +103,13 @@ end print;
 member procedure add_ddl
 ( self in out nocopy oracle_tools.t_schema_ddl
 , p_verb in varchar2
-, p_text in oracle_tools.t_text_tab
+, p_text_tab in oracle_tools.t_text_tab
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL (1)');
-  dbug.print(dbug."input", 'self.obj.id: %s; self.ddl_tab.count: %s; p_text.count: %s', self.obj.id, self.ddl_tab.count, case when p_text is not null then p_text.count end);
+  dbug.print(dbug."input", 'self.obj.id: %s; self.ddl_tab.count: %s; p_text_tab.count: %s', self.obj.id, self.ddl_tab.count, case when p_text_tab is not null then p_text_tab.count end);
 $end
 
   self.ddl_tab.extend(1);
@@ -117,7 +117,7 @@ $end
     oracle_tools.t_ddl
     ( p_ddl# => self.ddl_tab.last
     , p_verb => p_verb
-    , p_text => p_text
+    , p_text_tab => p_text_tab
     );
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
@@ -156,7 +156,7 @@ $end
     end if;
     self.add_ddl
     ( p_verb => p_verb
-    , p_text => l_text_tab
+    , p_text_tab => l_text_tab
     );
   end if;
 
@@ -240,7 +240,7 @@ $end
   loop
     self.add_ddl
     ( p_verb => p_source.ddl_tab(i_ddl_idx).verb()
-    , p_text => p_source.ddl_tab(i_ddl_idx).text
+    , p_text_tab => p_source.ddl_tab(i_ddl_idx).text_tab
     );
   end loop;
 
@@ -324,7 +324,7 @@ $end
   else
     for i_idx in self.ddl_tab.first .. self.ddl_tab.last
     loop
-      if self.ddl_tab(i_idx).text is null or self.ddl_tab(i_idx).text.count = 0
+      if self.ddl_tab(i_idx).text_tab is null or self.ddl_tab(i_idx).text_tab.count = 0
       then
         oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'There is no ddl text for ddl statement ' || i_idx, self.obj.schema_object_info());
       end if;
@@ -368,7 +368,7 @@ $end
                , p_privilege => l_part_tab(l_part_tab.first+8)
                , p_grantable => l_part_tab(l_part_tab.first+9)
                )
-    , p_ddl_tab => oracle_tools.t_ddl_tab(oracle_tools.t_ddl(p_ddl# => 1, p_verb => l_verb_tab(l_verb_tab.first+0), p_text => oracle_tools.t_text_tab(p_text)))
+    , p_ddl_tab => oracle_tools.t_ddl_tab(oracle_tools.t_ddl(p_ddl# => 1, p_verb => l_verb_tab(l_verb_tab.first+0), p_text_tab => oracle_tools.t_text_tab(p_text)))
     );
   l_schema_ddl.execute_ddl();
 
@@ -425,7 +425,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL (3)');
 $end
 
-  execute immediate p_schema_ddl.ddl_tab(1).text(1);
+  execute immediate p_schema_ddl.ddl_tab(1).text_tab(1);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;

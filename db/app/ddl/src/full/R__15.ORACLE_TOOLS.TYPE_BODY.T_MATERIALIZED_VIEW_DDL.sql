@@ -57,7 +57,7 @@ $end
         loop
           self.add_ddl
           ( p_verb => l_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).verb()
-          , p_text => l_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).text
+          , p_text_tab => l_schema_ddl_tab(i_idx).ddl_tab(i_ddl_idx).text_tab
           );
         end loop;
       end if;

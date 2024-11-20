@@ -19,7 +19,7 @@ create type oracle_tools.t_schema_ddl authid current_user as object
 , member procedure add_ddl
   ( self in out nocopy oracle_tools.t_schema_ddl
   , p_verb in varchar2
-  , p_text in oracle_tools.t_text_tab
+  , p_text_tab in oracle_tools.t_text_tab
   )
 , member procedure add_ddl
   ( self in out nocopy oracle_tools.t_schema_ddl

@@ -1047,22 +1047,6 @@ is
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_DDL)';
 $end
-
-  procedure chk
-  ( p_ddl in oracle_tools.t_ddl
-  )
-  is
-  begin
-    if p_ddl is null or p_ddl.text is null or p_ddl.text.count = 0 or p_ddl.text(1) like p_ddl.verb$ || ' %'
-    then
-      null; -- OK
-    else
-$if oracle_tools.schema_objects_api.c_tracing $then
-      p_ddl.print;
-$end        
-      raise program_error;
-    end if;
-  end chk;
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
@@ -1085,7 +1069,7 @@ $end
   then
     for i_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
     loop
-      chk(p_schema_ddl.ddl_tab(i_idx));
+      p_schema_ddl.ddl_tab(i_idx).chk();
     end loop;
   end if;
 
@@ -1112,7 +1096,7 @@ $end
     )
     loop
       begin
-        chk(r.ddl);
+        r.ddl.chk();
       exception
         when others
         then raise_application_error(-20000, 'schema_object_id: ' || r.schema_object_id, true);

@@ -141,7 +141,7 @@ $end
         self.add_ddl
         ( p_verb => l_table_column_ddl.ddl_tab(i_idx).verb()
           -- the schema is
-        , p_text => l_table_column_ddl.ddl_tab(i_idx).text
+        , p_text_tab => l_table_column_ddl.ddl_tab(i_idx).text_tab
         );
       end loop;
     end if;

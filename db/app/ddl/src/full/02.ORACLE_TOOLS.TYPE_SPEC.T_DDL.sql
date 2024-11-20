@@ -6,7 +6,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_DDL" authid current_user as object
   ( self in out nocopy oracle_tools.t_ddl
   , p_ddl# in integer
   , p_verb in varchar2
-  , p_text in oracle_tools.t_text_tab
+  , p_text_tab in oracle_tools.t_text_tab
   )
   return self as result
 -- no getter for text because the (possibly large) attribute text will be copied
