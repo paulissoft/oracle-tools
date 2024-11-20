@@ -6,7 +6,7 @@ create table generate_ddl_session_schema_ddl_chunks
 , line# integer -- Primary key #4
   not null
   constraint generate_ddl_session_schema_ddl_chunks$ck$line# check (line# >= 1)
-, text varchar2(4000 char)
+, text varchar2(4000 char) -- see t_text_tab
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   not null  
