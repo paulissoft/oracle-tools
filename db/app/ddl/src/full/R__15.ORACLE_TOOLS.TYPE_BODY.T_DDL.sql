@@ -266,9 +266,9 @@ begin
     ( oracle_tools.pkg_ddl_error.c_ddl_not_correct
     , 'First line should start with AUDIT, ALTER, CREATE or GRANT.'
     , utl_lms.format_message
-      ('verb=%s; line=%s'
+      ('verb="%s"; line[0:100]="%s"'
       , self.verb$
-      , case when cardinality(self.text_tab) > 0 then self.text_tab(1) end
+      , case when cardinality(self.text_tab) > 0 then substr(self.text_tab(1), 1, 100) end
       )
     );
   end if;
