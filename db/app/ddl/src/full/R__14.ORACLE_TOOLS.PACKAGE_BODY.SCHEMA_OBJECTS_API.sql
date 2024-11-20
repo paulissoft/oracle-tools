@@ -1084,8 +1084,8 @@ $end
       select  p_session_id as session_id
       ,       p_schema_ddl.obj.id as schema_object_id
       ,       rownum as seq
-      ,       value(t) as ddl
-      from    table(p_schema_ddl.ddl_tab) t;
+      ,       oracle_tools.t_ddl(p_ddl# => t.ddl#, p_verb => t.verb, p_text_tab => t.text_tab) as ddl
+      from    ( select t.ddl#() as ddl#, t.verb() as verb, t.text_tab as text_tab from table(p_schema_ddl.ddl_tab) t) t;
 
     for r in
     ( select  schema_object_id
