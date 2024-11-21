@@ -3051,7 +3051,7 @@ $end
           ( p_verb => '--'
           , p_text => '-- No DDL retrieved.'
           );
-          
+
           oracle_tools.schema_objects_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
           p_object_lookup_tab(l_object_key).ready := true;
           p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
@@ -3412,11 +3412,11 @@ $end
       else
         -- change of ddl#
         l_ddl#_prev := r.ddl#;
-        
+
         if r.ddl# = 1
         then
           -- new schema ddl
-          
+
           -- output old
           if l_schema_ddl is not null
           then
@@ -3440,13 +3440,13 @@ $end
       l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.extend(1);
       l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab(l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.last) := r.chunk;
     end loop;
-    
+
     -- output last
     if l_schema_ddl is not null
     then
       pipe row (l_schema_ddl);
     end if;
-    
+
     return; -- essential
   end display_ddl_schema;
 
