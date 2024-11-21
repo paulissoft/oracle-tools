@@ -32,6 +32,7 @@ as
   l_bfile bfile := null;
   l_cursor sys_refcursor := null;
   l_ddl_info_tab dbms_sql.varchar2_table;
+  l_ddl_info_previous varchar2(32767 byte) := null;
   l_text_tab oracle_tools.t_text_tab;
 
   c_fetch_limit constant pls_integer := 100;
@@ -94,11 +95,8 @@ $end
 
           -- full DDL because target schema (and database link) is empty
           open l_cursor for
-            select  '-- ddl info: ' ||
-                    u.verb() || ';' ||
-                    replace(t.obj.schema_object_info(), ':', ';') || ';' ||
-                    u.ddl#() || chr(10) as ddl_info
-            ,       u.text_tab
+            select  t.ddl_info
+            ,       t.chunk
             from    table
                     ( oracle_tools.pkg_ddl_util.display_ddl_schema
                       ( p_schema => pi_source_schema
@@ -114,9 +112,18 @@ $end
                       , p_include_objects => pi_include_objects
                       )
                     ) t
-          ,         table(t.ddl_tab) u
           ;
         else
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+        
+          oracle_tools.pkg_ddl_error.raise_error
+          ( oracle_tools.pkg_ddl_error.c_not_implemented
+          , 'display_ddl_schema_diff not implemented.'
+          , null
+          );
+          
+$else          
+        
           -- incremental DDL because target schema is not empty
           open l_cursor for
             select  '-- ddl info: ' ||
@@ -141,19 +148,32 @@ $end
                     ) t
           ,         table(t.ddl_tab) u
           ;
+$end
+
         end if;
         dbms_lob.trim(po_clob, 0);
         oracle_tools.pkg_str_util.append_text('-- '||l_interface_tab(i_interface_idx), po_clob); -- So Perl script generate_ddl.pl knows how to read the output
 
         loop
           -- just a simple fetch due to all the temporary clobs
-          fetch l_cursor into l_ddl_info_tab(1), l_text_tab;
-          exit when l_cursor%notfound;
+          fetch l_cursor bulk collect into l_ddl_info_tab, l_text_tab limit c_fetch_limit;
 
-          -- the text column does not end with an empty newline so we do it here
-          oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(1), po_clob);
-          oracle_tools.pkg_str_util.text2clob(pi_text_tab => l_text_tab, pio_clob => po_clob, pi_append => true);
-          oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+          if l_ddl_info_tab(1) = l_ddl_info_previous
+          then
+            null;
+          else
+            l_ddl_info_previous := l_ddl_info_tab(1);
+            -- the text column does not end with an empty newline so we do it here
+            oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(1), po_clob);
+          end if;
+          if l_text_tab.count > 0
+          then
+            for i_idx in l_text_tab.first .. l_text_tab.last
+            loop
+              oracle_tools.pkg_str_util.text2clob(pi_text_tab => l_text_tab, pio_clob => po_clob, pi_append => true);
+            end loop;
+            oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+          end if;
         end loop;
 
         close l_cursor;

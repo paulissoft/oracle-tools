@@ -14,6 +14,8 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.print(dbug."input", 'p_source.obj.id: %s; p_target.obj.id: %s', p_source.obj.id, p_target.obj.id);
 $end
 
+$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+
   -- first the standard things
   oracle_tools.t_schema_ddl.migrate
   ( p_source => p_source
@@ -63,6 +65,16 @@ $end
       end if;
     end loop;
   end if;
+
+$else
+
+  oracle_tools.pkg_ddl_error.raise_error
+  ( oracle_tools.pkg_ddl_error.c_not_implemented
+  , 'migrate not implemented.'
+  , p_source.obj.id
+  );
+
+$end
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;

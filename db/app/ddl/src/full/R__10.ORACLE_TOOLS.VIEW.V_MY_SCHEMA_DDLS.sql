@@ -1,9 +1,14 @@
 CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDLS" BEQUEATH CURRENT_USER AS 
-  select  '-- ddl info: ' ||
+  select  aso.session_id -- key #1
+,       aso.schema_object_id -- key #2
+,       gdssd.ddl# -- key #3
+,       gdssdc.chunk# -- key #4
+,       aso.obj  
+-- below is output to SQL file
+,       '-- ddl info: ' ||
         gdssd.verb || ';' ||
         replace(aso.obj.schema_object_info(), ':', ';') || ';' ||
         gdssd.ddl# || chr(10) as ddl_info
-,       gdssdc.chunk#
 ,       gdssdc.chunk
 from    oracle_tools.v_all_schema_objects aso
         inner join oracle_tools.generate_ddl_session_schema_ddls gdssd
