@@ -1051,8 +1051,17 @@ $end
                         end
           , p_check => 'OL'              
           );
-        l_text_tab.extend(1);
-        l_text_tab(l_text_tab.last) := l_buffer;
+        -- This may show up: ORA-12899: value too large for column "ORACLE_TOOLS"."GENERATE_DDL_SESSION_SCHEMA_DDL_CHUNKS"."CHUNK" (actual: 4002, maximum: 4000)
+        if lengthb(l_buffer) <= c_sql_string_size
+        then
+          l_text_tab.extend(1);
+          l_text_tab(l_text_tab.last) := l_buffer;
+        else
+          l_text_tab.extend(1);
+          l_text_tab(l_text_tab.last) := substr(l_buffer, 1, c_sql_string_size/2);
+          l_text_tab.extend(1);
+          l_text_tab(l_text_tab.last) := substr(l_buffer, 1 + c_sql_string_size/2);
+        end if;  
       end loop;
     end if;
   end if;
