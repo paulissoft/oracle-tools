@@ -31,9 +31,13 @@ as
   l_processed boolean := false;
   l_bfile bfile := null;
   l_cursor sys_refcursor := null;
+  
+  l_ddl#_tab dbms_sql.number_table;
   l_ddl_info_tab dbms_sql.varchar2_table;
+  l_chunk#_tab dbms_sql.number_table;
+  l_chunk_tab oracle_tools.t_text_tab;
+  
   l_ddl_info_previous varchar2(32767 byte) := null;
-  l_text_tab oracle_tools.t_text_tab;
 
   c_fetch_limit constant pls_integer := 100;
 
@@ -95,8 +99,10 @@ $end
 
           -- full DDL because target schema (and database link) is empty
           open l_cursor for
-            select  t.ddl_info
-            ,       t.chunk
+            select  t.ddl#
+            ,       t.ddl_info -- output
+            ,       t.chunk#
+            ,       t.chunk -- output
             from    table
                     ( oracle_tools.pkg_ddl_util.display_ddl_schema
                       ( p_schema => pi_source_schema
@@ -156,23 +162,20 @@ $end
 
         loop
           -- just a simple fetch due to all the temporary clobs
-          fetch l_cursor bulk collect into l_ddl_info_tab, l_text_tab limit c_fetch_limit;
+          fetch l_cursor bulk collect into l_ddl#_tab, l_ddl_info_tab, l_chunk#_tab, l_chunk_tab limit c_fetch_limit;
 
           if l_ddl_info_tab.count > 0
           then
-            if l_ddl_info_tab(1) = l_ddl_info_previous
+            if l_chunk_tab.count > 0
             then
-              null;
-            else
-              l_ddl_info_previous := l_ddl_info_tab(1);
-              -- the text column does not end with an empty newline so we do it here
-              oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(1), po_clob);
-            end if;
-            if l_text_tab.count > 0
-            then
-              for i_idx in l_text_tab.first .. l_text_tab.last
+              for i_idx in l_chunk_tab.first .. l_chunk_tab.last
               loop
-                oracle_tools.pkg_str_util.text2clob(pi_text_tab => l_text_tab, pio_clob => po_clob, pi_append => true);
+                if l_chunk#_tab(i_idx) = 1 -- first of a new ddl?
+                then
+                  -- the text column does not end with an empty newline so we do it here
+                  oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(i_idx), po_clob);
+                end if;
+                oracle_tools.pkg_str_util.text2clob(pi_text_tab => l_chunk_tab, pio_clob => po_clob, pi_append => true);
               end loop;
               oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
             end if;
