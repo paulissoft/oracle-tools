@@ -148,9 +148,35 @@ $end
         dbms_lob.trim(po_clob, 0);
         oracle_tools.pkg_str_util.append_text('-- '||l_interface_tab(i_interface_idx), po_clob); -- So Perl script generate_ddl.pl knows how to read the output
 
-        loop
-          -- just a simple fetch due to all the temporary clobs
-          fetch l_cursor bulk collect into l_ddl#_tab, l_ddl_info_tab, l_chunk#_tab, l_chunk_tab limit c_fetch_limit;
+        if pi_target_schema is null
+        then
+          -- display_ddl_sql
+          loop
+            fetch l_cursor bulk collect into l_ddl#_tab, l_ddl_info_tab, l_chunk#_tab, l_chunk_tab limit c_fetch_limit;
+
+            if l_ddl_info_tab.count > 0
+            then
+              if l_chunk_tab.count > 0
+              then
+                for i_idx in l_chunk_tab.first .. l_chunk_tab.last
+                loop
+                  if l_chunk#_tab(i_idx) = 1 -- first of a new ddl?
+                  then
+                    -- the text column does not end with an empty newline so we do it here
+                    oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(i_idx), po_clob);
+                  end if;
+                  dbms_lob.writeappend(lob_loc => po_clob, amount => length(l_chunk_tab(i_idx)), buffer => l_chunk_tab(i_idx));
+                end loop;
+                oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+              end if;
+            end if;
+
+            exit when l_ddl_info_tab.count < c_fetch_limit; -- next fetch will get 0 records
+          end loop;
+        else
+          loop
+            -- just a simple fetch due to all the temporary clobs
+            fetch l_cursor bulk collect into l_ddl#_tab, l_ddl_info_tab, l_chunk#_tab, l_chunk_tab limit c_fetch_limit;
 
           if l_ddl_info_tab.count > 0
           then
@@ -171,6 +197,7 @@ $end
 
           exit when l_ddl_info_tab.count < c_fetch_limit; -- next fetch will get 0 records
         end loop;
+        end if;
 
         close l_cursor;
         -- 100%
