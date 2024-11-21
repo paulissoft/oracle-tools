@@ -36,6 +36,7 @@ as
   l_ddl_info_tab dbms_sql.varchar2_table;
   l_chunk#_tab dbms_sql.number_table;
   l_chunk_tab oracle_tools.t_text_tab;
+  l_text_tab oracle_tools.t_text_tab;
 
   l_ddl_info_previous varchar2(32767 byte) := null;
 
@@ -174,29 +175,17 @@ $end
             exit when l_ddl_info_tab.count < c_fetch_limit; -- next fetch will get 0 records
           end loop;
         else
+          -- display_ddl_schema_diff
           loop
             -- just a simple fetch due to all the temporary clobs
-            fetch l_cursor bulk collect into l_ddl#_tab, l_ddl_info_tab, l_chunk#_tab, l_chunk_tab limit c_fetch_limit;
+            fetch l_cursor into l_ddl_info_tab(1), l_text_tab;
+            exit when l_cursor%notfound;
 
-          if l_ddl_info_tab.count > 0
-          then
-            if l_chunk_tab.count > 0
-            then
-              for i_idx in l_chunk_tab.first .. l_chunk_tab.last
-              loop
-                if l_chunk#_tab(i_idx) = 1 -- first of a new ddl?
-                then
-                  -- the text column does not end with an empty newline so we do it here
-                  oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(i_idx), po_clob);
-                end if;
-                dbms_lob.writeappend(lob_loc => po_clob, amount => length(l_chunk_tab(i_idx)), buffer => l_chunk_tab(i_idx));
-              end loop;
-              oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
-            end if;
-          end if;
-
-          exit when l_ddl_info_tab.count < c_fetch_limit; -- next fetch will get 0 records
-        end loop;
+            -- the text column does not end with an empty newline so we do it here
+            oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(1), po_clob);
+            oracle_tools.pkg_str_util.text2clob(pi_text_tab => l_text_tab, pio_clob => po_clob, pi_append => true);
+            oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+          end loop;
         end if;
 
         close l_cursor;
