@@ -31,12 +31,12 @@ as
   l_processed boolean := false;
   l_bfile bfile := null;
   l_cursor sys_refcursor := null;
-  
+
   l_ddl#_tab dbms_sql.number_table;
   l_ddl_info_tab dbms_sql.varchar2_table;
   l_chunk#_tab dbms_sql.number_table;
   l_chunk_tab oracle_tools.t_text_tab;
-  
+
   l_ddl_info_previous varchar2(32767 byte) := null;
 
   c_fetch_limit constant pls_integer := 100;
@@ -44,7 +44,7 @@ as
   l_buffer varchar2(32767 char) := null;
 
   l_program constant varchar2(61 char) := $$PLSQL_UNIT; -- no schema because l_program is used in dbms_application_info
-  
+
   -- dbms_application_info stuff
   l_longops_rec oracle_tools.api_longops_pkg.t_longops_rec :=
     oracle_tools.api_longops_pkg.longops_init
@@ -121,15 +121,15 @@ $end
           ;
         else
 $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-        
+
           oracle_tools.pkg_ddl_error.raise_error
           ( oracle_tools.pkg_ddl_error.c_not_implemented
           , 'display_ddl_schema_diff not implemented.'
           , null
           );
-          
+
 $else          
-        
+
           -- incremental DDL because target schema is not empty
           open l_cursor for
             select  '-- ddl info: ' ||
@@ -180,7 +180,7 @@ $end
               oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
             end if;
           end if;
-          
+
           exit when l_ddl_info_tab.count < c_fetch_limit; -- next fetch will get 0 records
         end loop;
 

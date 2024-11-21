@@ -119,6 +119,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
   , p_base_object_type in varchar2
   )
   return varchar2
+  deterministic /*result_cache*/
   /*
     Equivalent of order by from cursor c_params in package body PKG_DDL_UTIL:
     
@@ -133,16 +134,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
       ,       object_type
       ,       object_schema
       ,       base_object_schema
-      
-    case p_object_schema
-      when 'PUBLIC'
-      then '0'
-      when 'SCHEMA_EXPORT'
-      then '1'
-      else '2' || '|' || rpad(p_object_type, 30) || '|' || rpad(p_object_schema, 128) || '|' || p_base_object_schema
-    end
   */
-  deterministic /*result_cache*/
 , final member function ddl_batch_order return varchar2 deterministic /*result_cache*/
 )
 not instantiable

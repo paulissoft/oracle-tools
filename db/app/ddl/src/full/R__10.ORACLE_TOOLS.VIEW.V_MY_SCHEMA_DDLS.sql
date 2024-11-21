@@ -1,4 +1,4 @@
-CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDLS" BEQUEATH CURRENT_USER AS 
+CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDLS" ("SESSION_ID", "SCHEMA_OBJECT_ID", "DDL#", "CHUNK#", "OBJ", "DDL_INFO", "CHUNK") BEQUEATH CURRENT_USER AS 
   select  aso.session_id -- key #1
 ,       aso.schema_object_id -- key #2
 ,       gdssd.ddl# -- key #3
