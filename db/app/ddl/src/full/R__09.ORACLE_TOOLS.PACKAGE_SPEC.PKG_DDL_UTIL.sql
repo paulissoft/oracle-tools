@@ -45,7 +45,7 @@ That parameter often defaults to constant `c_transform_param_list` which include
 c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
 
 -- 0: none, 1: standard, 2: verbose, 3: even more verbose
-c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 2 $else 0 $end; -- never change the last value
+c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $else 0 $end; -- never change the last value
 c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 

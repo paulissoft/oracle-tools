@@ -2825,9 +2825,10 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       else
         dbug.print
         ( dbug."info"
-        , 'skipping this schema object: (type=%s, schema=%s)'
-        , p_schema_object.object_type()
+        , 'skipping this schema object due to schema/type mismatch: (schema=%s, type=%s, name=%s)'
         , p_schema_object.object_schema()
+        , p_schema_object.object_type()
+        , p_schema_object.object_name()
         );
 $end
       end if;

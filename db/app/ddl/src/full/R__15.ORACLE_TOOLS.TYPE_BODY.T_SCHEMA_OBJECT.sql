@@ -1034,7 +1034,16 @@ begin
       then '0'
       when 'SCHEMA_EXPORT'
       then '1'
-      else '2' || '|' || rpad(p_object_type, 30) || '|' || rpad(p_object_schema, 128) || '|' || p_base_object_schema
+      else
+        to_char
+        ( 2 +
+          case p_object_type
+            when 'TYPE_SPEC'
+            then 1 -- together with TYPE_BODY
+            else oracle_tools.t_schema_object.is_a_repeatable(p_object_type)
+          end
+        ) || '|' ||
+        rpad(p_object_type, 30) || '|' || rpad(p_object_schema, 128) || '|' || p_base_object_schema
     end;
 end ddl_batch_order;
 

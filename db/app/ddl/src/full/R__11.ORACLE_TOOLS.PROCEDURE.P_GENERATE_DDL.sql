@@ -158,22 +158,27 @@ $end
           -- just a simple fetch due to all the temporary clobs
           fetch l_cursor bulk collect into l_ddl_info_tab, l_text_tab limit c_fetch_limit;
 
-          if l_ddl_info_tab(1) = l_ddl_info_previous
+          if l_ddl_info_tab.count > 0
           then
-            null;
-          else
-            l_ddl_info_previous := l_ddl_info_tab(1);
-            -- the text column does not end with an empty newline so we do it here
-            oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(1), po_clob);
+            if l_ddl_info_tab(1) = l_ddl_info_previous
+            then
+              null;
+            else
+              l_ddl_info_previous := l_ddl_info_tab(1);
+              -- the text column does not end with an empty newline so we do it here
+              oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(1), po_clob);
+            end if;
+            if l_text_tab.count > 0
+            then
+              for i_idx in l_text_tab.first .. l_text_tab.last
+              loop
+                oracle_tools.pkg_str_util.text2clob(pi_text_tab => l_text_tab, pio_clob => po_clob, pi_append => true);
+              end loop;
+              oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+            end if;
           end if;
-          if l_text_tab.count > 0
-          then
-            for i_idx in l_text_tab.first .. l_text_tab.last
-            loop
-              oracle_tools.pkg_str_util.text2clob(pi_text_tab => l_text_tab, pio_clob => po_clob, pi_append => true);
-            end loop;
-            oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
-          end if;
+          
+          exit when l_ddl_info_tab.count < c_fetch_limit; -- next fetch will get 0 records
         end loop;
 
         close l_cursor;
