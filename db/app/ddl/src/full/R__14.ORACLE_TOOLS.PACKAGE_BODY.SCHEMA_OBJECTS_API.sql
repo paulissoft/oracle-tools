@@ -1040,10 +1040,6 @@ procedure add
 , p_session_id in t_session_id
 )
 is
-  -- ORA-00910: specified length too long for its datatype
-  e_specified_length_too_long_for_its_datatype exception;
-  pragma exception_init(e_specified_length_too_long_for_its_datatype, -910);
-  
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_DDL)';
 $end
@@ -1065,93 +1061,50 @@ $end
     else null;
   end case;
 
+  p_schema_ddl.chk(null);
+
   if cardinality(p_schema_ddl.ddl_tab) > 0
   then
-    for i_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
+    for i_ddl_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
     loop
-      p_schema_ddl.ddl_tab(i_idx).chk();
-    end loop;
-  end if;
-
-  begin
-    savepoint spt;
-    insert into generate_ddl_session_schema_ddls
-    ( session_id
-    , schema_object_id
-    , seq
-    , ddl
-    )
-      select  p_session_id as session_id
-      ,       p_schema_ddl.obj.id as schema_object_id
-      ,       rownum as seq
-      ,       oracle_tools.t_ddl(p_ddl# => t.ddl#, p_verb => t.verb, p_text_tab => t.text_tab) as ddl
-      from    ( select t.ddl#() as ddl#, t.verb() as verb, t.text_tab as text_tab from table(p_schema_ddl.ddl_tab) t) t;
-
-    for r in
-    ( select  schema_object_id
-      ,       ddl
-      from    generate_ddl_session_schema_ddls
-      where   session_id = p_session_id
-      and     ddl is not null
-    )
-    loop
-      begin
-        r.ddl.chk();
-      exception
-        when others
-        then raise_application_error(-20000, 'schema_object_id: ' || r.schema_object_id, true);
-      end;
-    end loop;
-  exception
-    when e_specified_length_too_long_for_its_datatype
-    then
-      -- do it record by record to give better feedback
-      rollback to spt;
-      for r in
-      ( select  p_session_id as session_id
-        ,       p_schema_ddl.obj.id as schema_object_id
-        ,       rownum as seq
-        ,       value(t) as ddl
-        from    table(p_schema_ddl.ddl_tab) t
+      insert into generate_ddl_session_schema_ddls
+      ( session_id
+      , schema_object_id
+      , ddl#
+      , verb
       )
-      loop
-        begin
-          insert into generate_ddl_session_schema_ddls
+      values
+      ( p_session_id
+      , p_schema_ddl.obj.id
+      , p_schema_ddl.ddl_tab(i_ddl_idx).ddl#()
+      , p_schema_ddl.ddl_tab(i_ddl_idx).verb()
+      );
+      if cardinality(p_schema_ddl.ddl_tab(i_ddl_idx).text_tab) > 0
+      then
+        for i_chunk_idx in p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.first
+                           ..
+                           p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.last
+        loop
+          insert into generate_ddl_session_schema_ddl_chunks
           ( session_id
           , schema_object_id
-          , seq
-          , ddl
+          , ddl#
+          , chunk#
+          , chunk
           )
           values
-          ( r.session_id
-          , r.schema_object_id
-          , r.seq
-          , r.ddl
+          ( p_session_id
+          , p_schema_ddl.obj.id
+          , p_schema_ddl.ddl_tab(i_ddl_idx).ddl#()
+          , i_chunk_idx
+          , p_schema_ddl.ddl_tab(i_ddl_idx).text_tab(i_chunk_idx)
           );
-        exception
-          when others
-          then
-            raise_application_error
-            ( -20000
-            , utl_lms.format_message
-              ( 'This session schema object could not be inserted: session_id=%s, seq=%s, schema_object_id=%s'
-              , to_char(r.session_id)
-              , to_char(r.seq)
-              , r.schema_object_id
-              )
-            , true
-            );
-        end;
-      end loop;
-      
-      raise; -- the original error
-  end;
-    
-  case sql%rowcount
-    when 0
-    then raise no_data_found;
-    else null;
-  end case;
+        end loop;
+      end if;
+    end loop;
+  else
+    raise no_data_found;
+  end if;
 
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;

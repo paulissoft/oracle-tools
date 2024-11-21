@@ -33,11 +33,18 @@ declare
     );
   l_view_tab sys.odcivarchar2list :=
     sys.odcivarchar2list
-    ( 'V_ALL_SCHEMA_DDLS'
-    , 'V_ALL_SCHEMA_OBJECTS'
+    ( 'V_ALL_SCHEMA_OBJECTS'
+    , 'V_MY_COMMENTS_DICT'
+    , 'V_MY_CONSTRAINTS_DICT'
+    , 'V_MY_GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES'
     , 'V_MY_NAMED_SCHEMA_OBJECTS'
+    , 'V_MY_OBJECT_GRANTS_DICT'
     , 'V_MY_SCHEMA_OBJECTS'
     , 'V_MY_SCHEMA_OBJECTS_NO_DDL_YET'
+    , 'V_MY_SCHEMA_DDLS'
+    , 'V_MY_SCHEMA_DDL_INFO'
+    , 'V_MY_SCHEMA_OBJECT_FILTER'
+    , 'V_MY_SCHEMA_OBJECT_INFO'
     );
   l_sequence_tab sys.odcivarchar2list :=
     sys.odcivarchar2list

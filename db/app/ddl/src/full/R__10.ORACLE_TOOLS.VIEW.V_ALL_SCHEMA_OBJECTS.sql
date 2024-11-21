@@ -12,7 +12,7 @@ CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_ALL_SCHEMA_OBJECTS" ("SESSION_ID"
                  from    oracle_tools.generate_ddl_session_schema_ddls gdssd
                  where   gdssd.session_id = gdsso.session_id
                  and     gdssd.schema_object_id = gdsso.schema_object_id
-                 and     gdssd.seq = 1
+                 and     gdssd.ddl# = 1
                )
           then 1
           else 0
