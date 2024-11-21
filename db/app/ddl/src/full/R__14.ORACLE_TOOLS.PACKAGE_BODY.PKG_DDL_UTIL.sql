@@ -2624,7 +2624,6 @@ $end
         loop
           p_ddl.text_tab(i_idx) := modify_ddl_text(p_ddl_text => p_ddl.text_tab(i_idx), p_schema => p_schema, p_new_schema => p_new_schema);
         end loop;
-        p_ddl.chk();
       else
         -- GJP 2021-09-02
         -- The replacement will change the length and it may either become too big or too small
@@ -2806,8 +2805,6 @@ $end
           , p_schema_ddl => p_object_lookup_tab(l_object_key).schema_ddl
           );
 
-          -- p_object_lookup_tab(l_object_key).schema_ddl.chk(null);
-          
 $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
           p_schema_object.print();
 $end
@@ -2984,7 +2981,6 @@ $end
 
           if not(p_object_lookup_tab(l_object_key).ready)
           then
-            p_object_lookup_tab(l_object_key).schema_ddl.chk(null);
             oracle_tools.schema_objects_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
             p_object_lookup_tab(l_object_key).ready := true;
             p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
@@ -3054,7 +3050,6 @@ $end
           ( p_verb => '--'
           , p_text => '-- No DDL retrieved.'
           );
-          p_object_lookup_tab(l_object_key).schema_ddl.chk(null);
           
           oracle_tools.schema_objects_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
           p_object_lookup_tab(l_object_key).ready := true;
