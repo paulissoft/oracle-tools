@@ -137,17 +137,17 @@ $end -- $if oracle_tools.cfg_pkg.c_testing $then
   -- DBMS_METADATA.
   --
   -- The solution is to get (a cursor to) the data already in
-  -- set_display_ddl_schema_args() which is called before the view which calls
-  -- get_display_ddl_schema(). Now the correct authentication is used.
+  -- set_display_ddl_sql_args() which is called before the view which calls
+  -- get_display_ddl_sql(). Now the correct authentication is used.
   --
   -- So:
   -- a) for Oracle 11g and above open a ref cursor in
-  --    set_display_ddl_schema_args() and since ref cursors can not be used as
+  --    set_display_ddl_sql_args() and since ref cursors can not be used as
   --    a package variable, convert it to a DBMS_SQL cursor package variable
-  --    (just an integer) and use it later on in get_display_ddl_schema().
+  --    (just an integer) and use it later on in get_display_ddl_sql().
   -- b) for Oracle 10g and below just get all the data in
-  --    set_display_ddl_schema_args() and use it later on in
-  --    get_display_ddl_schema()
+  --    set_display_ddl_sql_args() and use it later on in
+  --    get_display_ddl_sql()
   */
 
 
@@ -3091,7 +3091,7 @@ $end
 
   /* PUBLIC ROUTINES */
 
-  function display_ddl_schema
+  function display_ddl_sql
   ( p_schema in t_schema_nn
   , p_new_schema in t_schema
   , p_sort_objects_by_deps in t_numeric_boolean_nn
@@ -3104,7 +3104,7 @@ $end
   , p_exclude_objects in t_objects
   , p_include_objects in t_objects
   )
-  return display_ddl_schema_tab
+  return t_display_ddl_sql_tab
   pipelined
   is
     pragma autonomous_transaction;
@@ -3129,6 +3129,7 @@ $end
     type t_my_schema_ddl_tmp_rec is record
     ( obj oracle_tools.t_schema_object
     , ddl# oracle_tools.v_my_schema_ddls.ddl#%type
+    , verb oracle_tools.v_my_schema_ddls.verb%type
     , ddl_info oracle_tools.v_my_schema_ddls.ddl_info%type
     , chunk# oracle_tools.v_my_schema_ddls.chunk#%type
     , chunk oracle_tools.v_my_schema_ddls.chunk%type
@@ -3136,12 +3137,12 @@ $end
     type t_my_schema_ddl_tmp_tab is table of t_my_schema_ddl_tmp_rec;
 
     l_my_schema_ddl_tmp_tab t_my_schema_ddl_tmp_tab;
-    l_display_ddl_schema_rec display_ddl_schema_rec; -- for pipe row
+    l_display_ddl_sql_rec t_display_ddl_sql_rec; -- for pipe row
 
     -- GJP 2022-12-31 Not used
     -- l_transform_param_tab t_transform_param_tab;
     l_line_tab dbms_sql.varchar2a;
-    l_program constant t_module := 'DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+    l_program constant t_module := 'DISPLAY_DDL_SQL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec :=
@@ -3152,7 +3153,7 @@ $end
       );
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.enter(g_package_prefix || 'DISPLAY_DDL_SCHEMA');
+    dbug.enter(g_package_prefix || 'DISPLAY_DDL_SQL');
     dbug.print(dbug."input"
                ,'p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
                ,p_schema
@@ -3194,7 +3195,7 @@ $end
         raise program_error;
       end if;
 
-      oracle_tools.pkg_ddl_util.set_display_ddl_schema_args
+      oracle_tools.pkg_ddl_util.set_display_ddl_sql_args
       ( p_schema => p_schema
       , p_new_schema => p_new_schema
       , p_sort_objects_by_deps => p_sort_objects_by_deps
@@ -3208,7 +3209,7 @@ $end
       , p_include_objects => p_include_objects
       );
 
-      open l_cursor for 'select t.schema_ddl from oracle_tools.v_display_ddl_schema@' || l_network_link || ' t';
+      open l_cursor for 'select t.schema_ddl from oracle_tools.v_display_ddl_sql@' || l_network_link || ' t';
     else -- local
       oracle_tools.schema_objects_api.add
       ( p_schema_object_filter => l_schema_object_filter
@@ -3245,6 +3246,7 @@ $end
         open l_cursor for
           select  s.obj
           ,       s.ddl#
+          ,       s.verb
           ,       s.ddl_info
           ,       s.chunk#
           ,       s.chunk
@@ -3271,6 +3273,7 @@ $end
         open l_cursor for
           select  s.obj
           ,       s.ddl#
+          ,       s.verb
           ,       s.ddl_info
           ,       s.chunk#
           ,       s.chunk
@@ -3309,13 +3312,14 @@ $end
             );
           end if;
 
-          l_display_ddl_schema_rec.schema_object_id := l_my_schema_ddl_tmp_tab(i_idx).obj.id;
-          l_display_ddl_schema_rec.ddl# := l_my_schema_ddl_tmp_tab(i_idx).ddl#;
-          l_display_ddl_schema_rec.ddl_info := l_my_schema_ddl_tmp_tab(i_idx).ddl_info;
-          
-          l_display_ddl_schema_rec.chunk# := l_my_schema_ddl_tmp_tab(i_idx).chunk#;
-          l_display_ddl_schema_rec.chunk := l_my_schema_ddl_tmp_tab(i_idx).chunk;
-          pipe row(l_display_ddl_schema_rec);
+          l_display_ddl_sql_rec.schema_object_id := l_my_schema_ddl_tmp_tab(i_idx).obj.id;
+          l_display_ddl_sql_rec.obj := l_my_schema_ddl_tmp_tab(i_idx).obj;
+          l_display_ddl_sql_rec.ddl# := l_my_schema_ddl_tmp_tab(i_idx).ddl#;
+          l_display_ddl_sql_rec.verb := l_my_schema_ddl_tmp_tab(i_idx).verb;
+          l_display_ddl_sql_rec.ddl_info := l_my_schema_ddl_tmp_tab(i_idx).ddl_info;          
+          l_display_ddl_sql_rec.chunk# := l_my_schema_ddl_tmp_tab(i_idx).chunk#;
+          l_display_ddl_sql_rec.chunk := l_my_schema_ddl_tmp_tab(i_idx).chunk;
+          pipe row(l_display_ddl_sql_rec);
           oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
         end loop;
       end if;
@@ -3357,6 +3361,93 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
       raise;
 $end
+  end display_ddl_sql;
+
+  function display_ddl_schema
+  ( p_schema in t_schema_nn
+  , p_new_schema in t_schema
+  , p_sort_objects_by_deps in t_numeric_boolean_nn
+  , p_object_type in t_metadata_object_type
+  , p_object_names in t_object_names
+  , p_object_names_include in t_numeric_boolean
+  , p_network_link in t_network_link
+  , p_grantor_is_schema in t_numeric_boolean_nn
+  , p_transform_param_list in varchar2
+  , p_exclude_objects in t_objects
+  , p_include_objects in t_objects
+  )
+  return oracle_tools.t_schema_ddl_tab
+  pipelined
+  is
+    l_schema_ddl oracle_tools.t_schema_ddl := null;
+    l_ddl oracle_tools.t_ddl := null;
+    l_ddl#_prev pls_integer := null;
+  begin
+    -- use display_ddl_sql
+    for r in
+    ( select  t.obj
+      ,       t.ddl#
+      ,       t.verb
+      ,       t.chunk
+      from    table
+              ( oracle_tools.pkg_ddl_util.display_ddl_sql
+                ( p_schema => p_schema
+                , p_new_schema => p_new_schema
+                , p_sort_objects_by_deps => p_sort_objects_by_deps
+                , p_object_type => p_object_type
+                , p_object_names => p_object_names
+                , p_object_names_include => p_object_names_include
+                , p_network_link => p_network_link
+                , p_grantor_is_schema => p_grantor_is_schema
+                , p_transform_param_list => p_transform_param_list
+                , p_exclude_objects => p_exclude_objects
+                , p_include_objects => p_include_objects
+                )
+              ) t
+    )
+    loop
+      if r.ddl# = l_ddl#_prev
+      then
+        null;
+      else
+        -- change of ddl#
+        l_ddl#_prev := r.ddl#;
+        
+        if r.ddl# = 1
+        then
+          -- new schema ddl
+          
+          -- output old
+          if l_schema_ddl is not null
+          then
+            pipe row (l_schema_ddl);
+          end if;
+
+          -- create new
+          l_schema_ddl :=
+            oracle_tools.t_schema_ddl
+            ( r.obj
+            , oracle_tools.t_ddl_tab() -- empty ddl_tab
+            );
+        end if;
+
+        l_ddl := oracle_tools.t_ddl(r.ddl#, r.verb, oracle_tools.t_text_tab());
+        l_schema_ddl.ddl_tab.extend(1);
+        l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last) := l_ddl;
+      end if;
+
+      -- always append the chunk to text_tab of last schema ddl
+      l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.extend(1);
+      l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab(l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.last) := r.chunk;
+    end loop;
+    
+    -- output last
+    if l_schema_ddl is not null
+    then
+      pipe row (l_schema_ddl);
+    end if;
+    
+    return; -- essential
   end display_ddl_schema;
 
   procedure create_schema_ddl
@@ -3524,6 +3615,287 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
 $end
       raise;
   end create_schema_ddl;
+
+  function display_ddl_schema_diff
+  ( p_object_type in t_metadata_object_type
+  , p_object_names in t_object_names
+  , p_object_names_include in t_numeric_boolean
+  , p_schema_source in t_schema
+  , p_schema_target in t_schema_nn
+  , p_network_link_source in t_network_link
+  , p_network_link_target in t_network_link
+  , p_skip_repeatables in t_numeric_boolean_nn
+  , p_transform_param_list in varchar2
+  , p_exclude_objects in t_objects
+  , p_include_objects in t_objects
+  )
+  return oracle_tools.t_schema_ddl_tab
+  pipelined
+  is
+    l_schema_ddl oracle_tools.t_schema_ddl;
+    l_source_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
+    l_target_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
+
+    l_object t_object;
+    l_text_tab dbms_sql.varchar2a;
+    l_program constant t_module := 'DISPLAY_DDL_SCHEMA_DIFF';
+
+    -- dbms_application_info stuff
+    l_longops_rec t_longops_rec :=
+      oracle_tools.api_longops_pkg.longops_init
+      ( p_op_name => 'fetch'
+      , p_units => 'objects'
+      , p_target_desc => l_program
+      );
+
+    procedure free_memory
+    ( p_schema_ddl_tab in out nocopy oracle_tools.t_schema_ddl_tab
+    )
+    is
+    begin
+      /* GPA 2017-04-12 #142504743 The DDL incremental generator fails on the Oracle XE database with an ORA-22813 error.
+
+         In spite of the remark below (#141477987 ) we have to free up memory if and only if:
+         - parameter p_skip_repeatables != 0 AND
+         - the object are repeatable objects (excluding oracle_tools.t_type_method_ddl because it uses ddl_tab(1))
+      */
+      if p_skip_repeatables != 0 and p_schema_ddl_tab is not null and p_schema_ddl_tab.count > 0
+      then
+        for i_idx in p_schema_ddl_tab.first .. p_schema_ddl_tab.last
+        loop
+          if p_schema_ddl_tab(i_idx).obj.is_a_repeatable() != 0 and
+             not(p_schema_ddl_tab(i_idx) is of (oracle_tools.t_type_method_ddl))
+          then
+            p_schema_ddl_tab(i_idx).ddl_tab := oracle_tools.t_ddl_tab();
+          end if;
+        end loop;
+      end if;
+    end free_memory;
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || l_program);
+    dbug.print(dbug."input"
+               ,'p_object_type: %s; p_object_names: %s; p_object_names_include: %s; p_schema_source: %s; p_schema_target: %s'
+               ,p_object_type
+               ,p_object_names
+               ,p_object_names_include
+               ,p_schema_source
+               ,p_schema_target);
+    dbug.print(dbug."input"
+               ,'p_network_link_source: %s; p_network_link_target: %s; p_skip_repeatables: %s; p_transform_param_list: %s'
+               ,p_network_link_source
+               ,p_network_link_target
+               ,p_skip_repeatables
+               ,p_transform_param_list);
+    dbug.print(dbug."input"
+               ,'p_exclude_objects length: %s; p_include_objects length: %s'
+               ,dbms_lob.getlength(p_exclude_objects)
+               ,dbms_lob.getlength(p_include_objects)
+               );
+$end
+
+    -- input checks
+    -- by display_ddl_schema: check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'Object names include');
+    check_schema(p_schema => p_schema_source, p_network_link => p_network_link_source, p_description => 'Source schema');
+    check_schema(p_schema => p_schema_target, p_network_link => p_network_link_target, p_description => 'Target schema');
+    check_source_target
+    ( p_schema_source => p_schema_source
+    , p_schema_target => p_schema_target
+    , p_network_link_source => p_network_link_source
+    , p_network_link_target => p_network_link_target
+    );
+    check_network_link(p_network_link => p_network_link_source, p_description => 'Source database link');
+    check_network_link(p_network_link => p_network_link_target, p_description => 'Target database link');
+    check_numeric_boolean(p_numeric_boolean => p_skip_repeatables, p_description => 'Skip repeatables');
+
+    if p_schema_source is null
+    then
+      l_source_schema_ddl_tab := oracle_tools.t_schema_ddl_tab();
+    else
+      select  value(s)
+      bulk collect
+      into    l_source_schema_ddl_tab
+      from    table
+              ( oracle_tools.pkg_ddl_util.display_ddl_schema
+                ( p_schema => p_schema_source
+                , p_new_schema => p_schema_target
+                , p_sort_objects_by_deps => 1 -- sort for create
+                , p_object_type => p_object_type
+                , p_object_names => p_object_names
+                , p_object_names_include => p_object_names_include
+                , p_network_link => p_network_link_source
+                , p_grantor_is_schema => 0 -- any grantor
+                , p_transform_param_list => p_transform_param_list
+                , p_exclude_objects => p_exclude_objects
+                , p_include_objects => p_include_objects
+                )
+              ) s
+      ;
+      free_memory(l_source_schema_ddl_tab);
+    end if;
+
+    if p_schema_target is null
+    then
+      l_target_schema_ddl_tab := oracle_tools.t_schema_ddl_tab();
+    else
+      /* GPA 2017-03-10 #141477987 
+         Do not try to optimise retrieving DDL when there is only an uninstall
+         because the revoke statement needs the actual DDL.
+      */
+      select  value(t)
+      bulk collect
+      into    l_target_schema_ddl_tab
+      from    table
+              ( oracle_tools.pkg_ddl_util.display_ddl_schema
+                ( p_schema => p_schema_target
+                , p_new_schema => null
+                , p_sort_objects_by_deps => 1 -- sort for drop
+                , p_object_type => p_object_type
+                  /*
+                  -- GPA 2017-01-12
+                  -- When the source objects are named, we also just compare
+                  -- those target objects.  However if all source objects
+                  -- are taken or some excluded, we suppose that those
+                  -- excluded objects are temporary objects. So now if we
+                  -- just retrieve all target objects, those target objects
+                  -- that are not in the source schema will be uninstalled.
+                  --
+                  -- So we get rid of obsolete target objects if the objects
+                  -- are not named explicitly (i.e. p_object_names_include != 1).
+                  */
+                , p_object_names => case when p_object_names_include = 1 then p_object_names end 
+                , p_object_names_include => case when p_object_names_include = 1 then p_object_names_include end
+                , p_network_link => p_network_link_target
+                , p_grantor_is_schema => 1 -- only grantor equal to p_schema_target so we can revoke the grant if necessary
+                , p_transform_param_list => p_transform_param_list
+                , p_exclude_objects => p_exclude_objects
+                , p_include_objects => p_include_objects
+                )
+              ) t
+      ;
+      free_memory(l_target_schema_ddl_tab);
+    end if;
+
+    for r_schema_ddl in
+    ( with source as
+      ( select  value(source) as schema_ddl
+        ,       rownum as dependency_order
+        from    table(l_source_schema_ddl_tab) source
+      ), target as
+      ( select  value(target) as schema_ddl
+        ,       rownum as dependency_order
+        from    table(l_target_schema_ddl_tab) target
+      )
+      -- GPA 2017-03-24 #142307767 The incremental DDL generator handles changed check constraints incorrectly.
+      --
+      -- Since the map function is used (which uses signature()) some objects may have the same id but not
+      -- the same signature.
+      --
+      -- For example if a check constraint has the same name but a different check condition
+      -- they will not be "equal" so this query will return two rows and the new object first
+      -- and the dropped object last.
+      -- So the WRONG outcome is that the constraint will be added and then dropped.
+      -- So we have to adjust for objects not being "equal" but having the same id.
+      , eq as
+      (
+        select  s.schema_ddl as source_schema_ddl
+        ,       s.dependency_order as source_dependency_order
+        ,       t.schema_ddl as target_schema_ddl
+        ,       t.dependency_order as target_dependency_order
+        ,       count(*) over (partition by case when s.schema_ddl is not null then s.schema_ddl.obj.id else t.schema_ddl.obj.id end) as nr_objects_with_same_id
+        from    source s
+                full outer join target t
+                on t.schema_ddl.obj = s.schema_ddl.obj -- map function is used
+      )
+      select    eq.source_schema_ddl
+      ,         eq.target_schema_ddl
+      from      eq
+      order by
+                case
+                  when eq.nr_objects_with_same_id = 1 or (eq.source_schema_ddl is not null and eq.target_schema_ddl is not null) -- old behaviour
+                  then eq.source_dependency_order
+                  else null
+                end asc nulls last -- new or changed objects first
+      ,         case
+                  when eq.nr_objects_with_same_id = 1 or (eq.source_schema_ddl is not null and eq.target_schema_ddl is not null) -- old behaviour
+                  then eq.target_dependency_order
+                  else null
+                end desc nulls last -- to be dropped objects last in reversed order of creation
+      ,         case
+                  when not(eq.nr_objects_with_same_id = 1 or (eq.source_schema_ddl is not null and eq.target_schema_ddl is not null)) -- #142307767
+                  then eq.target_dependency_order
+                  else null
+                end desc nulls last -- drop first for object with same id
+      ,         case
+                  when not(eq.nr_objects_with_same_id = 1 or (eq.source_schema_ddl is not null and eq.target_schema_ddl is not null)) -- #142307767
+                  then eq.source_dependency_order
+                  else null
+                end asc nulls last -- create next
+    )
+    loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+      dbug.print
+      ( dbug."debug"
+      , 'sofar: %s; source signature: %s; target signature: %s; id different: %s'
+      , to_char(l_longops_rec.sofar + 1)
+      , case when r_schema_ddl.source_schema_ddl is not null then r_schema_ddl.source_schema_ddl.obj.signature() end
+      , case when r_schema_ddl.target_schema_ddl is not null then r_schema_ddl.target_schema_ddl.obj.signature() end
+      , dbug.cast_to_varchar2
+        ( case
+            when r_schema_ddl.source_schema_ddl is not null and
+                 r_schema_ddl.target_schema_ddl is not null
+            then r_schema_ddl.source_schema_ddl.obj.id != r_schema_ddl.target_schema_ddl.obj.id
+          end
+        )
+      );
+$end
+      create_schema_ddl
+      ( p_source_schema_ddl => r_schema_ddl.source_schema_ddl
+      , p_target_schema_ddl => r_schema_ddl.target_schema_ddl
+      , p_skip_repeatables => p_skip_repeatables
+      , p_schema_ddl => l_schema_ddl
+      );
+
+      pipe row(l_schema_ddl);
+
+      oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+    end loop schema_source_loop;
+
+    oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+$end
+
+    return; -- essential for a pipelined function
+
+  exception
+    when no_data_needed
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave;
+$end
+      null; -- not a real error, just a way to some cleanup
+
+    when no_data_found -- will otherwise get lost due to pipelined function (GJP 2022-12-29 as it should)
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave_on_error;
+$end
+      -- GJP 2022-12-29
+$if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
+      oracle_tools.pkg_ddl_error.reraise_error(l_program);
+$else      
+      null;
+$end      
+
+    when others
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave_on_error;
+$end
+      raise;
+  end display_ddl_schema_diff;
 
   procedure execute_ddl
   ( p_id in varchar2
@@ -5275,7 +5647,7 @@ $end
   /*
   -- Help procedure to store the results of display_ddl_schema on a remote database.
   */
-  procedure set_display_ddl_schema_args
+  procedure set_display_ddl_sql_args
   ( p_exclude_objects in clob
   , p_include_objects in clob
   )
@@ -5291,9 +5663,9 @@ $end
     , p_delimiter => chr(10)
     , p_str_tab => g_include_objects
     );
-  end set_display_ddl_schema_args;
+  end set_display_ddl_sql_args;
 
-  procedure get_display_ddl_schema_args
+  procedure get_display_ddl_sql_args
   ( p_exclude_objects out nocopy dbms_sql.varchar2a
   , p_include_objects out nocopy dbms_sql.varchar2a
   )
@@ -5301,9 +5673,9 @@ $end
   begin
     p_exclude_objects := g_exclude_objects;
     p_include_objects := g_include_objects;
-  end get_display_ddl_schema_args;
+  end get_display_ddl_sql_args;
 
-  procedure set_display_ddl_schema_args
+  procedure set_display_ddl_sql_args
   ( p_schema in t_schema_nn
   , p_new_schema in t_schema
   , p_sort_objects_by_deps in t_numeric_boolean_nn
@@ -5346,7 +5718,7 @@ $end
 
     l_network_link := oracle_tools.data_api_pkg.dbms_assert$simple_sql_name(l_network_link, 'database link');
 
-    set_display_ddl_schema_args
+    set_display_ddl_sql_args
     ( p_exclude_objects => p_exclude_objects
     , p_include_objects => p_include_objects
     );
@@ -5360,7 +5732,7 @@ declare
   l_exclude_objects_r dbms_sql.varchar2a@%s;
   l_include_objects_r dbms_sql.varchar2a@%s;
 begin
-  oracle_tools.pkg_ddl_util.get_display_ddl_schema_args
+  oracle_tools.pkg_ddl_util.get_display_ddl_sql_args
   ( p_exclude_objects => l_exclude_objects
   , p_include_objects => l_include_objects
   );
@@ -5378,7 +5750,7 @@ begin
       l_include_objects_r(i_idx) := l_include_objects(i_idx);
     end loop;
   end if;
-  oracle_tools.pkg_ddl_util.set_display_ddl_schema_args_r@%s
+  oracle_tools.pkg_ddl_util.set_display_ddl_sql_args_r@%s
   ( p_schema => :b01
   , p_new_schema => :b02
   , p_sort_objects_by_deps => :b03
@@ -5449,9 +5821,9 @@ $end
 
       raise_application_error(oracle_tools.pkg_ddl_error.c_execute_via_db_link, l_statement, true);
       raise; -- to keep the compiler happy
-  end set_display_ddl_schema_args;
+  end set_display_ddl_sql_args;
 
-  procedure set_display_ddl_schema_args_r
+  procedure set_display_ddl_sql_args_r
   ( p_schema in t_schema_nn
   , p_new_schema in t_schema
   , p_sort_objects_by_deps in t_numeric_boolean_nn
@@ -5469,7 +5841,7 @@ $end
     l_cursor sys_refcursor;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.enter(g_package_prefix || 'SET_DISPLAY_DDL_SCHEMA_ARGS_R');
+    dbug.enter(g_package_prefix || 'SET_DISPLAY_DDL_SQL_ARGS_R');
     dbug.print(dbug."input"
                ,'p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
                ,p_schema
@@ -5512,21 +5884,21 @@ $end
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."info", 'sid: %s; g_cursor: %s', sys_context('USERENV','SID'), g_cursor);
 $end
-  end set_display_ddl_schema_args_r;
+  end set_display_ddl_sql_args_r;
 
   /*
   -- Help procedure to retrieve the results of display_ddl_schema on a remote database.
   --
   -- Remark 1: Uses view v_display_ddl_schema2 because pipelined functions and a database link are not allowed.
-  -- Remark 2: A call to display_ddl_schema() with a database linke will invoke set_display_ddl_schema() at the remote database.
+  -- Remark 2: A call to display_ddl_schema() with a database linke will invoke set_display_ddl_sql() at the remote database.
   */
-  function get_display_ddl_schema
+  function get_display_ddl_sql
   return oracle_tools.t_schema_ddl_tab
   pipelined
   is
     l_cursor sys_refcursor;
     l_schema_ddl oracle_tools.t_schema_ddl;
-    l_program constant t_module := 'GET_DISPLAY_DDL_SCHEMA'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+    l_program constant t_module := 'GET_DISPLAY_DDL_SQL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := oracle_tools.api_longops_pkg.longops_init(p_target_desc => l_program, p_op_name => 'fetch', p_units => 'objects');
@@ -5570,7 +5942,7 @@ $if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
 $else      
       null;
 $end      
-  end get_display_ddl_schema;
+  end get_display_ddl_sql;
 
   /*
   -- Sort objects on dependencies

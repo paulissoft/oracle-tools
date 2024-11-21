@@ -104,7 +104,7 @@ $end
             ,       t.chunk#
             ,       t.chunk -- output
             from    table
-                    ( oracle_tools.pkg_ddl_util.display_ddl_schema
+                    ( oracle_tools.pkg_ddl_util.display_ddl_sql
                       ( p_schema => pi_source_schema
                       , p_new_schema => null
                       , p_sort_objects_by_deps => case when l_interface_tab(i_interface_idx) = "pkg_ddl_util v4" then 0 else 1 end

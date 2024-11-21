@@ -45,7 +45,7 @@ That parameter often defaults to constant `c_transform_param_list` which include
 c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
 
 -- 0: none, 1: standard, 2: verbose, 3: even more verbose
-c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 2 $else 0 $end; -- never change the last value
+c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $else 0 $end; -- never change the last value
 c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 
@@ -177,7 +177,7 @@ procedure md_close
 ( p_handle in out number
 );
 
-type display_ddl_schema_rec is record
+type display_ddl_sql_rec is record
 ( schema_object_id oracle_tools.generate_ddl_session_schema_objects.schema_object_id%type
 , ddl# integer
 , ddl_info varchar2(1000 byte)
@@ -185,7 +185,23 @@ type display_ddl_schema_rec is record
 , chunk varchar2(4000 char)
 );
 
-type display_ddl_schema_tab is table of display_ddl_schema_rec;
+type display_ddl_sql_tab is table of display_ddl_sql_rec;
+
+function display_ddl_sql
+( p_schema in t_schema_nn default user -- The schema name.
+, p_new_schema in t_schema default null -- The new schema name.
+, p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- Sort objects in dependency order to reduce the number of installation errors/warnings.
+, p_object_type in t_metadata_object_type default null -- Filter for object type.
+, p_object_names in t_object_names default null -- A comma separated list of (base) object names.
+, p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_network_link in t_network_link default null -- The network link.
+, p_grantor_is_schema in t_numeric_boolean_nn default 0 -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
+, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
+, p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
+)
+return display_ddl_sql_tab
+pipelined;
 
 function display_ddl_schema
 ( p_schema in t_schema_nn default user -- The schema name.
@@ -200,7 +216,7 @@ function display_ddl_schema
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 )
-return display_ddl_schema_tab
+return oracle_tools.t_schema_ddl_tab
 pipelined;
 
 /**

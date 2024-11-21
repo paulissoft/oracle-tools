@@ -177,15 +177,33 @@ procedure md_close
 ( p_handle in out number
 );
 
-type display_ddl_schema_rec is record
+type t_display_ddl_sql_rec is record
 ( schema_object_id oracle_tools.generate_ddl_session_schema_objects.schema_object_id%type
-, ddl# integer
+, obj oracle_tools.t_schema_object
+, ddl# generate_ddl_session_schema_ddls.ddl#%type
+, verb generate_ddl_session_schema_ddls.verb%type
 , ddl_info varchar2(1000 byte)
-, chunk# integer
-, chunk varchar2(4000 char)
+, chunk# generate_ddl_session_schema_ddl_chunks.chunk#%type
+, chunk generate_ddl_session_schema_ddl_chunks.chunk%type
 );
 
-type display_ddl_schema_tab is table of display_ddl_schema_rec;
+type t_display_ddl_sql_tab is table of t_display_ddl_sql_rec;
+
+function display_ddl_sql
+( p_schema in t_schema_nn default user -- The schema name.
+, p_new_schema in t_schema default null -- The new schema name.
+, p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- Sort objects in dependency order to reduce the number of installation errors/warnings.
+, p_object_type in t_metadata_object_type default null -- Filter for object type.
+, p_object_names in t_object_names default null -- A comma separated list of (base) object names.
+, p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_network_link in t_network_link default null -- The network link.
+, p_grantor_is_schema in t_numeric_boolean_nn default 0 -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
+, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
+, p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
+)
+return t_display_ddl_sql_tab
+pipelined;
 
 function display_ddl_schema
 ( p_schema in t_schema_nn default user -- The schema name.
@@ -200,7 +218,7 @@ function display_ddl_schema
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 )
-return display_ddl_schema_tab
+return oracle_tools.t_schema_ddl_tab
 pipelined;
 
 /**
@@ -224,9 +242,25 @@ procedure create_schema_ddl
 , p_schema_ddl out nocopy oracle_tools.t_schema_ddl
 );
 
+function display_ddl_schema_diff
+( p_object_type in t_metadata_object_type default null -- Filter for object type.
+, p_object_names in t_object_names default null -- A comma separated list of (base) object names.
+, p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_schema_source in t_schema default user -- Source schema (may be empty for uninstall).
+, p_schema_target in t_schema_nn default user -- Target schema.
+, p_network_link_source in t_network_link default null -- Source network link.
+, p_network_link_target in t_network_link default null -- Target network link.
+, p_skip_repeatables in t_numeric_boolean_nn default 1 -- Skip repeatables objects (1) or check all objects (0) with 1 the default for Flyway with repeatable migrations
+, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
+, p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
+)
+return oracle_tools.t_schema_ddl_tab
+pipelined;
+
 /**
 
-Display DDL (script plus infp) to migrate from source to target.
+Display DDL (script plus info) to migrate from source to target.
 
 **/
 
@@ -369,17 +403,17 @@ procedure get_schema_ddl
 , p_transform_param_list in varchar2 default c_transform_param_list
 );
 
-procedure set_display_ddl_schema_args
+procedure set_display_ddl_sql_args
 ( p_exclude_objects in clob
 , p_include_objects in clob
 );
 
-procedure get_display_ddl_schema_args
+procedure get_display_ddl_sql_args
 ( p_exclude_objects out nocopy dbms_sql.varchar2a
 , p_include_objects out nocopy dbms_sql.varchar2a
 );
 
-procedure set_display_ddl_schema_args
+procedure set_display_ddl_sql_args
 ( p_schema in t_schema_nn
 , p_new_schema in t_schema
 , p_sort_objects_by_deps in t_numeric_boolean_nn
@@ -393,7 +427,7 @@ procedure set_display_ddl_schema_args
 , p_include_objects in clob
 );
 
-procedure set_display_ddl_schema_args_r
+procedure set_display_ddl_sql_args_r
 ( p_schema in t_schema_nn
 , p_new_schema in t_schema
 , p_sort_objects_by_deps in t_numeric_boolean_nn
