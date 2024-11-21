@@ -1057,10 +1057,12 @@ $end
           l_text_tab.extend(1);
           l_text_tab(l_text_tab.last) := l_buffer;
         else
-          l_text_tab.extend(1);
-          l_text_tab(l_text_tab.last) := substr(l_buffer, 1, c_sql_string_size/2);
-          l_text_tab.extend(1);
-          l_text_tab(l_text_tab.last) := substr(l_buffer, 1 + c_sql_string_size/2);
+          -- when all characters are 3 bytes we must divide in 4 parts
+          for i_part in 1..4
+          loop
+            l_text_tab.extend(1);
+            l_text_tab(l_text_tab.last) := substr(l_buffer, 1 + (i_part-1)*(c_sql_string_size/4), c_sql_string_size/4);
+          end loop;
         end if;  
       end loop;
     end if;
