@@ -120,16 +120,6 @@ $end
                     ) t
           ;
         else
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-
-          oracle_tools.pkg_ddl_error.raise_error
-          ( oracle_tools.pkg_ddl_error.c_not_implemented
-          , 'display_ddl_schema_diff not implemented.'
-          , null
-          );
-
-$else          
-
           -- incremental DDL because target schema is not empty
           open l_cursor for
             select  '-- ddl info: ' ||
@@ -154,8 +144,6 @@ $else
                     ) t
           ,         table(t.ddl_tab) u
           ;
-$end
-
         end if;
         dbms_lob.trim(po_clob, 0);
         oracle_tools.pkg_str_util.append_text('-- '||l_interface_tab(i_interface_idx), po_clob); -- So Perl script generate_ddl.pl knows how to read the output
