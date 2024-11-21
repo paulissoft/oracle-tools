@@ -175,7 +175,7 @@ $end
                   -- the text column does not end with an empty newline so we do it here
                   oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(i_idx), po_clob);
                 end if;
-                oracle_tools.pkg_str_util.text2clob(pi_text_tab => l_chunk_tab, pio_clob => po_clob, pi_append => true);
+                dbms_lob.writeappend(lob_loc => po_clob, amount => length(l_chunk_tab(i_idx)), buffer => l_chunk_tab(i_idx));
               end loop;
               oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
             end if;
