@@ -120,7 +120,7 @@ procedure add
 , p_nr_objects in integer
 , p_session_id in t_session_id default get_session_id
 );
-/** Update the record in table GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES. **/
+/** Update the record in table GENERATE_DDL_SESSION_BATCHES. **/
 
 $if oracle_tools.cfg_pkg.c_testing $then
 

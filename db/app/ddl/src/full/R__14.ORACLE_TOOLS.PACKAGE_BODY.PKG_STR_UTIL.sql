@@ -1002,7 +1002,7 @@ is
   l_text_tab oracle_tools.t_text_tab := null;
   l_first pls_integer := 1;
   l_last pls_integer := dbms_lob.getlength(pi_clob);
-  l_buffer t_max_varchar2;
+  l_buffer t_sql_string;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter(g_package_prefix || 'CLOB2TEXT');
@@ -1044,26 +1044,11 @@ $end
           dbms_lob_substr
           ( p_clob => pi_clob
           , p_offset => l_first + (i_chunk-1) * c_sql_string_size
-          , p_amount => case
-                          when i_chunk < ceil((l_last - l_first + 1) / c_sql_string_size)
-                          then c_sql_string_size
-                          else (l_last - l_first + 1) - (i_chunk-1) * c_sql_string_size
-                        end
+          , p_amount => c_sql_string_size
           , p_check => 'OL'              
           );
-        -- This may show up: ORA-12899: value too large for column "ORACLE_TOOLS"."GENERATE_DDL_SESSION_SCHEMA_DDL_CHUNKS"."CHUNK" (actual: 4002, maximum: 4000)
-        if lengthb(l_buffer) <= c_sql_string_size
-        then
-          l_text_tab.extend(1);
-          l_text_tab(l_text_tab.last) := l_buffer;
-        else
-          -- when all characters are 3 bytes we must divide in 4 parts
-          for i_part in 1..4
-          loop
-            l_text_tab.extend(1);
-            l_text_tab(l_text_tab.last) := substr(l_buffer, 1 + (i_part-1)*(c_sql_string_size/4), c_sql_string_size/4);
-          end loop;
-        end if;  
+        l_text_tab.extend(1);
+        l_text_tab(l_text_tab.last) := l_buffer;
       end loop;
     end if;
   end if;

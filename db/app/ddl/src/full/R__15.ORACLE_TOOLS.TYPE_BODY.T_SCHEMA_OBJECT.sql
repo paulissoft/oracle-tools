@@ -1018,6 +1018,54 @@ $end
   return l_id;
 end join_id;
 
+final static function last_ddl_time
+( p_schema_object in oracle_tools.t_schema_object
+)
+return date
+is
+begin
+  return last_ddl_time
+         ( p_object_schema => p_schema_object.object_schema()
+         , p_dict_object_type => p_schema_object.dict_object_type()
+         , p_object_name => p_schema_object.object_name()
+         );
+end last_ddl_time;
+
+final static function last_ddl_time
+( p_object_schema in varchar2
+, p_dict_object_type in varchar2
+, p_object_name in varchar2
+)
+return date
+is
+  l_last_ddl_time all_objects.last_ddl_time%type;
+begin
+  select  o.last_ddl_time
+  into    l_last_ddl_time
+  from    all_objects o
+  where   o.owner = p_object_schema
+  and     o.object_type = p_dict_object_type
+  and     o.object_name = p_object_name;
+  return l_last_ddl_time;
+exception
+  when no_data_found
+  then return null;
+end last_ddl_time;
+
+member function last_ddl_time
+return date
+is
+begin
+  return oracle_tools.t_schema_object.last_ddl_time(self);
+end last_ddl_time;
+
+final member function dict_object_exists
+return integer -- 0/1 (is last_ddl_time not null)
+is
+begin
+  return case when self.last_ddl_time() is null then 0 else 1 end;
+end dict_object_exists;
+
 static function ddl_batch_order
 ( p_object_schema in varchar2
 , p_object_type in varchar2

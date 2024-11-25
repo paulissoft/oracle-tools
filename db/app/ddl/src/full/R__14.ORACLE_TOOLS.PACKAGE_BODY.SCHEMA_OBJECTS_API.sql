@@ -1167,7 +1167,7 @@ procedure add
 )
 is
 begin
-  insert into oracle_tools.generate_ddl_session_schema_ddl_batches
+  insert into oracle_tools.generate_ddl_session_batches
   ( session_id
   , seq
   , schema
@@ -1182,7 +1182,7 @@ begin
   )
   values
   ( p_session_id
-  , (select nvl(max(gdssdb.seq), 0) + 1 from oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb where gdssdb.session_id = p_session_id)
+  , (select nvl(max(gdsb.seq), 0) + 1 from oracle_tools.generate_ddl_session_batches gdsb where gdsb.session_id = p_session_id)
   , p_schema
   , p_transform_param_list
   , p_object_schema

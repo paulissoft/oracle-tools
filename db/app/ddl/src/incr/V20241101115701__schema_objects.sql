@@ -1,5 +1,5 @@
 create table schema_objects
-( id varchar2(500) not null constraint schema_objects$pk primary key
+( id varchar2(500 byte) not null constraint schema_objects$pk primary key
 , obj t_schema_object 
 , created timestamp(6)
   default sys_extract_utc(systimestamp)

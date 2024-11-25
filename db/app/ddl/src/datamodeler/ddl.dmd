@@ -1,0 +1,8 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<OSDM_Design class="oracle.dbtools.crest.model.design.Design" name="ddl" id="A270E921-3E50-9CE5-191C-4A2B56516BB3" version="3.5">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:13:16 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<capitalNames>false</capitalNames>
+<designId>A270E921-3E50-9CE5-191C-4A2B56516BB3</designId>
+</OSDM_Design>

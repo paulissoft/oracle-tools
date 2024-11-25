@@ -258,27 +258,6 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 end chk;
 
-overriding member function dict_object_exists
-return integer -- 0/1
-is
-  l_count pls_integer;
-  l_object_schema constant all_objects.owner%type := self.object_schema();
-  l_object_name constant all_objects.object_name%type := self.object_name();
-  l_base_object_schema constant all_objects.owner%type := self.base_object_schema();
-  l_base_object_type constant all_objects.object_type%type := self.base_dict_object_type();
-  l_base_object_name constant all_objects.object_name%type := self.base_object_name();
-begin
-  select  sign(count(*))
-  into    l_count
-  from    all_indexes i
-  where   i.owner = l_object_schema
-  and     i.index_name = l_object_name
-  and     i.table_owner = l_base_object_schema
-  and     i.table_type = l_base_object_type
-  and     i.table_name = l_base_object_name;
-  return l_count;
-end;
-
 end;
 /
 

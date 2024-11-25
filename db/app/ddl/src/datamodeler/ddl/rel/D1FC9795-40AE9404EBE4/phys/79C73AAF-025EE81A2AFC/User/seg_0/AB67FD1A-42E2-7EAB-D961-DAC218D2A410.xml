@@ -1,0 +1,9 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<UserOraclev10g class="oracle.dbtools.crest.model.design.storage.oracle.v10g.UserOraclev10g" name="ORACLE_TOOLS" directorySegmentName="seg_0" id="AB67FD1A-42E2-7EAB-D961-DAC218D2A410">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjName>ORACLE_TOOLS</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:38 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<schemaObject>86E07972-0E39-656A-F568-00AE638CFEA4</schemaObject>
+</UserOraclev10g>

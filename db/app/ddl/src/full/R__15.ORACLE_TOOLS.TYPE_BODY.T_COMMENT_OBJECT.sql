@@ -93,47 +93,26 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 end chk;
 
-overriding member function dict_object_exists
-return integer -- 0/1
+overriding member function last_ddl_time
+return date
 is
-  l_count pls_integer;
-  l_owner constant all_objects.owner%type := self.object_schema();
-  l_object_type constant all_objects.object_type%type := self.dict_object_type();
-  l_object_name constant all_objects.object_name%type := self.object_name();
-  l_column_name constant all_col_comments.column_name%type := self.column_name();
+  l_last_ddl_time all_objects.last_ddl_time%type;
+  l_owner constant all_objects.owner%type := self.base_object_schema();
+  l_object_type constant all_objects.object_type%type := self.dict_base_object_type();
+  l_object_name constant all_objects.object_name%type := self.base_object_name();
 begin
-  select  sign(count(*))
-  into    l_count
-  from    ( -- table/view comments
-            select  1
-            from    all_tab_comments t
-            where   l_object_type in ('TABLE', 'VIEW')
-            and     t.comments is not null
-            and     t.owner = l_owner
-            and     t.table_type = l_object_type
-            and     t.table_name = l_object_name
-            and     l_column_name is null
-            union all
-            -- materialized view comments
-            select  1
-            from    all_mview_comments m
-            where   l_object_type = 'MATERIALIZED VIEW'
-            and     m.comments is not null
-            and     m.owner = l_owner
-            and     m.mview_name = l_object_name
-            and     l_column_name is null
-            union all
-            -- column comments
-            select  1
-            from    all_col_comments c                    
-            where   l_object_type in ('TABLE', 'VIEW', 'MATERIALIZED VIEW')
-            and     c.comments is not null
-            and     c.owner = l_owner
-            and     c.table_name = l_object_name
-            and     c.column_name = l_column_name
-          );
-  return l_count;
-end;
+  select  o.last_ddl_time
+  into    l_last_ddl_time
+  from    all_objects o
+  where   o.owner = l_owner
+  and     o.object_type = l_object_type
+  and     o.object_name = l_object_name;
+  
+  return l_last_ddl_time;
+exception
+  when no_data_found
+  then return null;
+end last_ddl_time;
 
 end;
 /

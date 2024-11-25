@@ -1,4 +1,4 @@
-create table generate_ddl_session_schema_ddl_batches
+create table generate_ddl_session_batches
 ( session_id number not null -- Primary key #1
 , seq integer not null -- Primary key #2 (sequence within parent)
 , created timestamp(6)
@@ -14,16 +14,16 @@ create table generate_ddl_session_schema_ddl_batches
 , object_name_tab oracle_tools.t_text_tab
 , base_object_name_tab oracle_tools.t_text_tab
 , nr_objects integer
-, constraint generate_ddl_session_schema_ddl_batches$pk
+, constraint generate_ddl_session_batches$pk
   primary key (session_id, seq)
-, constraint generate_ddl_session_schema_ddl_batches$fk$1
+, constraint generate_ddl_session_batches$fk$1
   foreign key (session_id)
   references generate_ddl_sessions(session_id) on delete cascade
 )
-nested table object_name_tab store as generate_ddl_session_schema_ddl_batches$object_name_tab
-nested table base_object_name_tab store as generate_ddl_session_schema_ddl_batches$base_object_name_tab
+nested table object_name_tab store as generate_ddl_session_batches$object_name_tab
+nested table base_object_name_tab store as generate_ddl_session_batches$base_object_name_tab
 ;
 
-alter table generate_ddl_session_schema_ddl_batches nologging;
+alter table generate_ddl_session_batches nologging;
 
--- foreign key index generate_ddl_session_schema_ddl_batches$fk$2 not necessary
+-- foreign key index generate_ddl_session_batches$fk$2 not necessary

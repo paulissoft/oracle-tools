@@ -8,7 +8,7 @@ create type oracle_tools.t_refresh_group_object authid current_user under oracle
   )
   return self as result
 , overriding member function object_type return varchar2 deterministic
-, overriding member function dict_object_exists return integer -- 0/1
+, overriding member function last_ddl_time return date
 )
 final]';
 end;

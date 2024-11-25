@@ -1,0 +1,17 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<CollectionType class="oracle.dbtools.crest.model.design.datatypes.CollectionType" name="T_SCHEMA_OBJECT_TAB" directorySegmentName="seg_0" id="12D211A2-62B4-8108-0F94-14986B3831A5">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>T_SCHEMA_OBJECT_TAB</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:38 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<predefined>false</predefined>
+<dataTypeDescr class="oracle.dbtools.crest.model.design.datatypes.CollectionType$DataTypeWrapper">
+<size></size>
+<type>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</type>
+<isreference>false</isreference>
+</dataTypeDescr>
+<maxElement>1</maxElement>
+<type>COLLECTION</type>
+</CollectionType>

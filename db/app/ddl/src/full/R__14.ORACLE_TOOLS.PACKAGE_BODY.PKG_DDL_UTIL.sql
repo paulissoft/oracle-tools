@@ -5291,19 +5291,19 @@ $end
   is
     cursor c_gdssdb
     is
-      select  gdssdb.*
-      from    oracle_tools.generate_ddl_session_schema_ddl_batches gdssdb -- filter on session_id already part of view
-      where   gdssdb.session_id = p_session_id
+      select  gdsb.*
+      from    oracle_tools.generate_ddl_session_batches gdsb -- filter on session_id already part of view
+      where   gdsb.session_id = p_session_id
       and     ( p_start_id is null or
                 p_end_id is null or
-                ( gdssdb.object_type <> 'SCHEMA_EXPORT' and
+                ( gdsb.object_type <> 'SCHEMA_EXPORT' and
                   to_number
                   ( substr
                     ( oracle_tools.t_schema_object.ddl_batch_order
-                      ( p_object_schema => gdssdb.object_schema
-                      , p_object_type => gdssdb.object_type 
-                      , p_base_object_schema => gdssdb.base_object_schema 
-                      , p_base_object_type => gdssdb.base_object_type 
+                      ( p_object_schema => gdsb.object_schema
+                      , p_object_type => gdsb.object_type 
+                      , p_base_object_schema => gdsb.base_object_schema 
+                      , p_base_object_type => gdsb.base_object_type 
                       )
                     , 1
                     , 1
@@ -5312,8 +5312,8 @@ $end
                 )
               )
       order by
-              gdssdb.session_id
-      ,       gdssdb.seq
+              gdsb.session_id
+      ,       gdsb.seq
       for update;
   begin
     -- essential when in another process
@@ -5355,7 +5355,7 @@ $end
       end;
 
       delete
-      from    oracle_tools.v_my_generate_ddl_session_schema_ddl_batches gdssdb
+      from    oracle_tools.v_my_generate_ddl_session_schema_ddl_batches gdsb
       where   current of c_gdssdb;
     end loop;
 
@@ -5587,7 +5587,7 @@ $end
 
           r_params := l_params_tab(l_params_idx);
 
-          -- insert into generate_ddl_session_schema_ddl_batches
+          -- insert into generate_ddl_session_batches
           oracle_tools.schema_objects_api.add
           ( p_schema => p_schema_object_filter.schema()
           , p_transform_param_list => p_transform_param_list

@@ -1,0 +1,120 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<StructuredTypeProxyOraclev10g class="oracle.dbtools.crest.model.design.storage.oracle.v10g.StructuredTypeProxyOraclev10g" name="T_DEPENDENT_OR_GRANTED_OBJECT" directorySegmentName="seg_0" id="2773E2C3-839D-C9CA-7C28-2ADB03D4A8A9">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>T_DEPENDENT_OR_GRANTED_OBJECT</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:38 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<owner>AB67FD1A-42E2-7EAB-D961-DAC218D2A410</owner>
+<attributes itemClass="oracle.dbtools.crest.model.design.storage.oracle.v9i.TypeElementProxyOraclev9i">
+<Attribute name="BASE_OBJECT_ID$" id="DCF49543-A140-1511-EDF1-547811873F90">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+</Attribute>
+</attributes>
+<methods itemClass="oracle.dbtools.crest.model.design.storage.oracle.v9i.MethodProxyOraclev9i">
+<Method name="BASE_OBJECT_NAME" id="07BFBD41-5C35-E065-C863-59677D3BB0DE">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<bodyChanged>false</bodyChanged>
+<plSQLBody>deterministic
+is
+begin
+  return oracle_tools.t_schema_object.split_id(self.base_object_id$)(3);
+end base_object_name;</plSQLBody>
+</Method>
+<Method name="BASE_DICT_OBJECT_TYPE" id="476DBABD-516F-BE38-64AF-A4C5B21D40AD">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<bodyChanged>false</bodyChanged>
+<plSQLBody>deterministic
+is
+begin
+  return oracle_tools.t_schema_object.dict_object_type(self.base_object_type());
+end base_dict_object_type;</plSQLBody>
+</Method>
+<Method name="BASE_OBJECT_TYPE" id="6060E7ED-257A-5709-144A-63587B271ACC">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<bodyChanged>false</bodyChanged>
+<plSQLBody>deterministic
+is
+begin
+  return oracle_tools.t_schema_object.split_id(self.base_object_id$)(2);
+end base_object_type;</plSQLBody>
+</Method>
+<Method name="BASE_OBJECT_SCHEMA" id="6A1C359F-BD18-7156-2436-F1C081BC1041">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<bodyChanged>false</bodyChanged>
+<plSQLBody>deterministic
+is
+begin
+  return oracle_tools.t_schema_object.split_id(self.base_object_id$)(1);
+end base_object_schema;</plSQLBody>
+</Method>
+<Method name="BASE_OBJECT_SCHEMA" id="968E61B8-11AA-0032-B4B0-0B8D23FC1B64">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<bodyChanged>false</bodyChanged>
+<plSQLBody>  l_id_parts oracle_tools.t_text_tab := oracle_tools.t_schema_object.split_id(self.base_object_id$);
+begin
+  l_id_parts(1) := p_base_object_schema;
+  self.base_object_id$ := oracle_tools.t_schema_object.join_id(l_id_parts);
+end base_object_schema;</plSQLBody>
+<isFinal>YES</isFinal>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.storage.oracle.v10g.MethodParamProxyOraclev10g" name="P_BASE_OBJECT_SCHEMA" id="A644A7B7-3B0D-0DCF-2AFB-06ECFA529D94">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<directionType>IN</directionType>
+</Parameter>
+</parameters>
+</Method>
+<Method name="CHK" id="E654487F-4892-D6D2-50E8-B4273F24A866">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<bodyChanged>false</bodyChanged>
+<plSQLBody>begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging &gt;= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || &apos;.&apos; || $$PLSQL_UNIT || &apos;.&apos; || &apos;CHK&apos;);
+$end
+
+  oracle_tools.pkg_ddl_util.chk_schema_object(p_dependent_or_granted_object =&gt; self, p_schema =&gt; p_schema);
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging &gt;= 3 $then
+  dbug.leave;
+$end
+end chk;</plSQLBody>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.storage.oracle.v10g.MethodParamProxyOraclev10g" name="P_SCHEMA" id="A6B3EE16-0301-2EA8-4355-727DB2D29BC9">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<directionType>IN</directionType>
+</Parameter>
+</parameters>
+</Method>
+<Method name="BASE_OBJECT_ID" id="F979550D-BCA1-6E37-A537-6272536B48CB">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<bodyChanged>false</bodyChanged>
+<plSQLBody>deterministic
+is
+begin
+  return self.base_object_id$;
+end base_object_id;
+</plSQLBody>
+</Method>
+</methods>
+</StructuredTypeProxyOraclev10g>

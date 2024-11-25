@@ -8,11 +8,8 @@ String utilities.
 
 c_debugging constant naturaln := 0; -- 0: none, 1: standard, 2: verbose, 3: even more verbose
 
-subtype t_sql_string is varchar2(4000 char); -- suitable for a database column
+subtype t_sql_string is varchar2(4000 byte); -- suitable for a database column
 c_sql_string_size constant naturaln := 4000;
-
-subtype t_plsql_string is varchar2(8000 char); -- will always fit into varchar2(32767 byte)
-c_plsql_string_size constant naturaln := 8000;
 
 -- DBMS_SQL: type varchar2a is table of varchar2(32767) index by binary_integer;
 subtype t_max_varchar2 is varchar2(32767);

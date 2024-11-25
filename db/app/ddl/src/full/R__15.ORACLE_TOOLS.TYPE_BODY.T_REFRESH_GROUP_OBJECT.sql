@@ -39,20 +39,17 @@ begin
   return 'REFRESH_GROUP';
 end object_type;
 
-overriding member function dict_object_exists
-return integer -- 0/1
+overriding member function last_ddl_time
+return date
 is
-  l_count pls_integer;
-  l_object_schema constant all_refresh.rowner%type := self.object_schema();
-  l_object_name constant all_refresh.rname%type := self.object_name();
 begin
-  select  sign(count(*))
-  into    l_count
-  from    all_refresh r
-  where   r.rowner = l_object_schema
-  and     r.rname = l_object_name;
-  return l_count;
-end;
+  -- often mapped on MV
+  return oracle_tools.t_schema_object.last_ddl_time
+         ( p_object_schema => self.object_schema()
+         , p_dict_object_type => 'MATERIALIZED VIEW'
+         , p_object_name => self.object_name()
+         );
+end last_ddl_time;
 
 end;
 /

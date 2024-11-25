@@ -265,24 +265,16 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 end chk;
 
-overriding member function dict_object_exists
-return integer -- 0/1
+overriding member function last_ddl_time
+return date
 is
-  l_count pls_integer;
-  l_method_name constant all_type_methods.method_name%type := self.member_name$;
-  l_method_type constant all_type_methods.method_type%type := self.method_type$;
-  l_base_object_schema constant all_type_methods.owner%type := self.base_object_schema();
-  l_base_object_name constant all_type_methods.type_name%type := self.base_object_name();
 begin
-  select  sign(count(*))
-  into    l_count
-  from    all_type_methods t
-  where   t.owner = l_base_object_schema
-  and     t.type_name = l_base_object_name
-  and     t.method_name = l_method_name
-  and     t.method_type = l_method_type;
-  return l_count;
-end;
+  return oracle_tools.t_schema_object.last_ddl_time
+  ( p_object_schema => self.base_object_schema()
+  , p_dict_object_type => self.dict_base_object_name()
+  , p_object_name => self.base_object_name()
+  );
+end last_ddl_time;
 
 end;
 /

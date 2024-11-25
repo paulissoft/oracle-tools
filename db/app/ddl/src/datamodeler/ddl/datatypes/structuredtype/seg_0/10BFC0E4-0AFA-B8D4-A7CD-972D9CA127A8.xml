@@ -1,0 +1,1610 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<StructuredType class="oracle.dbtools.crest.model.design.datatypes.StructuredType" name="T_SCHEMA_OBJECT" directorySegmentName="seg_0" id="10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>T_SCHEMA_OBJECT</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:38 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<predefined>false</predefined>
+<final>false</final>
+<instantiable>false</instantiable>
+<attributes itemClass="oracle.dbtools.crest.model.design.datatypes.TypeElement">
+<Attribute name="ID" id="75783273-F0B9-FF3A-11B1-13C4A8F45288">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<size>500</size>
+<type>LOGDT024</type>
+</Attribute>
+<Attribute name="NETWORK_LINK$" id="642B8178-C257-4E09-BD93-4837E2FF7834">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<size>128</size>
+<type>LOGDT024</type>
+</Attribute>
+<Attribute name="OBJECT_SCHEMA$" id="855C29D6-2636-9413-8FA3-FE29105DBE00">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<size>128</size>
+<type>LOGDT024</type>
+</Attribute>
+</attributes>
+<methods itemClass="oracle.dbtools.crest.model.design.datatypes.Method">
+<Method name="NETWORK_LINK" id="47608C04-A870-9C38-E0B7-9E1904C43F76">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return self.network_link$;
+end network_link;]]></body>
+<number>1</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="NETWORK_LINK" id="5E6336A0-DEF1-6875-9D8A-1753DA638420">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="NETWORK_LINK" id="238F1B82-D6CE-B68D-D2A7-442E275264CE">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[begin
+  self.network_link$ := p_network_link;
+end network_link;]]></body>
+<number>2</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_NETWORK_LINK" id="E212A7EE-8F8C-6361-8774-423473432D57">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="OBJECT_SCHEMA" id="3C709613-7278-17CD-1B37-C07A190C2EDD">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return self.object_schema$;
+end object_schema;]]></body>
+<number>3</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="OBJECT_SCHEMA" id="D5F9A0A5-4D52-C347-1E01-ECD26C91A1B4">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="OBJECT_SCHEMA" id="C6B3D266-8E68-1AAA-6BB1-1E6858FBEC95">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[begin
+  self.object_schema$ := p_object_schema;
+end object_schema;]]></body>
+<number>4</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_SCHEMA" id="81AB5427-D33A-3D79-8EFD-A829C6012AF6">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="OBJECT_TYPE" id="2A48F13A-07E6-2660-C70F-01798F8519BE">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>5</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="OBJECT_TYPE" id="0E3ECDCF-77B3-1D17-3065-791EEF78FA19">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="OBJECT_NAME" id="7E04AA07-446B-1A3F-DF4C-A4901B7479ED">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return null;
+end object_name;]]></body>
+<number>6</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="OBJECT_NAME" id="C94A56EF-A639-830D-85BA-42146E47B507">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="BASE_OBJECT_SCHEMA" id="C2CB6D06-199B-DFED-0050-9A1990517344">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return null;
+end base_object_schema;]]></body>
+<number>7</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="BASE_OBJECT_SCHEMA" id="BB319053-4E44-CD09-2789-EA9130750642">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="BASE_OBJECT_SCHEMA" id="E5753DAE-5ECC-6D6C-3A79-A6F8337B9FC9">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[begin
+  oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_not_implemented, 'An object of type ' || self.object_type() || ' can not set its base_object_schema.', self.schema_object_info());
+end base_object_schema;]]></body>
+<number>8</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_BASE_OBJECT_SCHEMA" id="7F1096C3-7AD8-B214-55A1-1CAC97C318AB">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="BASE_OBJECT_TYPE" id="3CE9C299-2969-DA0D-B67E-2AC0B7465939">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return null;
+end base_object_type;]]></body>
+<number>9</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="BASE_OBJECT_TYPE" id="DCFE3256-7264-C1C2-F56E-025812328FBB">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="BASE_OBJECT_NAME" id="510E6F7E-BD38-094D-1128-F330B82BE429">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return null;
+end base_object_name;]]></body>
+<number>10</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="BASE_OBJECT_NAME" id="0ABD9C26-FD92-13BD-0ABA-A33FA08056FA">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="COLUMN_NAME" id="57D4ABD8-DAC2-F4C2-4A46-2B0C45C4052C">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return null;
+end column_name;]]></body>
+<number>11</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="COLUMN_NAME" id="70B899A7-0264-2776-E4DE-B9DD3D4D9C54">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="GRANTEE" id="A206E518-44A2-0C7C-2C29-5587F88CBBC5">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return null;
+end grantee;]]></body>
+<number>12</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="GRANTEE" id="41E8DD28-41D8-2D24-19AB-28D12E7BFFFC">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="PRIVILEGE" id="8AFB3064-11B4-BC7C-3B20-66AAFDBD89C1">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return null;
+end privilege;]]></body>
+<number>13</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="PRIVILEGE" id="AD861B67-31C3-6F3E-AB0F-4A7F29ED900C">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="GRANTABLE" id="3AE24536-C4CC-729D-695C-6CD5CC9BF40D">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return null;
+end grantable;]]></body>
+<number>14</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="GRANTABLE" id="E4D1822E-6843-B261-1380-DFC7DBAAD1E9">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="OBJECT_TYPE_ORDER" id="EF7F80D4-6510-AC69-A2AF-9EB2683DD695">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic /*result_cache*/
+is
+begin
+  return
+    case p_object_type
+      when 'SEQUENCE'              then  1
+      when 'TYPE_SPEC'             then  2
+      when 'CLUSTER'               then  3
+      when 'AQ_QUEUE_TABLE'        then  4
+      when 'AQ_QUEUE'              then  5
+      when 'TABLE'                 then  6
+      when 'DB_LINK'               then  7
+      when 'FUNCTION'              then  8
+      when 'PACKAGE_SPEC'          then  9
+      when 'VIEW'                  then 10
+      when 'PROCEDURE'             then 11
+      when 'MATERIALIZED_VIEW'     then 12
+      when 'MATERIALIZED_VIEW_LOG' then 13
+      when 'PACKAGE_BODY'          then 14
+      when 'TYPE_BODY'             then 15
+      when 'INDEX'                 then 16
+      when 'TRIGGER'               then 17
+      when 'OBJECT_GRANT'          then 18
+      when 'CONSTRAINT'            then 19
+      when 'REF_CONSTRAINT'        then 20
+      when 'SYNONYM'               then 21
+      when 'COMMENT'               then 22
+      when 'DIMENSION'             then 23
+      when 'INDEXTYPE'             then 24
+      when 'JAVA_SOURCE'           then 25
+      when 'LIBRARY'               then 26
+      when 'OPERATOR'              then 27
+      when 'REFRESH_GROUP'         then 28
+      when 'XMLSCHEMA'             then 29
+      when 'PROCOBJ'               then 30
+      else null
+    end;
+end object_type_order;]]></body>
+<number>15</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="OBJECT_TYPE_ORDER" id="1DC7628A-3B67-5633-A61B-C4DFDBA9C2C5">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT011</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_TYPE" id="6E583C24-D0EC-EFCE-DBBC-D5E4EB967B7E">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="OBJECT_TYPE_ORDER" id="76020FC2-E7D5-3FF8-16FE-090E43077B44">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return oracle_tools.t_schema_object.object_type_order(self.object_type);
+end object_type_order;]]></body>
+<number>16</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="OBJECT_TYPE_ORDER" id="29A29B0A-4184-9C7D-71F4-62228C836515">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT011</typeID>
+</returnValue>
+</Method>
+<Method name="GET_ID" id="9ADB27AA-D943-60FD-8803-22C945FEAEE8">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic /*result_cache*/
+is
+  l_id varchar2(500 byte) := null;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_ID');
+  dbug.print(dbug."input", 'p_object_schema: %s; p_object_type: %s; p_object_name: %s', p_object_schema, p_object_type, p_object_name);
+  if not(p_base_object_schema is null and p_base_object_type is null and p_base_object_name is null)
+  then
+    dbug.print(dbug."input", 'p_base_object_schema: %s; p_base_object_type: %s; p_base_object_name: %s', p_base_object_schema, p_base_object_type, p_base_object_name);
+  end if;
+  if not(p_column_name is null)
+  then
+    dbug.print(dbug."input", 'p_column_name: %s', p_column_name);
+  end if;
+  if not(p_grantee is null and p_privilege is null and p_grantable is null)
+  then
+    dbug.print(dbug."input", 'p_grantee: %s; p_privilege: %s; p_grantable: %s', p_grantee, p_privilege, p_grantable);
+  end if;
+$end
+
+  if p_object_type = 'OBJECT_GRANT'
+  then
+    l_id :=
+      -- DBMS_METADATA does not determine object_name and base object_type
+      -- :OBJECT_GRANT::<owner>::T_PROJECTITEMDOCUMENT:<owner>
+      null || ':' ||
+      p_object_type || ':' ||
+      null || ':' ||
+      -- base object
+      p_base_object_schema || ':' ||
+      null || ':' ||
+      p_base_object_name || ':' ||
+      -- column name
+      null || ':' ||
+      -- grantee
+      p_grantee || ':' ||
+      -- privilege
+      p_privilege || ':' ||
+      -- grantable
+      p_grantable
+      ;
+  elsif p_object_type in ('TRIGGER', 'SYNONYM')
+  then
+    l_id :=
+      -- DBMS_METADATA does not need to determine base object
+      -- <owner>:TRIGGER:TR_BR_CATEGORY::::
+      -- <owner>:PACKAGE_SPEC:IR_TO_MSEXCEL:::::
+      p_object_schema || ':' ||
+      p_object_type || ':' ||
+      p_object_name || ':' ||
+      -- base object
+      null || ':' ||
+      null || ':' ||
+      null || ':' ||
+      -- column name
+      null || ':' ||
+      -- grantee
+      null || ':' ||
+      -- privilege
+      null || ':' ||
+      -- grantable
+      null
+      ;
+  elsif p_object_type in ('INDEX')
+  then
+    l_id :=
+      -- DBMS_METADATA does not need to determine base object, but we do in oracle_tools.pkg_ddl_util.parse_ddl()
+      -- <owner>:INDEX:DOCUMENT_PK::::
+      p_object_schema || ':' ||
+      p_object_type || ':' ||
+      p_object_name || ':' ||
+      -- base object
+      p_base_object_schema || ':' ||
+      null || ':' ||
+      p_base_object_name || ':' ||
+      -- column name
+      null || ':' ||
+      -- grantee
+      null || ':' ||
+      -- privilege
+      null || ':' ||
+      -- grantable
+      null
+      ;
+  elsif p_object_type = 'COMMENT'
+  then
+    l_id :=
+      -- object
+      null || ':' ||
+      p_object_type || ':' ||
+      null || ':' ||
+      -- base object
+      p_base_object_schema || ':' ||
+      p_base_object_type || ':' ||
+      p_base_object_name || ':' ||
+      -- column name
+      p_column_name || ':' ||
+      -- grantee
+      null || ':' ||
+      -- privilege
+      null || ':' ||
+      -- grantable
+      null
+      ;
+  elsif p_object_type = 'PROCOBJ'
+  then
+    l_id :=
+      -- object
+      null || ':' ||
+      p_object_type || ':' ||
+      p_object_name || ':' ||
+      -- base object
+      null || ':' ||
+      null || ':' ||
+      null || ':' ||
+      -- column name
+      null || ':' ||
+      -- grantee
+      null || ':' ||
+      -- privilege
+      null || ':' ||
+      -- grantable
+      null
+      ;
+  elsif p_object_type is not null and
+        ( p_object_type in ( 'CONSTRAINT', 'REF_CONSTRAINT' ) -- NOT part of g_schema_md_object_type_tab
+          or
+          p_object_type]]></body>
+<number>17</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="GET_ID" id="266C3A74-2CD9-872A-4B1A-8C42BCA382F7">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_SCHEMA" id="96276F7B-3BBE-DBBF-5502-2B0D3B30E47D">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_TYPE" id="1E5054BA-193A-9B5B-DDB6-C624D57B9AD9">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_NAME" id="8114F572-BC18-B279-46EE-A8C4FD8CCB7C">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_BASE_OBJECT_SCHEMA" id="80FA66DF-E4E8-12BD-484C-81631E4E51D0">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_BASE_OBJECT_TYPE" id="39D3B24A-3B00-4D4B-242D-DDE419A9DC7C">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_BASE_OBJECT_NAME" id="3D99E172-FC95-5767-3190-B8BE2C4989A8">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_COLUMN_NAME" id="9991EC24-25FD-C818-01CA-A0C1808A4AFB">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_GRANTEE" id="FF82CDFA-5DD5-42B0-C586-698CCA60FE0D">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_PRIVILEGE" id="59939903-89F6-BE8B-A2BF-3F5736078205">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_GRANTABLE" id="E968470A-82E8-5298-422E-17CBCADA9E46">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="SET_ID" id="F72E5D66-A192-36D4-0ACF-22C34A05E087">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[begin
+  p_schema_object.id := 
+    get_id
+    ( p_object_schema => p_schema_object.object_schema()
+    , p_object_type => p_schema_object.object_type()
+    , p_object_name => p_schema_object.object_name()
+    , p_base_object_schema => p_schema_object.base_object_schema()
+    , p_base_object_type => p_schema_object.base_object_type()
+    , p_base_object_name => p_schema_object.base_object_name()
+    , p_column_name => p_schema_object.column_name()
+    , p_grantee => p_schema_object.grantee()
+    , p_privilege => p_schema_object.privilege()
+    , p_grantable => p_schema_object.grantable()
+    );
+end set_id;]]></body>
+<number>18</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA_OBJECT" id="C72B6484-2F7C-04C6-5649-DD36EF6FD015">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="SIGNATURE" id="EF3FE601-E451-7025-01A4-E6F40AFC3B72">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return self.id;
+end signature;]]></body>
+<number>19</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="SIGNATURE" id="E3FB3FCC-042B-2E62-BA12-95274CEA4EE6">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="DICT2METADATA_OBJECT_TYPE" id="E96844D2-C0F3-2FC5-6BB5-B023FF08260C">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic /*result_cache*/
+is
+  l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'DICT2METADATA_OBJECT_TYPE');
+$end
+
+  l_metadata_object_type := case
+                              -- http://stackoverflow.com/questions/3235300/oracles-dbms-metadata-get-ddl-for-object-type-job
+                              when p_dict_object_type in ('JOB', 'PROGRAM', 'RULE', 'RULE SET', 'EVALUATION CONTEXT')
+                              then 'PROCOBJ'
+                              when p_dict_object_type = 'GRANT'
+                              then 'OBJECT_GRANT'
+                              when p_dict_object_type in ('PACKAGE', 'TYPE')
+                              then p_dict_object_type || '_SPEC'
+                              when p_dict_object_type = 'QUEUE'
+                              then 'AQ_QUEUE'
+                              else replace(p_dict_object_type, ' ', '_')
+                            end;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.leave;
+$end
+
+  return l_metadata_object_type;
+end dict2metadata_object_type;]]></body>
+<number>20</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="DICT2METADATA_OBJECT_TYPE" id="1262BB8A-6778-6B2A-B16E-47A084B54FA4">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_DICT_OBJECT_TYPE" id="B13E0A6F-AB77-61FD-C274-07069C55B6A5">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="DICT2METADATA_OBJECT_TYPE" id="E61F392D-935F-D68F-3758-C0EC148A2C4A">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return oracle_tools.t_schema_object.dict2metadata_object_type(self.object_type);
+end dict2metadata_object_type;]]></body>
+<number>21</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="DICT2METADATA_OBJECT_TYPE" id="FBE47DA2-7A73-3A8B-8D62-B9AD14891529">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="PRINT" id="1689090F-A33A-CEC5-463E-97099E9B0F4E">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
+  dbug.print(dbug."info", 'network link: %s; id: %s', self.network_link(), self.id);
+  dbug.print(dbug."info", 'signature: %s', self.signature());
+  dbug.leave;
+$else
+  null;
+$end
+end print;]]></body>
+<number>22</number>
+</Method>
+<Method name="CREATE_SCHEMA_OBJECT" id="0154839E-BB2C-6AA1-7FF8-32EC6C4AF901">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[  l_base_object_schema all_objects.owner%type := p_base_object_schema;
+  l_base_object_name all_objects.object_name%type := p_base_object_name;
+  
+  function create_base_object
+  ( p_base_object_schema in varchar2
+  , p_base_object_type in varchar2
+  , p_base_object_name in varchar2
+  )
+  return oracle_tools.t_named_object
+  is
+    l_base_object oracle_tools.t_named_object;
+  begin
+    l_base_object :=
+      oracle_tools.t_named_object.create_named_object
+      ( p_object_schema => p_base_object_schema
+      , p_object_type => p_base_object_type
+      , p_object_name => p_base_object_name
+      );
+    return l_base_object;
+  exception
+    when no_data_found
+    then
+      raise_application_error
+      ( oracle_tools.pkg_ddl_error.c_object_not_correct
+      , utl_lms.format_message
+        ( 'error creating base object "%s.%s" of type "%s" for object with id "%s"'
+        , p_base_object_schema
+        , p_base_object_name
+        , p_base_object_type
+        , oracle_tools.t_schema_object.get_id
+          ( p_object_schema 
+          , p_object_type
+          , p_object_name
+          , p_base_object_schema
+          , p_base_object_type
+          , p_base_object_name
+          , p_column_name
+          , p_grantee
+          , p_privilege
+          , p_grantable
+          )
+        )
+      , true -- reraise
+      );
+  end create_base_object;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_SCHEMA_OBJECT (1)');
+  dbug.print
+  ( dbug."input"
+  , 'p_object_schema: %s; p_object_type: %s; p_object_name: %s'
+  , p_object_schema
+  , p_object_type
+  , p_object_name
+  );
+  if p_base_object_schema is not null or p_base_object_type is not null or p_base_object_name is not null
+  then
+    dbug.print
+    ( dbug."input"
+    , 'p_base_object_schema: %s; p_base_object_type: %s; p_base_object_name: %s'
+    , p_base_object_schema
+    , p_base_object_type
+    , p_base_object_name
+    );
+  end if;
+  if p_column_name is not null or p_grantee is not null or p_privilege is not null or p_grantable is not null
+  then
+    dbug.print
+    ( dbug."input"
+    , 'p_column_name: %s; p_grantee: %s; p_privilege: %s; p_grantable: %s'
+    , p_column_name
+    , p_grantee
+    , p_privilege
+    , p_grantable
+    );
+  end if;
+$end
+
+  case p_object_type
+    when 'INDEX' -- a named object with a base named object
+    then
+      -- base_object_type is corrected in create_named_object()
+      if l_base_object_schema is null or l_base_object_name is null
+      then
+        select  i.table_owner
+        ,       i.table_name
+        into    l_base_object_schema
+        ,       l_base_object_name
+        from    all_indexes i
+        where   i.owner = p_object_schema
+        and     i.index_name = p_object_name
+        and     ( l_base_object_schema is null or i.table_owner = l_base_object_schema )
+        and     ( l_base_object_name is null or i.table_name = l_base_object_name )
+        ;
+      end if;
+
+      p_schema_object :=
+        oracle_tools.t_index_object
+        ( p_base_object =>
+            create_base_object
+            ( p_base_object_schema => l_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => l_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_object_name => p_object_name
+        , p_tablespace_name => null
+        );
+
+    when 'TRIGGER' -- a named object with a base named object
+    then
+      -- base_object_type is corrected in create_named_object()
+      if l_base_object_schema is null or l_base_object_name is null
+      then
+        select  t.table_owner
+        ,       t.table_name
+        into    l_base_object_schema
+        ,       l_base_object_name
+        from    all_triggers t
+        where   t.owner = p_object_schema
+        and     t.trigger_name = p_object_name
+        and     ( l_base_object_schema is null or t.table_owner = l_base_object_schema )
+        and     ( l_base_object_name is null or t.table_name = l_base_object_name )
+        ;
+      end if;
+
+      p_schema_object :=
+        oracle_tools.t_trigger_object
+        ( p_base_object =>
+            create_base_object
+            ( p_base_object_schema => l_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => l_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_object_name => p_object_name
+        );
+
+    when 'OBJECT_GRANT'
+    then
+      p_schema_object :=
+        oracle_tools.t_object_grant_object
+        ( p_base_object =>
+            create_base_object
+            ( p_base_object_schema => p_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => p_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_grantee => p_grantee
+        , p_privilege => p_privilege
+        , p_grantable => p_grantable
+        );
+
+    when 'CONSTRAINT'
+    then
+      p_schema_object :=
+        oracle_tools.t_constraint_object
+        ( p_base_object =>
+            create_base_object
+            ( p_base_object_schema => p_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => p_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_object_name => p_object_name
+        );
+
+    when 'REF_CONSTRAINT'
+    then
+      p_schema_object :=
+        oracle_tools.t_ref_constraint_object
+        ( p_base_object =>
+            create_base_object
+            ( p_base_object_schema => p_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => p_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_object_name => p_object_name
+        );
+
+    when 'SYNONYM' -- a named object with a base named object
+    then
+      -- base_object_type is corrected in create_named_object()
+      if l_base_object_schema is null or l_base_object_name is null
+      then
+        select  s.table_owner
+        ,       s.table_name
+        into    l_base_object_schema
+        ,       l_base_object_name
+        from    all_synonyms s
+        where   s.owner = p_object_schema
+        and     s.synonym_name = p_object_name
+        and     ( l_base_object_schema is null or s.table_owner = l_base_object_schema )
+        and     ( l_base_object_name is null or s.table_name = l_base_object_name )
+        ;
+      end if;
+
+      p_schema_object :=
+        oracle_tools.t_synonym_object
+        ( p_base_object =>
+            create_base_object
+            ( p_base_object_schema => l_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => l_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_object_name => p_object_name
+        );
+
+    when 'COMMENT'
+    then
+      p_schema_object :=
+        oracle_tools.t_comment_object
+        ( p_base_object =>
+            create_base_object
+            ( p_base_object_schema => p_base_object_schema
+            , p_base_object_type => p_base_object_type
+            , p_base_object_name => p_base_object_name
+            )
+        , p_object_schema => p_object_schema
+        , p_column_name => p_column_name
+        );
+
+    else
+-- when 'SEQUENCE'
+-- when 'TYPE_SPEC'
+-- when 'CLUSTER'
+-- when 'AQ_QUEUE_TABLE'
+-- when 'AQ_QUEUE'
+-- when 'TABLE'
+-- when 'DB_LINK'
+-- when 'FUNCTION'
+-- when 'PACKAGE_SPEC'
+-- when 'VIEW'
+-- when 'PROCEDURE'
+-- when 'MATERIALIZED_VIEW'
+-- when 'MATERIALIZED_VIEW_LOG'
+-- when 'PACKAGE_BODY'
+-- when 'TYPE_BODY'
+-- when 'DIMENSION'
+-- when 'INDEXTYPE'
+-- when 'JAVA_SOURCE'
+-- when 'LIBRARY'
+-- when 'OPERATOR'
+-- when 'REFRESH_GROUP'
+-- when 'XMLSCHEMA'
+-- when 'PROCOBJ'
+      oracle_tools.t_named_object.create_named_object
+      ( p_object_schema => p_object_schema
+      , p_object_type => p_object_type
+      , p_object_name => p_object_name
+      , p_named_object => p_schema_object
+      );
+  end case;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end create_schema_object;]]></body>
+<number>23</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_SCHEMA" id="20DEFB34-B280-337A-92CF-C490F99B9B1E">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_TYPE" id="8BAC174E-0664-CBA3-B1EF-37618341E183">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_NAME" id="C1079C74-BE63-7ADF-2481-035C11D68328">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_BASE_OBJECT_SCHEMA" id="230C6695-1FBB-2351-FAA6-9098B99B8095">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_BASE_OBJECT_TYPE" id="C13D99AE-5AD6-6E9E-BB4A-568B37DEEE88">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_BASE_OBJECT_NAME" id="B667FF0B-351D-9E50-3BE5-066F8009CFE7">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_COLUMN_NAME" id="C8E07EF7-95F2-709D-CB11-6CC36B73DA33">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_GRANTEE" id="42388202-A39A-EC9D-8B9A-4B462D18B8B9">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_PRIVILEGE" id="1D946FE0-A83D-204A-B646-C26C2E678558">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_GRANTABLE" id="E388068C-625F-2478-0366-F7EEDA2F91BA">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA_OBJECT" id="E7E2FE50-1E30-3353-5713-03C40266094C">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="CREATE_SCHEMA_OBJECT" id="7FCC3F82-635D-B674-E46C-C0C65F1F5113">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[   l_schema_object oracle_tools.t_schema_object;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_SCHEMA_OBJECT (2)');
+$end
+
+  oracle_tools.t_schema_object.create_schema_object
+  ( p_object_schema => p_object_schema
+  , p_object_type => p_object_type
+  , p_object_name => p_object_name
+  , p_base_object_schema => p_base_object_schema
+  , p_base_object_type => p_base_object_type
+  , p_base_object_name => p_base_object_name
+  , p_column_name => p_column_name
+  , p_grantee => p_grantee
+  , p_privilege => p_privilege
+  , p_grantable => p_grantable
+  , p_schema_object => l_schema_object
+  );
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+$end
+
+  return l_schema_object;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end create_schema_object;]]></body>
+<number>24</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="CREATE_SCHEMA_OBJECT" id="E620A00F-7A25-4425-149B-2BF1A8F92528">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_SCHEMA" id="E4B7DF8A-31D8-8840-3B03-303B3E1B4F02">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_TYPE" id="6ADB45EB-C90F-7820-EE9C-6A6FA0043915">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_NAME" id="1C76ED35-253D-F845-7B4C-9B2217E8178D">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_BASE_OBJECT_SCHEMA" id="F9D40B59-7D5C-E2EE-F829-FBEA71D9E896">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_BASE_OBJECT_TYPE" id="1669EED6-B5B9-7EDA-5C27-7F94BA07CB20">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_BASE_OBJECT_NAME" id="9BF7469D-379F-3109-FED9-BA8D83AF9466">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_COLUMN_NAME" id="41004ADD-4DD6-8252-6B90-A13D598A4C27">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_GRANTEE" id="32D7F1C5-A8A8-2643-3CB9-A4AB5F3031E5">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_PRIVILEGE" id="2DC58DDD-F3C1-B4C5-7291-3C977CB6E479">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_GRANTABLE" id="B774B9FC-D652-0F82-D3AF-0CAE6191B40A">
+<defaultValue>null</defaultValue>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="IS_A_REPEATABLE" id="381AA266-19B3-F52B-2D4F-7C1198F43FB0">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic /*result_cache*/
+is
+begin
+  -- See generate_ddl.pl documentatation
+  return
+    case dict2metadata_object_type(p_object_type)
+      -- schema objects
+      when 'SEQUENCE' then 0
+      when 'TYPE_SPEC' then 0 -- can not replace a type when it is used by another object
+      when 'CLUSTER' then 0
+      when 'AQ_QUEUE_TABLE' then 0
+      when 'AQ_QUEUE' then 0
+      when 'TABLE' then 0
+      when 'COMMENT' then 1
+      when 'FUNCTION' then 1
+      when 'PACKAGE_SPEC' then 1
+      when 'VIEW' then 1
+      when 'PROCEDURE' then 1
+      when 'MATERIALIZED_VIEW' then 0
+      when 'MATERIALIZED_VIEW_LOG' then 0
+      when 'PACKAGE_BODY' then 1
+      when 'TYPE_BODY' then 1
+      when 'INDEX' then 0
+      when 'TRIGGER' then 1
+      when 'OBJECT_GRANT' then 1
+      when 'CONSTRAINT' then 0
+      when 'REF_CONSTRAINT' then 0
+      when 'SYNONYM' then 1
+      when 'DB_LINK' then 0
+      when 'DIMENSION' then 0
+      when 'INDEXTYPE' then 1
+      when 'JAVA_SOURCE' then 1
+      when 'LIBRARY' then 1
+      when 'OPERATOR' then 1
+      when 'REFRESH_GROUP' then 0
+      when 'XMLSCHEMA' then 0
+      when 'PROCOBJ' then 0
+
+      -- non schema objects
+      when 'CONTEXT' then 1
+      when 'DIRECTORY' then 1
+      when 'SYSTEM_GRANT' then 1
+    end;
+end is_a_repeatable;]]></body>
+<number>25</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="IS_A_REPEATABLE" id="43AB2391-750F-60E2-2A7A-34ED850CFD77">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT011</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_TYPE" id="6461EB00-7144-8DB4-95AA-C9C0E788016A">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="IS_A_REPEATABLE" id="F8ADD0A9-E46B-D31F-BBDD-C6617EB66A53">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return oracle_tools.t_schema_object.is_a_repeatable(self.object_type());
+end is_a_repeatable;]]></body>
+<number>26</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="IS_A_REPEATABLE" id="1E3BD409-51FA-65B4-C324-EBEDD246817E">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT011</typeID>
+</returnValue>
+</Method>
+<Method name="FQ_OBJECT_NAME" id="7FBA99F2-6DC6-7B5E-6A8C-15C10708FFC3">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+  l_object_name pkg_ddl_util.t_object_name;
+
+  function get_object_part(p_object_part in varchar2)
+  return varchar2
+  is
+  begin
+    return case when upper(p_object_part) != p_object_part then '"' || p_object_part || '"' else p_object_part end;
+  end get_object_part;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FQ_OBJECT_NAME');
+$end
+
+  l_object_name :=
+    get_object_part(object_schema())
+    || '.'
+    || get_object_part(object_name())
+    ;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print(dbug."output", 'return: %s', l_object_name);
+  dbug.leave;
+$end
+
+  return l_object_name;
+end fq_object_name;]]></body>
+<number>27</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="FQ_OBJECT_NAME" id="3528408C-24CB-EF22-8D6D-2D046E824FFB">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="DICT_OBJECT_TYPE" id="F127DF67-DAA9-232F-4053-BF5253B4FD46">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic /*result_cache*/
+is
+  l_dict_object_type oracle_tools.pkg_ddl_util.t_dict_object_type;
+  l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'DICT_OBJECT_TYPE');
+$end
+
+  l_metadata_object_type := p_object_type;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print(dbug."info", 'l_metadata_object_type: %s', l_metadata_object_type);
+$end
+
+  l_dict_object_type :=
+    case
+      when l_metadata_object_type in ('PACKAGE_SPEC', 'TYPE_SPEC')
+      then replace(l_metadata_object_type, '_SPEC')
+      when l_metadata_object_type = 'AQ_QUEUE'
+      then 'QUEUE'
+      else replace(l_metadata_object_type, '_', ' ')
+    end;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print(dbug."output", 'return: %s', l_dict_object_type);
+  dbug.leave;
+$end
+
+  return l_dict_object_type;
+end dict_object_type;]]></body>
+<number>28</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="DICT_OBJECT_TYPE" id="B2543661-F0F5-B007-45B1-75AA09263869">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_TYPE" id="AAFB956E-922E-C2C3-56C2-C7AE89136540">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="DICT_OBJECT_TYPE" id="4681D149-CE00-6721-49C7-8FB5A3A40EEA">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return oracle_tools.t_schema_object.dict_object_type(self.object_type());
+end dict_object_type;]]></body>
+<number>29</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="DICT_OBJECT_TYPE" id="9BDBA175-A1E7-9581-C386-F8EBA1FEC97B">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="CHK" id="A216BA7F-5630-A552-DAE6-8CF7AE75BF04">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
+$end
+
+  oracle_tools.pkg_ddl_util.chk_schema_object(p_schema_object => self, p_schema => p_schema);
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.leave;
+$end
+end chk;]]></body>
+<number>30</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA" id="33878DA7-12EE-3C90-D190-BE0DEB9D5596">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="BASE_DICT_OBJECT_TYPE" id="2D5E916D-59A1-10E4-D1E9-53E4D10969A5">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return null;
+end base_dict_object_type;]]></body>
+<number>31</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="BASE_DICT_OBJECT_TYPE" id="49C8776F-753A-029B-A439-B2D4F645FE8F">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="SCHEMA_OBJECT_INFO" id="05682AD9-C4E1-FDD8-1002-CC4876F6E455">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+begin
+  return self.object_schema() || ':' ||
+         self.object_type() || ':' ||
+         self.object_name() || ':' ||
+         self.base_object_schema() || ':' ||
+         self.base_object_type() || ':' ||
+         self.base_object_name() || ':' ||
+         self.column_name() || ':' ||
+         self.grantee() || ':' ||
+         self.privilege() || ':' ||
+         self.grantable();  
+end schema_object_info;]]></body>
+<number>32</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="SCHEMA_OBJECT_INFO" id="033A61B5-0AA1-AE32-BB25-6B5E07CECF3D">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="SPLIT_ID" id="AA636CB1-8155-6744-6833-DBA1DE486810">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+  l_id_parts dbms_sql.varchar2a;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SPLIT_ID');
+  dbug.print(dbug."input", 'p_id: %s', p_id);
+$end
+
+  pkg_str_util.split
+  ( p_str => p_id
+  , p_delimiter => ':'
+  , p_str_tab => l_id_parts
+  );
+  if l_id_parts.count != 10
+  then
+    raise program_error;
+  end if;
+  
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print(dbug."output", '1-5: %s:%s:%s:%s:%s', l_id_parts(1), l_id_parts(2), l_id_parts(3), l_id_parts(4), l_id_parts(5));
+  dbug.print(dbug."output", '6-10: %s:%s:%s:%s:%s', l_id_parts(6), l_id_parts(7), l_id_parts(8), l_id_parts(9), l_id_parts(10));
+  dbug.leave;
+$end
+
+  return
+    oracle_tools.t_text_tab
+         ( l_id_parts( 1)
+         , l_id_parts( 2)
+         , l_id_parts( 3)
+         , l_id_parts( 4)
+         , l_id_parts( 5)
+         , l_id_parts( 6)
+         , l_id_parts( 7)
+         , l_id_parts( 8)
+         , l_id_parts( 9)
+         , l_id_parts(10)
+         );
+
+end split_id;]]></body>
+<number>33</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="SPLIT_ID" id="6863AC40-F326-49CA-E969-385D9FD5ACC3">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>65B8C0C7-3DB1-AFA3-046A-99384CC4A2DC</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_ID" id="668C87D2-B286-63F2-5898-C2DB51456090">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="JOIN_ID" id="014FC11E-2759-B6DB-5464-CE6313A0FF33">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic
+is
+  l_id varchar2(500 byte);
+begin
+  if p_id_parts.count != 10
+  then
+    raise program_error;
+  end if;
+  
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SPLIT_ID');
+  dbug.print(dbug."input", '1-5: %s:%s:%s:%s:%s', p_id_parts(1), p_id_parts(2), p_id_parts(3), p_id_parts(4), p_id_parts(5));
+  dbug.print(dbug."input", '6-10: %s:%s:%s:%s:%s', p_id_parts(6), p_id_parts(7), p_id_parts(8), p_id_parts(9), p_id_parts(10));
+$end
+  
+  l_id := p_id_parts( 1) || ':' ||
+          p_id_parts( 2) || ':' ||
+          p_id_parts( 3) || ':' ||
+          p_id_parts( 4) || ':' ||
+          p_id_parts( 5) || ':' ||
+          p_id_parts( 6) || ':' ||
+          p_id_parts( 7) || ':' ||
+          p_id_parts( 8) || ':' ||
+          p_id_parts( 9) || ':' ||
+          p_id_parts(10);
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print(dbug."output", 'return: %s', l_id);
+  dbug.leave;
+$end
+
+  return l_id;
+end join_id;]]></body>
+<number>34</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="JOIN_ID" id="D0448646-1779-B501-590A-E78F7A1CE7F5">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_ID_PARTS" id="17EB635F-A85F-A87C-83C5-789C7893DC0E">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>65B8C0C7-3DB1-AFA3-046A-99384CC4A2DC</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="DICT_OBJECT_EXISTS" id="51806028-A3A4-661B-C154-68200CEBA4C9">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>35</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="DICT_OBJECT_EXISTS" id="2F301069-CE8E-2745-C9BD-ACB591115F14">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT011</typeID>
+</returnValue>
+</Method>
+<Method name="DDL_BATCH_ORDER" id="B0E1B04F-BDB5-AAA0-C870-3A2FCF347168">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic /*result_cache*/
+is
+begin
+  return
+    case p_object_schema
+      when 'PUBLIC'
+      then '0'
+      when 'SCHEMA_EXPORT'
+      then '1'
+      else
+        to_char
+        ( 2 +
+          case p_object_type
+            when 'TYPE_SPEC'
+            then 1 -- together with TYPE_BODY
+            else oracle_tools.t_schema_object.is_a_repeatable(p_object_type)
+          end
+        ) || '|' ||
+        rpad(p_object_type, 30) || '|' || rpad(p_object_schema, 128) || '|' || p_base_object_schema
+    end;
+end ddl_batch_order;]]></body>
+<number>36</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="DDL_BATCH_ORDER" id="EC65AD82-53F3-EC9E-E0A8-942288CBC308">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_SCHEMA" id="3EB37802-F80B-3715-408A-1C600D8BF8D4">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_TYPE" id="82BA8F76-D461-BC17-8A1F-B6C2EACDF5AF">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_BASE_OBJECT_SCHEMA" id="9BA38D85-75A9-4925-CEFC-03417BDC0EA3">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_BASE_OBJECT_TYPE" id="6F71C63C-E663-F544-958A-534ED274EFB1">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="DDL_BATCH_ORDER" id="19D809B4-8C04-2212-EF02-E9A01AA0B219">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<body><![CDATA[deterministic /*result_cache*/
+is
+begin
+  return oracle_tools.t_schema_object.ddl_batch_order(self.object_schema(), self.object_type(), self.base_object_schema(), self.base_object_type());
+end ddl_batch_order;
+]]></body>
+<number>37</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="DDL_BATCH_ORDER" id="61D56D8A-7C24-7B84-A1F2-3E60816C7C6A">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+</methods>
+</StructuredType>

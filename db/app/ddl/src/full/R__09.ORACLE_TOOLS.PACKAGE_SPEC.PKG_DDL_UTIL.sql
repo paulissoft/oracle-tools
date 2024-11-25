@@ -384,7 +384,7 @@ See also DBMS_PARALLEL_EXECUTE.RUN_TASK.
 procedure ddl_batch_process
 ( p_rollback in boolean default false
 );
-/** Invokes DBMS_PARALLEL_EXECUTE to process GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES for the current session. **/
+/** Invokes DBMS_PARALLEL_EXECUTE to process GENERATE_DDL_SESSION_BATCHES for the current session. **/
 
 procedure ddl_batch_process
 ( p_session_id in integer
@@ -392,7 +392,7 @@ procedure ddl_batch_process
 , p_end_id in number
 , p_rollback in boolean default false
 );
-/** Processes GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES for this session within this range. **/
+/** Processes GENERATE_DDL_SESSION_BATCHES for this session within this range. **/
 
 /**
 Help functions to get the DDL belonging to a list of allowed objects returned by get_schema_objects().
