@@ -96,22 +96,12 @@ end chk;
 overriding member function last_ddl_time
 return date
 is
-  l_last_ddl_time all_objects.last_ddl_time%type;
-  l_owner constant all_objects.owner%type := self.base_object_schema();
-  l_object_type constant all_objects.object_type%type := self.dict_base_object_type();
-  l_object_name constant all_objects.object_name%type := self.base_object_name();
 begin
-  select  o.last_ddl_time
-  into    l_last_ddl_time
-  from    all_objects o
-  where   o.owner = l_owner
-  and     o.object_type = l_object_type
-  and     o.object_name = l_object_name;
-  
-  return l_last_ddl_time;
-exception
-  when no_data_found
-  then return null;
+  return oracle_tools.t_schema_object.last_ddl_time
+  ( p_object_schema => self.base_object_schema()
+  , p_dict_object_type => self.base_dict_object_type()
+  , p_object_name => self.base_object_name()
+  );
 end last_ddl_time;
 
 end;

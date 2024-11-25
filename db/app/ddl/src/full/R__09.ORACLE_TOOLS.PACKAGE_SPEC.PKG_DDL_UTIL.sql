@@ -180,11 +180,11 @@ procedure md_close
 type t_display_ddl_sql_rec is record
 ( schema_object_id oracle_tools.generate_ddl_session_schema_objects.schema_object_id%type
 , obj oracle_tools.t_schema_object
-, ddl# generate_ddl_session_schema_ddls.ddl#%type
-, verb generate_ddl_session_schema_ddls.verb%type
+, ddl# generated_ddl_statements.ddl#%type
+, verb generated_ddl_statements.verb%type
 , ddl_info varchar2(1000 byte)
-, chunk# generate_ddl_session_schema_ddl_chunks.chunk#%type
-, chunk generate_ddl_session_schema_ddl_chunks.chunk%type
+, chunk# generated_ddl_statement_chunks.chunk#%type
+, chunk generated_ddl_statement_chunks.chunk%type
 );
 
 type t_display_ddl_sql_tab is table of t_display_ddl_sql_rec;

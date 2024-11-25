@@ -1056,7 +1056,7 @@ member function last_ddl_time
 return date
 is
 begin
-  return oracle_tools.t_schema_object.last_ddl_time(self);
+  return oracle_tools.t_schema_object.last_ddl_time(p_schema_object => self);
 end last_ddl_time;
 
 final member function dict_object_exists

@@ -1067,7 +1067,7 @@ $end
   then
     for i_ddl_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
     loop
-      insert into generate_ddl_session_schema_ddls
+      insert into generated_ddl_statements
       ( session_id
       , schema_object_id
       , ddl#
@@ -1085,7 +1085,7 @@ $end
                            ..
                            p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.last
         loop
-          insert into generate_ddl_session_schema_ddl_chunks
+          insert into generated_ddl_statement_chunks
           ( session_id
           , schema_object_id
           , ddl#

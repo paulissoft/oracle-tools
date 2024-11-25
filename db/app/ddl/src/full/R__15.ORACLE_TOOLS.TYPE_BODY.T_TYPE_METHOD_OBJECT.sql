@@ -271,7 +271,7 @@ is
 begin
   return oracle_tools.t_schema_object.last_ddl_time
   ( p_object_schema => self.base_object_schema()
-  , p_dict_object_type => self.dict_base_object_name()
+  , p_dict_object_type => self.base_dict_object_type()
   , p_object_name => self.base_object_name()
   );
 end last_ddl_time;
