@@ -27,9 +27,9 @@ declare
     , 'GENERATE_DDL_SESSIONS'
     , 'GENERATE_DDL_SESSION_SCHEMA_OBJECTS'
     , 'GENERATE_DDL_SESSION_SCHEMA_DDLS' -- obsolete
-    , 'GENERATE_DDL_STATEMENTS'
+    , 'GENERATED_DDL_STATEMENTS'
     , 'GENERATE_DDL_SESSION_SCHEMA_DDL_CHUNKS' -- obsolete
-    , 'GENERATE_DDL_STATEMENT_CHUNKS'
+    , 'GENERATED_DDL_STATEMENT_CHUNKS'
     , 'GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES' -- obsolete
     , 'GENERATE_DDL_SESSION_BATCHES'
     );
@@ -58,6 +58,10 @@ declare
     );
   l_count pls_integer;
   l_nr_objects_dropped pls_integer;
+
+  -- ORA-00942: table or view does not exist
+  e_table_or_view_does_not_exist exception;
+  pragma exception_init(e_table_or_view_does_not_exist, -942);
 begin
   select  count(*)
   into    l_count
@@ -72,14 +76,16 @@ begin
   loop
     l_nr_objects_dropped := 0;
     
-    for i_idx in l_table_tab.first .. l_table_tab.last
+    for i_idx in reverse l_table_tab.first .. l_table_tab.last -- in reverse order to mimimize cascade constraints
     loop
       begin
-        execute immediate 'drop table ' || l_table_tab(i_idx) || ' purge';
+        execute immediate 'drop table ' || l_table_tab(i_idx) || ' cascade constraints purge';
         l_nr_objects_dropped := l_nr_objects_dropped + 1;
       exception
-        when others
+        when e_table_or_view_does_not_exist
         then null;
+        when others
+        then raise; -- null;
       end;
     end loop;
     
