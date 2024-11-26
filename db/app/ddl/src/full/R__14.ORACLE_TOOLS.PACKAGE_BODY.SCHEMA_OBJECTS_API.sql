@@ -343,7 +343,7 @@ $end
               and     gd.last_ddl_time = t.last_ddl_time
             )
     from    ( select  t.id as schema_object_id
-              ,       t.obj.last_ddl_time() as last_ddl_time
+              ,       t.last_ddl_time() as last_ddl_time
               ,       rownum + l_last_seq as seq
               from    table(p_schema_object_tab) t -- may contain duplicates (constraints)
                       inner join schema_object_filter_results sofr
@@ -1148,7 +1148,7 @@ $end
       into    l_generated_ddl_id
       from    oracle_tools.generated_ddls gd
       where   gd.schema_object_id = p_schema_ddl.obj.id
-      and     gd.last_ddl_time p_schema_ddl.obj.last_ddl_time;
+      and     gd.last_ddl_time = p_schema_ddl.obj.last_ddl_time;
     exception
       when no_data_found
       then
@@ -1182,7 +1182,7 @@ $end
                            p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.last
         loop
           insert into generated_ddl_statement_chunks
-          ( generated_ddl_id session_id
+          ( generated_ddl_id
           , ddl#
           , chunk#
           , chunk

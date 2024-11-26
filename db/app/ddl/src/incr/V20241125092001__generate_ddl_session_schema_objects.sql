@@ -22,7 +22,7 @@ create table generate_ddl_session_schema_objects
   references generate_ddl_sessions(session_id) on delete cascade
 , constraint generate_ddl_session_schema_objects$fk$3
   foreign key (schema_object_id, last_ddl_time)
-  references generate_ddls(schema_object_id, last_ddl_time) on delete cascade
+  references generated_ddls(schema_object_id, last_ddl_time) on delete cascade
 )
 organization index
 tablespace users
@@ -39,5 +39,5 @@ create index generate_ddl_session_schema_objects$fk$2
 on generate_ddl_session_schema_objects(session_id);
 
 -- foreign key index generate_ddl_session_schema_objects$fk$3
-create index generate_ddl_session_schema_objects$fk$2
+create index generate_ddl_session_schema_objects$fk$3
 on generate_ddl_session_schema_objects(schema_object_id, last_ddl_time);

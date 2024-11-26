@@ -13,9 +13,9 @@ from    oracle_tools.v_all_schema_objects aso
         inner join oracle_tools.generated_ddls gd
         on gd.schema_object_id = aso.schema_object_id and gd.last_ddl_time = aso.last_ddl_time
         inner join oracle_tools.generated_ddl_statements gds
-        on gds.generate_ddl_id = gd.id
+        on gds.generated_ddl_id = gd.id
         inner join oracle_tools.generated_ddl_statement_chunks gdsc
-        on gdsc.generate_ddl_id = gds.generate_ddl_id and gdsc.ddl# = gds.ddl#
+        on gdsc.generated_ddl_id = gds.generated_ddl_id and gdsc.ddl# = gds.ddl#
 where   aso.session_id = (select oracle_tools.schema_objects_api.get_session_id from dual where rownum = 1)
 order by
         -- unique key
