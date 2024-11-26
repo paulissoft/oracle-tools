@@ -1019,19 +1019,6 @@ $end
 end join_id;
 
 final static function last_ddl_time
-( p_schema_object in oracle_tools.t_schema_object
-)
-return date
-is
-begin
-  return last_ddl_time
-         ( p_object_schema => p_schema_object.object_schema()
-         , p_dict_object_type => p_schema_object.dict_object_type()
-         , p_object_name => p_schema_object.object_name()
-         );
-end last_ddl_time;
-
-final static function last_ddl_time
 ( p_object_schema in varchar2
 , p_dict_object_type in varchar2
 , p_object_name in varchar2
@@ -1056,7 +1043,11 @@ member function last_ddl_time
 return date
 is
 begin
-  return oracle_tools.t_schema_object.last_ddl_time(p_schema_object => self);
+  return last_ddl_time
+         ( p_object_schema => self.object_schema()
+         , p_dict_object_type => self.dict_object_type()
+         , p_object_name => self.object_name()
+         );
 end last_ddl_time;
 
 final member function dict_object_exists

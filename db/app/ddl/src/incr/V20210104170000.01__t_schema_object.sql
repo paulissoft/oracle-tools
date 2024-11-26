@@ -114,10 +114,6 @@ create type oracle_tools.t_schema_object authid current_user as object
   )
   return varchar2 deterministic
 , final static function last_ddl_time
-  ( p_schema_object in oracle_tools.t_schema_object
-  )
-  return date
-, final static function last_ddl_time
   ( p_object_schema in varchar2
   , p_dict_object_type in varchar2
   , p_object_name in varchar2
