@@ -1043,7 +1043,7 @@ member function last_ddl_time
 return date
 is
 begin
-  return last_ddl_time
+  return oracle_tools.t_schema_object.last_ddl_time
          ( p_object_schema => self.object_schema()
          , p_dict_object_type => self.dict_object_type()
          , p_object_name => self.object_name()

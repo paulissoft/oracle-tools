@@ -327,15 +327,23 @@ $end
   ( session_id
   , seq
   , schema_object_filter_id 
-  , schema_object_id 
+  , schema_object_id
+  , last_ddl_time
   )
     select  p_session_id
     -- Since objects are inserted per Oracle session
     -- there is never a problem with another session inserting at the same time for the same session.
     ,       t.seq
     ,       p_schema_object_filter_id
-    ,       t.schema_object_id 
+    ,       t.schema_object_id
+    ,       -- when DDL has been generated for this last_ddl_time, fix it
+            ( select  gd.last_ddl_time
+              from    oracle_tools.generated_ddls gd
+              where   gd.schema_object_id = t.schema_object_id
+              and     gd.last_ddl_time = t.last_ddl_time
+            )
     from    ( select  t.id as schema_object_id
+              ,       t.obj.last_ddl_time() as last_ddl_time
               ,       rownum + l_last_seq as seq
               from    table(p_schema_object_tab) t -- may contain duplicates (constraints)
                       inner join schema_object_filter_results sofr
@@ -900,6 +908,7 @@ $end
 
     update  generate_ddl_sessions gds
     set     gds.schema_object_filter_id = l_schema_object_filter_id
+    ,       gds.generate_ddl_parameters_id = p_generate_ddl_parameters_id
     ,       gds.updated = sys_extract_utc(systimestamp)
     where   gds.session_id = p_session_id;
     
@@ -1012,7 +1021,8 @@ $end
       ( session_id
       , schema_object_filter_id 
       , seq
-      , schema_object_id 
+      , schema_object_id
+      , last_ddl_time
       )
       values
       ( p_session_id
@@ -1024,6 +1034,11 @@ $end
           where   gdsso.session_id = p_session_id
         )
       , l_schema_object_id
+      , ( select  gd.last_ddl_time
+          from    oracle_tools.generated_ddls gd
+          where   gd.schema_object_id = l_schema_object_id
+          and     gd.last_ddl_time = p_schema_object.last_ddl_time()
+        )
       );
     exception
       when dup_val_on_index
@@ -1102,6 +1117,7 @@ procedure add
 , p_session_id in t_session_id
 )
 is
+  l_generated_ddl_id oracle_tools.generated_ddls.id%type;
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_DDL)';
 $end
@@ -1127,17 +1143,35 @@ $end
 
   if cardinality(p_schema_ddl.ddl_tab) > 0
   then
+    begin
+      select  gd.id
+      into    l_generated_ddl_id
+      from    oracle_tools.generated_ddls gd
+      where   gd.schema_object_id = p_schema_ddl.obj.id
+      and     gd.last_ddl_time p_schema_ddl.obj.last_ddl_time;
+    exception
+      when no_data_found
+      then
+        insert into oracle_tools.generated_ddls
+        ( schema_object_id
+        , last_ddl_time
+        )
+        values
+        ( p_schema_ddl.obj.id
+        , p_schema_ddl.obj.last_ddl_time
+        )
+        returning id into l_generated_ddl_id;
+    end;
+      
     for i_ddl_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
     loop
       insert into generated_ddl_statements
-      ( session_id
-      , schema_object_id
+      ( generated_ddl_id
       , ddl#
       , verb
       )
       values
-      ( p_session_id
-      , p_schema_ddl.obj.id
+      ( l_generated_ddl_id
       , p_schema_ddl.ddl_tab(i_ddl_idx).ddl#()
       , p_schema_ddl.ddl_tab(i_ddl_idx).verb()
       );
@@ -1148,15 +1182,13 @@ $end
                            p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.last
         loop
           insert into generated_ddl_statement_chunks
-          ( session_id
-          , schema_object_id
+          ( generated_ddl_id session_id
           , ddl#
           , chunk#
           , chunk
           )
           values
-          ( p_session_id
-          , p_schema_ddl.obj.id
+          ( l_generated_ddl_id
           , p_schema_ddl.ddl_tab(i_ddl_idx).ddl#()
           , i_chunk_idx
           , p_schema_ddl.ddl_tab(i_ddl_idx).text_tab(i_chunk_idx)
