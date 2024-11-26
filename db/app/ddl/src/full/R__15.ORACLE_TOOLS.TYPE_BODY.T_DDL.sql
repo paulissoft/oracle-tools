@@ -274,6 +274,31 @@ begin
   end if;
 end chk;
 
+static function ddl_info
+( p_schema_object in oracle_tools.t_schema_object
+, p_verb in varchar2
+, p_ddl# in integer
+)
+return varchar2
+deterministic
+is
+begin
+  return '-- ddl info: ' ||
+         p_verb || ';' ||
+         replace(p_schema_object.schema_object_info(), ':', ';') || ';' ||
+         p_ddl# || chr(10);
+end ddl_info;
+
+final member function ddl_info
+( p_schema_object in oracle_tools.t_schema_object
+)
+return varchar2
+deterministic
+is
+begin
+  return oracle_tools.t_ddl.ddl_info(p_schema_object, self.verb(), self.ddl#);
+end ddl_info;
+
 end;
 /
 

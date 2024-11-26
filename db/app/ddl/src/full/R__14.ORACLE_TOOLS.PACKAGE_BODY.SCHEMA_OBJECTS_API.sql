@@ -691,9 +691,68 @@ begin
 end get_session_id;
 
 procedure add
+( p_schema in varchar2 -- The schema name.
+, p_object_type in varchar2 -- Filter for object type.
+, p_object_names in varchar2 -- A comma separated list of (base) object names.
+, p_object_names_include in integer -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_grantor_is_schema in integer -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
+, p_exclude_objects in clob -- A newline separated list of objects to exclude (their schema object id actually).
+, p_include_objects in clob -- A newline separated list of objects to include (their schema object id actually).
+, p_transform_param_list in varchar2 -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_schema_object_filter out nocopy oracle_tools.t_schema_object_filter -- the schema object filter
+, p_generate_ddl_parameters_id out nocopy oracle_tools.generate_ddl_parameters.id%type
+)
+is
+  l_param_tab1 sys.odcivarchar2list;
+  l_param_tab2 sys.odcivarchar2list;
+  l_transform_param_list oracle_tools.generate_ddl_parameters.transform_param_list%type;
+begin
+  p_schema_object_filter :=
+    oracle_tools.t_schema_object_filter
+    ( p_schema => p_schema
+    , p_object_type => p_object_type
+    , p_object_names => p_object_names
+    , p_object_names_include => p_object_names_include
+    , p_grantor_is_schema => p_grantor_is_schema
+    , p_exclude_objects => p_exclude_objects
+    , p_include_objects => p_include_objects
+    );
+
+  l_param_tab1 := oracle_tools.api_pkg.list2collection(p_value_list => p_transform_param_list, p_sep => ',');
+
+  select  distinct upper(t.column_value) as param
+  bulk collect
+  into    l_param_tab2
+  from    table(l_param_tab1) t
+  order by
+          param;
+
+  l_transform_param_list := ',' || oracle_tools.api_pkg.collection2list(p_value_tab => l_param_tab2, p_sep => ',');
+
+  begin
+    select  gdp.id
+    into    p_generate_ddl_parameters_id
+    from    oracle_tools.generate_ddl_parameters gdp
+    where   gdp.transform_param_list = l_transform_param_list;
+  exception
+    when no_data_found
+    then
+      insert
+      into   oracle_tools.generate_ddl_parameters
+      ( transform_param_list
+      )
+      values
+      ( l_transform_param_list
+      )
+      returning id into p_generate_ddl_parameters_id;
+  end;
+end add;
+
+procedure add
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_generate_ddl_parameters_id in oracle_tools.generate_ddl_parameters.id%type -- the GENERATE_DDL_PARAMETERS.ID
 , p_add_schema_objects in boolean
-, p_session_id in t_session_id default get_session_id
+, p_session_id in t_session_id
 )
 is
   cursor c_sof(b_schema_object_filter_id in positive)
@@ -721,6 +780,7 @@ $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $if oracle_tools.schema_objects_api.c_debugging $then
   dbug.print(dbug."input", 'p_add_schema_objects: %s', p_add_schema_objects);
+  dbug.print(dbug."input", 'p_generate_ddl_parameters_id: %s', p_generate_ddl_parameters_id);  
   dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
 $end
 $end
@@ -818,10 +878,12 @@ $end
     insert into generate_ddl_sessions
     ( session_id
     , schema_object_filter_id
+    , generate_ddl_parameters_id
     )
     values
     ( p_session_id
     , l_schema_object_filter_id
+    , p_generate_ddl_parameters_id
     );
 $if oracle_tools.schema_objects_api.c_debugging $then
     dbug.print(dbug."info", '# rows inserted into generate_ddl_sessions: %s', sql%rowcount);
@@ -1163,7 +1225,7 @@ procedure add
 , p_object_name_tab in oracle_tools.t_text_tab
 , p_base_object_name_tab in oracle_tools.t_text_tab
 , p_nr_objects in integer
-, p_session_id in t_session_id default get_session_id
+, p_session_id in t_session_id
 )
 is
 begin
@@ -1231,6 +1293,7 @@ end find_schema_object_by_object_id;
 
 procedure get_schema_objects
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_generate_ddl_parameters_id in oracle_tools.generate_ddl_parameters.id%type -- the GENERATE_DDL_PARAMETERS.ID
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
@@ -1245,6 +1308,7 @@ $end
 
   add
   ( p_schema_object_filter => p_schema_object_filter
+  , p_generate_ddl_parameters_id => p_generate_ddl_parameters_id
   , p_add_schema_objects => true
   );
   select  value(t) as obj
@@ -1263,13 +1327,14 @@ $end
 end get_schema_objects;
 
 function get_schema_objects
-( p_schema in varchar2 default user
-, p_object_type in varchar2 default null
-, p_object_names in varchar2 default null
-, p_object_names_include in integer default null
-, p_grantor_is_schema in integer default 0
-, p_exclude_objects in clob default null
-, p_include_objects in clob default null
+( p_schema in varchar2
+, p_object_type in varchar2
+, p_object_names in varchar2
+, p_object_names_include in integer
+, p_grantor_is_schema in integer
+, p_exclude_objects in clob
+, p_include_objects in clob
+, p_transform_param_list in varchar2
 )
 return oracle_tools.t_schema_object_tab
 pipelined
@@ -1277,6 +1342,7 @@ is
   pragma autonomous_transaction;
   
   l_schema_object_filter oracle_tools.t_schema_object_filter := null;
+  l_generate_ddl_parameters_id oracle_tools.generate_ddl_parameters.id%type;
   l_schema_object_filter_id positiven := 1;
   l_program constant t_module := 'function ' || 'GET_SCHEMA_OBJECTS'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
@@ -1299,19 +1365,21 @@ $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECTS');
 $end
 
-  l_schema_object_filter :=
-    new oracle_tools.t_schema_object_filter
-        ( p_schema => p_schema
-        , p_object_type => p_object_type
-        , p_object_names => p_object_names
-        , p_object_names_include => p_object_names_include 
-        , p_grantor_is_schema => p_grantor_is_schema 
-        , p_exclude_objects => p_exclude_objects 
-        , p_include_objects => p_include_objects 
-        );
-
+  add
+  ( p_schema => p_schema
+  , p_object_type => p_object_type
+  , p_object_names => p_object_names
+  , p_object_names_include => p_object_names_include
+  , p_grantor_is_schema => p_grantor_is_schema
+  , p_exclude_objects => p_exclude_objects
+  , p_include_objects => p_include_objects
+  , p_transform_param_list => p_transform_param_list
+  , p_schema_object_filter => l_schema_object_filter
+  , p_generate_ddl_parameters_id => l_generate_ddl_parameters_id
+  );
   add
   ( p_schema_object_filter => l_schema_object_filter
+  , p_generate_ddl_parameters_id => l_generate_ddl_parameters_id
   , p_add_schema_objects => true
   );
 

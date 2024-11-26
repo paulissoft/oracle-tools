@@ -123,10 +123,7 @@ $end
         else
           -- incremental DDL because target schema is not empty
           open l_cursor for
-            select  '-- ddl info: ' ||
-                    u.verb() || ';' ||
-                    replace(t.obj.schema_object_info(), ':', ';') || ';' ||
-                    u.ddl#() || chr(10) as ddl_info
+            select  oracle_tools.t_ddl.ddl_info(t.obj, u.verb(), u.ddl#()) as ddl_info
             ,       u.text_tab
             from    table
                     ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff

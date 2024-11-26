@@ -1003,6 +1003,8 @@ is
   l_first pls_integer := 1;
   l_last pls_integer := dbms_lob.getlength(pi_clob);
   l_buffer t_sql_string;
+  l_offset pls_integer := 1;
+  l_buffer_length pls_integer;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
   dbug.enter(g_package_prefix || 'CLOB2TEXT');
@@ -1036,21 +1038,26 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >
     dbug.print(dbug."info", 'l_first: %s; l_last: %s', l_first, l_last);
 $end
 
-    if l_first <= l_last
-    then
-      for i_chunk in 1 .. ceil((l_last - l_first + 1) / c_sql_string_size)
-      loop
-        l_buffer :=
-          dbms_lob_substr
-          ( p_clob => pi_clob
-          , p_offset => l_first + (i_chunk-1) * c_sql_string_size
-          , p_amount => c_sql_string_size
-          , p_check => 'OL'              
-          );
+    l_offset := l_first;
+    while l_offset <= l_last
+    loop
+      l_buffer :=
+        dbms_lob_substr
+        ( p_clob => pi_clob
+        , p_offset => l_offset
+        , p_amount => least(l_last - l_offset + 1, c_sql_string_size)
+        , p_check => 'OL'              
+        );
+      l_buffer_length := length(l_buffer);
+      if l_buffer_length > 0
+      then
         l_text_tab.extend(1);
         l_text_tab(l_text_tab.last) := l_buffer;
-      end loop;
-    end if;
+        l_offset := l_offset + l_buffer_length;
+      else
+        exit; -- apparently there is no more to read
+      end if;
+    end loop;
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then

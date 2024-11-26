@@ -36,6 +36,7 @@ declare
   l_view_tab sys.odcivarchar2list :=
     sys.odcivarchar2list
     ( 'V_ALL_SCHEMA_OBJECTS'
+    , 'V_DISPLAY_DDL_SCHEMA'
     , 'V_MY_COMMENTS_DICT'
     , 'V_MY_CONSTRAINTS_DICT'
     , 'V_MY_GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES'

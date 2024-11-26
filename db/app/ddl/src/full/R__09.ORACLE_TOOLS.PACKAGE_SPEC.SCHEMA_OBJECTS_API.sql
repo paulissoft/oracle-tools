@@ -36,12 +36,14 @@ function get_schema_objects
 , p_grantor_is_schema in integer default 0
 , p_exclude_objects in clob default null
 , p_include_objects in clob default null
+, p_transform_param_list in varchar2 default null
 )
 return oracle_tools.t_schema_object_tab
 pipelined;
 
 procedure get_schema_objects
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_generate_ddl_parameters_id in oracle_tools.generate_ddl_parameters.id%type -- the GENERATE_DDL_PARAMETERS.ID
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 );
 
@@ -73,10 +75,24 @@ function match_perc_threshold
 return integer
 deterministic;
 
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
+$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
+
+procedure add
+( p_schema in varchar2 -- The schema name.
+, p_object_type in varchar2 -- Filter for object type.
+, p_object_names in varchar2 -- A comma separated list of (base) object names.
+, p_object_names_include in integer -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_grantor_is_schema in integer -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
+, p_exclude_objects in clob -- A newline separated list of objects to exclude (their schema object id actually).
+, p_include_objects in clob -- A newline separated list of objects to include (their schema object id actually).
+, p_transform_param_list in varchar2 -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_schema_object_filter out nocopy oracle_tools.t_schema_object_filter -- the schema object filter
+, p_generate_ddl_parameters_id out nocopy oracle_tools.generate_ddl_parameters.id%type -- the GENERATE_DDL_PARAMETERS.ID
+);
 
 procedure add
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter -- the schema object filter
+, p_generate_ddl_parameters_id in oracle_tools.generate_ddl_parameters.id%type -- the GENERATE_DDL_PARAMETERS.ID
 , p_add_schema_objects in boolean default true -- create records for table GENERATE_DDL_SESSION_SCHEMA_OBJECTS (and its parent tables SCHEMA_OBJECTS and SCHEMA_OBJECT_FILTER_RESULTS)?
 , p_session_id in t_session_id default get_session_id
 );

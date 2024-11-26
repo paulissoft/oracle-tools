@@ -6,10 +6,7 @@ CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDLS" ("SESSION_ID", "S
 ,       aso.obj  
 ,       gds.verb
 -- below is output to SQL file
-,       '-- ddl info: ' ||
-        gds.verb || ';' ||
-        replace(aso.obj.schema_object_info(), ':', ';') || ';' ||
-        gds.ddl# || chr(10) as ddl_info
+,       oracle_tools.t_ddl.ddl_info(aso.obj, gds.verb, gds.ddl#) as ddl_info
 ,       gdsc.chunk
 from    oracle_tools.v_all_schema_objects aso
         inner join oracle_tools.generated_ddl_statements gds

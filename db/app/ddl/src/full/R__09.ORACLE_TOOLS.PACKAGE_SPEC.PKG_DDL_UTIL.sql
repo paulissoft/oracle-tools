@@ -283,6 +283,32 @@ procedure execute_ddl
 , p_network_link in varchar2 default null
 );
 
+procedure synchronize
+( p_object_type in t_metadata_object_type default null -- Filter for object type.
+, p_object_names in t_object_names default null -- A comma separated list of (base) object names.
+, p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_schema_source in t_schema default user -- Source schema (may be empty for uninstall).
+, p_schema_target in t_schema_nn default user -- Target schema.
+, p_network_link_source in t_network_link default null -- Source network link.
+, p_network_link_target in t_network_link default null -- Target network link.
+, p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
+, p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
+);
+
+/** Synchronize a target schema based on a source schema. **/
+
+procedure uninstall
+( p_object_type in t_metadata_object_type default null -- Filter for object type.
+, p_object_names in t_object_names default null -- A comma separated list of (base) object names.
+, p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_schema_target in t_schema_nn default user -- Target schema.
+, p_network_link_target in t_network_link default null -- Target network link.
+, p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
+, p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
+);
+
+/** This one uninstalls a target schema. **/
+
 procedure get_member_ddl
 ( p_schema_ddl in oracle_tools.t_schema_ddl
 , p_member_ddl_tab out nocopy oracle_tools.t_schema_ddl_tab
@@ -447,6 +473,19 @@ Must convert clob into dbms_sql.varchar2a since lobs can not be transferred via 
 
 **/
 
+function get_display_ddl_sql
+return t_display_ddl_sql_tab
+pipelined;
+
+/**
+
+Help procedure to retrieve the results of display_ddl_schema on a remote database.
+
+Remark 1: Uses view v_display_ddl_sql because pipelined functions and a database link are not allowed.
+Remark 2: A call to display_ddl_schema() with a database linke will invoke set_display_ddl_schema() at the remote database.
+
+**/
+
 function sort_objects_by_deps
 ( p_schema in t_schema_nn default user
 )
@@ -542,6 +581,13 @@ procedure ut_dict2metadata_object_type;
 
 --%test
 procedure ut_is_a_repeatable;
+
+--%test
+--%beforetest(oracle_tools.pkg_ddl_util.ut_cleanup_empty)
+--%beforetest(oracle_tools.pkg_ddl_util.ut_disable_schema_export)
+--%aftertest(oracle_tools.pkg_ddl_util.ut_enable_schema_export)
+--%disabled
+procedure ut_synchronize;
 
 --%test
 procedure ut_sort_objects_by_deps;

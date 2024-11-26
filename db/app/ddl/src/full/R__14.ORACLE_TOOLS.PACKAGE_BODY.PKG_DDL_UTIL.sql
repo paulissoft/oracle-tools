@@ -19,8 +19,8 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
   -- key is oracle_tools.t_schema_object.signature(), value is oracle_tools.t_schema_object.id
   type t_constraint_lookup_tab is table of t_object index by t_object; -- for parse_ddl
 
-  -- just to make the usage of VIEW oracle_tools.v_display_ddl_schema in dynamic SQL explicit
---  subtype t_stm_v_display_ddl_schema is oracle_tools.v_display_ddl_schema%rowtype;
+  -- just to make the usage of VIEW oracle_tools.v_display_ddl_sql in dynamic SQL explicit
+  subtype t_stm_v_display_ddl_sql is oracle_tools.v_display_ddl_sql%rowtype;
 
   subtype t_graph is t_object_dependency_tab;
   /*
@@ -72,6 +72,10 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
   c_object_to_ignore_tab constant oracle_tools.t_text_tab := oracle_tools.t_text_tab("schema_version", "flyway_schema_history", "CREATE$JAVA$LOB$TABLE");
 
 $if oracle_tools.cfg_pkg.c_testing $then
+
+  "EMPTY"                    constant all_objects.owner%type := 'EMPTY';
+
+  g_empty constant all_objects.owner%type := "EMPTY";
 
   g_owner constant all_objects.owner%type := $$PLSQL_UNIT_OWNER;
 
@@ -2091,6 +2095,10 @@ $end
             );
             if l_line_tab.count > 0
             then
+              -- free and nullify the ddlText so a copy will not create a new temporary on the fly
+              dbms_lob.freetemporary(g_ddl_tab(i_ku$ddls_idx).ddlText);
+              g_ddl_tab(i_ku$ddls_idx).ddlText := null;
+
               for i_idx in l_line_tab.first .. l_line_tab.last
               loop
 $if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
@@ -2203,7 +2211,11 @@ $end
     procedure cleanup
     is
     begin
-      null;
+      if p_ku$_ddl.ddlText is not null
+      then
+        dbms_lob.freetemporary(p_ku$_ddl.ddlText);
+        p_ku$_ddl.ddlText := null;
+      end if;
     end cleanup;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
@@ -3113,16 +3125,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     l_count pls_integer;
 $end
 
-    l_schema_object_filter oracle_tools.t_schema_object_filter :=
-      oracle_tools.t_schema_object_filter
-      ( p_schema => p_schema
-      , p_object_type => p_object_type
-      , p_object_names => p_object_names
-      , p_object_names_include => p_object_names_include
-      , p_grantor_is_schema => 0
-      , p_exclude_objects => p_exclude_objects
-      , p_include_objects => p_include_objects
-      );
+    l_schema_object_filter oracle_tools.t_schema_object_filter;
+    l_generate_ddl_parameters_id pls_integer;
     l_network_link all_db_links.db_link%type := null;
     l_cursor sys_refcursor;
 
@@ -3137,7 +3141,9 @@ $end
     type t_my_schema_ddl_tmp_tab is table of t_my_schema_ddl_tmp_rec;
 
     l_my_schema_ddl_tmp_tab t_my_schema_ddl_tmp_tab;
-    l_display_ddl_sql_rec t_display_ddl_sql_rec; -- for pipe row
+    l_schema_ddl oracle_tools.t_schema_ddl := null;
+    -- l_display_ddl_sql_rec t_display_ddl_sql_rec; -- for pipe row
+    l_display_ddl_sql_tab t_display_ddl_sql_tab; -- for pipe row
 
     -- GJP 2022-12-31 Not used
     -- l_transform_param_tab t_transform_param_tab;
@@ -3151,6 +3157,55 @@ $end
       , p_op_name => 'fetch'
       , p_units => 'objects'
       );
+
+    procedure convert_and_copy
+    ( p_schema_ddl in out nocopy oracle_tools.t_schema_ddl
+    , p_display_ddl_sql_tab out nocopy t_display_ddl_sql_tab 
+    )
+    is
+      l_display_ddl_sql_rec t_display_ddl_sql_rec; -- for pipe row
+    begin
+      p_display_ddl_sql_tab := t_display_ddl_sql_tab();
+      
+      -- change of schema_ddl: print it
+      if p_network_link is not null
+      then
+        p_schema_ddl.obj.network_link(p_network_link);
+      end if;
+
+      if p_schema != p_new_schema
+      then
+        remap_schema
+        ( p_schema => p_schema
+        , p_new_schema => p_new_schema
+        , p_schema_ddl => p_schema_ddl
+        );
+      end if;
+
+      if cardinality(p_schema_ddl.ddl_tab) > 0
+      then
+        for i_ddl_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
+        loop
+          if cardinality(p_schema_ddl.ddl_tab(i_ddl_idx).text_tab) > 0
+          then
+            for i_text_idx in p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.first
+                              ..
+                              p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.last
+            loop
+              l_display_ddl_sql_rec.schema_object_id := p_schema_ddl.obj.id;
+              l_display_ddl_sql_rec.obj := p_schema_ddl.obj;
+              l_display_ddl_sql_rec.ddl# := p_schema_ddl.ddl_tab(i_ddl_idx).ddl#;
+              l_display_ddl_sql_rec.verb := p_schema_ddl.ddl_tab(i_ddl_idx).verb;
+              l_display_ddl_sql_rec.ddl_info := p_schema_ddl.ddl_tab(i_ddl_idx).ddl_info(p_schema_ddl.obj);
+              l_display_ddl_sql_rec.chunk# := i_text_idx;
+              l_display_ddl_sql_rec.chunk := p_schema_ddl.ddl_tab(i_ddl_idx).text_tab(i_text_idx);
+              p_display_ddl_sql_tab.extend(1);
+              p_display_ddl_sql_tab(p_display_ddl_sql_tab.last) := l_display_ddl_sql_rec;
+            end loop;
+          end if;                
+        end loop;
+      end if;
+    end convert_and_copy;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'DISPLAY_DDL_SQL');
@@ -3209,10 +3264,22 @@ $end
       , p_include_objects => p_include_objects
       );
 
-      open l_cursor for 'select t.schema_ddl from oracle_tools.v_display_ddl_sql@' || l_network_link || ' t';
+      open l_cursor for 'select t.* from oracle_tools.v_display_ddl_sql@' || l_network_link || ' t';
     else -- local
       oracle_tools.schema_objects_api.add
+      ( p_schema => p_schema
+      , p_object_type => p_object_type
+      , p_object_names => p_object_names
+      , p_object_names_include => p_object_names_include
+      , p_grantor_is_schema => 0
+      , p_exclude_objects => p_exclude_objects
+      , p_include_objects => p_include_objects
+      , p_schema_object_filter => l_schema_object_filter
+      , p_generate_ddl_parameters_id => l_generate_ddl_parameters_id
+      );
+      oracle_tools.schema_objects_api.add
       ( p_schema_object_filter => l_schema_object_filter
+      , p_generate_ddl_parameters_id => l_generate_ddl_parameters_id
       , p_add_schema_objects => true
       );
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -3250,8 +3317,7 @@ $end
           ,       s.ddl_info
           ,       s.chunk#
           ,       s.chunk
-          from
-                  oracle_tools.v_my_schema_ddls s
+          from    oracle_tools.v_my_schema_ddls s
                   -- GPA 27-10-2016 We should not forget objects so use left outer join
                   inner join
                   ( select  d.id as schema_object_id
@@ -3298,34 +3364,84 @@ $end
       then
         for i_idx in l_my_schema_ddl_tmp_tab.first .. l_my_schema_ddl_tmp_tab.last
         loop
-          if p_network_link is not null
+          if l_my_schema_ddl_tmp_tab(i_idx).ddl# = 1 and
+             l_my_schema_ddl_tmp_tab(i_idx).chunk# = 1
           then
-            l_my_schema_ddl_tmp_tab(i_idx).obj.network_link(p_network_link);
+            if l_schema_ddl is not null
+            then
+              -- output last
+              convert_and_copy
+              ( l_schema_ddl
+              , l_display_ddl_sql_tab
+              );
+              if cardinality(l_display_ddl_sql_tab) > 0
+              then
+                for i_row_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
+                loop
+                  pipe row (l_display_ddl_sql_tab(i_row_idx));
+                  oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+                end loop;
+              end if;
+              l_schema_ddl := null;
+            end if;
+
+            -- new l_schema_ddl
+            l_schema_ddl := oracle_tools.t_schema_ddl(l_my_schema_ddl_tmp_tab(i_idx).obj, oracle_tools.t_ddl_tab());
           end if;
 
-          if p_schema != p_new_schema
+          -- append to l_schema_ddl.ddl_tab (ddl# is number of items in ddl_tab)
+          if l_my_schema_ddl_tmp_tab(i_idx).ddl# > cardinality(l_schema_ddl.ddl_tab)
           then
-            oracle_tools.pkg_ddl_error.raise_error
-            ( oracle_tools.pkg_ddl_error.c_not_implemented
-            , 'remap schema not implemented.'
-            , l_my_schema_ddl_tmp_tab(i_idx).obj.id
-            );
+            l_schema_ddl.ddl_tab.extend(1);
+            l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last) :=
+              oracle_tools.t_ddl
+              ( p_ddl# => l_my_schema_ddl_tmp_tab(i_idx).ddl#
+              , p_verb => l_my_schema_ddl_tmp_tab(i_idx).verb
+              , p_text_tab => oracle_tools.t_text_tab()
+              );
           end if;
 
-          l_display_ddl_sql_rec.schema_object_id := l_my_schema_ddl_tmp_tab(i_idx).obj.id;
-          l_display_ddl_sql_rec.obj := l_my_schema_ddl_tmp_tab(i_idx).obj;
-          l_display_ddl_sql_rec.ddl# := l_my_schema_ddl_tmp_tab(i_idx).ddl#;
-          l_display_ddl_sql_rec.verb := l_my_schema_ddl_tmp_tab(i_idx).verb;
-          l_display_ddl_sql_rec.ddl_info := l_my_schema_ddl_tmp_tab(i_idx).ddl_info;          
-          l_display_ddl_sql_rec.chunk# := l_my_schema_ddl_tmp_tab(i_idx).chunk#;
-          l_display_ddl_sql_rec.chunk := l_my_schema_ddl_tmp_tab(i_idx).chunk;
-          pipe row(l_display_ddl_sql_rec);
-          oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+          if l_my_schema_ddl_tmp_tab(i_idx).ddl# = l_schema_ddl.ddl_tab.last
+          then
+            null; -- OK
+          else
+            raise program_error;
+          end if;
+
+          -- always append to l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab
+          l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.extend(1);
+          l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab(l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.last) :=
+            l_my_schema_ddl_tmp_tab(i_idx).chunk;
+            
+          if l_my_schema_ddl_tmp_tab(i_idx).chunk# = l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.last
+          then
+            null; -- OK
+          else
+            raise program_error;
+          end if;
         end loop;
       end if;
       exit fetch_loop when l_my_schema_ddl_tmp_tab.count < c_fetch_limit;
     end loop fetch_loop;
     close l_cursor;
+
+    -- output last
+    if l_schema_ddl is not null
+    then
+      -- output last
+      convert_and_copy
+      ( l_schema_ddl
+      , l_display_ddl_sql_tab
+      );
+      if cardinality(l_display_ddl_sql_tab) > 0
+      then
+        for i_row_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
+        loop
+          pipe row (l_display_ddl_sql_tab(i_row_idx));
+          oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+        end loop;
+      end if;
+    end if;
 
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
 
@@ -4010,7 +4126,7 @@ $end
     -- ORA-24344: success with compilation error -- due to missing privileges
     e_s6_with_compilation_error exception;
     pragma exception_init(e_s6_with_compilation_error, -24344);
-    -- ORA-04063: view "EMPTY.V_DISPLAY_DDL_SCHEMA" has errors
+    -- ORA-04063: view "EMPTY.V_DISPLAY_DDL_SQL" has errors
     e_view_has_errors exception;
     pragma exception_init(e_view_has_errors, -4063);
     -- ORA-01720: grant option does not exist for <owner>.PARTY
@@ -4127,6 +4243,109 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
       raise;
 $end
   end execute_ddl;
+
+  procedure synchronize
+  ( p_object_type in t_metadata_object_type
+  , p_object_names in t_object_names
+  , p_object_names_include in t_numeric_boolean
+  , p_schema_source in t_schema
+  , p_schema_target in t_schema_nn
+  , p_network_link_source in t_network_link
+  , p_network_link_target in t_network_link
+  , p_exclude_objects in t_objects
+  , p_include_objects in t_objects
+  )
+  is
+    l_diff_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    l_program constant t_module := g_package_prefix || 'SYNCHRONIZE';
+$end
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(l_program);
+$end
+
+    -- Bereken de verschillen, i.e. de CREATE statements.
+    -- Gebruik database links om aan te loggen met de juiste gebruiker.
+    select value(t)
+    bulk collect
+    into   l_diff_schema_ddl_tab
+    from   table
+           ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
+             ( p_object_type => p_object_type
+             , p_object_names => p_object_names
+             , p_object_names_include => p_object_names_include
+             , p_schema_source => p_schema_source
+             , p_schema_target => p_schema_target
+             , p_network_link_source => p_network_link_source
+             , p_network_link_target => p_network_link_target
+             , p_skip_repeatables => 0
+             , p_exclude_objects => p_exclude_objects
+             , p_include_objects => p_include_objects
+             )
+           ) t
+    ;
+
+    -- Skip public synonyms on the same database
+    if get_host(p_network_link_source) = get_host(p_network_link_target)
+    then
+      remove_public_synonyms(l_diff_schema_ddl_tab);
+    end if;
+
+    execute_ddl(l_diff_schema_ddl_tab, p_network_link_target);
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end synchronize;
+
+  procedure uninstall
+  ( p_object_type in t_metadata_object_type
+  , p_object_names in t_object_names
+  , p_object_names_include in t_numeric_boolean
+  , p_schema_target in t_schema_nn
+  , p_network_link_target in t_network_link
+  , p_exclude_objects in t_objects
+  , p_include_objects in t_objects
+  )
+  is
+    l_drop_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    l_program constant t_module := g_package_prefix || 'UNINSTALL';
+$end
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(l_program);
+$end
+
+    synchronize
+    ( p_object_type => p_object_type
+    , p_object_names => p_object_names
+    , p_object_names_include => p_object_names_include
+    , p_schema_source => null
+    , p_schema_target => p_schema_target
+    , p_network_link_source => null
+    , p_network_link_target => p_network_link_target
+    , p_exclude_objects => p_exclude_objects
+    , p_include_objects => p_include_objects
+    );
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end uninstall;
 
   procedure get_member_ddl
   ( p_schema_ddl in oracle_tools.t_schema_ddl
@@ -5889,15 +6108,15 @@ $end
   /*
   -- Help procedure to retrieve the results of display_ddl_schema on a remote database.
   --
-  -- Remark 1: Uses view v_display_ddl_schema2 because pipelined functions and a database link are not allowed.
-  -- Remark 2: A call to display_ddl_schema() with a database linke will invoke set_display_ddl_sql() at the remote database.
+  -- Remark 1: Uses view v_display_ddl_sql because pipelined functions and a database link are not allowed.
+  -- Remark 2: A call to display_ddl_sql() with a database linke will invoke set_display_ddl_sql() at the remote database.
   */
   function get_display_ddl_sql
-  return oracle_tools.t_schema_ddl_tab
+  return t_display_ddl_sql_tab
   pipelined
   is
     l_cursor sys_refcursor;
-    l_schema_ddl oracle_tools.t_schema_ddl;
+    l_display_ddl_sql_rec t_display_ddl_sql_rec;
     l_program constant t_module := 'GET_DISPLAY_DDL_SQL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
@@ -5918,9 +6137,9 @@ $end
     l_cursor := dbms_sql.to_refcursor(g_cursor);
     g_cursor := null;
     loop
-      fetch l_cursor into l_schema_ddl;
+      fetch l_cursor into l_display_ddl_sql_rec;
       exit when l_cursor%notfound;
-      pipe row (l_schema_ddl);
+      pipe row (l_display_ddl_sql_rec);
       oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
     end loop;
     close l_cursor;
@@ -6482,11 +6701,116 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
   end eq;
 
+  procedure cleanup_empty
+  is
+    l_drop_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
+    l_network_link_target constant t_network_link := g_empty; -- in order to have the same privileges
+    l_program constant t_module := 'CLEANUP_EMPTY';
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(l_program);
+$end
+
+    uninstall
+    ( p_schema_target => g_empty
+    , p_network_link_target => l_network_link_target
+    );
+
+    -- drop (user created) objects which are excluded in get_schema_objects()
+    l_drop_schema_ddl_tab := oracle_tools.t_schema_ddl_tab();
+    for r in
+    ( select  oracle_tools.t_schema_ddl.create_schema_ddl
+              ( p_obj => oracle_tools.t_named_object.create_named_object
+                         ( p_object_type => o.object_type
+                         , p_object_schema => o.object_schema
+                         , p_object_name => o.object_name
+                         )
+              , p_ddl_tab => oracle_tools.t_ddl_tab()
+              ) as obj
+      from    ( select  o.owner as object_schema
+                ,       o.object_name
+                        -- use scalar subqueries for a (possible) better performance
+                ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(o.object_type), 1, 23) from dual ) as object_type
+                ,       ( select oracle_tools.pkg_ddl_util.is_dependent_object_type(o.object_type) from dual ) as is_dependent_object_type
+
+                from    all_objects o
+                where   o.owner = g_empty
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
+                and     o.generated = 'N' -- GPA 2016-12-19 #136334705
+$end                
+              ) o
+      where   o.is_dependent_object_type = 0
+    )
+    loop
+      l_drop_schema_ddl_tab.extend(1);
+      create_schema_ddl
+      ( p_source_schema_ddl => null
+      , p_target_schema_ddl => r.obj
+      , p_skip_repeatables => 0
+      , p_schema_ddl => l_drop_schema_ddl_tab(l_drop_schema_ddl_tab.last)
+      );
+    end loop;
+
+    execute_ddl(l_drop_schema_ddl_tab, l_network_link_target);
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+$end
+  exception
+    when others
+    then
+      null;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave;
+$end
+  end cleanup_empty;
+
   procedure ut_cleanup_empty
   is
+    pragma autonomous_transaction;
+
+    l_found pls_integer;
   begin
-    null;
-  end;
+    begin
+      -- schema EMPTY should exist
+      select  1
+      into    l_found
+      from    all_users
+      where   username = g_empty
+      ;
+    exception
+      when no_data_found
+      then raise_application_error(oracle_tools.pkg_ddl_error.c_missing_schema, 'User EMPTY must exist', true);
+    end;
+    
+    begin
+      cleanup_empty;
+    exception
+      when others
+      then null;
+    end;
+
+    -- schema EMPTY should not have user created objects
+    begin
+      select  1
+      into    l_found
+      from    all_objects o
+      where   o.owner = g_empty
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
+      and     o.generated = 'N' -- GPA 2016-12-19 #136334705
+$end      
+      and     rownum = 1
+      ;
+      raise too_many_rows;
+    exception
+      when no_data_found
+      then null;
+      when too_many_rows
+      then raise_application_error(oracle_tools.pkg_ddl_error.c_schema_not_empty, 'User EMPTY should have NO objects', true);
+    end;
+
+    commit;
+  end ut_cleanup_empty;
 
   procedure ut_disable_schema_export
   is
@@ -7199,6 +7523,468 @@ $end
       raise;
   end ut_display_ddl_schema;
 
+  procedure ut_display_ddl_schema_diff_chk
+  is
+    -- dbms_application_info stuff
+    l_program constant t_module := 'UT_DISPLAY_DDL_SCHEMA_DIFF_CHK';
+
+    c_no_exception_raised constant integer := -20001;
+
+    procedure chk
+    ( p_description in varchar2
+    , p_sqlcode_expected in integer
+    , p_object_type in varchar2 default null
+    , p_object_names in varchar2 default null
+    , p_object_names_include in number default null
+    , p_schema_source in varchar2 default 'HR' -- just a few objects
+    , p_schema_target in varchar2 default 'HR'
+    , p_network_link_source in varchar2 default null
+    , p_network_link_target in varchar2 default null
+    , p_skip_repeatables in number default 1
+    )
+    is
+      cursor c_display_ddl_schema_diff
+      ( b_object_type in varchar2
+      , b_object_names in varchar2
+      , b_object_names_include in number
+      , b_schema_source in varchar2
+      , b_schema_target in varchar2
+      , b_network_link_source in varchar2
+      , b_network_link_target in varchar2
+      , b_skip_repeatables in number
+      )
+      is
+        select value(t)
+        from   table
+               ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
+                 ( p_object_type => b_object_type
+                 , p_object_names => b_object_names
+                 , p_object_names_include => b_object_names_include
+                 , p_schema_source => b_schema_source
+                 , p_schema_target => b_schema_target
+                 , p_network_link_source => b_network_link_source
+                 , p_network_link_target => b_network_link_target
+                 , p_skip_repeatables => b_skip_repeatables
+                 , p_exclude_objects => null
+                 , p_include_objects => null
+                 )
+               ) t
+        ;
+
+      l_schema_ddl oracle_tools.t_schema_ddl;
+    begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.enter(g_package_prefix || l_program || '.CHK');
+      dbug.print
+      ( dbug."input"
+      , 'p_description: %s; p_sqlcode_expected: %s; p_object_type: %s; p_object_names: %s; p_object_names_include: %s'
+      , p_description
+      , p_sqlcode_expected
+      , p_object_type
+      , p_object_names
+      , p_object_names_include
+      );
+      dbug.print
+      ( dbug."input"
+      , 'p_schema_source: %s; p_schema_target: %s; p_network_link_source: %s; p_network_link_target: %s; p_skip_repeatables: %s'
+      , p_schema_source
+      , p_schema_target
+      , p_network_link_source
+      , p_network_link_target
+      , p_skip_repeatables
+      );
+$end
+
+      open c_display_ddl_schema_diff
+           ( p_object_type
+           , p_object_names
+           , p_object_names_include
+           , p_schema_source
+           , p_schema_target
+           , p_network_link_source
+           , p_network_link_target
+           , p_skip_repeatables
+           );
+--      fetch c_display_ddl_schema_diff into l_schema_ddl;
+      close c_display_ddl_schema_diff;
+
+      raise_application_error(c_no_exception_raised, 'OK');
+    exception
+      when others
+      then
+        if c_display_ddl_schema_diff%isopen then close c_display_ddl_schema_diff; end if;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        dbug.leave_on_error;
+$end        
+        ut.expect(sqlcode, l_program || '#' || p_description).to_equal(p_sqlcode_expected);
+    end chk;
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || l_program);
+$end
+
+/*
+    chk
+    ( p_description => 'When p_object_names is not empty and p_object_names_include empty.'
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_objects_wrong
+    , p_object_names => 'ABC'
+    , p_schema_source => 'SYS' -- need to add it since
+    );
+
+    chk
+    ( p_description => 'When p_object_names is not empty and p_object_names_include not empty and not in (0, 1).'
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_numeric_boolean_wrong
+    , p_object_names => 'ABC'
+    , p_object_names_include => 2
+    );
+
+    chk
+    ( p_description => 'When p_object_names is not empty and p_object_names_include not empty and not in (0, 1).'
+    , p_sqlcode_expected => -6502 -- VALUE_ERROR vanwege NATURAL datatype
+    , p_object_names => 'ABC'
+    , p_object_names_include => -1
+    );
+
+    chk
+    ( p_description => 'When p_object_names is empty and p_object_names_include not empty.'
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_objects_wrong
+    , p_object_names_include => 1
+    );
+*/
+    chk
+    ( p_description => 'When p_schema_source is empty and p_network_link_source not empty.'
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_schema_wrong
+    , p_schema_source => null
+    , p_network_link_source => g_dbname
+    );
+
+    chk
+    ( p_description => 'When p_schema_target is empty.'
+    , p_sqlcode_expected => -6502 -- VALUE_ERROR vanwege NATURAL datatype
+    , p_schema_target => null
+    );
+
+    chk
+    ( p_description => 'When p_network_link_source is empty, p_schema_source not empty and non-existing.'
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_schema_does_not_exist
+    , p_schema_source => 'ABC'
+    );
+
+    chk
+    ( p_description => 'When p_network_link_target is empty, p_schema_target not empty and non-existing.'
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_schema_does_not_exist
+    , p_schema_target => 'ABC'
+    );
+
+    chk
+    ( p_description => 'When source equals target.'
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_source_and_target_equal
+    , p_schema_source => g_owner
+    , p_schema_target => g_owner
+    );
+
+    chk
+    ( p_description => 'When p_network_link_source not empty and unknown.'
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_database_link_does_not_exist
+    , p_network_link_source => 'ABC'
+    );
+
+    chk
+    ( p_description => 'When p_network_link_target not empty and unknown.'
+    , p_sqlcode_expected => oracle_tools.pkg_ddl_error.c_database_link_does_not_exist
+    , p_network_link_target => 'ABC'
+    );
+
+    -- check skip_repeatables
+    for r in
+    ( select  column_value
+      from    table
+              ( sys.odcinumberlist
+                ( null
+                , -1
+                , 0
+                , 1
+                , 2
+                )
+              )
+    )
+    loop
+      chk
+      ( p_description => 'skip_repeatables: ' || r.column_value
+      , p_sqlcode_expected => case
+                                when r.column_value is null
+                                then -6502 -- VALUE_ERROR want NATURALN staat null niet toe
+                                when r.column_value in (0, 1)
+                                then c_no_exception_raised
+                                when r.column_value < 0
+                                then -6502 -- VALUE_ERROR want NATURALN staat negatieve getallen niet toe
+                                else oracle_tools.pkg_ddl_error.c_numeric_boolean_wrong
+                              end
+      , p_skip_repeatables => r.column_value
+      , p_object_names => 'ABC'
+      , p_object_names_include => 1
+      , p_schema_source => null
+      );
+    end loop;
+
+    chk
+    ( p_description => 'Running against empty source schema should work'
+    , p_sqlcode_expected => c_no_exception_raised -- oracle_tools.pkg_ddl_error.c_no_schema_objects
+    , p_schema_target => g_empty
+    , p_schema_source => null
+    );
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end ut_display_ddl_schema_diff_chk;
+
+  procedure ut_display_ddl_schema_diff
+  is
+    pragma autonomous_transaction;
+
+    l_line1_tab    dbms_sql.varchar2a;
+    l_clob1        clob := null;
+    l_first1       pls_integer := null;
+    l_last1        pls_integer := null;
+    l_line2_tab    dbms_sql.varchar2a;
+    l_first2       pls_integer := null;
+    l_last2        pls_integer := null;
+
+    l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
+
+    -- dbms_application_info stuff
+    l_program constant t_module := 'UT_DISPLAY_DDL_SCHEMA_DIFF';
+    l_longops_rec t_longops_rec;
+
+    procedure cleanup
+    is
+    begin
+      if l_clob1 is not null
+      then
+        dbms_lob.freetemporary(l_clob1);
+        l_clob1 := null;
+      end if;
+    end cleanup;
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || l_program);
+$end
+
+    -- Check this schema
+    for r in (select t.owner
+                    ,case t.object_type when 'TABLE' then 'COMMENT' else t.object_type end as object_type
+                    ,t.object_name
+                    ,count(*) over () as total
+              from   ( select  t.*
+                               -- use scalar subqueries for a (possible) better performance
+                       ,       ( select oracle_tools.t_schema_object.is_a_repeatable(t.object_type) from dual ) as is_a_repeatable
+                       ,       ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(t.object_type), t.object_name) from dual ) as is_exclude_name_expr
+                       ,       row_number() over (partition by t.owner, t.object_type order by t.object_name) as orderseq
+                       from    all_objects t
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
+                       where   t.generated = 'N' /* GPA 2016-12-19 #136334705 */
+$end                       
+                     ) t
+              where  t.owner in (g_owner, g_owner_utplsql)
+              and    t.orderseq <= 3
+              and    (t.is_a_repeatable = 1 or /* for comments */ t.object_type = 'TABLE')
+              and    t.object_type not in ('EVALUATION CONTEXT','JOB','PROGRAM','RULE','RULE SET','JAVA CLASS','JAVA SOURCE')
+              and    ( t.owner = g_owner or
+                       t.object_type not like '%BODY' -- CREATE ANY PROCEDURE system privilege needed to lookup
+                     )
+              and    ( t.object_type <> 'TRIGGER' or
+                       (t.owner, t.object_name) in (select owner, trigger_name from all_triggers where base_object_type in ('TABLE', 'VIEW'))
+                     )
+              and    t.is_exclude_name_expr = 0
+              order  by case t.object_type
+                          when 'TABLE'
+                          then 0
+                          when 'TRIGGER'
+                          then 1
+                          when 'VIEW'
+                          then 2
+                          when 'TYPE_SPEC'
+                          then 3
+                          else null
+                        end nulls last -- tables and triggers first
+                       ,t.object_type
+                       ,t.object_name
+             )
+    loop
+      if l_longops_rec.totalwork is null
+      then
+        l_longops_rec := oracle_tools.api_longops_pkg.longops_init(p_op_name => 'Test', p_units => 'objects', p_target_desc => l_program, p_totalwork => r.total);
+      end if;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print
+      ( dbug."info"
+      , 'r.owner: %s; r.object_type: %s; r.object_name: %s'
+      , r.owner
+      , r.object_type
+      , r.object_name
+      );
+$end
+
+      <<try_loop>>
+      for i_try in 1 .. case when g_loopback is not null then 2 else 1 end
+      loop
+        if l_clob1 is not null
+        then
+          dbms_lob.trim(l_clob1, 0);
+        end if;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        dbug.print(dbug."info", 'try %s; retrieving l_line1_tab', i_try);
+$end
+
+        for r_text in
+        ( select t.obj.object_schema() as object_schema
+          ,      t.obj.object_type() as object_type
+          ,      t.obj.object_name() as object_name
+          ,      u.text_tab
+          from   table
+                 ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
+                   ( p_object_type => oracle_tools.t_schema_object.dict2metadata_object_type(r.object_type)
+                   , p_object_names => r.object_name
+                   , p_object_names_include => 1
+                   , p_schema_source => r.owner
+                   , p_schema_target => g_empty
+                   , p_network_link_source => case when i_try = 2 then g_loopback end
+                   , p_network_link_target => case when i_try = 2 then g_loopback end
+                   , p_skip_repeatables => 0
+                   , p_exclude_objects => null
+                   , p_include_objects => null
+                   , p_transform_param_list => c_transform_param_list_testing
+                   )
+                 ) t
+          ,      table(t.ddl_tab) u                                                          
+          where  u.verb() != '--' -- no comments
+          and    t.obj.object_type() = oracle_tools.t_schema_object.dict2metadata_object_type(r.object_type)
+          order by
+                 u.verb()
+          ,      t.obj.object_schema()
+          ,      t.obj.object_type()
+          ,      t.obj.object_name()
+          ,      t.obj.base_object_schema()
+          ,      t.obj.base_object_type()
+          ,      t.obj.base_object_name()
+          ,      t.obj.column_name()
+          ,      t.obj.grantee()
+          ,      t.obj.privilege()
+          ,      t.obj.grantable()
+          ,      u.ddl#()
+        )
+        loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          dbug.print
+          ( dbug."info"
+          , 'r_text.object_schema: %s; r_text.object_type: %s; r_text.object_name: %s'
+          , r_text.object_schema
+          , r_text.object_type
+          , r_text.object_name
+          );
+          if r_text.text_tab is not null and r_text.text_tab.count > 0
+          then
+            for i_line_idx in r_text.text_tab.first .. r_text.text_tab.last
+            loop
+              dbug.print(dbug."info", 'line1: %s', r_text.text_tab(i_line_idx));
+            end loop;
+          end if;
+$end
+          oracle_tools.pkg_str_util.text2clob(r_text.text_tab, l_clob1, true);
+        end loop;
+
+        -- Copy all lines from l_clob1 to l_line1_tab but skip empty lines for comments.
+        -- So we use an intermediary l_line2_tab first.
+        oracle_tools.pkg_str_util.split(p_str => l_clob1, p_str_tab => l_line2_tab, p_delimiter => chr(10));
+        l_line1_tab.delete;
+        for i_idx in l_line2_tab.first .. l_line2_tab.last
+        loop
+          if r.object_type <> 'COMMENT' or trim(l_line2_tab(i_idx)) is not null
+          then
+            l_line1_tab(l_line1_tab.count+1) := l_line2_tab(i_idx);
+          end if;
+        end loop;
+
+        skip_ws_lines_around(l_line1_tab, l_first1, l_last1);
+
+        -- Skip line 1 (create ...) because it may differ
+        if l_first1 between l_line1_tab.first and l_line1_tab.last and
+           ltrim(l_line1_tab(l_first1)) like 'CREATE %'
+        then
+          l_line1_tab.delete(l_first1);
+          l_first1 := l_first1 + 1;
+          skip_ws_lines_around(l_line1_tab, l_first1, l_last1);
+        end if;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        dbug.print(dbug."info", 'try %s; retrieving l_line2_tab', i_try);
+$end
+
+        get_source(p_owner => r.owner
+                  ,p_object_type => r.object_type
+                  ,p_object_name => r.object_name
+                  ,p_line_tab => l_line2_tab
+                  ,p_first => l_first2
+                  ,p_last => l_last2);
+
+        -- Skip line 1 (create ...) because it may differ
+        if l_first2 between l_line2_tab.first and l_line2_tab.last and
+           ltrim(l_line2_tab(l_first2)) like 'CREATE %'
+        then
+          l_line2_tab.delete(l_first2);
+          l_first2 := l_first2 + 1;
+          skip_ws_lines_around(l_line2_tab, l_first2, l_last2);
+        end if;
+
+        if l_first2 <= l_last2
+        then
+          for i_line_idx in l_first2 .. l_last2
+          loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+            dbug.print
+            ( dbug."info"
+            , 'line2: %s'
+            , l_line2_tab(i_line_idx)
+            );
+$end
+            l_line2_tab(i_line_idx) :=
+              modify_ddl_text
+              ( p_ddl_text => l_line2_tab(i_line_idx)
+              , p_schema => r.owner
+              , p_new_schema => g_empty
+              );
+          end loop;
+        end if;
+
+        ut.expect
+        ( show_diff(l_line1_tab, l_first1, l_last1, l_line2_tab, l_first2, l_last2)
+        , l_program || '#' || r.owner || '#' || r.object_type || '#' || r.object_name || '#' || i_try || '#eq'
+        ).to_be_null();
+      end loop try_loop;
+
+      oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+    end loop;
+
+    commit;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+  end ut_display_ddl_schema_diff;
+
   procedure ut_object_type_order
   is
     pragma autonomous_transaction;
@@ -7330,6 +8116,226 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       raise;
 $end
   end ut_is_a_repeatable;
+
+  procedure ut_synchronize
+  is
+    pragma autonomous_transaction;
+
+    l_drop_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
+    l_diff_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
+
+    l_schema t_schema;
+    l_network_link_source t_network_link;
+    l_network_link_target constant t_network_link := g_empty; -- in order to have the same privileges
+
+    -- GJP 2021-09-02
+    c_object_type constant t_metadata_object_type := null; -- 'TYPE_SPEC';
+    c_object_names constant t_object_name := null; -- 'EXCELTABLEIMPL';
+    c_object_names_include constant t_numeric_boolean := null; -- 1;
+
+    cursor c_display_ddl_schema_diff
+    ( b_object_type in t_metadata_object_type default c_object_type
+    , b_object_names in t_object_names default c_object_names
+    , b_object_names_include in t_numeric_boolean default c_object_names_include
+    , b_schema_source in t_schema default g_owner
+    , b_schema_target in t_schema default g_owner
+    , b_network_link_source in t_network_link default null
+    , b_network_link_target in t_network_link default null
+    , b_skip_repeatables in t_numeric_boolean default 1
+    )
+    is
+      select value(t)
+      from   table
+             ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
+               ( p_object_type => b_object_type
+               , p_object_names => b_object_names
+               , p_object_names_include => b_object_names_include
+               , p_schema_source => b_schema_source
+               , p_schema_target => b_schema_target
+               , p_network_link_source => b_network_link_source
+               , p_network_link_target => b_network_link_target
+               , p_skip_repeatables => b_skip_repeatables
+               , p_exclude_objects => null
+               , p_include_objects => null
+               )
+             ) t
+      ,      table(t.ddl_tab) u
+      where  u.verb() != '--' -- no comments
+      ;
+
+    l_count pls_integer;
+
+    l_program constant t_module := g_package || '.UT_SYNCHRONIZE';
+
+    procedure cleanup is
+    begin
+      null; -- special beforetest annotation will take care of cleaning EMPTY
+    end cleanup;
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(l_program);
+$end
+
+    /*
+    -- Scenario: install a schema to the EMPTY schema on this database
+    --
+    -- 1) empty the schema EMPTY
+    -- 2) check that the source schema has no public synonyms (we do not want to change them)
+    -- 3) invoke synchronize
+    -- 4) calculate the difference DDL
+    -- 5) remove object grants which failed to execute
+    --
+    -- Now there must be no differences
+    */
+
+    for i_try in 1..1
+    loop
+      case i_try
+        when 1
+        then
+          l_schema := g_owner;
+          l_network_link_source := null; -- this is l_schema
+
+        when 2 -- GJP 2021-08-31
+        then
+          l_schema := g_owner;
+          l_network_link_source := g_loopback; -- this is l_schema
+
+      end case;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+      dbug.print(dbug."info", 'step 1');
+$end
+
+      /* step 1 */
+      cleanup; -- empty EMPTY
+
+      select  count(*)
+      into    l_count
+      from    all_objects t
+      where   t.owner = g_empty
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
+      and     t.generated = 'N' -- GPA 2016-12-19 #136334705
+$end      
+      and     ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(t.object_type), t.object_name) from dual ) = 0;
+
+      ut.expect(l_count, l_program || '#cleanup' || '#' || i_try).to_equal(0);
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+      if l_count != 0
+      then
+        dbug.print(dbug."error", 'schema %s should not contain user created objects', g_empty);
+        for r in
+        ( select  o.object_type
+          ,       o.object_name
+          from    all_objects o
+          where   o.owner = g_empty
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
+          and     o.generated = 'N' -- GPA 2016-12-19 #136334705
+$end          
+          order by
+                  o.object_type
+          ,       o.object_name
+        )
+        loop
+          dbug.print(dbug."error", 'object_type: %s; object_name: %s', r.object_type, r.object_name);
+        end loop;
+        raise_application_error(oracle_tools.pkg_ddl_error.c_schema_not_empty, g_empty);
+      end if;
+$end          
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+      dbug.print(dbug."info", 'step 2');
+$end
+
+      /* step 2 */
+      select  count(*)
+      into    l_count
+      from    all_synonyms t
+      where   t.owner = 'PUBLIC'
+      and     t.table_owner = l_schema;
+
+      ut.expect(l_count, l_program || '#no public synonyms' || '#' || i_try).to_equal(0);
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+      dbug.print(dbug."info", 'step 3');
+$end
+
+      /* step 3 */
+      synchronize
+      ( p_object_type => c_object_type
+      , p_object_names => c_object_names
+      , p_object_names_include => c_object_names_include
+      , p_schema_source => l_schema
+      , p_schema_target => g_empty
+      , p_network_link_source => l_network_link_source
+      , p_network_link_target => l_network_link_target
+      , p_exclude_objects => null
+      , p_include_objects => null
+      );
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+      dbug.print(dbug."info", 'step 4');
+$end
+      /* step 4 */
+
+      -- Bereken de verschillen, i.e. de CREATE statements.
+      -- Gebruik database links om aan te loggen met de juiste gebruiker.
+      open c_display_ddl_schema_diff( b_object_type => c_object_type
+                                    , b_object_names => c_object_names
+                                    , b_object_names_include => c_object_names_include
+                                    , b_schema_source => l_schema
+                                    , b_schema_target => g_empty
+                                    , b_network_link_source => l_network_link_source
+                                    , b_network_link_target => l_network_link_target
+                                    );
+      fetch c_display_ddl_schema_diff bulk collect into l_diff_schema_ddl_tab limit g_max_fetch;
+      close c_display_ddl_schema_diff;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then        
+      dbug.print(dbug."info", 'step 5');
+$end
+
+      /* step 5 */
+
+      /* see step 2: there are no public synonyms */
+      /*
+      -- Skip public synonyms
+      remove_public_synonyms(l_diff_schema_ddl_tab);
+      */
+      -- ORA-01720: grant option does not exist for '<owner>.PARTY'
+      remove_object_grants(l_diff_schema_ddl_tab);
+
+      ut.expect(l_diff_schema_ddl_tab.count, l_program || '#differences' || '#' || i_try).to_equal(0);
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      if l_diff_schema_ddl_tab.count > 0
+      then
+        dbug.print(dbug."error", 'schema DDL differences found');
+        for i_idx in l_diff_schema_ddl_tab.first .. l_diff_schema_ddl_tab.last
+        loop
+          dbug.print(dbug."error", 'schema DDL %s', i_idx);
+          l_diff_schema_ddl_tab(i_idx).print();
+        end loop;
+        raise_application_error(-20000, 'schema DDL differences found');
+      end if;
+$end          
+
+      cleanup;
+    end loop;
+
+    commit;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      -- do not invoke cleanup() so we can better investigate the error
+      raise;
+$end
+  end ut_synchronize;
 
   procedure ut_sort_objects_by_deps
   is
