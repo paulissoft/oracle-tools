@@ -3101,6 +3101,40 @@ $end
     i_object_exclude_name_expr_tab;
   end session_init;
 
+  procedure copy
+  ( p_schema_ddl in oracle_tools.t_schema_ddl
+  , p_display_ddl_sql_tab out nocopy t_display_ddl_sql_tab 
+  )
+  is
+    l_display_ddl_sql_rec t_display_ddl_sql_rec; -- for pipe row
+  begin
+    p_display_ddl_sql_tab := t_display_ddl_sql_tab();
+
+    if cardinality(p_schema_ddl.ddl_tab) > 0
+    then
+      for i_ddl_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
+      loop
+        if cardinality(p_schema_ddl.ddl_tab(i_ddl_idx).text_tab) > 0
+        then
+          for i_text_idx in p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.first
+                            ..
+                            p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.last
+          loop
+            l_display_ddl_sql_rec.schema_object_id := p_schema_ddl.obj.id;
+            l_display_ddl_sql_rec.obj := p_schema_ddl.obj;
+            l_display_ddl_sql_rec.ddl# := p_schema_ddl.ddl_tab(i_ddl_idx).ddl#;
+            l_display_ddl_sql_rec.verb := p_schema_ddl.ddl_tab(i_ddl_idx).verb;
+            l_display_ddl_sql_rec.ddl_info := p_schema_ddl.ddl_tab(i_ddl_idx).ddl_info(p_schema_ddl.obj);
+            l_display_ddl_sql_rec.chunk# := i_text_idx;
+            l_display_ddl_sql_rec.chunk := p_schema_ddl.ddl_tab(i_ddl_idx).text_tab(i_text_idx);
+            p_display_ddl_sql_tab.extend(1);
+            p_display_ddl_sql_tab(p_display_ddl_sql_tab.last) := l_display_ddl_sql_rec;
+          end loop;
+        end if;                
+      end loop;
+    end if;
+  end copy;
+
   /* PUBLIC ROUTINES */
 
   function display_ddl_sql
@@ -3163,10 +3197,7 @@ $end
     , p_display_ddl_sql_tab out nocopy t_display_ddl_sql_tab 
     )
     is
-      l_display_ddl_sql_rec t_display_ddl_sql_rec; -- for pipe row
     begin
-      p_display_ddl_sql_tab := t_display_ddl_sql_tab();
-      
       -- change of schema_ddl: print it
       if p_network_link is not null
       then
@@ -3182,29 +3213,7 @@ $end
         );
       end if;
 
-      if cardinality(p_schema_ddl.ddl_tab) > 0
-      then
-        for i_ddl_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
-        loop
-          if cardinality(p_schema_ddl.ddl_tab(i_ddl_idx).text_tab) > 0
-          then
-            for i_text_idx in p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.first
-                              ..
-                              p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.last
-            loop
-              l_display_ddl_sql_rec.schema_object_id := p_schema_ddl.obj.id;
-              l_display_ddl_sql_rec.obj := p_schema_ddl.obj;
-              l_display_ddl_sql_rec.ddl# := p_schema_ddl.ddl_tab(i_ddl_idx).ddl#;
-              l_display_ddl_sql_rec.verb := p_schema_ddl.ddl_tab(i_ddl_idx).verb;
-              l_display_ddl_sql_rec.ddl_info := p_schema_ddl.ddl_tab(i_ddl_idx).ddl_info(p_schema_ddl.obj);
-              l_display_ddl_sql_rec.chunk# := i_text_idx;
-              l_display_ddl_sql_rec.chunk := p_schema_ddl.ddl_tab(i_ddl_idx).text_tab(i_text_idx);
-              p_display_ddl_sql_tab.extend(1);
-              p_display_ddl_sql_tab(p_display_ddl_sql_tab.last) := l_display_ddl_sql_rec;
-            end loop;
-          end if;                
-        end loop;
-      end if;
+      copy(p_schema_ddl, p_display_ddl_sql_tab);
     end convert_and_copy;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -3732,6 +3741,59 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
 $end
       raise;
   end create_schema_ddl;
+
+  function display_ddl_sql_diff
+  ( p_object_type in t_metadata_object_type default null -- Filter for object type.
+  , p_object_names in t_object_names default null -- A comma separated list of (base) object names.
+  , p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+  , p_schema_source in t_schema default user -- Source schema (may be empty for uninstall).
+  , p_schema_target in t_schema_nn default user -- Target schema.
+  , p_network_link_source in t_network_link default null -- Source network link.
+  , p_network_link_target in t_network_link default null -- Target network link.
+  , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Skip repeatables objects (1) or check all objects (0) with 1 the default for Flyway with repeatable migrations
+  , p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+  , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
+  , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
+  )
+  return t_display_ddl_sql_tab
+  pipelined
+  is
+    l_display_ddl_sql_tab t_display_ddl_sql_tab;
+  begin
+    for r in
+    ( select  value(t) as schema_ddl
+      from    table
+              ( oracle_tools.pkg_ddl_util.display_ddl_schema_diff
+                ( p_object_type => p_object_type
+                , p_object_names => p_object_names
+                , p_object_names_include => p_object_names_include
+                , p_schema_source => p_schema_source
+                , p_schema_target => p_schema_target
+                , p_network_link_source => p_network_link_source
+                , p_network_link_target => p_network_link_target
+                , p_skip_repeatables => p_skip_repeatables
+                , p_transform_param_list => p_transform_param_list
+                , p_exclude_objects => p_exclude_objects
+                , p_include_objects => p_include_objects
+                )
+              ) t
+    )
+    loop
+      copy
+      ( r.schema_ddl
+      , l_display_ddl_sql_tab 
+      );
+      if cardinality(l_display_ddl_sql_tab) > 0
+      then
+        for i_row_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
+        loop
+          pipe row (l_display_ddl_sql_tab(i_row_idx));
+        end loop;
+      end if;
+    end loop;
+    
+    return; -- essential
+  end display_ddl_sql_diff;
 
   function display_ddl_schema_diff
   ( p_object_type in t_metadata_object_type

@@ -242,6 +242,22 @@ procedure create_schema_ddl
 , p_schema_ddl out nocopy oracle_tools.t_schema_ddl
 );
 
+function display_ddl_sql_diff
+( p_object_type in t_metadata_object_type default null -- Filter for object type.
+, p_object_names in t_object_names default null -- A comma separated list of (base) object names.
+, p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_schema_source in t_schema default user -- Source schema (may be empty for uninstall).
+, p_schema_target in t_schema_nn default user -- Target schema.
+, p_network_link_source in t_network_link default null -- Source network link.
+, p_network_link_target in t_network_link default null -- Target network link.
+, p_skip_repeatables in t_numeric_boolean_nn default 1 -- Skip repeatables objects (1) or check all objects (0) with 1 the default for Flyway with repeatable migrations
+, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
+, p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
+)
+return t_display_ddl_sql_tab
+pipelined;
+
 function display_ddl_schema_diff
 ( p_object_type in t_metadata_object_type default null -- Filter for object type.
 , p_object_names in t_object_names default null -- A comma separated list of (base) object names.

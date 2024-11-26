@@ -1039,15 +1039,33 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >
 $end
 
     l_offset := l_first;
+    <<read_buffer_loop>>
     while l_offset <= l_last
     loop
-      l_buffer :=
-        dbms_lob_substr
-        ( p_clob => pi_clob
-        , p_offset => l_offset
-        , p_amount => least(l_last - l_offset + 1, c_sql_string_size)
-        , p_check => 'OL'              
-        );
+      -- Reading 4000 characters into l_buffer (varchar2(4000 byte))
+      -- may lead to a VALUE_ERROR when there are UNICODE characters.
+      <<part_loop>>
+      for i_part_idx in 1..4
+      loop
+        begin
+          l_buffer :=
+            dbms_lob_substr
+            ( p_clob => pi_clob
+            , p_offset => l_offset
+            , p_amount => trunc(least(l_last - l_offset + 1, c_sql_string_size) / i_part_idx)
+            , p_check => 'OL'              
+            );
+          exit part_loop; -- OK
+        exception
+          when value_error
+          then
+            if i_part_idx = 4
+            then
+              raise;
+            end if;
+        end;
+      end loop part_loop;
+      
       l_buffer_length := length(l_buffer);
       if l_buffer_length > 0
       then
@@ -1055,9 +1073,9 @@ $end
         l_text_tab(l_text_tab.last) := l_buffer;
         l_offset := l_offset + l_buffer_length;
       else
-        exit; -- apparently there is no more to read
+        exit read_buffer_loop; -- apparently there is nothing more to read
       end if;
-    end loop;
+    end loop read_buffer_loop;
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_str_util.c_debugging >= 1 $then
