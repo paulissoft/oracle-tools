@@ -3274,6 +3274,7 @@ $end
       , p_grantor_is_schema => 0
       , p_exclude_objects => p_exclude_objects
       , p_include_objects => p_include_objects
+      , p_transform_param_list => p_transform_param_list
       , p_schema_object_filter => l_schema_object_filter
       , p_generate_ddl_parameters_id => l_generate_ddl_parameters_id
       );
