@@ -329,6 +329,7 @@ $end
   , schema_object_filter_id 
   , schema_object_id
   , last_ddl_time
+  , generate_ddl_parameter_id
   )
     select  p_session_id
     -- Since objects are inserted per Oracle session
@@ -336,20 +337,24 @@ $end
     ,       t.seq
     ,       p_schema_object_filter_id
     ,       t.schema_object_id
-    ,       -- when DDL has been generated for this last_ddl_time, fix it
-            ( select  gd.last_ddl_time
-              from    oracle_tools.generated_ddls gd
-              where   gd.schema_object_id = t.schema_object_id
-              and     gd.last_ddl_time = t.last_ddl_time
-            )
+            -- when DDL has been generated for this last_ddl_time, fix it
+    ,       t.last_ddl_time
+    ,       t.generate_ddl_parameter_id
     from    ( select  t.id as schema_object_id
-              ,       t.last_ddl_time() as last_ddl_time
+              ,       gd.last_ddl_time
+              ,       gd.generate_ddl_parameter_id
               ,       rownum + l_last_seq as seq
               from    table(p_schema_object_tab) t -- may contain duplicates (constraints)
                       inner join schema_object_filter_results sofr
                       on sofr.schema_object_filter_id = p_schema_object_filter_id and
                          sofr.schema_object_id = t.id and
                          sofr.generate_ddl = 1 -- ignore objects that do not need to be generated
+                      inner join oracle_tools.generate_ddl_sessions gds
+                      on gds.session_id = p_session_id   
+                      left outer join oracle_tools.generated_ddls gd
+                      on gd.schema_object_id = t.id and
+                         gd.last_ddl_time = t.last_ddl_time() and
+                         gd.generate_ddl_parameter_id = gds.generate_ddl_parameter_id
               where   ( p_session_id, t.id ) not in
                       ( select  /* GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 */
                                 gdsso.session_id
@@ -1023,23 +1028,25 @@ $end
       , seq
       , schema_object_id
       , last_ddl_time
+      , generate_ddl_parameter_id
       )
-      values
-      ( p_session_id
-      , l_schema_object_filter_id
+        select  p_session_id
+        ,       l_schema_object_filter_id
         -- Since objects are inserted per Oracle session
         -- there is never a problem with another session inserting at the same time for the same session.
-      , ( select  nvl(max(gdsso.seq), 0) + 1
-          from    oracle_tools.generate_ddl_session_schema_objects gdsso
-          where   gdsso.session_id = p_session_id
-        )
-      , l_schema_object_id
-      , ( select  gd.last_ddl_time
-          from    oracle_tools.generated_ddls gd
-          where   gd.schema_object_id = l_schema_object_id
-          and     gd.last_ddl_time = p_schema_object.last_ddl_time()
-        )
-      );
+        ,       ( select  nvl(max(gdsso.seq), 0) + 1
+                  from    oracle_tools.generate_ddl_session_schema_objects gdsso
+                  where   gdsso.session_id = p_session_id
+                )
+        ,       l_schema_object_id
+        ,       gd.last_ddl_time
+        ,       gd.generate_ddl_parameter_id
+        from    oracle_tools.generate_ddl_sessions gds
+                cross join oracle_tools.generated_ddls gd
+        where   gds.session_id = p_session_id
+        and     gd.schema_object_id = l_schema_object_id
+        and     gd.last_ddl_time = p_schema_object.last_ddl_time()
+        and     gd.generate_ddl_parameter_id = gds.generate_ddl_parameter_id;
     exception
       when dup_val_on_index
       then
