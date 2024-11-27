@@ -3473,8 +3473,7 @@ $end
   begin
     -- use display_ddl_sql
     for r in
-    ( select  t.obj
-      ,       t.ddl#
+    ( select  t.ddl#
       ,       t.verb
       ,       t.chunk
       from    table
