@@ -8,10 +8,10 @@ prompt @V00000000000000__drop_all_objects.sql
 @V00000000000000__drop_all_objects.sql
 prompt @V20201115143000__t_text_tab.sql
 @V20201115143000__t_text_tab.sql
-prompt @V20201128105200__t_object_info_rec.sql
-@V20201128105200__t_object_info_rec.sql
-prompt @V20201215162500.03__t_object_info_tab.sql
-@V20201215162500.03__t_object_info_tab.sql
+prompt @V20201128105200.01__t_display_ddl_sql_rec.sql
+@V20201128105200.01__t_display_ddl_sql_rec.sql
+prompt @V20201128105200.02__t_display_ddl_sql_tab.sql
+@V20201128105200.02__t_display_ddl_sql_tab.sql
 prompt @V20210104170000.01__t_schema_object.sql
 @V20210104170000.01__t_schema_object.sql
 prompt @V20210104170000.02__t_schema_object_tab.sql

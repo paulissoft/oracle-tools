@@ -3101,40 +3101,6 @@ $end
     i_object_exclude_name_expr_tab;
   end session_init;
 
-  procedure copy
-  ( p_schema_ddl in oracle_tools.t_schema_ddl
-  , p_display_ddl_sql_tab out nocopy t_display_ddl_sql_tab 
-  )
-  is
-    l_display_ddl_sql_rec t_display_ddl_sql_rec; -- for pipe row
-  begin
-    p_display_ddl_sql_tab := t_display_ddl_sql_tab();
-
-    if cardinality(p_schema_ddl.ddl_tab) > 0
-    then
-      for i_ddl_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
-      loop
-        if cardinality(p_schema_ddl.ddl_tab(i_ddl_idx).text_tab) > 0
-        then
-          for i_text_idx in p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.first
-                            ..
-                            p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.last
-          loop
-            l_display_ddl_sql_rec.schema_object_id := p_schema_ddl.obj.id;
-            l_display_ddl_sql_rec.obj := p_schema_ddl.obj;
-            l_display_ddl_sql_rec.ddl# := p_schema_ddl.ddl_tab(i_ddl_idx).ddl#;
-            l_display_ddl_sql_rec.verb := p_schema_ddl.ddl_tab(i_ddl_idx).verb;
-            l_display_ddl_sql_rec.ddl_info := p_schema_ddl.ddl_tab(i_ddl_idx).ddl_info(p_schema_ddl.obj);
-            l_display_ddl_sql_rec.chunk# := i_text_idx;
-            l_display_ddl_sql_rec.chunk := p_schema_ddl.ddl_tab(i_ddl_idx).text_tab(i_text_idx);
-            p_display_ddl_sql_tab.extend(1);
-            p_display_ddl_sql_tab(p_display_ddl_sql_tab.last) := l_display_ddl_sql_rec;
-          end loop;
-        end if;                
-      end loop;
-    end if;
-  end copy;
-
   /* PUBLIC ROUTINES */
 
   function display_ddl_sql
@@ -3150,7 +3116,7 @@ $end
   , p_exclude_objects in t_objects
   , p_include_objects in t_objects
   )
-  return t_display_ddl_sql_tab
+  return oracle_tools.t_display_ddl_sql_tab
   pipelined
   is
     pragma autonomous_transaction;
@@ -3160,24 +3126,15 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
     l_schema_object_filter oracle_tools.t_schema_object_filter;
-    l_generate_ddl_parameters_id pls_integer;
+    l_generate_ddl_parameter_id pls_integer;
     l_network_link all_db_links.db_link%type := null;
     l_cursor sys_refcursor;
 
-    type t_my_schema_ddl_tmp_rec is record
-    ( obj oracle_tools.t_schema_object
-    , ddl# oracle_tools.v_my_schema_ddls.ddl#%type
-    , verb oracle_tools.v_my_schema_ddls.verb%type
-    , ddl_info oracle_tools.v_my_schema_ddls.ddl_info%type
-    , chunk# oracle_tools.v_my_schema_ddls.chunk#%type
-    , chunk oracle_tools.v_my_schema_ddls.chunk%type
-    );
-    type t_my_schema_ddl_tmp_tab is table of t_my_schema_ddl_tmp_rec;
-
-    l_my_schema_ddl_tmp_tab t_my_schema_ddl_tmp_tab;
+    l_schema_object_tab oracle_tools.t_schema_object_tab;
+    l_my_schema_ddl_tmp_tab oracle_tools.t_display_ddl_sql_tab;
     l_schema_ddl oracle_tools.t_schema_ddl := null;
-    -- l_display_ddl_sql_rec t_display_ddl_sql_rec; -- for pipe row
-    l_display_ddl_sql_tab t_display_ddl_sql_tab; -- for pipe row
+    -- l_display_ddl_sql_rec oracle_tools.t_display_ddl_sql_rec; -- for pipe row
+    l_display_ddl_sql_tab oracle_tools.t_display_ddl_sql_tab; -- for pipe row
 
     -- GJP 2022-12-31 Not used
     -- l_transform_param_tab t_transform_param_tab;
@@ -3194,7 +3151,7 @@ $end
 
     procedure convert_and_copy
     ( p_schema_ddl in out nocopy oracle_tools.t_schema_ddl
-    , p_display_ddl_sql_tab out nocopy t_display_ddl_sql_tab 
+    , p_display_ddl_sql_tab out nocopy oracle_tools.t_display_ddl_sql_tab 
     )
     is
     begin
@@ -3213,7 +3170,7 @@ $end
         );
       end if;
 
-      copy(p_schema_ddl, p_display_ddl_sql_tab);
+      p_schema_ddl.copy(p_display_ddl_sql_tab);
     end convert_and_copy;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -3285,13 +3242,14 @@ $end
       , p_include_objects => p_include_objects
       , p_transform_param_list => p_transform_param_list
       , p_schema_object_filter => l_schema_object_filter
-      , p_generate_ddl_parameters_id => l_generate_ddl_parameters_id
+      , p_generate_ddl_parameter_id => l_generate_ddl_parameter_id
       );
       oracle_tools.schema_objects_api.add
       ( p_schema_object_filter => l_schema_object_filter
-      , p_generate_ddl_parameters_id => l_generate_ddl_parameters_id
+      , p_generate_ddl_parameter_id => l_generate_ddl_parameter_id
       , p_add_schema_objects => true
       );
+      
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       select count(*) into l_count from oracle_tools.v_my_schema_objects;
       dbug.print
@@ -3300,7 +3258,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       , oracle_tools.schema_objects_api.get_session_id
       , l_count
       );
-$end      
+$end
+
       get_schema_ddl
       ( p_schema_object_filter => l_schema_object_filter
       , p_transform_param_list => p_transform_param_list
@@ -3308,6 +3267,7 @@ $end
       commit;
       ddl_batch_process;
       commit;
+      
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       select count(*) into l_count from oracle_tools.v_my_schema_ddls;
       dbug.print
@@ -3322,6 +3282,7 @@ $end
       then
         open l_cursor for
           select  s.obj
+          ,       s.obj.id as schema_object_id
           ,       s.ddl#
           ,       s.verb
           ,       s.ddl_info
@@ -3348,6 +3309,7 @@ $end
         -- normal stuff: no network link, no dependency sorting
         open l_cursor for
           select  s.obj
+          ,       s.obj.id as schema_object_id
           ,       s.ddl#
           ,       s.verb
           ,       s.ddl_info
@@ -3364,7 +3326,7 @@ $end
 
     <<fetch_loop>>
     loop
-      fetch l_cursor bulk collect into l_my_schema_ddl_tmp_tab limit c_fetch_limit;    
+      fetch l_cursor bulk collect into l_schema_object_tab, l_my_schema_ddl_tmp_tab limit c_fetch_limit;    
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print(dbug."info", 'l_my_schema_ddl_tmp_tab.count: %s', l_my_schema_ddl_tmp_tab.count);
@@ -3396,7 +3358,7 @@ $end
             end if;
 
             -- new l_schema_ddl
-            l_schema_ddl := oracle_tools.t_schema_ddl(l_my_schema_ddl_tmp_tab(i_idx).obj, oracle_tools.t_ddl_tab());
+            l_schema_ddl := oracle_tools.t_schema_ddl(l_schema_object_tab(i_idx), oracle_tools.t_ddl_tab());
           end if;
 
           -- append to l_schema_ddl.ddl_tab (ddl# is number of items in ddl_tab)
@@ -3755,10 +3717,10 @@ $end
   , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
   , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
   )
-  return t_display_ddl_sql_tab
+  return oracle_tools.t_display_ddl_sql_tab
   pipelined
   is
-    l_display_ddl_sql_tab t_display_ddl_sql_tab;
+    l_display_ddl_sql_tab oracle_tools.t_display_ddl_sql_tab;
   begin
     for r in
     ( select  value(t) as schema_ddl
@@ -6175,11 +6137,11 @@ $end
   -- Remark 2: A call to display_ddl_sql() with a database linke will invoke set_display_ddl_sql() at the remote database.
   */
   function get_display_ddl_sql
-  return t_display_ddl_sql_tab
+  return oracle_tools.t_display_ddl_sql_tab
   pipelined
   is
     l_cursor sys_refcursor;
-    l_display_ddl_sql_rec t_display_ddl_sql_rec;
+    l_display_ddl_sql_rec oracle_tools.t_display_ddl_sql_rec;
     l_program constant t_module := 'GET_DISPLAY_DDL_SQL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff

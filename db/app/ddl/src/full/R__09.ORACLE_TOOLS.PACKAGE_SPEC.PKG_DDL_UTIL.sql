@@ -177,18 +177,6 @@ procedure md_close
 ( p_handle in out number
 );
 
-type t_display_ddl_sql_rec is record
-( schema_object_id oracle_tools.generate_ddl_session_schema_objects.schema_object_id%type
-, obj oracle_tools.t_schema_object
-, ddl# generated_ddl_statements.ddl#%type
-, verb generated_ddl_statements.verb%type
-, ddl_info varchar2(1000 byte)
-, chunk# generated_ddl_statement_chunks.chunk#%type
-, chunk generated_ddl_statement_chunks.chunk%type
-);
-
-type t_display_ddl_sql_tab is table of t_display_ddl_sql_rec;
-
 function display_ddl_sql
 ( p_schema in t_schema_nn default user -- The schema name.
 , p_new_schema in t_schema default null -- The new schema name.
@@ -202,7 +190,7 @@ function display_ddl_sql
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 )
-return t_display_ddl_sql_tab
+return oracle_tools.t_display_ddl_sql_tab
 pipelined;
 
 function display_ddl_schema
@@ -255,7 +243,7 @@ function display_ddl_sql_diff
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 )
-return t_display_ddl_sql_tab
+return oracle_tools.t_display_ddl_sql_tab
 pipelined;
 
 function display_ddl_schema_diff
@@ -490,7 +478,7 @@ Must convert clob into dbms_sql.varchar2a since lobs can not be transferred via 
 **/
 
 function get_display_ddl_sql
-return t_display_ddl_sql_tab
+return oracle_tools.t_display_ddl_sql_tab
 pipelined;
 
 /**

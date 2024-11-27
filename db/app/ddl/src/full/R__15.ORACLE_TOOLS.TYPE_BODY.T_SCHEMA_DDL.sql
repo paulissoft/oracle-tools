@@ -77,6 +77,74 @@ $end
   return l_schema_ddl;
 end create_schema_ddl;
 
+static function create_schema_ddl
+( p_display_ddl_sql_tab in oracle_tools.t_display_ddl_sql_tab
+)
+return oracle_tools.t_schema_ddl
+is
+  l_schema_ddl oracle_tools.t_schema_ddl := null;
+  l_obj oracle_tools.t_schema_object := null;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_SCHEMA_DDL (3)');
+$end
+
+  if cardinality(p_display_ddl_sql_tab) > 0
+  then
+    -- create a schema ddl with an empty ddl table based on the first schema_object_id
+    select  so.obj
+    into    l_obj
+    from    oracle_tools.schema_objects so
+    where   so.id = p_display_ddl_sql_tab(1).schema_object_id;
+
+    l_schema_ddl := 
+      oracle_tools.t_schema_ddl.create_schema_ddl
+      ( p_obj => l_obj
+      , p_ddl_tab => oracle_tools.t_ddl_tab()
+      );
+
+    -- append to l_schema_ddl.ddl_tab (ddl# is number of items in ddl_tab)
+    for i_idx in p_display_ddl_sql_tab.first .. p_display_ddl_sql_tab.last
+    loop
+      if p_display_ddl_sql_tab(i_idx).ddl# > cardinality(l_schema_ddl.ddl_tab)
+      then
+        l_schema_ddl.ddl_tab.extend(1);
+        l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last) :=
+          oracle_tools.t_ddl
+          ( p_ddl# => p_display_ddl_sql_tab(i_idx).ddl#
+          , p_verb => p_display_ddl_sql_tab(i_idx).verb
+          , p_text_tab => oracle_tools.t_text_tab()
+          );
+      end if;
+
+      if p_display_ddl_sql_tab(i_idx).ddl# = l_schema_ddl.ddl_tab.last
+      then
+        null; -- OK
+      else
+        raise program_error;
+      end if;
+
+      -- always append to l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab
+      l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.extend(1);
+      l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab(l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.last) :=
+        p_display_ddl_sql_tab(i_idx).chunk;
+        
+      if p_display_ddl_sql_tab(i_idx).chunk# = l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.last
+      then
+        null; -- OK
+      else
+        raise program_error;
+      end if;
+    end loop;
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+$end
+
+  return l_schema_ddl;
+end create_schema_ddl;
+
 member procedure print
 ( self in oracle_tools.t_schema_ddl
 )
@@ -440,6 +508,39 @@ exception
     dbug.leave_on_error;
 $end
 end execute_ddl;
+
+final member procedure copy
+( self in oracle_tools.t_schema_ddl
+, p_display_ddl_sql_tab out nocopy oracle_tools.t_display_ddl_sql_tab 
+)
+is
+  l_display_ddl_sql_rec oracle_tools.t_display_ddl_sql_rec; -- for pipe row
+begin
+  p_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab();
+
+  if cardinality(self.ddl_tab) > 0
+  then
+    for i_ddl_idx in self.ddl_tab.first .. self.ddl_tab.last
+    loop
+      if cardinality(self.ddl_tab(i_ddl_idx).text_tab) > 0
+      then
+        for i_text_idx in self.ddl_tab(i_ddl_idx).text_tab.first
+                          ..
+                          self.ddl_tab(i_ddl_idx).text_tab.last
+        loop
+          l_display_ddl_sql_rec.schema_object_id := self.obj.id;
+          l_display_ddl_sql_rec.ddl# := self.ddl_tab(i_ddl_idx).ddl#;
+          l_display_ddl_sql_rec.verb := self.ddl_tab(i_ddl_idx).verb;
+          l_display_ddl_sql_rec.ddl_info := self.ddl_tab(i_ddl_idx).ddl_info(self.obj);
+          l_display_ddl_sql_rec.chunk# := i_text_idx;
+          l_display_ddl_sql_rec.chunk := self.ddl_tab(i_ddl_idx).text_tab(i_text_idx);
+          p_display_ddl_sql_tab.extend(1);
+          p_display_ddl_sql_tab(p_display_ddl_sql_tab.last) := l_display_ddl_sql_rec;
+        end loop;
+      end if;                
+    end loop;
+  end if;
+end copy;
 
 end;
 /

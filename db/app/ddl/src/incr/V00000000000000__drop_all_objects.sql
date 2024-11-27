@@ -8,6 +8,7 @@ declare
     , 'T_SCHEMA_OBJECT_TAB'
     , 'T_OBJECT_INFO_TAB'
     , 'T_DDL_TAB'
+    , 'T_DISPLAY_DDL_SQL_TAB'
       -- object types
     , 'T_ARGUMENT_OBJECT'
     , 'T_SCHEMA_DDL'
@@ -15,6 +16,7 @@ declare
     , 'T_DDL'
     , 'T_OBJECT_INFO_REC'
     , 'T_SCHEMA_OBJECT_FILTER'
+    , 'T_DISPLAY_DDL_SQL_REC'
       -- must be last
     , 'T_TEXT_TAB' 
     );
