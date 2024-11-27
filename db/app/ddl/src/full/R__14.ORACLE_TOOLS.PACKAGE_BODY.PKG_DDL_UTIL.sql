@@ -3473,7 +3473,8 @@ $end
   begin
     -- use display_ddl_sql
     for r in
-    ( select  t.ddl#
+    ( select  ( select so.obj from oracle_tools.schema_objects so where so.id = t.schema_object_id ) as obj
+      ,       t.ddl#
       ,       t.verb
       ,       t.chunk
       from    table
@@ -3740,10 +3741,7 @@ $end
               ) t
     )
     loop
-      copy
-      ( r.schema_ddl
-      , l_display_ddl_sql_tab 
-      );
+      r.schema_ddl.copy(l_display_ddl_sql_tab);
       if cardinality(l_display_ddl_sql_tab) > 0
       then
         for i_row_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
