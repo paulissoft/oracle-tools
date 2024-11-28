@@ -1078,7 +1078,7 @@ begin
         to_char
         ( 2 +
           case p_object_type
-            -- table related, more or less
+            -- table related, more or less       -- result of object_type_order()
             when 'SEQUENCE'              then  0 --  1
             when 'CLUSTER'               then  0 --  3
             when 'AQ_QUEUE_TABLE'        then  0 --  4
