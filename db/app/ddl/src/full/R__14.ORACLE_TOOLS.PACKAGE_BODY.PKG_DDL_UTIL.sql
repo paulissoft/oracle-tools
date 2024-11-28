@@ -2904,7 +2904,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
       return false; -- FAIL
-    
+
     when others
     then
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -2955,7 +2955,7 @@ $end
                      , p_target_desc => l_program
                      , p_totalwork => p_object_lookup_tab.count
                      );
-                     
+
     if get_schema_ddl_init
       ( p_schema => p_schema
       , p_object_type => p_object_type
@@ -3088,7 +3088,7 @@ $end
         end loop;
       end if; -- if p_add_no_ddl_retrieved
     end if; -- if get_schema_ddl_init()
-    
+
     -- overall
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
 
@@ -3172,7 +3172,7 @@ $end
     begin
       l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(p_display_ddl_sql_tab, null);
       p_display_ddl_sql_tab := null;
-      
+
       -- change of schema_ddl: print it
       if p_network_link is not null
       then
@@ -3276,7 +3276,7 @@ from    oracle_tools.v_display_ddl_sql@' || l_network_link || ' t';
       , p_generate_ddl_configuration_id => l_generate_ddl_configuration_id
       , p_add_schema_objects => true
       );
-      
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       select count(*) into l_count from oracle_tools.v_my_schema_objects;
       dbug.print
@@ -3294,7 +3294,7 @@ $end
       commit;
       ddl_batch_process;
       commit;
-      
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       select count(*) into l_count from oracle_tools.v_my_schema_ddls;
       dbug.print
@@ -3725,7 +3725,7 @@ $end
         end loop;
       end if;
     end loop;
-    
+
     return; -- essential
   end display_ddl_sql_diff;
 
@@ -5429,7 +5429,7 @@ $end
       into    l_status
       from    oracle_tools.v_my_generate_ddl_session_schema_ddl_batches
       where   rownum = 1;
-      
+
       -- Create the TASK for all but SCHEMA_EXPORT
       dbms_parallel_execute.create_task(l_task_name);
 
@@ -6774,7 +6774,7 @@ $end
       when no_data_found
       then raise_application_error(oracle_tools.pkg_ddl_error.c_missing_schema, 'User EMPTY must exist', true);
     end;
-    
+
     begin
       cleanup_empty;
     exception
