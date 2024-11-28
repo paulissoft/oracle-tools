@@ -38,6 +38,9 @@ g_default_match_perc_threshold integer := 50;
 
 g_session_id t_session_id := to_number(sys_context('USERENV', 'SESSIONID'));
 
+g_min_timestamp_to_keep constant oracle_tools.generate_ddl_sessions.created%type :=
+  (sys_extract_utc(current_timestamp) - interval '2' day);
+
 function get_schema_object_filter_id
 ( p_session_id in t_session_id
 )
@@ -674,20 +677,6 @@ $end
     raise;
 end add_schema_objects;
 
-procedure cleanup
-is
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-  pragma autonomous_transaction;
-$end  
-begin
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-  delete from oracle_tools.generate_ddl_sessions t where t.created <= (sys_extract_utc(current_timestamp) - interval '2' day);
-  commit;
-$else
-  null;
-$end
-end cleanup;
-
 -- PUBLIC
 
 procedure set_session_id
@@ -903,6 +892,11 @@ $end
 $if oracle_tools.schema_objects_api.c_debugging $then
   dbug.print(dbug."info", 'l_schema_object_filter_id: %s', l_schema_object_filter_id);
 $end
+
+  -- cleanup on the fly
+  delete
+  from    oracle_tools.generate_ddl_sessions gds
+  where   gds.created <= g_min_timestamp_to_keep;
 
   -- either insert or update GENERATE_DDL_SESSIONS
   if get_schema_object_filter_id(p_session_id => p_session_id) is null
@@ -1782,8 +1776,6 @@ end ut_get_schema_object_filter;
 
 $end
 
-begin
-  cleanup;
 END SCHEMA_OBJECTS_API;
 /
 
