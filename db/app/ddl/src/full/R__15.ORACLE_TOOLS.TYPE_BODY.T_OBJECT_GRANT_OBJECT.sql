@@ -177,8 +177,14 @@ is
   l_object_name constant all_objects.object_name%type := self.base_object_name();
   l_last_ddl_time all_objects.last_ddl_time%type;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'LAST_DDL_TIME');
+  dbug.print
+  ( dbug."input"
+  , 'l_owner: %s; l_object_name: %s'
+  , l_owner
+  , l_object_name
+  );
 $end
 
   -- self.base_dict_object_type() is null, so check all objects matching base object schema/base object name
@@ -188,8 +194,8 @@ $end
   where   o.owner = l_owner
   and     o.object_name = l_object_name;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.print(dbug."output", 'result: %s', l_last_ddl_time);
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+  dbug.print(dbug."output", 'return: %s', l_last_ddl_time);
   dbug.leave;
 $end
 

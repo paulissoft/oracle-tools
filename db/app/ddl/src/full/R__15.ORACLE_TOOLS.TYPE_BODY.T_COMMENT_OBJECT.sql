@@ -96,12 +96,24 @@ end chk;
 overriding member function last_ddl_time
 return date
 is
+  l_last_ddl_time date;
 begin
-  return oracle_tools.t_schema_object.last_ddl_time
-  ( p_object_schema => self.base_object_schema()
-  , p_dict_object_type => self.base_dict_object_type()
-  , p_object_name => self.base_object_name()
-  );
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'LAST_DDL_TIME');
+$end
+
+  l_last_ddl_time := oracle_tools.t_schema_object.last_ddl_time
+                     ( p_object_schema => self.base_object_schema()
+                     , p_dict_object_type => self.base_dict_object_type()
+                     , p_object_name => self.base_object_name()
+                     );
+                     
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+  dbug.print(dbug."output", 'return: %s', l_last_ddl_time);
+  dbug.leave;
+$end
+
+  return l_last_ddl_time;
 end last_ddl_time;
 
 end;

@@ -237,6 +237,18 @@ is
   l_constraint_name constant all_objects.object_name%type := self.object_name();
   l_table_name constant all_objects.object_name%type := self.base_object_name();
 begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'LAST_DDL_TIME');
+  dbug.print
+  ( dbug."input"
+  , 'l_object_schema: %s; l_object_type: %s; l_constraint_name: %s; l_table_name: %s'
+  , l_object_schema
+  , l_object_type
+  , l_constraint_name
+  , l_table_name
+  );
+$end
+
   begin
     select  c.last_change
     into    l_last_ddl_time
@@ -248,6 +260,9 @@ begin
   exception
     when others
     then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.on_error;
+$end
       -- get last_ddl_time from base object
       select  o.last_ddl_time
       into    l_last_ddl_time
@@ -256,12 +271,22 @@ begin
       and     o.object_type = l_object_type
       and     o.object_name = l_table_name;    
   end;  
-  
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+  dbug.print(dbug."output", 'return: %s', l_last_ddl_time);
+  dbug.leave;
+$end
+
   return l_last_ddl_time;
 exception
   when others
-  then return null;
-end;
+  then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.print(dbug."output", 'return: %s', to_date(null));
+    dbug.leave_on_error;
+$end
+    return null;
+end last_ddl_time;
 
 end;
 /
