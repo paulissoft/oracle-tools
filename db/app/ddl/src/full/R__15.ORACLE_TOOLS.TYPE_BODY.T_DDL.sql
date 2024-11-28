@@ -257,8 +257,8 @@ begin
   if self is null or
      self.text_tab is null or
      self.text_tab.count = 0 or
-     self.verb$ not in ('CREATE', 'GRANT', 'AUDIT', 'ALTER') or
-     self.text_tab(1) like self.verb$ || ' %'
+     ( self.verb$ is null and self.text_tab(1) like 'BEGIN%' ) or -- PROCOBJ
+     ( self.verb$ in ('ALTER', 'AUDIT', 'CREATE', 'GRANT') and self.text_tab(1) like self.verb$ || ' %' )
   then
     null; -- OK
   else

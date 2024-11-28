@@ -24,7 +24,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <dataTypePrecision>*</dataTypePrecision>
 <dataTypeScale>0</dataTypeScale>
-<ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
 <autoIncrementCycle>false</autoIncrementCycle>
 <associations>
 <colAssociation fkAssociation="42C7FBBA-1D29-977C-4999-3ABF9F6CB4B3" referredColumn="25FCB72A-4BDC-B95A-83F3-2C909E708C5F"/>
@@ -51,21 +51,6 @@
 <ownDataTypeParameters>,*,0</ownDataTypeParameters>
 <autoIncrementCycle>false</autoIncrementCycle>
 </Column>
-<Column name="VERB" id="1709472D-2C60-E445-B809-DA73C15F4B1E">
-<sourceConnName>oracle_tools@free</sourceConnName>
-<sourceObjSchema>GENERATED_DDL_STATEMENTS</sourceObjSchema>
-<sourceObjName>VERB</sourceObjName>
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<importedID>BA2C8956-2228-A686-F2BE-8684815459DE</importedID>
-<useDomainConstraints>false</useDomainConstraints>
-<use>1</use>
-<logicalDatatype>LOGDT024</logicalDatatype>
-<dataTypeSize>128 BYTE</dataTypeSize>
-<ownDataTypeParameters>128 BYTE,,</ownDataTypeParameters>
-<autoIncrementCycle>false</autoIncrementCycle>
-</Column>
 <Column name="CREATED" id="0DEEBB8C-2216-8432-D4EA-3EB15FE2B903">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>GENERATED_DDL_STATEMENTS</sourceObjSchema>
@@ -80,6 +65,22 @@
 <dataTypePrecision>6</dataTypePrecision>
 <defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="VERB" id="1709472D-2C60-E445-B809-DA73C15F4B1E">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATED_DDL_STATEMENTS</sourceObjSchema>
+<sourceObjName>VERB</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>BA2C8956-2228-A686-F2BE-8684815459DE</importedID>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>128 BYTE</dataTypeSize>
+<ownDataTypeParameters>128 BYTE,,</ownDataTypeParameters>
 <autoIncrementCycle>false</autoIncrementCycle>
 </Column>
 </columns>

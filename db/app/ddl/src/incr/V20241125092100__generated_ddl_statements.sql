@@ -3,11 +3,10 @@ create table generated_ddl_statements
 , ddl# integer -- Primary key #2 (sequence within parent)
   not null
   constraint generated_ddl_statements$ck$ddl# check (ddl# >= 1) 
-, verb varchar2(128 byte)
-  not null
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   not null  
+, verb varchar2(128 byte)
 , constraint generated_ddl_statements$pk
   primary key (generated_ddl_id, ddl#)
 , constraint generated_ddl_statements$fk$1
@@ -16,7 +15,7 @@ create table generated_ddl_statements
 )
 organization index
 tablespace users
-including created
+including verb
 overflow tablespace users
 ;
 
