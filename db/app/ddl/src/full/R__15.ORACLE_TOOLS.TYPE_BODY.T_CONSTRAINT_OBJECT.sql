@@ -234,14 +234,16 @@ is
   l_last_ddl_time all_objects.last_ddl_time%type;
   l_object_schema constant all_objects.owner%type := self.object_schema();
   l_object_type constant all_objects.object_type%type := self.dict_object_type();
-  l_object_name constant all_objects.object_name%type := self.object_name();
+  l_constraint_name constant all_objects.object_name%type := self.object_name();
+  l_table_name constant all_objects.object_name%type := self.base_object_name();
 begin
   select  c.last_change
   into    l_last_ddl_time
   from    all_constraints c /* this is where we are interested in */
   where   l_object_type in ('TABLE', 'VIEW')
   and     c.owner = l_object_schema
-  and     c.table_name = l_object_name;
+  and     c.constraint_name = l_constraint_name
+  and     c.table_name = l_table_name;
   
   return l_last_ddl_time;
 exception
