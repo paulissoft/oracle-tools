@@ -2890,6 +2890,7 @@ $end
     end;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.print(dbug."output", 'result: %s', true);
     dbug.leave;
 $end
 
@@ -2898,7 +2899,8 @@ $end
     when no_data_found
     then
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.leave;
+      dbug.print(dbug."output", 'result: %s', false);
+      dbug.leave;
 $end
 
       return false; -- FAIL
