@@ -3461,16 +3461,19 @@ $end
   return oracle_tools.t_schema_ddl_tab
   pipelined
   is
-    l_schema_ddl oracle_tools.t_schema_ddl := null;
-    l_ddl oracle_tools.t_ddl := null;
-    l_ddl#_prev pls_integer := null;
+    l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
+    l_schema_object_id_prev t_object := null;
   begin
     -- use display_ddl_sql
     for r in
-    ( select  ( select so.obj from oracle_tools.schema_objects so where so.id = t.schema_object_id ) as obj
-      ,       t.ddl#
-      ,       t.verb
-      ,       t.chunk
+    ( select  oracle_tools.t_display_ddl_sql_rec
+              ( t.schema_object_id
+              , t.ddl#
+              , t.verb
+              , t.ddl_info
+              , t.chunk#
+              , t.chunk
+              ) as obj
       from    table
               ( oracle_tools.pkg_ddl_util.display_ddl_sql
                 ( p_schema => p_schema
@@ -3488,45 +3491,23 @@ $end
               ) t
     )
     loop
-      if r.ddl# = l_ddl#_prev
+      if l_schema_object_id_prev != r.obj.schema_object_id and cardinality(l_display_ddl_sql_prev_tab) > 0
       then
-        null;
-      else
-        -- change of ddl#
-        l_ddl#_prev := r.ddl#;
-
-        if r.ddl# = 1
-        then
-          -- new schema ddl
-
-          -- output old
-          if l_schema_ddl is not null
-          then
-            pipe row (l_schema_ddl);
-          end if;
-
-          -- create new
-          l_schema_ddl :=
-            oracle_tools.t_schema_ddl
-            ( r.obj
-            , oracle_tools.t_ddl_tab() -- empty ddl_tab
-            );
-        end if;
-
-        l_ddl := oracle_tools.t_ddl(r.ddl#, r.verb, oracle_tools.t_text_tab());
-        l_schema_ddl.ddl_tab.extend(1);
-        l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last) := l_ddl;
+        -- output old
+        pipe row (oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null));
+        l_display_ddl_sql_prev_tab.delete;
       end if;
 
       -- always append the chunk to text_tab of last schema ddl
-      l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.extend(1);
-      l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab(l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.last) := r.chunk;
+      l_display_ddl_sql_prev_tab.extend(1);
+      l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) := r.obj;
+      l_schema_object_id_prev := r.obj.schema_object_id;
     end loop;
 
     -- output last
-    if l_schema_ddl is not null
+    if l_schema_object_id_prev is not null and cardinality(l_display_ddl_sql_prev_tab) > 0
     then
-      pipe row (l_schema_ddl);
+      pipe row (oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null));
     end if;
 
     return; -- essential
