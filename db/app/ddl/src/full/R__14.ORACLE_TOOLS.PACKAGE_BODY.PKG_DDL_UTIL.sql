@@ -2773,7 +2773,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
 $end
   end remap_schema;
 
-  procedure get_schema_ddl_init
+  function get_schema_ddl_init
   ( p_schema in varchar2
   , p_object_type in varchar2 -- metadata object type
   , p_object_schema in varchar2 -- metadata object schema
@@ -2784,6 +2784,7 @@ $end
   , p_constraint_lookup_tab in out nocopy t_constraint_lookup_tab
   , p_nr_objects_countdown in out nocopy positiven
   )
+  return boolean -- objects found yes or no
   is
     l_program constant t_module := 'GET_SCHEMA_DDL_INIT';
 
@@ -2890,12 +2891,24 @@ $end
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
+$end
+
+    return true; -- OK
   exception
+    when no_data_found
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+$end
+
+      return false; -- FAIL
+    
     when others
     then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
+$end      
       raise;
-$end
   end get_schema_ddl_init;
 
   procedure get_schema_ddl
@@ -2934,144 +2947,146 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     );
 $end
 
-    get_schema_ddl_init
-    ( p_schema => p_schema
-    , p_object_type => p_object_type
-    , p_object_schema => p_object_schema
-    , p_base_object_schema => p_base_object_schema
-    , p_object_name_tab => p_object_name_tab
-    , p_base_object_name_tab => p_base_object_name_tab
-    , p_object_lookup_tab => p_object_lookup_tab
-    , p_constraint_lookup_tab => p_constraint_lookup_tab
-    , p_nr_objects_countdown => p_nr_objects_countdown
-    );
-
     l_longops_rec := oracle_tools.api_longops_pkg.longops_init
                      ( p_op_name => 'fetch'
                      , p_units => 'objects'
                      , p_target_desc => l_program
                      , p_totalwork => p_object_lookup_tab.count
                      );
+                     
+    if get_schema_ddl_init
+      ( p_schema => p_schema
+      , p_object_type => p_object_type
+      , p_object_schema => p_object_schema
+      , p_base_object_schema => p_base_object_schema
+      , p_object_name_tab => p_object_name_tab
+      , p_base_object_name_tab => p_base_object_name_tab
+      , p_object_lookup_tab => p_object_lookup_tab
+      , p_constraint_lookup_tab => p_constraint_lookup_tab
+      , p_nr_objects_countdown => p_nr_objects_countdown
+      )
+    then
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    l_start_time := dbms_utility.get_time;
+      l_start_time := dbms_utility.get_time;
 $end    
 
-    <<fetch_loop>>
-    for r in
-    ( select  value(t) as obj
-      from    table
-              ( oracle_tools.pkg_ddl_util.fetch_ddl
-                ( p_object_type => p_object_type
-                , p_object_schema => p_object_schema
-                , p_object_name_tab => p_object_name_tab
-                , p_base_object_schema => p_base_object_schema
-                , p_base_object_name_tab => p_base_object_name_tab
-                , p_transform_param_list => p_transform_param_list
-                )
-              ) t
-    )
-    loop
-      begin
-        parse_object
-        ( p_schema => p_schema
-        , p_constraint_lookup_tab => p_constraint_lookup_tab
-        , p_object_lookup_tab => p_object_lookup_tab
-        , p_ku$_ddl => r.obj
-        , p_object_key => l_object_key
-        );
+      <<fetch_loop>>
+      for r in
+      ( select  value(t) as obj
+        from    table
+                ( oracle_tools.pkg_ddl_util.fetch_ddl
+                  ( p_object_type => p_object_type
+                  , p_object_schema => p_object_schema
+                  , p_object_name_tab => p_object_name_tab
+                  , p_base_object_schema => p_base_object_schema
+                  , p_base_object_name_tab => p_base_object_name_tab
+                  , p_transform_param_list => p_transform_param_list
+                  )
+                ) t
+      )
+      loop
+        begin
+          parse_object
+          ( p_schema => p_schema
+          , p_constraint_lookup_tab => p_constraint_lookup_tab
+          , p_object_lookup_tab => p_object_lookup_tab
+          , p_ku$_ddl => r.obj
+          , p_object_key => l_object_key
+          );
 
-        if l_object_key is not null
-        then
-          -- some checks
-          if not(p_object_lookup_tab.exists(l_object_key))
+          if l_object_key is not null
           then
-            raise_application_error
-            ( oracle_tools.pkg_ddl_error.c_object_not_found
-            , 'Can not find object with key "' || l_object_key || '"'
-            );
+            -- some checks
+            if not(p_object_lookup_tab.exists(l_object_key))
+            then
+              raise_application_error
+              ( oracle_tools.pkg_ddl_error.c_object_not_found
+              , 'Can not find object with key "' || l_object_key || '"'
+              );
+            end if;
+
+            if not(p_object_lookup_tab(l_object_key).ready)
+            then
+              oracle_tools.schema_objects_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
+              p_object_lookup_tab(l_object_key).ready := true;
+              p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+              dbug.print
+              ( dbug."info"
+              , '# objects to go: %s (after %s milliseconds for object %s)'
+              , p_nr_objects_countdown-1
+              , lpad(to_char((dbms_utility.get_time - l_start_time) * 10, 'fm9999990'), 7) -- right aligned
+              , l_object_key
+              );
+              l_start_time := dbms_utility.get_time;
+$end         
+              begin
+                p_nr_objects_countdown := p_nr_objects_countdown - 1;
+              exception
+                when value_error -- tried to set it to 0 (it is positiven i.e. always > 0): we are ready
+                then
+                -- every object in p_object_lookup_tab is ready
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+                  dbug.print(dbug."info", 'all schema DDL fetched');
+$end
+                  exit fetch_loop;
+              end;
+            end if;
           end if;
 
+          oracle_tools.api_longops_pkg.longops_show(l_longops_rec, 0);
+        exception
+          when oracle_tools.pkg_ddl_error.e_object_not_found
+          then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+            l_object_key := p_object_lookup_tab.first;
+            <<object_loop>>
+            while l_object_key is not null
+            loop
+              dbug.print
+              ( dbug."debug"
+              , 'Object key: %s'
+              , l_object_key
+              );
+              l_object_key := p_object_lookup_tab.next(l_object_key);
+            end loop object_loop;
+$end        
+            raise;
+        end;
+      end loop fetch_loop;
+
+      if p_add_no_ddl_retrieved
+      then
+        l_object_key := p_object_lookup_tab.first;
+        while l_object_key is not null
+        loop
           if not(p_object_lookup_tab(l_object_key).ready)
           then
-            oracle_tools.schema_objects_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
-            p_object_lookup_tab(l_object_key).ready := true;
-            p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
             dbug.print
             ( dbug."info"
-            , '# objects to go: %s (after %s milliseconds for object %s)'
-            , p_nr_objects_countdown-1
-            , lpad(to_char((dbms_utility.get_time - l_start_time) * 10, 'fm9999990'), 7) -- right aligned
+            , 'No DDL for object key: %s'
             , l_object_key
             );
-            l_start_time := dbms_utility.get_time;
-$end         
-            begin
-              p_nr_objects_countdown := p_nr_objects_countdown - 1;
-            exception
-              when value_error -- tried to set it to 0 (it is positiven i.e. always > 0): we are ready
-              then
-              -- every object in p_object_lookup_tab is ready
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-                dbug.print(dbug."info", 'all schema DDL fetched');
-$end
-                exit fetch_loop;
-            end;
-          end if;
-        end if;
+$end        
 
-        oracle_tools.api_longops_pkg.longops_show(l_longops_rec, 0);
-      exception
-        when oracle_tools.pkg_ddl_error.e_object_not_found
-        then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          l_object_key := p_object_lookup_tab.first;
-          <<object_loop>>
-          while l_object_key is not null
-          loop
-            dbug.print
-            ( dbug."debug"
-            , 'Object key: %s'
-            , l_object_key
+            -- case 2
+            -- add comment otherwise the schema DDL table is empty and will this object never be displayed
+            p_object_lookup_tab(l_object_key).schema_ddl.add_ddl
+            ( p_verb => '--'
+            , p_text => '-- No DDL retrieved.'
             );
-            l_object_key := p_object_lookup_tab.next(l_object_key);
-          end loop object_loop;
-$end        
-          raise;
-      end;
-    end loop fetch_loop;
 
-    if p_add_no_ddl_retrieved
-    then
-      l_object_key := p_object_lookup_tab.first;
-      while l_object_key is not null
-      loop
-        if not(p_object_lookup_tab(l_object_key).ready)
-        then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          dbug.print
-          ( dbug."info"
-          , 'No DDL for object key: %s'
-          , l_object_key
-          );
-$end        
-
-          -- case 2
-          -- add comment otherwise the schema DDL table is empty and will this object never be displayed
-          p_object_lookup_tab(l_object_key).schema_ddl.add_ddl
-          ( p_verb => '--'
-          , p_text => '-- No DDL retrieved.'
-          );
-
-          oracle_tools.schema_objects_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
-          p_object_lookup_tab(l_object_key).ready := true;
-          p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
-        end if;          
-        l_object_key := p_object_lookup_tab.next(l_object_key);
-      end loop;
-    end if; -- if p_add_no_ddl_retrieved
-
+            oracle_tools.schema_objects_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
+            p_object_lookup_tab(l_object_key).ready := true;
+            p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
+          end if;          
+          l_object_key := p_object_lookup_tab.next(l_object_key);
+        end loop;
+      end if; -- if p_add_no_ddl_retrieved
+    end if; -- if get_schema_ddl_init()
+    
     -- overall
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
 
@@ -5477,18 +5492,12 @@ $end
     end;
 
     -- the rest including SCHEMA_EXPORT next
-    begin
-      -- try again all variants
-      oracle_tools.pkg_ddl_util.ddl_batch_process
-      ( p_session_id => l_session_id
-      , p_start_id => null
-      , p_end_id => null
-      );
-    exception
-      when no_data_found -- comes from procedure call (indirectly from get_schema_ddl_init)
-      then
-        null;
-    end;
+    -- try again all variants
+    oracle_tools.pkg_ddl_util.ddl_batch_process
+    ( p_session_id => l_session_id
+    , p_start_id => null
+    , p_end_id => null
+    );
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -5551,26 +5560,17 @@ $end
 
     for r_gdssdb in c_gdssdb
     loop
-      begin
-        get_schema_ddl
-        ( p_schema => r_gdssdb.schema
-        , p_transform_param_list => r_gdssdb.transform_param_list
-        , p_object_type => r_gdssdb.object_type
-        , p_object_schema => r_gdssdb.object_schema
-        , p_base_object_schema => r_gdssdb.base_object_schema
-        , p_object_name_tab => r_gdssdb.object_name_tab
-        , p_base_object_name_tab => r_gdssdb.base_object_name_tab
-        , p_nr_objects => r_gdssdb.nr_objects
-        , p_add_no_ddl_retrieved => (r_gdssdb.object_type = "SCHEMA_EXPORT")
-        );
-      exception
-        when no_data_found -- there may be no DDL to generate
-        then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          dbug.print(dbug."info", 'NO_DATA_FOUND error ignored because there are no more schema objects to generate DDL for');
-$end            
-          null;
-      end;
+      get_schema_ddl
+      ( p_schema => r_gdssdb.schema
+      , p_transform_param_list => r_gdssdb.transform_param_list
+      , p_object_type => r_gdssdb.object_type
+      , p_object_schema => r_gdssdb.object_schema
+      , p_base_object_schema => r_gdssdb.base_object_schema
+      , p_object_name_tab => r_gdssdb.object_name_tab
+      , p_base_object_name_tab => r_gdssdb.base_object_name_tab
+      , p_nr_objects => r_gdssdb.nr_objects
+      , p_add_no_ddl_retrieved => (r_gdssdb.object_type = "SCHEMA_EXPORT")
+      );
 
       delete
       from    oracle_tools.v_my_generate_ddl_session_schema_ddl_batches gdsb
