@@ -1,0 +1,20 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="850D52D7-DDE9-B4ED-0481-F6EF5EE09636" containerWithKeyObject="F8BF1CAA-5378-41A7-DD44-C359F4A298D6" localFKIndex="AE7C55FB-D059-568C-EF5F-D5C2C95A3D80" name="GENERATE_DDL_SESSION_SCHEMA_OBJECTS$FK$1">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATE_DDL_SESSION_SCHEMA_OBJECTS$FK$1</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>B59D981D-5587-475D-2109-D1E28581F15E</importedID>
+<referredTableLongName>ORACLE_TOOLS.SCHEMA_OBJECT_FILTER_RESULTS</referredTableLongName>
+<deleteRule>CASCADE</deleteRule>
+<referredTableID>08287852-5AC8-2148-3667-B66D1D398D0C</referredTableID>
+<keyObject>B829F6B9-B4F3-9B13-48A4-4FF7944C7D32</keyObject>
+<referredKeyID>B829F6B9-B4F3-9B13-48A4-4FF7944C7D32</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>SCHEMA_OBJECT_FILTER_ID,SCHEMA_OBJECT_ID</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>

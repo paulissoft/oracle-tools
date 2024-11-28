@@ -5,4 +5,9 @@
 <ownerDesignName>ddl</ownerDesignName>
 <capitalNames>false</capitalNames>
 <designId>A270E921-3E50-9CE5-191C-4A2B56516BB3</designId>
+<usedDesignStorageDescriptors>
+<designDescr class="oracle.dbtools.crest.model.design.Design$DesignStorageDesc" id="382C8549-54AD-E4A5-C7C3-AA5C5DDC81C9">
+<designStoragePath>/Users/gpaulissen/dev/oracle-tools/db/app/ddl/src/datamodeler</designStoragePath>
+</designDescr>
+</usedDesignStorageDescriptors>
 </OSDM_Design>

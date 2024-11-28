@@ -5,10 +5,10 @@ create table generated_ddl_statement_chunks
 , chunk# integer -- Primary key #3
   not null
   constraint generated_ddl_statement_chunks$ck$chunk# check (chunk# >= 1)
-, chunk varchar2(4000 byte) -- see t_text_tab
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   not null  
+, chunk varchar2(4000 byte) -- see t_text_tab
 , constraint generated_ddl_statement_chunks$pk
   primary key (generated_ddl_id, ddl#, chunk#)
 , constraint generated_ddl_statement_chunks$fk$1

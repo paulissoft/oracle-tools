@@ -47,21 +47,6 @@
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR');
-$end
-
-  self.ddl#$ := p_ddl#;
-  self.verb$ := p_verb;
-  set_text_tab(p_text_tab);
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.leave;
-$end
-
-  return;
-end;]]></body>
 <constructor>true</constructor>
 <number>1</number>
 <returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="T_DDL" id="19987196-AE42-AD55-5086-BA9E256B15DF">
@@ -95,11 +80,6 @@ end;]]></body>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[deterministic
-is
-begin
-  return self.ddl#$;
-end ddl#;]]></body>
 <number>2</number>
 <returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="DDL#" id="D622D372-7E1D-E9FF-B88C-28493B1E5875">
 <precision>0</precision>
@@ -112,11 +92,6 @@ end ddl#;]]></body>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[deterministic
-is
-begin
-  return self.verb$;
-end verb;]]></body>
 <number>3</number>
 <returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="VERB" id="8F629C27-DDCF-1420-6194-C47A4371B522">
 <precision>0</precision>
@@ -129,56 +104,12 @@ end verb;]]></body>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-  l_clob clob := null;
-  l_lines_tab dbms_sql.varchar2a;
-$end
-begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
-  dbug.print
-  ( dbug."info"
-  , 'ddl#: %s; verb: %s; cardinality: %s'
-  , self.ddl#()
-  , self.verb()
-  , case when self.text_tab is not null then self.text_tab.count end
-  );
---$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  if self.text_tab is not null and self.text_tab.count > 0
-  then
-    oracle_tools.pkg_str_util.text2clob
-    ( pi_text_tab => self.text_tab
-    , pio_clob => l_clob
-    , pi_append => false
-    );
-    oracle_tools.pkg_str_util.split
-    ( p_str => l_clob
-    , p_delimiter => chr(10)
-    , p_str_tab => l_lines_tab
-    );
-    for i_idx in l_lines_tab.first .. l_lines_tab.last
-    loop
-      dbug.print(dbug."info", l_lines_tab(i_idx));
-    end loop;
-    dbms_lob.freetemporary(l_clob);
-  end if;
---$end
-  dbug.leave;
-$else
-  null;
-$end
-end print;]]></body>
 <number>4</number>
 </Method>
 <Method name="MATCH" id="AFC5CA3C-AC82-2710-66C9-57D29B5547FD">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[deterministic
-is
-begin
-  return compare(p_ddl);
-end match;]]></body>
 <number>5</number>
 <returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="MATCH" id="01DECAB4-3A9E-8031-7D55-6215CDDBF66F">
 <precision>0</precision>
@@ -199,132 +130,6 @@ end match;]]></body>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[deterministic
-is
-  l_result binary_integer := 0;
-  l_idx binary_integer;
-  l_text1_tab oracle_tools.t_text_tab := null;
-  l_text2_tab oracle_tools.t_text_tab := null;
-
-  function cmp(p_val1 in varchar2, p_val2 in varchar2)
-  return binary_integer
-  is
-  begin
-    return
-      case
-        when p_val1 is null and p_val2 is null then 0
-        when p_val1 is null then -1 -- cmp(null, X) = -1
-        when p_val2 is null then +1 -- cmp(X, null) = +1
-        when p_val1 < p_val1 then -1 -- cmp(X, Y) = -1 when X < Y
-        when p_val1 > p_val1 then +1 -- cmp(X, Y) = +1 when X > Y
-        else 0
-      end;
-  end cmp;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  function pos_not_equal(p_text1 in varchar2, p_text2 in varchar2)
-  return pls_integer
-  is
-  begin
-    if p_text1 is null and p_text2 is null
-    then
-      return 0;
-    elsif p_text1 is null or p_text2 is null
-    then
-      dbug.print(dbug.warning, 'equal: "%s"; p_text1 remainder: "%s"; p_text2 remainder: "%s"', null, substr(p_text1, 1, 20), substr(p_text2, 1, 20));
-      return 1;
-    else
-      for i_idx in 1 .. greatest(length(p_text1), length(p_text2))
-      loop
-        if substr(p_text1, i_idx, 1) = substr(p_text2, i_idx, 1)
-        then
-          null;
-        else
-          dbug.print(dbug.warning, 'equal: "%s"; p_text1 remainder: "%s"; p_text2 remainder: "%s"', substr(p_text1, 1, i_idx - 1), substr(p_text1, i_idx, 20), substr(p_text2, i_idx, 20));
-          return i_idx;
-        end if;
-      end loop;
-      return 0;
-    end if;
-  end pos_not_equal;
-$end
-begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'COMPARE');
-  dbug.print(dbug."input", 'self:');
-  self.print();
-  dbug.print(dbug."input", 'p_ddl:');
-  p_ddl.print();
-$end
-
-  if p_ddl is null
-  then
-    l_result := null;
-  else
-    l_result := cmp(self.verb(), p_ddl.verb());
-
-    if l_result = 0
-    then
-      l_result := cmp(to_char(self.ddl#()), to_char(p_ddl.ddl#()));
-    end if;
-
-    if l_result = 0
-    then
-      self.text_to_compare(l_text1_tab);
-      p_ddl.text_to_compare(l_text2_tab);
-
-      l_idx := l_text1_tab.first;
-
-      loop
-        exit when l_idx is null or l_result != 0;
-
-        if l_idx <= l_text2_tab.last
-        then
-          l_result :=
-            case
-              when l_text1_tab(l_idx) is null and l_text2_tab(l_idx) is null
-              then 0
-              -- not both null
-              when l_text1_tab(l_idx) is null
-              then -1
-              when l_text2_tab(l_idx) is null
-              then +1
-              -- both not null
-              when l_text1_tab(l_idx) < l_text2_tab(l_idx)
-              then -1
-              when l_text1_tab(l_idx) > l_text2_tab(l_idx)
-              then +1
-              else 0
-            end;
-        else
-          l_result := +1;
-        end if;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-        if l_result != 0
-        then
-          dbug.print
-          ( dbug."warning"
-          , 'idx: %s; result: %s; index not equal: %s'
-          , l_idx
-          , l_result
-          , pos_not_equal(l_text1_tab(l_idx), case when l_idx <= l_text2_tab.last then l_text2_tab(l_idx) end)
-          );
-        end if;
-$end
-
-        l_idx := l_text1_tab.next(l_idx);
-      end loop;
-    end if;
-  end if;
-
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
-  dbug.print(dbug."output", 'result: %s', l_result);
-  dbug.leave;
-$end
-
-  return l_result;
-end compare;]]></body>
 <number>6</number>
 <returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="COMPARE" id="44108AF5-9D52-2AE9-4E25-7D8B892D3B7C">
 <precision>0</precision>
@@ -345,9 +150,6 @@ end compare;]]></body>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[begin
-  p_text_tab := self.text_tab;
-end text_to_compare;]]></body>
 <number>7</number>
 <parameters>
 <Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_TEXT_TAB" id="D23B405E-66F4-DEA1-99DC-2FE0E1191E1B">
@@ -362,22 +164,6 @@ end text_to_compare;]]></body>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[begin
-  case
-    when p_text_tab is null
-    then self.text_tab := null;
-    when p_text_tab.count = 0
-    then self.text_tab := oracle_tools.t_text_tab();
-    else
-      self.text_tab := oracle_tools.t_text_tab();
-      for i_idx in p_text_tab.first .. p_text_tab.last
-      loop
-        self.text_tab.extend(1);
-        self.text_tab(self.text_tab.last) := p_text_tab(i_idx);
-      end loop;
-  end case;
-  chk();
-end set_text_tab;]]></body>
 <number>8</number>
 <parameters>
 <Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_TEXT_TAB" id="473B80EE-CC17-5846-F22C-E827A559CD83">
@@ -392,28 +178,63 @@ end set_text_tab;]]></body>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[begin
-  if self is null or
-     self.text_tab is null or
-     self.text_tab.count = 0 or
-     self.verb$ not in ('CREATE', 'GRANT', 'AUDIT', 'ALTER') or
-     self.text_tab(1) like self.verb$ || ' %'
-  then
-    null; -- OK
-  else
-    oracle_tools.pkg_ddl_error.raise_error
-    ( oracle_tools.pkg_ddl_error.c_ddl_not_correct
-    , 'First line should start with AUDIT, ALTER, CREATE or GRANT.'
-    , utl_lms.format_message
-      ('verb="%s"; line[1:100]="%s"'
-      , self.verb$
-      , case when cardinality(self.text_tab) > 0 then substr(self.text_tab(1), 1, 100) end
-      )
-    );
-  end if;
-end chk;
-]]></body>
 <number>9</number>
+</Method>
+<Method name="DDL_INFO" id="21DF33DF-2BB5-808F-A178-149E15FE4327">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<generatorID>C88479C7-5755-9E6C-D9F2-C4588E3F45BF</generatorID>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>C88479C7-5755-9E6C-D9F2-C4588E3F45BF</importedID>
+<number>0</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="DDL_INFO" id="B1FF0820-AAC0-E099-5EA9-97A5366253E6">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA_OBJECT" id="EA6A4B1B-1EA6-99EE-53A9-4A36C5203EF5">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_VERB" id="58FF5C6C-A6A5-5E3B-9276-7DB8AB62B4C0">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_DDL#" id="4F7A182C-A003-4C68-ED9E-1FFD71FC2052">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT011</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="DDL_INFO" id="027D0F2F-4024-61DF-6C6F-3D3432983C7C">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<generatorID>CD941755-6472-83BD-BEC7-9833FB618E3F</generatorID>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>CD941755-6472-83BD-BEC7-9833FB618E3F</importedID>
+<number>0</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="DDL_INFO" id="C436813A-9BDE-2A61-88FF-1C82F5B2F2FF">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA_OBJECT" id="EEFD39C6-B792-05E9-5EE9-E5DF2129D105">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</typeID>
+</Parameter>
+</parameters>
 </Method>
 </methods>
 </StructuredType>

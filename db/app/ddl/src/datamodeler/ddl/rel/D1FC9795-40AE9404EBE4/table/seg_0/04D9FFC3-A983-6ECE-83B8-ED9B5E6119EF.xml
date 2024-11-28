@@ -1,0 +1,114 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="04D9FFC3-A983-6ECE-83B8-ED9B5E6119EF" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATED_DDL_STATEMENTS">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATED_DDL_STATEMENTS</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>87C42C36-D95D-26CF-B496-66EF6D13FAF7</importedID>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="GENERATED_DDL_ID" id="D0252DB8-9CC5-C8CB-0348-54F78EA7E828">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATED_DDL_STATEMENTS</sourceObjSchema>
+<sourceObjName>GENERATED_DDL_ID</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>02F3E0CD-7C43-0F76-6ED9-C1551DB80E16</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>*</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="42C7FBBA-1D29-977C-4999-3ABF9F6CB4B3" referredColumn="25FCB72A-4BDC-B95A-83F3-2C909E708C5F"/>
+</associations>
+</Column>
+<Column name="DDL#" id="6414C550-A545-803E-12AD-8174116E3EC3">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATED_DDL_STATEMENTS</sourceObjSchema>
+<sourceObjName>DDL#</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>092CEC72-16F7-43CF-6986-47E318E39BE7</importedID>
+<constraintName>GENERATED_DDL_STATEMENTS$CK$DDL#</constraintName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>*</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<checkConstraint>
+<implementationDef dbType="Generic Constraint" definition="ddl# &gt;= 1"/>
+<implementationDef dbType="Oracle Database 12cR2" definition="ddl# &gt;= 1"/>
+</checkConstraint>
+<ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="VERB" id="1709472D-2C60-E445-B809-DA73C15F4B1E">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATED_DDL_STATEMENTS</sourceObjSchema>
+<sourceObjName>VERB</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>BA2C8956-2228-A686-F2BE-8684815459DE</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>128 BYTE</dataTypeSize>
+<ownDataTypeParameters>128 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="CREATED" id="0DEEBB8C-2216-8432-D4EA-3EB15FE2B903">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATED_DDL_STATEMENTS</sourceObjSchema>
+<sourceObjName>CREATED</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>8286523E-9AB2-0711-CDE9-28D5A28FE37D</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT015</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<defaultValue>sys_extract_utc(systimestamp)</defaultValue>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="5853602B-4834-F4B2-F386-817D9CB35D75" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATED_DDL_STATEMENTS$PK">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATED_DDL_STATEMENTS$PK</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>E3EAF8C4-3615-B53D-1D32-8B0875B1BD4B</importedID>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="D0252DB8-9CC5-C8CB-0348-54F78EA7E828"/>
+<colUsage columnID="6414C550-A545-803E-12AD-8174116E3EC3"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="594B8A25-402E-F083-A0A5-9D00CA822F25" name="GENERATED_DDL_STATEMENTS$FK$1">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="D0252DB8-9CC5-C8CB-0348-54F78EA7E828"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

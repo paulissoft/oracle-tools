@@ -16,7 +16,7 @@
 <objectViews>
 <OView class="oracle.dbtools.crest.swingui.datatypes.TVStructuredType" oid="10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8" otype="StructuredType" vid="7AE4E655-049F-8FA4-585F-7F0C1240A1B0">
 <hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
-<bounds x="541" y="221" width="234" height="599"/>
+<bounds x="562" y="20" width="234" height="627"/>
 </OView>
 <OView class="oracle.dbtools.crest.swingui.datatypes.TVStructuredType" oid="2773E2C3-839D-C9CA-7C28-2ADB03D4A8A9" otype="StructuredType" vid="0405EF57-4756-58EC-2B48-90C765B679CB">
 <hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
@@ -28,15 +28,19 @@
 </OView>
 <OView class="oracle.dbtools.crest.swingui.datatypes.TVStructuredType" oid="4CDD2A0B-EB10-D22E-6836-DA5D2676D562" otype="StructuredType" vid="F541C63C-920D-A921-EC58-22CC6422F268">
 <hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
-<bounds x="269" y="221" width="222" height="263"/>
+<bounds x="20" y="20" width="222" height="291"/>
 </OView>
 <OView class="oracle.dbtools.crest.swingui.datatypes.TVStructuredType" oid="6377A402-87D9-A0E9-FBF3-B712C892890A" otype="StructuredType" vid="EB384A1B-5378-7E8A-BEF1-C0B1D843C25B">
 <hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
-<bounds x="825" y="221" width="269" height="193"/>
+<bounds x="269" y="697" width="269" height="193"/>
+</OView>
+<OView class="oracle.dbtools.crest.swingui.datatypes.TVStructuredType" oid="7621EEA4-571F-F148-CA59-07A5DA2C32B5" otype="StructuredType" vid="747E4683-061B-661E-EFCB-AE983ACB76C7">
+<hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
+<bounds x="846" y="20" width="269" height="123"/>
 </OView>
 <OView class="oracle.dbtools.crest.swingui.datatypes.TVStructuredType" oid="765908D6-F99F-87A0-41EB-BC5C9500F412" otype="StructuredType" vid="790B2CF7-13D1-3C74-FF99-28CDBF298388">
 <hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
-<bounds x="306" y="20" width="220" height="123"/>
+<bounds x="292" y="20" width="220" height="109"/>
 </OView>
 <OView class="oracle.dbtools.crest.swingui.datatypes.TVStructuredType" oid="F72C39E0-D1CA-8821-2AD7-A1E95A37D3D1" otype="StructuredType" vid="535D28DA-649E-1B26-3003-21E2D62758EA">
 <hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
@@ -44,13 +48,18 @@
 </OView>
 <OView class="oracle.dbtools.crest.swingui.datatypes.TVStructuredType" oid="FFEBD343-757E-9204-6DC4-D6C21158697E" otype="StructuredType" vid="64D43F4B-2377-8D9E-0DC8-509D9B45EEA7">
 <hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
-<bounds x="20" y="221" width="199" height="207"/>
+<bounds x="20" y="697" width="199" height="235"/>
 </OView>
 </objectViews>
 <connectors>
 <Connector class="oracle.dbtools.crest.swingui.datatypes.TVDTInheritance" oid="3212713B-1335-5237-CF3E-6A52E5A73013" otype="DTInheritance" vid_source="7AE4E655-049F-8FA4-585F-7F0C1240A1B0" vid_target="0405EF57-4756-58EC-2B48-90C765B679CB">
 <hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
 <backgroundColor>-65536</backgroundColor>
+<lineWidth>1</lineWidth>
+</Connector>
+<Connector class="oracle.dbtools.crest.swingui.datatypes.TVDTReference" oid="3758D615-CB32-0F62-F72C-48D221DEF250" otype="DTReference" vid_source="64D43F4B-2377-8D9E-0DC8-509D9B45EEA7" vid_target="F541C63C-920D-A921-EC58-22CC6422F268">
+<hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
+<backgroundColor>-16776961</backgroundColor>
 <lineWidth>1</lineWidth>
 </Connector>
 <Connector class="oracle.dbtools.crest.swingui.datatypes.TVDTReference" oid="38C8B871-6588-E2DD-3AFF-DA2A639CCFA0" otype="DTReference" vid_source="7AE4E655-049F-8FA4-585F-7F0C1240A1B0" vid_target="F541C63C-920D-A921-EC58-22CC6422F268">

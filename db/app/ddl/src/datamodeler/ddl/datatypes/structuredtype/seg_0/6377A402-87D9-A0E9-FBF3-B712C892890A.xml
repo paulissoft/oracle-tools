@@ -67,20 +67,6 @@
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:44 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[begin
-  oracle_tools.pkg_schema_object_filter.construct
-  ( p_schema => p_schema
-  , p_object_type => p_object_type
-  , p_object_names => p_object_names
-  , p_object_names_include => p_object_names_include
-  , p_grantor_is_schema => p_grantor_is_schema
-  , p_exclude_objects => p_exclude_objects
-  , p_include_objects => p_include_objects
-  , p_schema_object_filter => self
-  );
-
-  return; -- essential
-end;]]></body>
 <constructor>true</constructor>
 <number>1</number>
 <returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="T_SCHEMA_OBJECT_FILTER" id="AA54D609-8E31-3FD2-177F-77BB583C6969">
@@ -91,49 +77,42 @@ end;]]></body>
 </returnValue>
 <parameters>
 <Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA" id="4ED6BC90-1BA4-CCC7-CDBE-784B4A831CBD">
-<defaultValue>user</defaultValue>
 <precision>0</precision>
 <reference>false</reference>
 <scale>0</scale>
 <typeID>LOGDT024</typeID>
 </Parameter>
 <Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_TYPE" id="1CD1BBD3-9192-6D36-21EE-401583DE58E0">
-<defaultValue>null</defaultValue>
 <precision>0</precision>
 <reference>false</reference>
 <scale>0</scale>
 <typeID>LOGDT024</typeID>
 </Parameter>
 <Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_NAMES" id="3F689E0A-AC24-E2F0-6523-8CF6BC391D63">
-<defaultValue>null</defaultValue>
 <precision>0</precision>
 <reference>false</reference>
 <scale>0</scale>
 <typeID>LOGDT024</typeID>
 </Parameter>
 <Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_NAMES_INCLUDE" id="035FABE3-425B-8D0E-E516-8222E9683720">
-<defaultValue>null</defaultValue>
 <precision>0</precision>
 <reference>false</reference>
 <scale>0</scale>
 <typeID>LOGDT011</typeID>
 </Parameter>
 <Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_GRANTOR_IS_SCHEMA" id="9C3CB1A4-488E-695A-D8B0-46CF5049240D">
-<defaultValue>0</defaultValue>
 <precision>0</precision>
 <reference>false</reference>
 <scale>0</scale>
 <typeID>LOGDT011</typeID>
 </Parameter>
 <Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_EXCLUDE_OBJECTS" id="CCBD5C00-5B33-DAD4-F7CC-0F3590AA4727">
-<defaultValue>null</defaultValue>
 <precision>0</precision>
 <reference>false</reference>
 <scale>0</scale>
 <typeID>LOGDT028</typeID>
 </Parameter>
 <Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_INCLUDE_OBJECTS" id="8B67CE2B-2C86-D49C-804E-0E8A5581ACAB">
-<defaultValue>null</defaultValue>
 <precision>0</precision>
 <reference>false</reference>
 <scale>0</scale>
@@ -145,11 +124,6 @@ end;]]></body>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:44 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[deterministic
-is
-begin
-  return self.schema$;
-end;]]></body>
 <number>2</number>
 <returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="SCHEMA" id="BC661BF1-863A-A134-DA0E-E9E51454C646">
 <precision>0</precision>
@@ -162,11 +136,6 @@ end;]]></body>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:44 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[deterministic
-is
-begin
-  return self.grantor_is_schema$;
-end;]]></body>
 <number>3</number>
 <returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="GRANTOR_IS_SCHEMA" id="F69E8233-461A-0154-AD66-83761381623D">
 <precision>0</precision>
@@ -179,11 +148,6 @@ end;]]></body>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:44 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[deterministic
-is
-begin
-  return oracle_tools.pkg_schema_object_filter.matches_schema_object(self, p_schema_object_id);
-end matches_schema_object;]]></body>
 <number>4</number>
 <returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="MATCHES_SCHEMA_OBJECT" id="1BB551B3-6121-49C5-41AD-F1017AC59B5C">
 <precision>0</precision>
@@ -204,11 +168,6 @@ end matches_schema_object;]]></body>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:44 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[deterministic
-is
-begin
-  return oracle_tools.pkg_schema_object_filter.serialize(self).to_clob();
-end;]]></body>
 <number>5</number>
 <returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="SERIALIZE" id="18C204DC-29D3-8E55-6F7C-75306B5DFE88">
 <precision>0</precision>
@@ -221,12 +180,6 @@ end;]]></body>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-25 09:19:44 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<body><![CDATA[begin
-  oracle_tools.pkg_schema_object_filter.print
-  ( p_schema_object_filter => self
-  );
-end print;
-]]></body>
 <number>6</number>
 </Method>
 </methods>

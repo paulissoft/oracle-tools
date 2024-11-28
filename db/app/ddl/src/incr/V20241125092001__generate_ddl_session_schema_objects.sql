@@ -4,11 +4,11 @@ create table generate_ddl_session_schema_objects
   constraint generate_ddl_session_schema_objects$ck$seq check (seq >= 1) 
 , schema_object_filter_id integer not null -- derivable from session_id, however needed for generate_ddl_session_schema_objects$fk$1
 , schema_object_id varchar2(500 byte) not null
-, last_ddl_time date -- all_objects.last_ddl_time
-, generate_ddl_configuration_id integer 
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   not null  
+, last_ddl_time date -- all_objects.last_ddl_time
+, generate_ddl_configuration_id integer 
 , constraint generate_ddl_session_schema_objects$pk
   primary key (session_id, seq)
 , constraint generate_ddl_session_schema_objects$uk$1

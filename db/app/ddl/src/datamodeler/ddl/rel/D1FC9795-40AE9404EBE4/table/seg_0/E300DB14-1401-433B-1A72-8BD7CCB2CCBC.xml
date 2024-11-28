@@ -1,0 +1,163 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="E300DB14-1401-433B-1A72-8BD7CCB2CCBC" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_SESSIONS">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATE_DDL_SESSIONS</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>D1C76D32-F356-467D-30F4-BDC83259A6E1</importedID>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="SESSION_ID" id="613B2DB2-8850-A2C4-488C-9EEF937877EA">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATE_DDL_SESSIONS</sourceObjSchema>
+<sourceObjName>SESSION_ID</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>E72578EE-65A2-E9FD-80DE-DBEDC6603B21</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<defaultValue>to_number(sys_context(&apos;USERENV&apos;, &apos;SESSIONID&apos;))</defaultValue>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="SCHEMA_OBJECT_FILTER_ID" id="21DD6465-6438-0C93-B07B-E6F9BB80F55C">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATE_DDL_SESSIONS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECT_FILTER_ID</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>40CC015D-034C-BA87-93BF-974C3DD331C3</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>*</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="B8BF3A80-83A1-061B-655C-45220819FBF9" referredColumn="897C19BD-7515-AD12-9A34-320E5B62A40B"/>
+</associations>
+</Column>
+<Column name="GENERATE_DDL_CONFIGURATION_ID" id="E84E5521-3361-7DC4-87CD-DDE41CE8BDF6">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATE_DDL_SESSIONS</sourceObjSchema>
+<sourceObjName>GENERATE_DDL_CONFIGURATION_ID</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>ED3556FC-3ACA-721D-7B30-8DBD5BF0D7A4</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>*</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="ABC78FD1-15E9-EB3B-3FB8-D0618C1F478D" referredColumn="4F392E8D-3FC7-BEB7-EB63-5AE2152699F5"/>
+</associations>
+</Column>
+<Column name="CREATED" id="C9DE075A-96F7-2F46-03A2-54F4B04CA888">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATE_DDL_SESSIONS</sourceObjSchema>
+<sourceObjName>CREATED</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>6433430B-5BD7-6FA6-F3C1-4FCCF11E62CE</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT015</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<defaultValue>sys_extract_utc(systimestamp)</defaultValue>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="UPDATED" id="6EC3F328-2F0B-3F2F-8274-D184323E5157">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATE_DDL_SESSIONS</sourceObjSchema>
+<sourceObjName>UPDATED</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>9DA6698A-B458-AEF9-D379-3E05D71B777A</importedID>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT015</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="86B57766-7ADA-89EF-73B7-7D67E6D2BE1C" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_SESSIONS$PK">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATE_DDL_SESSIONS$PK</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>50D84ED5-3228-34B6-5CD9-AC4D5C8110D9</importedID>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="613B2DB2-8850-A2C4-488C-9EEF937877EA"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="4B2ADFC7-549A-DB4E-9D09-A47BAD369720" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_SESSIONS$FK$1">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATE_DDL_SESSIONS$FK$1</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>AC082EA5-1C40-2BDF-D4AC-316AAB7AE7EE</importedID>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="21DD6465-6438-0C93-B07B-E6F9BB80F55C"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="AFE9D654-6846-8BDA-D8D7-07CEBC90A6D1" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_SESSIONS$FK$2">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATE_DDL_SESSIONS$FK$2</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>85E7C4FD-D205-2C0C-6F4C-0BC0221AD624</importedID>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="E84E5521-3361-7DC4-87CD-DDE41CE8BDF6"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="3CA2E7F1-F339-323E-1AE0-8BB76AD856C5" name="GENERATE_DDL_SESSIONS$FK$1">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="21DD6465-6438-0C93-B07B-E6F9BB80F55C"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="DF0820C5-AC2F-70DD-A591-AFF8BA298D58" name="GENERATE_DDL_SESSIONS$FK$2">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="E84E5521-3361-7DC4-87CD-DDE41CE8BDF6"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>
