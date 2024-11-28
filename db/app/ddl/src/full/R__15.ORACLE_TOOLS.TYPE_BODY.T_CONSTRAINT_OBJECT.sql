@@ -237,17 +237,29 @@ is
   l_constraint_name constant all_objects.object_name%type := self.object_name();
   l_table_name constant all_objects.object_name%type := self.base_object_name();
 begin
-  select  c.last_change
-  into    l_last_ddl_time
-  from    all_constraints c /* this is where we are interested in */
-  where   l_object_type in ('TABLE', 'VIEW')
-  and     c.owner = l_object_schema
-  and     c.constraint_name = l_constraint_name
-  and     c.table_name = l_table_name;
+  begin
+    select  c.last_change
+    into    l_last_ddl_time
+    from    all_constraints c /* this is where we are interested in */
+    where   l_object_type in ('TABLE', 'VIEW')
+    and     c.owner = l_object_schema
+    and     c.constraint_name = l_constraint_name
+    and     c.table_name = l_table_name;
+  exception
+    when others
+    then
+      -- get last_ddl_time from base object
+      select  o.last_ddl_time
+      into    l_last_ddl_time
+      from    all_objects o
+      where   o.owner = l_object_schema
+      and     o.object_type = l_object_type
+      and     o.object_name = l_table_name;    
+  end;  
   
   return l_last_ddl_time;
 exception
-  when no_data_found
+  when others
   then return null;
 end;
 
