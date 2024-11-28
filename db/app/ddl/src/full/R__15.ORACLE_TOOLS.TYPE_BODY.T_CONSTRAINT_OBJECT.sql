@@ -233,18 +233,18 @@ return date
 is
   l_last_ddl_time all_objects.last_ddl_time%type;
   l_object_schema constant all_objects.owner%type := self.object_schema();
-  l_object_type constant all_objects.object_type%type := self.dict_object_type();
   l_constraint_name constant all_objects.object_name%type := self.object_name();
+  l_object_type constant all_objects.object_type%type := self.base_dict_object_type();
   l_table_name constant all_objects.object_name%type := self.base_object_name();
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'LAST_DDL_TIME');
   dbug.print
   ( dbug."input"
-  , 'l_object_schema: %s; l_object_type: %s; l_constraint_name: %s; l_table_name: %s'
+  , 'l_object_schema: %s; l_constraint_name: %s; l_object_type: %s; l_table_name: %s'
   , l_object_schema
-  , l_object_type
   , l_constraint_name
+  , l_object_type
   , l_table_name
   );
 $end
@@ -260,7 +260,7 @@ $end
   exception
     when others
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
       dbug.on_error;
 $end
       -- get last_ddl_time from base object
@@ -272,7 +272,7 @@ $end
       and     o.object_name = l_table_name;    
   end;  
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_last_ddl_time);
   dbug.leave;
 $end
@@ -281,7 +281,7 @@ $end
 exception
   when others
   then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
     dbug.print(dbug."output", 'return: %s', to_date(null));
     dbug.leave_on_error;
 $end
