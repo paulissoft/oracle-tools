@@ -1,6 +1,10 @@
 create table generate_ddl_configurations
 ( id integer generated always as identity
-, transform_param_list varchar2(4000 byte)
+, transform_param_list varchar2(4000 byte) -- dbms_metadata transform parameters
+  not null
+, db_version number -- dbms_db_version.version + dbms_db_version.release / 10, e.g. 12.2
+  not null
+, last_ddl_time_schema date -- last_ddl_time of any schema_object in this schema
   not null
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
