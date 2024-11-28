@@ -2202,7 +2202,7 @@ $end
     l_grantee varchar2(4000 char) := null;
     l_privilege varchar2(4000 char) := null;
     l_grantable varchar2(4000 char) := null;
-    l_ddl_text varchar2(32767 char) := null;
+    l_ddl_text varchar2(2000/*32767*/ char) := null;
     l_exclude_name_expr_tab oracle_tools.t_text_tab;
     l_schema_object oracle_tools.t_schema_object;
     l_my_schema_object generate_ddl_session_schema_objects%rowtype;
@@ -2323,7 +2323,7 @@ $end
               -- GJP 2021-08-27 Ignore this only when the DDL is whitespace only.
               if p_ku$_ddl.ddlText is not null
               then
-                l_ddl_text := trim(replace(replace(oracle_tools.pkg_str_util.dbms_lob_substr(p_ku$_ddl.ddlText, 32767), chr(10), ' '), chr(13), ' '));
+                l_ddl_text := trim(replace(replace(oracle_tools.pkg_str_util.dbms_lob_substr(p_ku$_ddl.ddlText, 2000/*32767*/), chr(10), ' '), chr(13), ' '));
                 if l_ddl_text is not null
                 then
                   raise_application_error
