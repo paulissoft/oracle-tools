@@ -173,7 +173,7 @@ end chk;
 overriding member function last_ddl_time
 return date
 is
-  l_last_ddl_time al_objects.last_ddl_time%type;
+  l_last_ddl_time all_objects.last_ddl_time%type;
 begin
   -- self.base_dict_object_type() is null, so check all objects matching base object schema/base object name
   select  max(o.last_ddl_time)
@@ -181,6 +181,8 @@ begin
   from    all_objects o
   where   o.owner = self.base_object_name()
   and     o.object_name = self.base_object_name();
+
+  return l_last_ddl_time;
 end last_ddl_time;
 
 end;
