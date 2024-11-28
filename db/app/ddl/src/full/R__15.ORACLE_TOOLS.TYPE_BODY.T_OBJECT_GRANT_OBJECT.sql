@@ -173,12 +173,14 @@ end chk;
 overriding member function last_ddl_time
 return date
 is
+  l_last_ddl_time al_objects.last_ddl_time%type;
 begin
-  return oracle_tools.t_schema_object.last_ddl_time
-         ( p_object_schema => self.base_object_name()
-         , p_dict_object_type => self.base_dict_object_type()
-         , p_object_name => self.base_object_name()
-         );
+  -- self.base_dict_object_type() is null, so check all objects matching base object schema/base object name
+  select  max(o.last_ddl_time)
+  into    l_last_ddl_time
+  from    all_objects o
+  where   o.owner = self.base_object_name()
+  and     o.object_name = self.base_object_name();
 end last_ddl_time;
 
 end;
