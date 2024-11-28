@@ -329,7 +329,7 @@ $end
   , schema_object_filter_id 
   , schema_object_id
   , last_ddl_time
-  , generate_ddl_parameter_id
+  , generate_ddl_configuration_id
   )
     select  p_session_id
     -- Since objects are inserted per Oracle session
@@ -339,23 +339,24 @@ $end
     ,       t.schema_object_id
             -- when DDL has been generated for this last_ddl_time, fix it
     ,       t.last_ddl_time
-    ,       t.generate_ddl_parameter_id
+    ,       t.generate_ddl_configuration_id
     from    ( select  t.id as schema_object_id
               ,       gd.last_ddl_time
-              ,       gd.generate_ddl_parameter_id
+              ,       gd.generate_ddl_configuration_id
               ,       rownum + l_last_seq as seq
-              from    table(p_schema_object_tab) t -- may contain duplicates (constraints)
+              from    oracle_tools.generate_ddl_sessions gds
+                      cross join table(p_schema_object_tab) t -- may contain duplicates (constraints)
                       inner join schema_object_filter_results sofr
                       on sofr.schema_object_filter_id = p_schema_object_filter_id and
                          sofr.schema_object_id = t.id and
-                         sofr.generate_ddl = 1 -- ignore objects that do not need to be generated
-                      inner join oracle_tools.generate_ddl_sessions gds
-                      on gds.session_id = p_session_id   
+                         sofr.generate_ddl = 1 -- ignore objects that do not need to be generated                      
                       left outer join oracle_tools.generated_ddls gd
                       on gd.schema_object_id = t.id and
                          gd.last_ddl_time = t.last_ddl_time() and
-                         gd.generate_ddl_parameter_id = gds.generate_ddl_parameter_id
-              where   ( p_session_id, t.id ) not in
+                         gd.generate_ddl_configuration_id = gds.generate_ddl_configuration_id
+              where   gds.session_id = p_session_id
+              and     gds.schema_object_filter_id = p_schema_object_filter_id
+              and     ( p_session_id, t.id ) not in
                       ( select  /* GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 */
                                 gdsso.session_id
                         ,       gdsso.schema_object_id
@@ -713,12 +714,12 @@ procedure add
 , p_include_objects in clob -- A newline separated list of objects to include (their schema object id actually).
 , p_transform_param_list in varchar2 -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
 , p_schema_object_filter out nocopy oracle_tools.t_schema_object_filter -- the schema object filter
-, p_generate_ddl_parameter_id out nocopy oracle_tools.generate_ddl_parameters.id%type
+, p_generate_ddl_configuration_id out nocopy oracle_tools.generate_ddl_configurations.id%type
 )
 is
   l_param_tab1 sys.odcivarchar2list;
   l_param_tab2 sys.odcivarchar2list;
-  l_transform_param_list oracle_tools.generate_ddl_parameters.transform_param_list%type;
+  l_transform_param_list oracle_tools.generate_ddl_configurations.transform_param_list%type;
 begin
   p_schema_object_filter :=
     oracle_tools.t_schema_object_filter
@@ -743,27 +744,27 @@ begin
   l_transform_param_list := ',' || oracle_tools.api_pkg.collection2list(p_value_tab => l_param_tab2, p_sep => ',');
 
   begin
-    select  gdp.id
-    into    p_generate_ddl_parameter_id
-    from    oracle_tools.generate_ddl_parameters gdp
-    where   gdp.transform_param_list = l_transform_param_list;
+    select  gdc.id
+    into    p_generate_ddl_configuration_id
+    from    oracle_tools.generate_ddl_configurations gdc
+    where   gdc.transform_param_list = l_transform_param_list;
   exception
     when no_data_found
     then
       insert
-      into   oracle_tools.generate_ddl_parameters
+      into   oracle_tools.generate_ddl_configurations
       ( transform_param_list
       )
       values
       ( l_transform_param_list
       )
-      returning id into p_generate_ddl_parameter_id;
+      returning id into p_generate_ddl_configuration_id;
   end;
 end add;
 
 procedure add
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_generate_ddl_parameter_id in oracle_tools.generate_ddl_parameters.id%type -- the GENERATE_DDL_PARAMETERS.ID
+, p_generate_ddl_configuration_id in oracle_tools.generate_ddl_configurations.id%type -- the GENERATE_DDL_CONFIGURATIONS.ID
 , p_add_schema_objects in boolean
 , p_session_id in t_session_id
 )
@@ -793,7 +794,7 @@ $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $if oracle_tools.schema_objects_api.c_debugging $then
   dbug.print(dbug."input", 'p_add_schema_objects: %s', p_add_schema_objects);
-  dbug.print(dbug."input", 'p_generate_ddl_parameter_id: %s', p_generate_ddl_parameter_id);  
+  dbug.print(dbug."input", 'p_generate_ddl_configuration_id: %s', p_generate_ddl_configuration_id);  
   dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
 $end
 $end
@@ -891,12 +892,12 @@ $end
     insert into generate_ddl_sessions
     ( session_id
     , schema_object_filter_id
-    , generate_ddl_parameter_id
+    , generate_ddl_configuration_id
     )
     values
     ( p_session_id
     , l_schema_object_filter_id
-    , p_generate_ddl_parameter_id
+    , p_generate_ddl_configuration_id
     );
 $if oracle_tools.schema_objects_api.c_debugging $then
     dbug.print(dbug."info", '# rows inserted into generate_ddl_sessions: %s', sql%rowcount);
@@ -913,7 +914,7 @@ $end
 
     update  generate_ddl_sessions gds
     set     gds.schema_object_filter_id = l_schema_object_filter_id
-    ,       gds.generate_ddl_parameter_id = p_generate_ddl_parameter_id
+    ,       gds.generate_ddl_configuration_id = p_generate_ddl_configuration_id
     ,       gds.updated = sys_extract_utc(systimestamp)
     where   gds.session_id = p_session_id;
     
@@ -1028,9 +1029,10 @@ $end
       , seq
       , schema_object_id
       , last_ddl_time
-      , generate_ddl_parameter_id
+      , generate_ddl_configuration_id
       )
-        select  p_session_id
+      for r in
+      ( select  p_session_id
         ,       l_schema_object_filter_id
         -- Since objects are inserted per Oracle session
         -- there is never a problem with another session inserting at the same time for the same session.
@@ -1040,13 +1042,38 @@ $end
                 )
         ,       l_schema_object_id
         ,       gd.last_ddl_time
-        ,       gd.generate_ddl_parameter_id
+        ,       gd.generate_ddl_configuration_id
         from    oracle_tools.generate_ddl_sessions gds
                 cross join oracle_tools.generated_ddls gd
         where   gds.session_id = p_session_id
         and     gd.schema_object_id = l_schema_object_id
         and     gd.last_ddl_time = p_schema_object.last_ddl_time()
-        and     gd.generate_ddl_parameter_id = gds.generate_ddl_parameter_id;
+        and     gd.generate_ddl_configuration_id = gds.generate_ddl_configuration_id
+      )
+      loop
+        begin
+          update  generate_ddl_session_schema_objects gdsso
+          set
+          where   gdsso.session_id = p_session_id
+          and     gdsso.schema_object_id = l_schema_object_id;
+          if sql%rowcount = 0
+          then
+            insert into generate_ddl_session_schema_objects
+      ( session_id
+      , schema_object_filter_id 
+      , seq
+      , schema_object_id
+      , last_ddl_time
+      , generate_ddl_configuration_id
+      )
+          insert into generate_ddl_session_schema_objects
+          ( session_id
+      , schema_object_filter_id 
+      , seq
+      , schema_object_id
+      , last_ddl_time
+      , generate_ddl_configuration_id
+      )
     exception
       when dup_val_on_index
       then
@@ -1332,7 +1359,7 @@ end find_schema_object_by_object_id;
 
 procedure get_schema_objects
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_generate_ddl_parameter_id in oracle_tools.generate_ddl_parameters.id%type -- the GENERATE_DDL_PARAMETERS.ID
+, p_generate_ddl_configuration_id in oracle_tools.generate_ddl_configurations.id%type -- the GENERATE_DDL_CONFIGURATIONS.ID
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
@@ -1347,7 +1374,7 @@ $end
 
   add
   ( p_schema_object_filter => p_schema_object_filter
-  , p_generate_ddl_parameter_id => p_generate_ddl_parameter_id
+  , p_generate_ddl_configuration_id => p_generate_ddl_configuration_id
   , p_add_schema_objects => true
   );
   select  value(t) as obj
@@ -1381,7 +1408,7 @@ is
   pragma autonomous_transaction;
   
   l_schema_object_filter oracle_tools.t_schema_object_filter := null;
-  l_generate_ddl_parameter_id oracle_tools.generate_ddl_parameters.id%type;
+  l_generate_ddl_configuration_id oracle_tools.generate_ddl_configurations.id%type;
   l_schema_object_filter_id positiven := 1;
   l_program constant t_module := 'function ' || 'GET_SCHEMA_OBJECTS'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
@@ -1414,11 +1441,11 @@ $end
   , p_include_objects => p_include_objects
   , p_transform_param_list => p_transform_param_list
   , p_schema_object_filter => l_schema_object_filter
-  , p_generate_ddl_parameter_id => l_generate_ddl_parameter_id
+  , p_generate_ddl_configuration_id => l_generate_ddl_configuration_id
   );
   add
   ( p_schema_object_filter => l_schema_object_filter
-  , p_generate_ddl_parameter_id => l_generate_ddl_parameter_id
+  , p_generate_ddl_configuration_id => l_generate_ddl_configuration_id
   , p_add_schema_objects => true
   );
 

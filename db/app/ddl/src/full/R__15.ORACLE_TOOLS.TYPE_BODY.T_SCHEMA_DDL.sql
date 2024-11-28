@@ -79,11 +79,12 @@ end create_schema_ddl;
 
 static function create_schema_ddl
 ( p_display_ddl_sql_tab in oracle_tools.t_display_ddl_sql_tab
+, p_obj in oracle_tools.t_schema_object
 )
 return oracle_tools.t_schema_ddl
 is
   l_schema_ddl oracle_tools.t_schema_ddl := null;
-  l_obj oracle_tools.t_schema_object := null;
+  l_obj oracle_tools.t_schema_object := p_obj;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_SCHEMA_DDL (3)');
@@ -92,10 +93,13 @@ $end
   if cardinality(p_display_ddl_sql_tab) > 0
   then
     -- create a schema ddl with an empty ddl table based on the first schema_object_id
-    select  so.obj
-    into    l_obj
-    from    oracle_tools.schema_objects so
-    where   so.id = p_display_ddl_sql_tab(1).schema_object_id;
+    if l_obj is null
+    then
+      select  so.obj
+      into    l_obj
+      from    oracle_tools.schema_objects so
+      where   so.id = p_display_ddl_sql_tab(1).schema_object_id;
+    end if;
 
     l_schema_ddl := 
       oracle_tools.t_schema_ddl.create_schema_ddl

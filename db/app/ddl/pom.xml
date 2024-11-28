@@ -19,7 +19,7 @@
     <db.generate.full.strip.source.schema>0</db.generate.full.strip.source.schema>
     <db.object.names.include>1</db.object.names.include>
     <db.object.names>F_GENERATE_DDL
-,GENERATE_DDL_PARAMETERS
+,GENERATE_DDL_CONFIGURATIONS
 ,GENERATE_DDL_SESSIONS
 ,GENERATE_DDL_SESSION_BATCHES
 ,GENERATE_DDL_SESSION_SCHEMA_OBJECTS

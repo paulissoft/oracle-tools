@@ -3126,15 +3126,14 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
     l_schema_object_filter oracle_tools.t_schema_object_filter;
-    l_generate_ddl_parameter_id pls_integer;
+    l_generate_ddl_configuration_id pls_integer;
     l_network_link all_db_links.db_link%type := null;
     l_cursor sys_refcursor;
 
     l_schema_object_tab oracle_tools.t_schema_object_tab;
-    l_my_schema_ddl_tmp_tab oracle_tools.t_display_ddl_sql_tab;
-    l_schema_ddl oracle_tools.t_schema_ddl := null;
-    -- l_display_ddl_sql_rec oracle_tools.t_display_ddl_sql_rec; -- for pipe row
-    l_display_ddl_sql_tab oracle_tools.t_display_ddl_sql_tab; -- for pipe row
+    l_display_ddl_sql_curr_tab oracle_tools.t_display_ddl_sql_tab;
+    l_schema_object_prev oracle_tools.t_schema_object := null;
+    l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab; -- for pipe row
 
     -- GJP 2022-12-31 Not used
     -- l_transform_param_tab t_transform_param_tab;
@@ -3150,15 +3149,19 @@ $end
       );
 
     procedure convert_and_copy
-    ( p_schema_ddl in out nocopy oracle_tools.t_schema_ddl
-    , p_display_ddl_sql_tab out nocopy oracle_tools.t_display_ddl_sql_tab 
+    ( p_schema_object in oracle_tools.t_schema_object
+    , p_display_ddl_sql_tab in out nocopy oracle_tools.t_display_ddl_sql_tab 
     )
     is
+      l_schema_ddl oracle_tools.t_schema_ddl := null;
     begin
+      l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(p_display_ddl_sql_tab, p_schema_object);
+      p_display_ddl_sql_tab := null;
+      
       -- change of schema_ddl: print it
       if p_network_link is not null
       then
-        p_schema_ddl.obj.network_link(p_network_link);
+        l_schema_ddl.obj.network_link(p_network_link);
       end if;
 
       if p_schema != p_new_schema
@@ -3166,11 +3169,11 @@ $end
         remap_schema
         ( p_schema => p_schema
         , p_new_schema => p_new_schema
-        , p_schema_ddl => p_schema_ddl
+        , p_schema_ddl => l_schema_ddl
         );
       end if;
 
-      p_schema_ddl.copy(p_display_ddl_sql_tab);
+      l_schema_ddl.copy(p_display_ddl_sql_tab);
     end convert_and_copy;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -3242,11 +3245,11 @@ $end
       , p_include_objects => p_include_objects
       , p_transform_param_list => p_transform_param_list
       , p_schema_object_filter => l_schema_object_filter
-      , p_generate_ddl_parameter_id => l_generate_ddl_parameter_id
+      , p_generate_ddl_configuration_id => l_generate_ddl_configuration_id
       );
       oracle_tools.schema_objects_api.add
       ( p_schema_object_filter => l_schema_object_filter
-      , p_generate_ddl_parameter_id => l_generate_ddl_parameter_id
+      , p_generate_ddl_configuration_id => l_generate_ddl_configuration_id
       , p_add_schema_objects => true
       );
       
@@ -3326,90 +3329,60 @@ $end
 
     <<fetch_loop>>
     loop
-      fetch l_cursor bulk collect into l_schema_object_tab, l_my_schema_ddl_tmp_tab limit c_fetch_limit;    
+      fetch l_cursor bulk collect into l_schema_object_tab, l_display_ddl_sql_curr_tab limit c_fetch_limit;    
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."info", 'l_my_schema_ddl_tmp_tab.count: %s', l_my_schema_ddl_tmp_tab.count);
+      dbug.print(dbug."info", 'l_display_ddl_sql_curr_tab.count: %s', l_display_ddl_sql_curr_tab.count);
 $end
 
-      if l_my_schema_ddl_tmp_tab.count > 0
+      if l_display_ddl_sql_curr_tab.count > 0
       then
-        for i_idx in l_my_schema_ddl_tmp_tab.first .. l_my_schema_ddl_tmp_tab.last
+        for i_idx in l_display_ddl_sql_curr_tab.first .. l_display_ddl_sql_curr_tab.last
         loop
-          if l_my_schema_ddl_tmp_tab(i_idx).ddl# = 1 and
-             l_my_schema_ddl_tmp_tab(i_idx).chunk# = 1
+          if l_schema_object_prev = l_schema_object_tab(i_idx)
           then
-            if l_schema_ddl is not null
+            null; -- still equal
+          elsif l_schema_object_prev is not null
+          then
+            -- output last
+            convert_and_copy
+            ( l_schema_object_prev
+            , l_display_ddl_sql_prev_tab
+            );
+            if cardinality(l_display_ddl_sql_prev_tab) > 0
             then
-              -- output last
-              convert_and_copy
-              ( l_schema_ddl
-              , l_display_ddl_sql_tab
-              );
-              if cardinality(l_display_ddl_sql_tab) > 0
-              then
-                for i_row_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
-                loop
-                  pipe row (l_display_ddl_sql_tab(i_row_idx));
-                  oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
-                end loop;
-              end if;
-              l_schema_ddl := null;
+              for i_row_idx in l_display_ddl_sql_prev_tab.first .. l_display_ddl_sql_prev_tab.last
+              loop
+                pipe row (l_display_ddl_sql_prev_tab(i_row_idx));
+                oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
+              end loop;
             end if;
-
-            -- new l_schema_ddl
-            l_schema_ddl := oracle_tools.t_schema_ddl(l_schema_object_tab(i_idx), oracle_tools.t_ddl_tab());
+            l_display_ddl_sql_prev_tab.delete;
           end if;
 
-          -- append to l_schema_ddl.ddl_tab (ddl# is number of items in ddl_tab)
-          if l_my_schema_ddl_tmp_tab(i_idx).ddl# > cardinality(l_schema_ddl.ddl_tab)
-          then
-            l_schema_ddl.ddl_tab.extend(1);
-            l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last) :=
-              oracle_tools.t_ddl
-              ( p_ddl# => l_my_schema_ddl_tmp_tab(i_idx).ddl#
-              , p_verb => l_my_schema_ddl_tmp_tab(i_idx).verb
-              , p_text_tab => oracle_tools.t_text_tab()
-              );
-          end if;
-
-          if l_my_schema_ddl_tmp_tab(i_idx).ddl# = l_schema_ddl.ddl_tab.last
-          then
-            null; -- OK
-          else
-            raise program_error;
-          end if;
-
-          -- always append to l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab
-          l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.extend(1);
-          l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab(l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.last) :=
-            l_my_schema_ddl_tmp_tab(i_idx).chunk;
-            
-          if l_my_schema_ddl_tmp_tab(i_idx).chunk# = l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.last
-          then
-            null; -- OK
-          else
-            raise program_error;
-          end if;
+          -- save current values 
+          l_display_ddl_sql_prev_tab.extend(1);
+          l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) := l_display_ddl_sql_curr_tab(i_idx);
+          l_schema_object_prev := l_schema_object_tab(i_idx);
         end loop;
       end if;
-      exit fetch_loop when l_my_schema_ddl_tmp_tab.count < c_fetch_limit;
+      exit fetch_loop when l_display_ddl_sql_curr_tab.count < c_fetch_limit;
     end loop fetch_loop;
     close l_cursor;
 
     -- output last
-    if l_schema_ddl is not null
+    if l_schema_object_prev is not null
     then
       -- output last
       convert_and_copy
-      ( l_schema_ddl
-      , l_display_ddl_sql_tab
+      ( l_schema_object_prev
+      , l_display_ddl_sql_prev_tab
       );
-      if cardinality(l_display_ddl_sql_tab) > 0
+      if cardinality(l_display_ddl_sql_prev_tab) > 0
       then
-        for i_row_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
+        for i_row_idx in l_display_ddl_sql_prev_tab.first .. l_display_ddl_sql_prev_tab.last
         loop
-          pipe row (l_display_ddl_sql_tab(i_row_idx));
+          pipe row (l_display_ddl_sql_prev_tab(i_row_idx));
           oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
         end loop;
       end if;

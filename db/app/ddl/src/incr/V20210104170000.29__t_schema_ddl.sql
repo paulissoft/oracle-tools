@@ -15,6 +15,7 @@ create type oracle_tools.t_schema_ddl authid current_user as object
   return oracle_tools.t_schema_ddl
 , static function create_schema_ddl
   ( p_display_ddl_sql_tab in oracle_tools.t_display_ddl_sql_tab
+  , p_obj in oracle_tools.t_schema_object default null
   )
   return oracle_tools.t_schema_ddl
 , member procedure print

@@ -3,7 +3,7 @@ create table generate_ddl_sessions
   default to_number(sys_context('USERENV', 'SESSIONID'))
   not null
 , schema_object_filter_id integer not null
-, generate_ddl_parameter_id integer not null
+, generate_ddl_configuration_id integer not null
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   not null
@@ -16,8 +16,8 @@ create table generate_ddl_sessions
   foreign key (schema_object_filter_id)
   references oracle_tools.schema_object_filters(id) on delete cascade
 , constraint generate_ddl_sessions$fk$2
-  foreign key (generate_ddl_parameter_id)
-  references oracle_tools.generate_ddl_parameters(id) on delete cascade
+  foreign key (generate_ddl_configuration_id)
+  references oracle_tools.generate_ddl_configurations(id) on delete cascade
 )
 organization index
 tablespace users
@@ -31,4 +31,4 @@ on generate_ddl_sessions(schema_object_filter_id);
 
 -- foreign key index generate_ddl_sessions$fk$2
 create index generate_ddl_sessions$fk$2
-on generate_ddl_sessions(generate_ddl_parameter_id);
+on generate_ddl_sessions(generate_ddl_configuration_id);

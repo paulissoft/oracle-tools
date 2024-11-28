@@ -11,7 +11,7 @@ CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDLS" ("SESSION_ID", "S
 ,       gdsc.chunk
 from    oracle_tools.v_all_schema_objects aso
         inner join oracle_tools.generated_ddls gd
-        on gd.schema_object_id = aso.schema_object_id and gd.last_ddl_time = aso.last_ddl_time and gd.generate_ddl_parameter_id = aso.generate_ddl_parameter_id
+        on gd.schema_object_id = aso.schema_object_id and gd.last_ddl_time = aso.last_ddl_time and gd.generate_ddl_configuration_id = aso.generate_ddl_configuration_id
         inner join oracle_tools.generated_ddl_statements gds
         on gds.generated_ddl_id = gd.id
         inner join oracle_tools.generated_ddl_statement_chunks gdsc
