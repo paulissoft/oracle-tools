@@ -37,7 +37,6 @@ CREATE TYPE "ORACLE_TOOLS"."T_INDEX_OBJECT" authid current_user under oracle_too
   ( self in oracle_tools.t_index_object
   , p_schema in varchar2
   )
-, overriding member function dict_object_exists return integer -- 0/1
 )
 final;
 /

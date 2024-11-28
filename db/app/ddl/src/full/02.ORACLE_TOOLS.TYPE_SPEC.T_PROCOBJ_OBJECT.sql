@@ -14,7 +14,6 @@ CREATE TYPE "ORACLE_TOOLS"."T_PROCOBJ_OBJECT" authid current_user under oracle_t
   ( self in oracle_tools.t_procobj_object
   , p_schema in varchar2
   )
-, overriding member function dict_object_exists return integer -- 0/1
 )
 final;
 /

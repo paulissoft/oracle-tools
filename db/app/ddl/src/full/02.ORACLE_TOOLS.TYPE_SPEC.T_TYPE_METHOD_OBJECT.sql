@@ -50,7 +50,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_TYPE_METHOD_OBJECT" authid current_user under orac
 , member function static_or_member return varchar2 deterministic
 , overriding final map member function signature return varchar2 deterministic
 , overriding member procedure chk( self in oracle_tools.t_type_method_object, p_schema in varchar2 )
-, overriding member function dict_object_exists return integer -- 0/1
+, overriding member function last_ddl_time return date
 )
 not final;
 /

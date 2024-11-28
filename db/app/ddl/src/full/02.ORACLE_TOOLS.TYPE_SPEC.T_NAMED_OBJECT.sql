@@ -18,7 +18,6 @@ CREATE TYPE "ORACLE_TOOLS"."T_NAMED_OBJECT" authid current_user under oracle_too
   ( self in oracle_tools.t_named_object
   , p_schema in varchar2
   )
-, overriding member function dict_object_exists return integer -- 0/1
 )
 not instantiable
 not final;

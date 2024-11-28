@@ -21,7 +21,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_OBJECT_GRANT_OBJECT" authid current_user under ora
   ( self in oracle_tools.t_object_grant_object
   , p_schema in varchar2
   )
-, overriding member function dict_object_exists return integer -- 0/1
+, overriding member function last_ddl_time return date
 )
 final;
 /

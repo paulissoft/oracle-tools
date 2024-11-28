@@ -111,7 +111,14 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
   ( p_id_parts in oracle_tools.t_text_tab
   )
   return varchar2 deterministic
-, not instantiable member function dict_object_exists return integer -- 0/1
+, final static function last_ddl_time
+  ( p_object_schema in varchar2
+  , p_dict_object_type in varchar2
+  , p_object_name in varchar2
+  )
+  return date
+, member function last_ddl_time return date -- e.g. all_objects.last_ddl_time
+, final member function dict_object_exists return integer -- 0/1 (is last_ddl_time not null)
 , static function ddl_batch_order
   ( p_object_schema in varchar2
   , p_object_type in varchar2

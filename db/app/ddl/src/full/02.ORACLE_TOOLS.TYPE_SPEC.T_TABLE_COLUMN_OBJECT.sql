@@ -55,7 +55,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_TABLE_COLUMN_OBJECT" authid current_user under ora
 , overriding member function char_length return number deterministic
 , overriding member function char_used return varchar2 deterministic
 -- end of getter(s)/setter(s)
-, overriding member function dict_object_exists return integer -- 0/1
+, overriding member function last_ddl_time return date
 )
 final;
 /
