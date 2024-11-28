@@ -10,6 +10,10 @@ subtype t_module is varchar2(100);
 subtype t_numeric_boolean is oracle_tools.pkg_ddl_util.t_numeric_boolean;
 subtype t_schema_nn is oracle_tools.pkg_ddl_util.t_schema_nn;
 
+-- ORA-01400: cannot insert NULL into ("ORACLE_TOOLS"."GENERATED_DDLS"."LAST_DDL_TIME")
+e_can_not_insert_null exception;
+pragma exception_init(e_can_not_insert_null, -1400);
+
 -- steps in get_schema_objects
 "named objects" constant varchar2(30 char) := 'base objects';
 "object grants" constant varchar2(30 char) := 'object grants';
@@ -757,7 +761,7 @@ begin
     from    oracle_tools.generate_ddl_configurations gdc
     where   gdc.transform_param_list = l_transform_param_list
     and     gdc.db_version = l_db_version
-    and     gds.last_ddl_time_schema = l_last_ddl_time_schema;
+    and     gdc.last_ddl_time_schema = l_last_ddl_time_schema;
   exception
     when no_data_found
     then
@@ -1042,7 +1046,7 @@ $end
     for r in
     ( select  /* key */
               gds.session_id
-      ,       gds.schema_object_id
+      ,       gd.schema_object_id
               /* data */
       ,       gd.last_ddl_time
       ,       gd.generate_ddl_configuration_id
@@ -1172,17 +1176,26 @@ $end
     exception
       when no_data_found
       then
-        insert into oracle_tools.generated_ddls
-        ( schema_object_id
-        , last_ddl_time
-        , generate_ddl_configuration_id
-        )
-        values
-        ( p_schema_ddl.obj.id
-        , p_schema_ddl.obj.last_ddl_time
-        , l_generate_ddl_configuration_id
-        )
-        returning id into l_generated_ddl_id;
+        begin
+          insert into oracle_tools.generated_ddls
+          ( schema_object_id
+          , last_ddl_time
+          , generate_ddl_configuration_id
+          )
+          values
+          ( p_schema_ddl.obj.id
+          , p_schema_ddl.obj.last_ddl_time
+          , l_generate_ddl_configuration_id
+          )
+          returning id into l_generated_ddl_id;
+        exception
+          when e_can_not_insert_null
+          then raise_application_error
+               ( pkg_ddl_error.c_object_not_correct
+               , 'No LAST_DDL_TIME for schema object id ' || p_schema_ddl.obj.id
+               , true
+               );
+        end;
     end;
       
     for i_ddl_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
