@@ -3130,10 +3130,9 @@ $end
     l_network_link all_db_links.db_link%type := null;
     l_cursor sys_refcursor;
 
-    l_schema_object_tab oracle_tools.t_schema_object_tab;
     l_display_ddl_sql_curr_tab oracle_tools.t_display_ddl_sql_tab;
-    l_schema_object_prev oracle_tools.t_schema_object := null;
-    l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab; -- for pipe row
+    l_schema_object_id_prev t_object := null;
+    l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
 
     -- GJP 2022-12-31 Not used
     -- l_transform_param_tab t_transform_param_tab;
@@ -3149,13 +3148,12 @@ $end
       );
 
     procedure convert_and_copy
-    ( p_schema_object in oracle_tools.t_schema_object
-    , p_display_ddl_sql_tab in out nocopy oracle_tools.t_display_ddl_sql_tab 
+    ( p_display_ddl_sql_tab in out nocopy oracle_tools.t_display_ddl_sql_tab 
     )
     is
       l_schema_ddl oracle_tools.t_schema_ddl := null;
     begin
-      l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(p_display_ddl_sql_tab, p_schema_object);
+      l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(p_display_ddl_sql_tab, null);
       p_display_ddl_sql_tab := null;
       
       -- change of schema_ddl: print it
@@ -3233,7 +3231,16 @@ $end
       , p_include_objects => p_include_objects
       );
 
-      open l_cursor for 'select t.* from oracle_tools.v_display_ddl_sql@' || l_network_link || ' t';
+      open l_cursor for '
+select  oracle_tools.t_display_ddl_sql_rec
+        ( t.schema_object_id
+        , t.ddl#
+        , t.verb
+        , t.ddl_info
+        , t.chunk#
+        , t.chunk
+        )
+from    oracle_tools.v_display_ddl_sql@' || l_network_link || ' t';
     else -- local
       oracle_tools.schema_objects_api.add
       ( p_schema => p_schema
@@ -3284,13 +3291,14 @@ $end
       if nvl(p_sort_objects_by_deps, 0) != 0
       then
         open l_cursor for
-          select  s.obj
-          ,       s.obj.id as schema_object_id
-          ,       s.ddl#
-          ,       s.verb
-          ,       s.ddl_info
-          ,       s.chunk#
-          ,       s.chunk
+          select  oracle_tools.t_display_ddl_sql_rec
+                  ( s.obj.id
+                  , s.ddl#
+                  , s.verb
+                  , s.ddl_info
+                  , s.chunk#
+                  , s.chunk
+                  )
           from    oracle_tools.v_my_schema_ddls s
                   -- GPA 27-10-2016 We should not forget objects so use left outer join
                   inner join
@@ -3311,13 +3319,14 @@ $end
       else
         -- normal stuff: no network link, no dependency sorting
         open l_cursor for
-          select  s.obj
-          ,       s.obj.id as schema_object_id
-          ,       s.ddl#
-          ,       s.verb
-          ,       s.ddl_info
-          ,       s.chunk#
-          ,       s.chunk
+          select  oracle_tools.t_display_ddl_sql_rec
+                  ( s.obj.id
+                  , s.ddl#
+                  , s.verb
+                  , s.ddl_info
+                  , s.chunk#
+                  , s.chunk
+                  )
           from    oracle_tools.v_my_schema_ddls s
           order by
                   s.obj.id
@@ -3329,7 +3338,7 @@ $end
 
     <<fetch_loop>>
     loop
-      fetch l_cursor bulk collect into l_schema_object_tab, l_display_ddl_sql_curr_tab limit c_fetch_limit;    
+      fetch l_cursor bulk collect into l_display_ddl_sql_curr_tab limit c_fetch_limit;    
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print(dbug."info", 'l_display_ddl_sql_curr_tab.count: %s', l_display_ddl_sql_curr_tab.count);
@@ -3339,15 +3348,11 @@ $end
       then
         for i_idx in l_display_ddl_sql_curr_tab.first .. l_display_ddl_sql_curr_tab.last
         loop
-          if l_schema_object_prev = l_schema_object_tab(i_idx)
+          if l_schema_object_id_prev != l_display_ddl_sql_curr_tab(i_idx).schema_object_id
           then
-            null; -- still equal
-          elsif l_schema_object_prev is not null
-          then
-            -- output last
+            -- both schema object id's not null and not equal: output prev
             convert_and_copy
-            ( l_schema_object_prev
-            , l_display_ddl_sql_prev_tab
+            ( l_display_ddl_sql_prev_tab
             );
             if cardinality(l_display_ddl_sql_prev_tab) > 0
             then
@@ -3363,7 +3368,7 @@ $end
           -- save current values 
           l_display_ddl_sql_prev_tab.extend(1);
           l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) := l_display_ddl_sql_curr_tab(i_idx);
-          l_schema_object_prev := l_schema_object_tab(i_idx);
+          l_schema_object_id_prev := l_display_ddl_sql_curr_tab(i_idx).schema_object_id;
         end loop;
       end if;
       exit fetch_loop when l_display_ddl_sql_curr_tab.count < c_fetch_limit;
@@ -3371,12 +3376,11 @@ $end
     close l_cursor;
 
     -- output last
-    if l_schema_object_prev is not null
+    if l_schema_object_id_prev is not null
     then
       -- output last
       convert_and_copy
-      ( l_schema_object_prev
-      , l_display_ddl_sql_prev_tab
+      ( l_display_ddl_sql_prev_tab
       );
       if cardinality(l_display_ddl_sql_prev_tab) > 0
       then
