@@ -268,7 +268,7 @@ $end
 
   g_ddl_tab sys.ku$_ddls; -- should be package global for better performance
 
-  g_parallel_level natural := 2; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
+  g_parallel_level natural := null; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
 
   /* PRIVATE ROUTINES */
 

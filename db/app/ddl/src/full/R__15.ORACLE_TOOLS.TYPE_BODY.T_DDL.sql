@@ -258,13 +258,13 @@ begin
      self.text_tab is null or
      self.text_tab.count = 0 or
      ( self.verb$ is null and self.text_tab(1) like 'BEGIN%' ) or -- PROCOBJ
-     ( self.verb$ in ('ALTER', 'AUDIT', 'CREATE', 'GRANT', '--') and self.text_tab(1) like self.verb$ || ' %' )
+     ( self.verb$ in ('ALTER', 'AUDIT', 'COMMENT', 'CREATE', 'GRANT', '--') and self.text_tab(1) like self.verb$ || ' %' )
   then
     null; -- OK
   else
     oracle_tools.pkg_ddl_error.raise_error
     ( oracle_tools.pkg_ddl_error.c_ddl_not_correct
-    , 'First line should start with ALTER, AUDIT, CREATE, GRANT or --.'
+    , 'First line should start with ALTER, AUDIT, COMMENT, CREATE, GRANT or --.'
     , utl_lms.format_message
       ('verb="%s"; line[1:100]="%s"'
       , self.verb$

@@ -1074,12 +1074,46 @@ begin
       when 'SCHEMA_EXPORT'
       then '1'
       else
+        -- must stay 1 digit number
         to_char
         ( 2 +
           case p_object_type
-            when 'TYPE_SPEC'
-            then 1 -- together with TYPE_BODY
-            else oracle_tools.t_schema_object.is_a_repeatable(p_object_type)
+            -- table related, more or less
+            when 'SEQUENCE'              then  0 --  1
+            when 'CLUSTER'               then  0 --  3
+            when 'AQ_QUEUE_TABLE'        then  0 --  4
+            when 'AQ_QUEUE'              then  0 --  5
+            -- table related
+            when 'TABLE'                 then  1 --  6
+            when 'MATERIALIZED_VIEW'     then  1 -- 12
+            when 'MATERIALIZED_VIEW_LOG' then  1 -- 13
+            when 'INDEX'                 then  1 -- 16
+            when 'CONSTRAINT'            then  1 -- 19
+            when 'REF_CONSTRAINT'        then  1 -- 20
+            when 'COMMENT'               then  1 -- 22
+            -- stored procedure            
+            when 'TYPE_SPEC'             then  2 --  2
+            when 'FUNCTION'              then  2 --  8
+            when 'PACKAGE_SPEC'          then  2 --  9
+            when 'VIEW'                  then  2 -- 10
+            when 'PROCEDURE'             then  2 -- 11
+            when 'TRIGGER'               then  2 -- 17
+            when 'PACKAGE_BODY'          then  2 -- 14
+            when 'TYPE_BODY'             then  2 -- 15
+            -- dependent
+            when 'OBJECT_GRANT'          then  3 -- 18
+            when 'SYNONYM'               then  3 -- 21            
+            -- rest
+            when 'DB_LINK'               then  4 --  7
+            when 'DIMENSION'             then  4 -- 23
+            when 'INDEXTYPE'             then  4 -- 24
+            when 'JAVA_SOURCE'           then  4 -- 25
+            when 'LIBRARY'               then  4 -- 26
+            when 'OPERATOR'              then  4 -- 27
+            when 'REFRESH_GROUP'         then  4 -- 28
+            when 'XMLSCHEMA'             then  4 -- 29
+            when 'PROCOBJ'               then  4 -- 30
+            else 4
           end
         ) || '|' ||
         rpad(p_object_type, 30) || '|' || rpad(p_object_schema, 128) || '|' || p_base_object_schema
