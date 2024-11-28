@@ -518,7 +518,6 @@ final member procedure copy
 , p_display_ddl_sql_tab out nocopy oracle_tools.t_display_ddl_sql_tab 
 )
 is
-  l_display_ddl_sql_rec oracle_tools.t_display_ddl_sql_rec; -- for pipe row
 begin
   p_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab();
 
@@ -532,14 +531,16 @@ begin
                           ..
                           self.ddl_tab(i_ddl_idx).text_tab.last
         loop
-          l_display_ddl_sql_rec.schema_object_id := self.obj.id;
-          l_display_ddl_sql_rec.ddl# := self.ddl_tab(i_ddl_idx).ddl#;
-          l_display_ddl_sql_rec.verb := self.ddl_tab(i_ddl_idx).verb;
-          l_display_ddl_sql_rec.ddl_info := self.ddl_tab(i_ddl_idx).ddl_info(self.obj);
-          l_display_ddl_sql_rec.chunk# := i_text_idx;
-          l_display_ddl_sql_rec.chunk := self.ddl_tab(i_ddl_idx).text_tab(i_text_idx);
           p_display_ddl_sql_tab.extend(1);
-          p_display_ddl_sql_tab(p_display_ddl_sql_tab.last) := l_display_ddl_sql_rec;
+          p_display_ddl_sql_tab(p_display_ddl_sql_tab.last) :=
+            oracle_tools.t_display_ddl_sql_rec
+            ( self.obj.id
+            , self.ddl_tab(i_ddl_idx).ddl#
+            , self.ddl_tab(i_ddl_idx).verb
+            , self.ddl_tab(i_ddl_idx).ddl_info(self.obj)
+            , i_text_idx
+            , self.ddl_tab(i_ddl_idx).text_tab(i_text_idx)
+            );
         end loop;
       end if;                
     end loop;
