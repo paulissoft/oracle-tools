@@ -1,7 +1,7 @@
 <?xml version = '1.0' encoding = 'UTF-8'?>
-<TableProxyOraclev12c class="oracle.dbtools.crest.model.design.storage.oracle.v12c.TableProxyOraclev12c" name="GENERATED_DDLS" directorySegmentName="seg_0" id="913B7F83-227F-E187-E0DF-B88A99F3EDE5">
+<TableProxyOraclev20c class="oracle.dbtools.crest.model.design.storage.oracle.v20c.TableProxyOraclev20c" name="GENERATED_DDLS" directorySegmentName="seg_0" id="913B7F83-227F-E187-E0DF-B88A99F3EDE5">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-11-29 09:22:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <schemaObject>86E07972-0E39-656A-F568-00AE638CFEA4</schemaObject>
 <logging>YES</logging>
@@ -12,41 +12,41 @@
 <columnProxies itemClass="oracle.dbtools.crest.model.design.storage.oracle.v12c.ColumnProxyOraclev12c">
 <ColumnProxy name="ID" id="25FCB72A-4BDC-B95A-83F3-2C909E708C5F">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-11-29 09:22:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
 <ColumnProxy name="GENERATE_DDL_CONFIGURATION_ID" id="8EF0A29E-6139-D3EF-834A-FE57BFC90397">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-11-29 09:22:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
 <ColumnProxy name="LAST_DDL_TIME" id="A6FA1104-AC8B-1C89-F7B7-083A95D29A66">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-11-29 09:22:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
 <ColumnProxy name="CREATED" id="A98E89E5-EB12-2438-D155-640E59C0A734">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-11-29 09:22:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 </ColumnProxy>
 <ColumnProxy name="SCHEMA_OBJECT_ID" id="AD410528-CDAA-D79B-975E-E48495FCF411">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-11-29 09:22:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
 </columnProxies>
 <indexProxies>
 <IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="GENERATED_DDLS$FK$2" id="1AFA0B70-A4AA-0AB5-E3A4-023DCF0526DC">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-11-29 09:22:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <schemaObject>86E07972-0E39-656A-F568-00AE638CFEA4</schemaObject>
 </IndexProxy>
 <IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="GENERATED_DDLS$UK$1" id="50250A90-B2C1-BEDC-C1F8-A202CF59BC5D">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-11-29 09:22:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <schemaObject>86E07972-0E39-656A-F568-00AE638CFEA4</schemaObject>
 </IndexProxy>
@@ -54,19 +54,19 @@
 <foreignKeys>
 <ForeignKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.FKProxyOraclev10g" name="GENERATED_DDLS$FK$1" id="54F78397-31D7-8C2D-D3DE-BF0B35B0CB00">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-11-29 09:22:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ForeignKey>
 <ForeignKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.FKProxyOraclev10g" name="GENERATE_DDLS$FK$2" id="97D2FC95-4BEE-6554-9510-099C36024E19">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-11-29 09:22:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ForeignKey>
 </foreignKeys>
 <primaryKeys>
 <PrimaryKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.PKProxyOraclev10g" name="GENERATED_DDLS$PK" id="445128CA-5EA6-F426-89C1-08E9276500C8">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-11-29 09:22:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <schemaObject>86E07972-0E39-656A-F568-00AE638CFEA4</schemaObject>
 <indexSort>SORTED</indexSort>
@@ -75,9 +75,9 @@
 <uniqueKeys>
 <UniqueKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.UniqueOraclev10g" name="GENERATED_DDLS$UK$1" id="2BEA6072-6E31-61AB-E27E-788239DA09E3">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-11-29 09:22:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <indexSort>SORTED</indexSort>
 </UniqueKey>
 </uniqueKeys>
-</TableProxyOraclev12c>
+</TableProxyOraclev20c>
