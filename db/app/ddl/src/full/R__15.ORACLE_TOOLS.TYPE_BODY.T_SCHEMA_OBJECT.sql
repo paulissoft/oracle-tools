@@ -1077,29 +1077,30 @@ begin
         -- must stay 1 digit number
         to_char
         ( 2 +
+          -- TABLE must start early: so let the ddl_batch_order return the minimum here for TABLE (2)
           case p_object_type
-            -- table related                     -- result of object_type_order()
-            when 'SEQUENCE'              then  0 --  1
-            when 'CLUSTER'               then  0 --  3
-            when 'INDEX'                 then  0 -- 16
-            when 'CONSTRAINT'            then  0 -- 19
-            when 'REF_CONSTRAINT'        then  0 -- 20
-            -- table related
-            when 'TABLE'                 then  1 --  6
-            when 'COMMENT'               then  1 -- 22
-            when 'AQ_QUEUE_TABLE'        then  1 --  4
-            when 'AQ_QUEUE'              then  1 --  5
-            when 'MATERIALIZED_VIEW'     then  1 -- 12
-            when 'MATERIALIZED_VIEW_LOG' then  1 -- 13
+            -- table related (part 1)            -- result of object_type_order()
+            when 'AQ_QUEUE_TABLE'        then  0 --  4
+            when 'AQ_QUEUE'              then  0 --  5
+            when 'TABLE'                 then  0 --  6
+            when 'MATERIALIZED_VIEW'     then  0 -- 12
+            when 'MATERIALIZED_VIEW_LOG' then  0 -- 13
+            when 'COMMENT'               then  0 -- 22
+            -- table related (part 1)            
+            when 'SEQUENCE'              then  1 --  1
+            when 'CLUSTER'               then  1 --  3
+            when 'INDEX'                 then  1 -- 16
+            when 'CONSTRAINT'            then  1 -- 19
+            when 'REF_CONSTRAINT'        then  1 -- 20
             -- stored procedure            
             when 'TYPE_SPEC'             then  2 --  2
             when 'FUNCTION'              then  2 --  8
             when 'PACKAGE_SPEC'          then  2 --  9
             when 'VIEW'                  then  2 -- 10
             when 'PROCEDURE'             then  2 -- 11
-            when 'TRIGGER'               then  2 -- 17
             when 'PACKAGE_BODY'          then  2 -- 14
             when 'TYPE_BODY'             then  2 -- 15
+            when 'TRIGGER'               then  2 -- 17            
             -- dependent
             when 'OBJECT_GRANT'          then  3 -- 18
             when 'SYNONYM'               then  3 -- 21            
