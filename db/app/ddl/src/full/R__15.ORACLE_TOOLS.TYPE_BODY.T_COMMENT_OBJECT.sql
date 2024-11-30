@@ -27,10 +27,12 @@ $end
     self.base_object_id$ := p_base_object.id;
   end if;
   self.network_link$ := null;
-  self.object_schema$ := p_object_schema;
+  self.object_schema$ := null; -- p_object_schema;
   self.column_name$ := p_column_name;
 
   oracle_tools.t_schema_object.set_id(self);
+
+  self.chk(p_object_schema); -- TO DO: make it more generic
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;

@@ -314,15 +314,50 @@ $end
         
       when "comments"
       then
+        with v_my_comments_dict as
+        ( select  c.base_object_schema
+          ,       c.base_object_type
+          ,       c.base_object_name
+          ,       c.column_name
+          from    ( -- table/view comments
+                    select  t.owner             as base_object_schema
+                    ,       t.table_type        as base_object_type
+                    ,       t.table_name        as base_object_name
+                    ,       null                as column_name
+                    from    all_tab_comments t
+                    where   t.table_type in ('TABLE', 'VIEW')
+                    and     t.comments is not null
+                    union all
+                    -- materialized view comments
+                    select  m.owner             
+                    ,       'MATERIALIZED_VIEW'
+                    ,       m.mview_name        
+                    ,       null                
+                    from    all_mview_comments m
+                    where   m.comments is not null
+                    union all
+                    -- column comments
+                    select  c.owner             
+                    ,       ( select  o.object_type
+                              from    all_objects o
+                              where   o.owner = c.owner
+                              and     o.object_name = c.table_name
+                            )                   
+                    ,       c.table_name        
+                    ,       c.column_name       
+                    from    all_col_comments c
+                    where   c.comments is not null
+                  ) c
+        )
         select  oracle_tools.t_comment_object
                 ( p_base_object => treat(value(mnso) as oracle_tools.t_named_object)
-                , p_object_schema => null -- c.base_object_schema
+                , p_object_schema => c.base_object_schema
                 , p_column_name => c.column_name
                 )
         bulk collect
         into    l_tmp_schema_object_tab                  
         from    oracle_tools.v_my_named_schema_objects mnso
-                inner join oracle_tools.v_my_comments_dict c
+                inner join v_my_comments_dict c
                 on c.base_object_schema = mnso.object_schema() and
                    c.base_object_type = mnso.object_type() and
                    c.base_object_name = mnso.object_name() and
@@ -333,6 +368,33 @@ $end
       then
         for r in
         ( -- constraints for objects in the same schema
+          with v_my_constraints_dict as
+          ( select  t.object_schema
+            ,       t.object_type
+            ,       t.object_name
+            ,       t.base_object_schema
+            ,       t.base_object_name
+            ,       t.constraint_type
+            ,       t.search_condition
+            from    ( select  c.owner as object_schema
+                      ,       case when c.constraint_type = 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
+                      ,       c.constraint_name as object_name
+                      ,       c.owner as base_object_schema
+                      ,       c.table_name as base_object_name
+                      ,       c.constraint_type
+                      ,       c.search_condition
+                      from    all_constraints c
+                      where   /* Type of constraint definition:
+                                 C (check constraint on a table)
+                                 P (primary key)
+                                 U (unique key)
+                                 R (referential integrity)
+                                 V (with check option, on a view)
+                                 O (with read only, on a view)
+                              */
+                              c.constraint_type in ('C', 'P', 'U', 'R')
+                    ) t
+          )
           select  t.*
           from    ( select  value(mnso) as base_object
                     ,       c.object_schema
@@ -341,7 +403,7 @@ $end
                     ,       c.constraint_type
                     ,       c.search_condition
                     from    oracle_tools.v_my_named_schema_objects mnso
-                            inner join oracle_tools.v_my_constraints_dict c /* this is where we are interested in */
+                            inner join v_my_constraints_dict c /* this is where we are interested in */
                             on c.base_object_schema = mnso.object_schema() and c.base_object_name = mnso.object_name()
                     where   mnso.object_type() in ('TABLE', 'VIEW')
                   ) t
