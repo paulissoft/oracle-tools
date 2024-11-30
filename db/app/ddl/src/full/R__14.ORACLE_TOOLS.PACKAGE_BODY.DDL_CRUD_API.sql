@@ -184,6 +184,9 @@ $end
       delete
       from    oracle_tools.schema_object_filter_results sofr
       where   sofr.schema_object_filter_id = p_schema_object_filter_id;
+$if oracle_tools.ddl_crud_api.c_debugging $then
+      dbug.print(dbug."info", '# rows deleted from schema_object_filter_results: %s', sql%rowcount);
+$end
     end if;
     update  oracle_tools.schema_object_filters sof
     set     sof.last_modification_time_schema = l_last_modification_time_schema_new
@@ -193,13 +196,17 @@ $end
   end if;
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
-  dbug.print(dbug."output", 'p_schema_object_filter_id: %s', p_schema_object_filter_id);
+  dbug.print(dbug."info", 'p_schema_object_filter_id: %s', p_schema_object_filter_id);
 $end
 
   -- cleanup on the fly
   delete
   from    oracle_tools.generate_ddl_sessions gds
   where   gds.created <= g_min_timestamp_to_keep;
+
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."info", '# rows deleted from generate_ddl_sessions: %s', sql%rowcount);
+$end
 
   -- either insert or update GENERATE_DDL_SESSIONS
   if get_schema_object_filter_id(p_session_id => p_session_id) is null
@@ -241,6 +248,9 @@ $end
   end if;
 
 $if oracle_tools.ddl_crud_api.c_tracing $then
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."output", 'p_schema_object_filter_id: %s', p_schema_object_filter_id);
+$end
   dbug.leave;
 exception
   when others
@@ -428,7 +438,11 @@ $end
           from    oracle_tools.generated_ddls gd
           where   gd.schema_object_id = p_schema_ddl.obj.id
           and     gd.last_ddl_time < p_schema_ddl.obj.last_ddl_time;
-          
+
+$if oracle_tools.ddl_crud_api.c_debugging $then
+          dbug.print(dbug."info", '# rows deleted from generated_ddls: %s', sql%rowcount);
+$end
+
           insert into oracle_tools.generated_ddls
           ( schema_object_id
           , last_ddl_time
@@ -815,7 +829,11 @@ begin
       and    ( gdc.db_version < l_db_version or
                ( gdc.db_version = l_db_version and gdc.last_ddl_time_schema < l_last_ddl_time_schema )
              );
-      
+
+$if oracle_tools.ddl_crud_api.c_debugging $then
+      dbug.print(dbug."info", '# rows deleted from generate_ddl_configurations: %s', sql%rowcount);
+$end
+
       insert
       into   oracle_tools.generate_ddl_configurations
       ( transform_param_list
@@ -955,6 +973,10 @@ begin
   delete
   from    oracle_tools.generate_ddl_session_batches gdsb
   where   gdsb.session_id = l_session_id;
+  
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."info", '# rows deleted from generate_ddl_session_batches: %s', sql%rowcount);
+$end
 end clear_batch;
 
 procedure set_batch_start_time
@@ -1000,12 +1022,24 @@ is
 begin
   delete
   from    oracle_tools.generate_ddl_configurations;
+
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."info", '# rows deleted from generate_ddl_configurations: %s', sql%rowcount);
+$end
   
   delete
   from    oracle_tools.schema_objects;
-  
+
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."info", '# rows deleted from schema_objects: %s', sql%rowcount);
+$end
+
   delete
   from    oracle_tools.schema_object_filters;
+
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."info", '# rows deleted from schema_object_filters: %s', sql%rowcount);
+$end
 end clear_all_ddl_tables;
 
 END DDL_CRUD_API;
