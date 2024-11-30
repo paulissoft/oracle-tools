@@ -1086,7 +1086,7 @@ begin
             when 'MATERIALIZED_VIEW'     then  0 -- 12
             when 'MATERIALIZED_VIEW_LOG' then  0 -- 13
             when 'COMMENT'               then  0 -- 22
-            -- table related (part 1)            
+            -- table related (part 2)            
             when 'SEQUENCE'              then  1 --  1
             when 'CLUSTER'               then  1 --  3
             when 'INDEX'                 then  1 -- 16
