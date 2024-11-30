@@ -380,6 +380,17 @@ $end
       when "synonyms"
       then
         -- private synonyms for this schema which may point to another schema
+        with syn as
+        ( select  /*+ MATERIALIZE */
+                  s.owner
+          ,       s.synonym_name
+          ,       s.table_owner
+          ,       s.table_name
+          ,       s.db_link
+          from    all_synonyms s
+          where   ( s.owner = 'PUBLIC' and s.table_owner = l_schema ) -- public synonyms
+          or      ( s.owner = l_schema )
+        )
         select  oracle_tools.t_schema_object.create_schema_object
                 ( p_object_schema => s.owner
                 , p_object_type => 'SYNONYM'
@@ -389,11 +400,11 @@ $end
                     nvl
                     ( case
                         when s.db_link is null
-                        then ( select  max(so.obj.dict_object_type())
-                               from    oracle_tools.schema_objects so
-                               where   so.obj.object_schema() = s.table_owner
-                               and     so.obj.object_name() = s.table_name
-                               and     so.obj.object_type() not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
+                        then ( select  max(oracle_tools.t_schema_object.dict_object_type(o.object_type))
+                               from    all_objects o
+                               where   o.owner = s.table_owner
+                               and     o.object_name = s.table_name
+                               and     o.object_type not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
                              )
                       end
                     , 'TABLE' -- assume its a table when the object could not be found (in this database schema)
@@ -402,9 +413,7 @@ $end
                 )
         bulk collect
         into    l_tmp_schema_object_tab
-        from    all_synonyms s
-        where   ( s.owner = 'PUBLIC' and s.table_owner = l_schema ) -- public synonyms
-        or      ( s.owner = l_schema ); -- private synonyms
+        from    syn s;
 
       when "triggers"
       then
@@ -536,6 +545,7 @@ $end
   oracle_tools.ddl_crud_api.add
   ( p_schema_object_filter => p_schema_object_filter
   , p_generate_ddl_configuration_id => p_generate_ddl_configuration_id
+  , p_schema_object_filter_id => l_schema_object_filter_id
   );
 
   if p_add_schema_objects
@@ -608,7 +618,7 @@ is
   pragma autonomous_transaction;
   
   l_schema_object_filter oracle_tools.t_schema_object_filter := null;
-  l_generate_ddl_configuration_id oracle_tools.generate_ddl_configurations.id%type := null;
+  l_generate_ddl_configuration_id integer := null;
   l_program constant t_module := 'function ' || 'GET_SCHEMA_OBJECTS'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
   -- dbms_application_info stuff
