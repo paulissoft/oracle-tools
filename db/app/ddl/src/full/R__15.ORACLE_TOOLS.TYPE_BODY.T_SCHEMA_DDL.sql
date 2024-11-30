@@ -95,10 +95,11 @@ $end
     -- create a schema ddl with an empty ddl table based on the first schema_object_id
     if l_obj is null
     then
-      select  so.obj
-      into    l_obj
-      from    oracle_tools.schema_objects so
-      where   so.id = p_display_ddl_sql_tab(1).schema_object_id;
+      l_obj := oracle_tools.ddl_crud_api.find_schema_object(p_display_ddl_sql_tab(1).schema_object_id);
+      if l_obj is null
+      then
+        raise no_data_found;
+      end if;
     end if;
 
     l_schema_ddl := 
