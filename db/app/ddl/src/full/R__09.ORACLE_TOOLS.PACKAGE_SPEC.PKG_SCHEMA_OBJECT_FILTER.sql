@@ -2,7 +2,7 @@ CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_SCHEMA_OBJECT_FILTER" AUTHID CURRE
 
 c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 
-subtype t_schema_object_filter is oracle_tools.t_schema_object_filter;
+-- subtype t_schema_object_filter is oracle_tools.t_schema_object_filter;
 
 /**
 
@@ -37,7 +37,7 @@ procedure construct
 , p_grantor_is_schema in integer default 0 -- Must the grantor be equal to the schema, yes (1) or no (0)?
 , p_exclude_objects in clob default null -- A list of unique identification expressions to exclude where you can use O/S wild cards (* and ?).
 , p_include_objects in clob default null -- A list of unique identification expressions to include where you can use O/S wild cards (* and ?).
-, p_schema_object_filter in out nocopy t_schema_object_filter -- The object that stores all relevant info.
+, p_schema_object_filter in out nocopy oracle_tools.t_schema_object_filter -- The object that stores all relevant info.
 );
 
 /**
@@ -54,12 +54,12 @@ return integer
 deterministic;
 
 function serialize
-( p_schema_object_filter in t_schema_object_filter
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 return json_object_t;
 
 procedure print
-( p_schema_object_filter in t_schema_object_filter
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
 );
 
 /**
