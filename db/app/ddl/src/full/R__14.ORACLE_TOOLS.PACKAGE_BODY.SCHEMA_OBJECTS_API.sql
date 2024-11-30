@@ -400,11 +400,11 @@ $end
                     nvl
                     ( case
                         when s.db_link is null
-                        then ( select  max(oracle_tools.t_schema_object.dict_object_type(o.object_type))
-                               from    all_objects o
-                               where   o.owner = s.table_owner
-                               and     o.object_name = s.table_name
-                               and     o.object_type not in ('PACKAGE BODY', 'TYPE BODY', 'MATERIALIZED VIEW')
+                        then ( select  max(mnso.object_type())
+                               from    oracle_tools.v_my_named_schema_objects mnso
+                               where   mnso.object_schema() = s.table_owner
+                               and     mnso.object_name() = s.table_name
+                               and     mnso.object_type() not in ('PACKAGE_BODY', 'TYPE_BODY', 'MATERIALIZED_VIEW')
                              )
                       end
                     , 'TABLE' -- assume its a table when the object could not be found (in this database schema)
