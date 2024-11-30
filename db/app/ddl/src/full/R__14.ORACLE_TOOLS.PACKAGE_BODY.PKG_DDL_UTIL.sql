@@ -5520,8 +5520,7 @@ $end
               )
       order by
               gdsb.session_id
-      ,       gdsb.seq
-      for update;
+      ,       gdsb.seq;
   begin
     -- essential when in another process
     if oracle_tools.ddl_crud_api.get_session_id = p_session_id
@@ -5553,10 +5552,6 @@ $end
       , p_nr_objects => r_gdssdb.nr_objects
       , p_add_no_ddl_retrieved => (r_gdssdb.object_type = "SCHEMA_EXPORT")
       );
-
-      delete
-      from    oracle_tools.v_my_generate_ddl_session_schema_ddl_batches gdsb
-      where   current of c_gdssdb;
       
       oracle_tools.ddl_crud_api.set_batch_end_time(r_gdssdb.seq);
     end loop;
