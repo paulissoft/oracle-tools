@@ -7,5 +7,5 @@ CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_OBJECT_FILTER" ("SESSIO
 from    oracle_tools.generate_ddl_sessions gds
         inner join oracle_tools.schema_object_filters sof
         on sof.id = gds.schema_object_filter_id
-where   gds.session_id = (select oracle_tools.schema_objects_api.get_session_id from dual where rownum = 1);
+where   gds.session_id = (select oracle_tools.ddl_crud_api.get_session_id from dual where rownum = 1);
 

@@ -8,7 +8,7 @@ CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_ALL_SCHEMA_OBJECTS" ("SESSION_ID"
 ,       gdsso.created
 ,       so.obj
 ,       sofr.generate_ddl
-,       case when gdsso.last_ddl_time is null then 0 else 1 end as ddl_generated
+,       case when gdsso.last_ddl_time is null or gdsso.generate_ddl_configuration_id is null then 0 else 1 end as ddl_generated
 from    oracle_tools.generate_ddl_session_schema_objects gdsso
         inner join oracle_tools.schema_objects so
         on so.id = gdsso.schema_object_id

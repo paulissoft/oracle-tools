@@ -1,32 +1,46 @@
 CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."SCHEMA_OBJECTS_API" AUTHID CURRENT_USER IS /* -*-coding: utf-8-*- */
 
+/**
+This package is used to get objects from the dictionary with current user authentication.
+
+[This documentation is in PLOC format](https://github.com/ogobrecht/ploc)
+**/
+
 c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
 c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 
-type t_schema_object_rec is record
-( obj oracle_tools.t_schema_object
+procedure add
+( p_schema_object_filter in oracle_tools.t_schema_object_filter -- the schema object filter
+, p_generate_ddl_configuration_id in integer -- the GENERATE_DDL_CONFIGURATIONS.ID
+, p_add_schema_objects in boolean default true -- create records for table GENERATE_DDL_SESSION_SCHEMA_OBJECTS (and its parent tables SCHEMA_OBJECTS and SCHEMA_OBJECT_FILTER_RESULTS)?
 );
+/**
 
-type t_schema_object_cursor is ref cursor return t_schema_object_rec;
+Steps:
+1. invoke DDL_CRUD_API.ADD(p_schema_object_filter, p_generate_ddl_configuration_id)
+2. add schema objects (when the parameter is true) matching the schema object filter using DDL_CRUD_API.ADD(p_schema_object_tab, p_schema_object_filter_id) for:
+   a. named objects -- no base object
+   b. object grants -- base object (using named objects from step 2a)
+   c. synonyms      -- base object (idem)
+   d. comments      -- base object (idem)
+   e. constraints   -- base object (idem)
+   f. triggers      -- base object (idem)
+   g. indexes       -- base object (idem)
 
-type t_schema_ddl_rec is record
-( session_id generate_ddl_session_schema_objects.session_id%type -- key #1 from GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 
-, schema_object_id generate_ddl_session_schema_objects.schema_object_id%type -- key #2 from GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 
-, ddl oracle_tools.t_schema_ddl
+**/
+
+procedure get_schema_objects
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_generate_ddl_configuration_id in integer -- the GENERATE_DDL_CONFIGURATIONS.ID
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 );
+/**
+Get the schema objects and return them as a table.
 
-type t_schema_ddl_cursor is ref cursor return t_schema_ddl_rec;
-
-subtype t_session_id is generate_ddl_session_schema_objects.session_id%type;  
-
-procedure set_session_id
-( p_session_id in t_session_id
-);
-/** Set the session id for saving/retrieving on GENERATE_DDL_SESSIONS and GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
-
-function get_session_id
-return t_session_id;
-/** Get the session id for saving/retrieving on GENERATE_DDL_SESSIONS and GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
+Steps:
+1. invoke ADD(p_schema_object_filter, p_generate_ddl_configuration_id, p_add_schema_objects)
+2. get all rows from V_MY_SCHEMA_OBJECTS and put them in p_schema_object_tab
+**/
 
 function get_schema_objects
 ( p_schema in varchar2 default user
@@ -40,103 +54,15 @@ function get_schema_objects
 )
 return oracle_tools.t_schema_object_tab
 pipelined;
+/**
+Get the schema objects and return them as a pipelined function.
 
-procedure get_schema_objects
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_generate_ddl_configuration_id in oracle_tools.generate_ddl_configurations.id%type -- the GENERATE_DDL_CONFIGURATIONS.ID
-, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
-);
+Steps:
+1. Invoke DDL_CRUD_API.ADD(p_schema, p_object_type, p_object_names, p_object_names_include, p_grantor_is_schema, p_exclude_objects, p_include_objects, p_transform_param_list, p_schema_object_filter, p_generate_ddl_configuration_id)
+2. invoke ADD(p_schema_object_filter, p_generate_ddl_configuration_id, p_add_schema_objects)
+3. get all rows from V_MY_SCHEMA_OBJECTS and output them
 
-function find_schema_object_by_seq
-( p_seq in integer default 1 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, seq)
-, p_session_id in t_session_id default get_session_id
-)
-return generate_ddl_session_schema_objects%rowtype;
-/** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by seq. **/
-
-function find_schema_object_by_object_id
-( p_schema_object_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id)
-, p_session_id in t_session_id default get_session_id
-)
-return generate_ddl_session_schema_objects%rowtype;
-/** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by obj.id. **/
-
-procedure default_match_perc_threshold
-( p_match_perc_threshold in integer
-);
-
-function match_perc
-( p_session_id in t_session_id default get_session_id
-)
-return integer
-deterministic;
-
-function match_perc_threshold
-return integer
-deterministic;
-
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-
-procedure add
-( p_schema in varchar2 -- The schema name.
-, p_object_type in varchar2 -- Filter for object type.
-, p_object_names in varchar2 -- A comma separated list of (base) object names.
-, p_object_names_include in integer -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
-, p_grantor_is_schema in integer -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
-, p_exclude_objects in clob -- A newline separated list of objects to exclude (their schema object id actually).
-, p_include_objects in clob -- A newline separated list of objects to include (their schema object id actually).
-, p_transform_param_list in varchar2 -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
-, p_schema_object_filter out nocopy oracle_tools.t_schema_object_filter -- the schema object filter
-, p_generate_ddl_configuration_id out nocopy oracle_tools.generate_ddl_configurations.id%type -- the GENERATE_DDL_CONFIGURATIONS.ID
-);
-
-procedure add
-( p_schema_object_filter in oracle_tools.t_schema_object_filter -- the schema object filter
-, p_generate_ddl_configuration_id in oracle_tools.generate_ddl_configurations.id%type -- the GENERATE_DDL_CONFIGURATIONS.ID
-, p_add_schema_objects in boolean default true -- create records for table GENERATE_DDL_SESSION_SCHEMA_OBJECTS (and its parent tables SCHEMA_OBJECTS and SCHEMA_OBJECT_FILTER_RESULTS)?
-, p_session_id in t_session_id default get_session_id
-);
-/** Add a record to table GENERATE_DDL_SESSIONS (and its parent SCHEMA_OBJECT_FILTERS). **/
-
-procedure add
-( p_schema_object in oracle_tools.t_schema_object -- The schema object to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS
-, p_session_id in t_session_id default get_session_id
-, p_ignore_dup_val_on_index in boolean default true
-);
-/** Add a schema object to GENERATE_DDL_SESSION_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
-
-procedure add
-( p_schema_object_cursor in t_schema_object_cursor -- The schema objects to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS
-, p_session_id in t_session_id default get_session_id
-, p_ignore_dup_val_on_index in boolean default true
-);
-/** Add schema objects to GENERATE_DDL_SESSION_SCHEMA_OBJECTS, meaning INSERT, UPDATE OR UPSERT. */
-
-procedure add
-( p_schema_ddl in oracle_tools.t_schema_ddl
-, p_session_id in t_session_id default get_session_id
-);
-/** Update the record in table GENERATE_DDL_SESSION_SCHEMA_OBJECTS. **/
-
-procedure add
-( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab
-, p_session_id in t_session_id default get_session_id
-);
-/** Update the record in table GENERATED_DDL_STATEMENTS. **/
-
-procedure add
-( p_schema in varchar2
-, p_transform_param_list in varchar2
-, p_object_schema in varchar2
-, p_object_type in varchar2
-, p_base_object_schema in varchar2
-, p_base_object_type in varchar2
-, p_object_name_tab in oracle_tools.t_text_tab
-, p_base_object_name_tab in oracle_tools.t_text_tab
-, p_nr_objects in integer
-, p_session_id in t_session_id default get_session_id
-);
-/** Update the record in table GENERATE_DDL_SESSION_BATCHES. **/
+**/
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
@@ -152,8 +78,6 @@ procedure ut_get_schema_objects;
 procedure ut_get_schema_object_filter;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
-
-$end -- $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then  
 
 END SCHEMA_OBJECTS_API;
 /

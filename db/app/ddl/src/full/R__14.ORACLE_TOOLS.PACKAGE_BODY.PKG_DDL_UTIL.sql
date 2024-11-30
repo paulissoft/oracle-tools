@@ -2297,7 +2297,7 @@ $end
         when no_data_found
         then
           begin
-            l_my_schema_object := oracle_tools.schema_objects_api.find_schema_object_by_object_id(p_object_key);
+            l_my_schema_object := oracle_tools.ddl_crud_api.find_schema_object_by_object_id(p_object_key);
             l_generate_ddl := 1;
           exception
             when no_data_found
@@ -2867,7 +2867,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.print(dbug."info", 'oracle_tools.schema_objects_api.get_session_id: %s', oracle_tools.schema_objects_api.get_session_id);
+    dbug.print(dbug."info", 'oracle_tools.ddl_crud_api.get_session_id: %s', oracle_tools.ddl_crud_api.get_session_id);
 $end      
 
     -- here we are only interested in schema objects without DDL
@@ -3010,7 +3010,7 @@ $end
 
             if not(p_object_lookup_tab(l_object_key).ready)
             then
-              oracle_tools.schema_objects_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
+              oracle_tools.ddl_crud_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
               p_object_lookup_tab(l_object_key).ready := true;
               p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -3080,7 +3080,7 @@ $end
             , p_text => '-- No DDL retrieved.'
             );
 
-            oracle_tools.schema_objects_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
+            oracle_tools.ddl_crud_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
             p_object_lookup_tab(l_object_key).ready := true;
             p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
           end if;          
@@ -3259,7 +3259,7 @@ select  oracle_tools.t_display_ddl_sql_rec
         )
 from    oracle_tools.v_display_ddl_sql@' || l_network_link || ' t';
     else -- local
-      oracle_tools.schema_objects_api.add
+      oracle_tools.ddl_crud_api.add
       ( p_schema => p_schema
       , p_object_type => p_object_type
       , p_object_names => p_object_names
@@ -3281,8 +3281,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       select count(*) into l_count from oracle_tools.v_my_schema_objects;
       dbug.print
       ( dbug."info"
-      , 'oracle_tools.schema_objects_api.get_session_id: %s; # schema objects: %s'
-      , oracle_tools.schema_objects_api.get_session_id
+      , 'oracle_tools.ddl_crud_api.get_session_id: %s; # schema objects: %s'
+      , oracle_tools.ddl_crud_api.get_session_id
       , l_count
       );
 $end
@@ -3299,8 +3299,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       select count(*) into l_count from oracle_tools.v_my_schema_ddls;
       dbug.print
       ( dbug."info"
-      , 'oracle_tools.schema_objects_api.get_session_id: %s; # schema object ddls: %s'
-      , oracle_tools.schema_objects_api.get_session_id
+      , 'oracle_tools.ddl_crud_api.get_session_id: %s; # schema object ddls: %s'
+      , oracle_tools.ddl_crud_api.get_session_id
       , l_count
       );
 $end      
@@ -5398,7 +5398,7 @@ $end
   ( p_rollback in boolean
   )
   is
-    l_session_id constant integer := oracle_tools.schema_objects_api.get_session_id;
+    l_session_id constant integer := oracle_tools.ddl_crud_api.get_session_id;
     l_task_name constant varchar2(100 byte) := 'DDL_BATCH-' || to_char(l_session_id);
     -- Here we substitute the session id into the statement since it may be executed by another session.
     l_sql_stmt constant varchar2(1000 byte) :=
@@ -5537,11 +5537,11 @@ $end
       for update;
   begin
     -- essential when in another process
-    if oracle_tools.schema_objects_api.get_session_id = p_session_id
+    if oracle_tools.ddl_crud_api.get_session_id = p_session_id
     then
       null; -- OK
     else
-      oracle_tools.schema_objects_api.set_session_id(p_session_id);
+      oracle_tools.ddl_crud_api.set_session_id(p_session_id);
     end if;
 
     savepoint spt;
@@ -5732,21 +5732,21 @@ $end
 */
 
     -- only use schema export when necessary but first try per object type and some other parameters
-    oracle_tools.schema_objects_api.default_match_perc_threshold(null);
+    oracle_tools.ddl_crud_api.default_match_perc_threshold(null);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print
     ( dbug."info"
-    , 'schema_objects_api.match_perc(): %s; schema_objects_api.match_perc_threshold(): %s'
-    , schema_objects_api.match_perc()
-    , schema_objects_api.match_perc_threshold()
+    , 'ddl_crud_api.match_perc(): %s; ddl_crud_api.match_perc_threshold(): %s'
+    , ddl_crud_api.match_perc()
+    , ddl_crud_api.match_perc_threshold()
     );
 $end
 
     -- now we can calculate the percentage matches (after get_schema_objects)
     l_use_schema_export :=
       case
-        when schema_objects_api.match_perc() >= schema_objects_api.match_perc_threshold()
+        when ddl_crud_api.match_perc() >= ddl_crud_api.match_perc_threshold()
         then 1
         else 0
       end;
@@ -5799,7 +5799,7 @@ $end
           r_params := l_params_tab(l_params_idx);
 
           -- insert into generate_ddl_session_batches
-          oracle_tools.schema_objects_api.add
+          oracle_tools.ddl_crud_api.add
           ( p_schema => p_schema_object_filter.schema()
           , p_transform_param_list => p_transform_param_list
           , p_object_schema => r_params.object_schema
@@ -5822,7 +5822,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
     end loop outer_loop;
 
---    ddl_batch_process(true, oracle_tools.schema_objects_api.get_session_id);
+--    ddl_batch_process(true, oracle_tools.ddl_crud_api.get_session_id);
 
     cleanup;
 

@@ -24,6 +24,6 @@ CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_GENERATE_DDL_SESSION_SCHEMA_DD
           )
         ) as ddl_batch_group
 from    oracle_tools.generate_ddl_session_batches gdsb
-where   gdsb.session_id = (select oracle_tools.schema_objects_api.get_session_id from dual where rownum = 1) -- old trick
+where   gdsb.session_id = (select oracle_tools.ddl_crud_api.get_session_id from dual where rownum = 1) -- old trick
 and     gdsb.object_type <> 'SCHEMA_EXPORT';
 

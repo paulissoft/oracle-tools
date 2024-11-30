@@ -7,6 +7,8 @@ create table generate_ddl_sessions
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   not null
+, username varchar2(128 byte)
+  not null
 , updated timestamp(6) -- only set during update
 , -- Per session just one active schema object filter:
   -- when you update schema_object_filter_id remove all its related GENERATE_DDL_SESSION_SCHEMA_OBJECTS.

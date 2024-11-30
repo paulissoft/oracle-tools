@@ -16,7 +16,7 @@ from    oracle_tools.v_all_schema_objects aso
         on gds.generated_ddl_id = gd.id
         inner join oracle_tools.generated_ddl_statement_chunks gdsc
         on gdsc.generated_ddl_id = gds.generated_ddl_id and gdsc.ddl# = gds.ddl#
-where   aso.session_id = (select oracle_tools.schema_objects_api.get_session_id from dual where rownum = 1)
+where   aso.session_id = (select oracle_tools.ddl_crud_api.get_session_id from dual where rownum = 1)
 order by
         -- unique key
         aso.session_id

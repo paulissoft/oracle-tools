@@ -96,7 +96,7 @@ $end
         , p_search_condition => null
         );
       begin
-        if oracle_tools.schema_objects_api.find_schema_object_by_object_id(l_base_object.id).schema_object_id is null
+        if oracle_tools.ddl_crud_api.find_schema_object_by_object_id(l_base_object.id).schema_object_id is null
         then
           raise no_data_found;
         end if;
@@ -106,13 +106,13 @@ $end
           null;
           /*
           raise program_error;
-          oracle_tools.schema_objects_api.add
+          oracle_tools.ddl_crud_api.add
           ( p_schema_object => l_base_object
           );
           */
       end;
       begin
-        if oracle_tools.schema_objects_api.find_schema_object_by_object_id(l_constraint_object.id).schema_object_id is null
+        if oracle_tools.ddl_crud_api.find_schema_object_by_object_id(l_constraint_object.id).schema_object_id is null
         then
           raise no_data_found;
         end if;
@@ -122,7 +122,7 @@ $end
           null;
           /*
           raise program_error;
-          oracle_tools.schema_objects_api.add
+          oracle_tools.ddl_crud_api.add
           ( p_schema_object => l_constraint_object          
           );
           */
