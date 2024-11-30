@@ -17,4 +17,7 @@
 <transferable>true</transferable>
 <rely>false</rely>
 <columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </FKIndexAssociation>

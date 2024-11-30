@@ -5736,6 +5736,8 @@ $end
         else 0
       end;
 
+    oracle_tools.ddl_crud_api.clear_batch;        
+
     -- GJP 2022-12-17 Note SCHEMA_EXPORT.
     -- Under some circumstances just a SCHEMA_EXPORT does not do the job,
     -- for instance when named not null constraints do not show up as
@@ -5773,8 +5775,6 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.print(dbug."debug", 'l_params_tab.count: %s', l_params_tab.count);
 $end
 
-      oracle_tools.ddl_crud_api.clear_batch;
-        
       l_params_idx := l_params_tab.first;
       <<param_loop>>
       loop

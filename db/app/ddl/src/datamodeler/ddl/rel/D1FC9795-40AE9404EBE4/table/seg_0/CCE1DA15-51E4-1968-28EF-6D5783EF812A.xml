@@ -5,11 +5,21 @@
 <sourceObjName>GENERATE_DDL_CONFIGURATIONS</sourceObjName>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<comment><![CDATA[A DDL generate configuration including DBMS_METADATA tansformation parameters, database and schema version. ]]></comment>
+<commentInRDBMS><![CDATA[A DDL generate configuration including DBMS_METADATA tansformation parameters, database and schema version. ]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>1EA834A7-6306-8879-E74F-A4FCEC22B96D</importedID>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>
+<propertyMap>
+<property name="applyStandards" value="1"/>
+<property name="copyComments" value="1"/>
+<property name="createIndexOnFK" value="1"/>
+<property name="setColumnsOrder" value="0"/>
+<property name="setIdentityColumn" value="1"/>
+<property name="tableToUpperCase" value="1"/>
+</propertyMap>
 <columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
 <Column name="ID" id="4F392E8D-3FC7-BEB7-EB63-5AE2152699F5">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -22,9 +32,9 @@
 <useDomainConstraints>false</useDomainConstraints>
 <use>1</use>
 <logicalDatatype>LOGDT019</logicalDatatype>
-<dataTypePrecision>*</dataTypePrecision>
-<dataTypeScale>0</dataTypeScale>
-<ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementColumn>true</autoIncrementColumn>
 <identityColumn>true</identityColumn>
 <autoIncrementGenerateAlways>true</autoIncrementGenerateAlways>
@@ -32,6 +42,11 @@
 <autoIncrementDisableCache>false</autoIncrementDisableCache>
 <autoIncrementCache>20</autoIncrementCache>
 <autoIncrementOrder>false</autoIncrementOrder>
+<autoIncrementGenerateTrigger>false</autoIncrementGenerateTrigger>
+<notNullConstraintName>GENERATE_DDL_CONFIGURATIONS$NNC$ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="TRANSFORM_PARAM_LIST" id="AD52CCFA-86D7-3710-56BA-439B0B4149E2">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -41,7 +56,7 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>320343A6-F827-4980-5B8A-9B61F0EA0C90</importedID>
-<constraintName>GENERATE_DDL_CONFIGURATIONS$CK$1</constraintName>
+<constraintName>GENERATE_DDL_CONFIGURATIONS$CK$TRANSFORM_PARAM_LIST</constraintName>
 <useDomainConstraints>false</useDomainConstraints>
 <use>1</use>
 <logicalDatatype>LOGDT024</logicalDatatype>
@@ -51,7 +66,13 @@
 <implementationDef dbType="Oracle Database 12cR2" definition="substr(transform_param_list, 1, 1) = &apos;,&apos;"/>
 </checkConstraint>
 <ownDataTypeParameters>4000 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_CONFIGURATIONS$NNC$TRANSFORM_PARAM_LIST</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="DB_VERSION" id="4739C7C6-C7BA-EF7F-C532-91296D8A0569">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -65,7 +86,13 @@
 <use>1</use>
 <logicalDatatype>LOGDT019</logicalDatatype>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_CONFIGURATIONS$NNC$DB_VERSION</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="LAST_DDL_TIME_SCHEMA" id="AD4A98FB-D840-2A98-08CC-2CD14138D9AE">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -80,7 +107,13 @@
 <logicalDatatype>LOGDT007</logicalDatatype>
 <dataTypeSize>7</dataTypeSize>
 <ownDataTypeParameters>7,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_CONFIGURATIONS$NNC$LAST_DDL_TIME_SCHEMA</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="CREATED" id="1CC83909-2C09-9FFC-3A58-1B0BB013EACD">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -96,7 +129,13 @@
 <dataTypePrecision>6</dataTypePrecision>
 <defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_CONFIGURATIONS$NNC$CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 </columns>
 <indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
@@ -111,6 +150,9 @@
 <pk>true</pk>
 <indexState>Primary Constraint</indexState>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="4F392E8D-3FC7-BEB7-EB63-5AE2152699F5"/>
 </indexColumnUsage>
@@ -121,13 +163,16 @@
 <ownerDesignName>ddl</ownerDesignName>
 <indexState>Unique Constraint</indexState>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="AD52CCFA-86D7-3710-56BA-439B0B4149E2"/>
 <colUsage columnID="4739C7C6-C7BA-EF7F-C532-91296D8A0569"/>
 <colUsage columnID="AD4A98FB-D840-2A98-08CC-2CD14138D9AE"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="4FA34533-F3EF-1B31-58EF-9A7021E587E2" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_CONFIGURATIONS$PK">
+<ind_PK_UK id="4FA34533-F3EF-1B31-58EF-9A7021E587E2" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_CONFIGURATIONS$IDX$1">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>GENERATE_DDL_CONFIGURATIONS$PK</sourceObjName>
@@ -135,8 +180,12 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>E245225E-F69E-DBEF-DD66-E2C21AB8C43F</importedID>
+<deprecated>true</deprecated>
 <indexState>Unique Plain Index</indexState>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="4F392E8D-3FC7-BEB7-EB63-5AE2152699F5"/>
 </indexColumnUsage>

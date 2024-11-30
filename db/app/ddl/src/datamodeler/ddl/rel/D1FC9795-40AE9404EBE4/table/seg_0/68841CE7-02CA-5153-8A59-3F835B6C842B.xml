@@ -5,11 +5,21 @@
 <sourceObjName>GENERATE_DDL_SESSION_BATCHES</sourceObjName>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<comment><![CDATA[DDL is generated in batches.]]></comment>
+<commentInRDBMS><![CDATA[DDL is generated in batches.]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>C1BFF7C6-3EFE-7F76-C89C-367C1FC8F22C</importedID>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>
+<propertyMap>
+<property name="applyStandards" value="1"/>
+<property name="copyComments" value="1"/>
+<property name="createIndexOnFK" value="1"/>
+<property name="setColumnsOrder" value="0"/>
+<property name="setIdentityColumn" value="0"/>
+<property name="tableToUpperCase" value="1"/>
+</propertyMap>
 <columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
 <Column name="SESSION_ID" id="DF38470F-41E9-0D9D-06E5-1882ED4DD525">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -23,8 +33,13 @@
 <use>1</use>
 <logicalDatatype>LOGDT019</logicalDatatype>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
 <notNullConstraintName>GENERATE_DDL_SESSION_BATCHES$NNC$SESSION_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <associations>
 <colAssociation fkAssociation="F8B527D4-9EE2-E03B-17A7-BF2BFCC20AC6" referredColumn="613B2DB2-8850-A2C4-488C-9EEF937877EA"/>
 </associations>
@@ -43,8 +58,13 @@
 <dataTypePrecision>*</dataTypePrecision>
 <dataTypeScale>0</dataTypeScale>
 <ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
 <notNullConstraintName>GENERATE_DDL_SESSION_BATCHES$NNC$SEQ</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="CREATED" id="550738BE-7748-BAED-7B53-FF0DBA135D39">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -60,8 +80,13 @@
 <dataTypePrecision>6</dataTypePrecision>
 <defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
 <notNullConstraintName>GENERATE_DDL_SESSION_BATCHES$NNC$CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="SCHEMA" id="55D563EC-F349-E69E-2161-55AE33BA4B06">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -77,7 +102,12 @@
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>128 BYTE</dataTypeSize>
 <ownDataTypeParameters>128 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="TRANSFORM_PARAM_LIST" id="9D8598D6-35B4-E807-E198-A39F7D8662FC">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -93,7 +123,12 @@
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>4000 BYTE</dataTypeSize>
 <ownDataTypeParameters>4000 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="OBJECT_SCHEMA" id="ADE3F6A6-6291-E8FC-AEE0-D7EC5213B462">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -109,7 +144,12 @@
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>128 BYTE</dataTypeSize>
 <ownDataTypeParameters>128 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="OBJECT_TYPE" id="E1905CFD-00AD-C8AD-0D1C-0ACD0C9CE436">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -125,7 +165,12 @@
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>30 BYTE</dataTypeSize>
 <ownDataTypeParameters>30 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="BASE_OBJECT_SCHEMA" id="28343E80-9040-717E-D1EF-C844F996D841">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -141,7 +186,12 @@
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>128 BYTE</dataTypeSize>
 <ownDataTypeParameters>128 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="BASE_OBJECT_TYPE" id="7CEB0C09-335C-DC0B-1A0F-CCDBFE8D9EF2">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -157,7 +207,12 @@
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>30 BYTE</dataTypeSize>
 <ownDataTypeParameters>30 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="OBJECT_NAME_TAB" id="2EC8299F-EA88-27DF-CA33-0C0893C7A94D">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -173,7 +228,12 @@
 <use>4</use>
 <collectionType>65B8C0C7-3DB1-AFA3-046A-99384CC4A2DC</collectionType>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="BASE_OBJECT_NAME_TAB" id="C7D7303B-5390-A8DA-B02C-AF222C398533">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -189,7 +249,12 @@
 <use>4</use>
 <collectionType>65B8C0C7-3DB1-AFA3-046A-99384CC4A2DC</collectionType>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="NR_OBJECTS" id="A38E9A8D-99E3-4DB5-767A-1F1203855C0E">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -206,7 +271,12 @@
 <dataTypePrecision>*</dataTypePrecision>
 <dataTypeScale>0</dataTypeScale>
 <ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="START_TIME" id="3DA2F6F8-B3B4-FF6E-6632-864AC39EF8CF">
 <createdBy>gpaulissen</createdBy>
@@ -219,7 +289,12 @@
 <dataTypePrecision>6</dataTypePrecision>
 <defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="END_TIME" id="1A0553DE-EF70-E580-566B-8FA56065C4E0">
 <createdBy>gpaulissen</createdBy>
@@ -232,7 +307,12 @@
 <dataTypePrecision>6</dataTypePrecision>
 <defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 </columns>
 <indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
@@ -247,6 +327,9 @@
 <pk>true</pk>
 <indexState>Primary Constraint</indexState>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="DF38470F-41E9-0D9D-06E5-1882ED4DD525"/>
 <colUsage columnID="55981A1A-DAB7-CB06-9BCB-5E89F9B8548B"/>
@@ -260,11 +343,28 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>9C0DDBA0-397B-AB1B-89D3-81F042F8F2AE</importedID>
+<deprecated>true</deprecated>
 <indexState>Unique Plain Index</indexState>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="DF38470F-41E9-0D9D-06E5-1882ED4DD525"/>
 <colUsage columnID="55981A1A-DAB7-CB06-9BCB-5E89F9B8548B"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="465ED803-A1F6-222B-3306-AED96E44686F" name="GENERATE_DDL_SESSION_BATCHES$IDX$2">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 14:08:03 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<deprecated>true</deprecated>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="DF38470F-41E9-0D9D-06E5-1882ED4DD525"/>
 </indexColumnUsage>
 </ind_PK_UK>
 <ind_PK_UK id="404433EB-3D7E-D5FC-DC70-886AD784E5DD" name="GENERATE_DDL_SESSION_BATCHES$FK$1">

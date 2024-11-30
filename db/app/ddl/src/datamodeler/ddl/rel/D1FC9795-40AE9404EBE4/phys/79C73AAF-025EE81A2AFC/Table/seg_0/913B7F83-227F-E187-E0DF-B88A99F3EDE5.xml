@@ -14,6 +14,7 @@
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
+<autoIncrementDDL>IDENTITY_CLAUSE</autoIncrementDDL>
 </ColumnProxy>
 <ColumnProxy name="GENERATE_DDL_CONFIGURATION_ID" id="8EF0A29E-6139-D3EF-834A-FE57BFC90397">
 <createdBy>gpaulissen</createdBy>
@@ -38,17 +39,22 @@
 </ColumnProxy>
 </columnProxies>
 <indexProxies>
-<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="GENERATED_DDLS$FK$2" id="1AFA0B70-A4AA-0AB5-E3A4-023DCF0526DC">
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="GENERATED_DDLS$IDX$1" id="1AFA0B70-A4AA-0AB5-E3A4-023DCF0526DC">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <schemaObject>86E07972-0E39-656A-F568-00AE638CFEA4</schemaObject>
 </IndexProxy>
-<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="GENERATED_DDLS$UK$1" id="50250A90-B2C1-BEDC-C1F8-A202CF59BC5D">
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="GENERATED_DDLS$IDX$2" id="50250A90-B2C1-BEDC-C1F8-A202CF59BC5D">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <schemaObject>86E07972-0E39-656A-F568-00AE638CFEA4</schemaObject>
+</IndexProxy>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="GENERATED_DDLS$IDX$3" id="EE2DB155-3494-4BFF-4379-AE0D1760D4B4">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 15:15:13 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
 </IndexProxy>
 </indexProxies>
 <foreignKeys>
@@ -57,7 +63,7 @@
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ForeignKey>
-<ForeignKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.FKProxyOraclev10g" name="GENERATE_DDLS$FK$2" id="97D2FC95-4BEE-6554-9510-099C36024E19">
+<ForeignKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.FKProxyOraclev10g" name="GENERATED_DDLS$FK$2" id="97D2FC95-4BEE-6554-9510-099C36024E19">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>

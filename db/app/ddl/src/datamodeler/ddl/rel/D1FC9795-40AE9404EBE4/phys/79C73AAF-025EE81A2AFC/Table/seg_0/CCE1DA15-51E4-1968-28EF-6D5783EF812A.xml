@@ -25,6 +25,7 @@
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
+<autoIncrementDDL>IDENTITY_CLAUSE</autoIncrementDDL>
 </ColumnProxy>
 <ColumnProxy name="LAST_DDL_TIME_SCHEMA" id="AD4A98FB-D840-2A98-08CC-2CD14138D9AE">
 <createdBy>gpaulissen</createdBy>

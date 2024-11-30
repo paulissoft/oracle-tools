@@ -56,6 +56,7 @@
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
+<autoIncrementDDL>IDENTITY_CLAUSE</autoIncrementDDL>
 </ColumnProxy>
 <ColumnProxy name="OBJ.GRANTOR_IS_SCHEMA$" id="8AD818D2-E5A4-539F-3F4B-79F864D857FB">
 <createdBy>gpaulissen</createdBy>

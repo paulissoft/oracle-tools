@@ -1,5 +1,5 @@
 <?xml version = '1.0' encoding = 'UTF-8'?>
-<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="E8A0FD0C-713F-C5C7-9AFA-CDC5A3979BAB" containerWithKeyObject="913B7F83-227F-E187-E0DF-B88A99F3EDE5" localFKIndex="97D2FC95-4BEE-6554-9510-099C36024E19" name="GENERATE_DDLS$FK$2">
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="E8A0FD0C-713F-C5C7-9AFA-CDC5A3979BAB" containerWithKeyObject="913B7F83-227F-E187-E0DF-B88A99F3EDE5" localFKIndex="97D2FC95-4BEE-6554-9510-099C36024E19" name="GENERATED_DDLS$FK$2">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>GENERATE_DDLS$FK$2</sourceObjName>
@@ -17,4 +17,7 @@
 <transferable>true</transferable>
 <rely>false</rely>
 <columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </FKIndexAssociation>

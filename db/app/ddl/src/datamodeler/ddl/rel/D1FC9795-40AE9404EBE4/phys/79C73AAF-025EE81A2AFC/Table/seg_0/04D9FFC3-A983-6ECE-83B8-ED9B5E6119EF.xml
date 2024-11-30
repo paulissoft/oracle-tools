@@ -32,6 +32,13 @@
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
 </columnProxies>
+<indexProxies>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="GENERATED_DDL_STATEMENTS$IDX$1" id="97DB869A-D041-8C2B-D60C-AD63A2E902C5">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 15:27:11 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+</IndexProxy>
+</indexProxies>
 <foreignKeys>
 <ForeignKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.FKProxyOraclev10g" name="GENERATED_DDL_STATEMENTS$FK$1" id="594B8A25-402E-F083-A0A5-9D00CA822F25">
 <createdBy>gpaulissen</createdBy>

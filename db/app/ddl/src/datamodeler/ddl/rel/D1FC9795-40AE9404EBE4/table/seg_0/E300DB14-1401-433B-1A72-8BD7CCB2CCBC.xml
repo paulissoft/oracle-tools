@@ -5,11 +5,21 @@
 <sourceObjName>GENERATE_DDL_SESSIONS</sourceObjName>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<comment><![CDATA[Information about DDL generation per session id (sys_context('USERENV', 'SESSIONID')). ]]></comment>
+<commentInRDBMS><![CDATA[Information about DDL generation per session id (sys_context('USERENV', 'SESSIONID')). ]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>D1C76D32-F356-467D-30F4-BDC83259A6E1</importedID>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>
+<propertyMap>
+<property name="applyStandards" value="1"/>
+<property name="copyComments" value="1"/>
+<property name="createIndexOnFK" value="1"/>
+<property name="setColumnsOrder" value="0"/>
+<property name="setIdentityColumn" value="0"/>
+<property name="tableToUpperCase" value="1"/>
+</propertyMap>
 <columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
 <Column name="SESSION_ID" id="613B2DB2-8850-A2C4-488C-9EEF937877EA">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -24,26 +34,13 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <defaultValue>to_number(sys_context(&apos;USERENV&apos;, &apos;SESSIONID&apos;))</defaultValue>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
-</Column>
-<Column name="SCHEMA_OBJECT_FILTER_ID" id="21DD6465-6438-0C93-B07B-E6F9BB80F55C">
-<sourceConnName>oracle_tools@free</sourceConnName>
-<sourceObjSchema>GENERATE_DDL_SESSIONS</sourceObjSchema>
-<sourceObjName>SCHEMA_OBJECT_FILTER_ID</sourceObjName>
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<importedID>40CC015D-034C-BA87-93BF-974C3DD331C3</importedID>
-<useDomainConstraints>false</useDomainConstraints>
-<use>1</use>
-<logicalDatatype>LOGDT019</logicalDatatype>
-<dataTypePrecision>*</dataTypePrecision>
-<dataTypeScale>0</dataTypeScale>
-<ownDataTypeParameters>,*,0</ownDataTypeParameters>
-<autoIncrementCycle>false</autoIncrementCycle>
-<associations>
-<colAssociation fkAssociation="B8BF3A80-83A1-061B-655C-45220819FBF9" referredColumn="897C19BD-7515-AD12-9A34-320E5B62A40B"/>
-</associations>
+<notNullConstraintName>GENERATE_DDL_SESSIONS$NNC$SESSION_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="GENERATE_DDL_CONFIGURATION_ID" id="E84E5521-3361-7DC4-87CD-DDE41CE8BDF6">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -58,10 +55,39 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <dataTypePrecision>*</dataTypePrecision>
 <dataTypeScale>0</dataTypeScale>
-<ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_SESSIONS$NNC$GENERATE_DDL_CONFIGURATION_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <associations>
 <colAssociation fkAssociation="ABC78FD1-15E9-EB3B-3FB8-D0618C1F478D" referredColumn="4F392E8D-3FC7-BEB7-EB63-5AE2152699F5"/>
+</associations>
+</Column>
+<Column name="SCHEMA_OBJECT_FILTER_ID" id="21DD6465-6438-0C93-B07B-E6F9BB80F55C">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATE_DDL_SESSIONS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECT_FILTER_ID</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>40CC015D-034C-BA87-93BF-974C3DD331C3</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_SESSIONS$NNC$SCHEMA_OBJECT_FILTER_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<associations>
+<colAssociation fkAssociation="B8BF3A80-83A1-061B-655C-45220819FBF9" referredColumn="897C19BD-7515-AD12-9A34-320E5B62A40B"/>
 </associations>
 </Column>
 <Column name="CREATED" id="C9DE075A-96F7-2F46-03A2-54F4B04CA888">
@@ -78,7 +104,13 @@
 <dataTypePrecision>6</dataTypePrecision>
 <defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_SESSIONS$NNC$CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="USERNAME" id="C7968EA4-54B7-19C8-7F5F-B43342BB9771">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -93,7 +125,13 @@
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>128 BYTE</dataTypeSize>
 <ownDataTypeParameters>128 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_SESSIONS$NNC$USERNAME</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="UPDATED" id="6EC3F328-2F0B-3F2F-8274-D184323E5157">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -109,7 +147,12 @@
 <logicalDatatype>LOGDT015</logicalDatatype>
 <dataTypePrecision>6</dataTypePrecision>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 </columns>
 <indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
@@ -124,11 +167,14 @@
 <pk>true</pk>
 <indexState>Primary Constraint</indexState>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="613B2DB2-8850-A2C4-488C-9EEF937877EA"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="4B2ADFC7-549A-DB4E-9D09-A47BAD369720" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_SESSIONS$FK$1">
+<ind_PK_UK id="4B2ADFC7-549A-DB4E-9D09-A47BAD369720" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_SESSIONS$IDX$1">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>GENERATE_DDL_SESSIONS$FK$1</sourceObjName>
@@ -136,12 +182,16 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>AC082EA5-1C40-2BDF-D4AC-316AAB7AE7EE</importedID>
+<deprecated>true</deprecated>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="21DD6465-6438-0C93-B07B-E6F9BB80F55C"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="AFE9D654-6846-8BDA-D8D7-07CEBC90A6D1" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_SESSIONS$FK$2">
+<ind_PK_UK id="AFE9D654-6846-8BDA-D8D7-07CEBC90A6D1" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_SESSIONS$IDX$2">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>GENERATE_DDL_SESSIONS$FK$2</sourceObjName>
@@ -149,7 +199,11 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>85E7C4FD-D205-2C0C-6F4C-0BC0221AD624</importedID>
+<deprecated>true</deprecated>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="E84E5521-3361-7DC4-87CD-DDE41CE8BDF6"/>
 </indexColumnUsage>

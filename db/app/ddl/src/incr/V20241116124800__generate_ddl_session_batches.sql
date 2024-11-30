@@ -1,9 +1,11 @@
 create table generate_ddl_session_batches
-( session_id number not null -- Primary key #1
-, seq integer not null -- Primary key #2 (sequence within parent)
+( session_id number
+  constraint generate_ddl_session_batches$nnc$session_id not null -- Primary key #1
+, seq integer
+  constraint generate_ddl_session_batches$nnc$seq not null -- Primary key #2 (sequence within parent)
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
-  not null
+  constraint generate_ddl_session_batches$nnc$created not null
 , schema varchar2(128 byte)
 , transform_param_list varchar2(4000 byte) -- parameter from pkg_ddl_util.get_schema_ddl
 -- select list from cursor c_params in body pkg_ddl_util
@@ -29,3 +31,6 @@ nested table base_object_name_tab store as generate_ddl_session_batches$base_obj
 alter table generate_ddl_session_batches nologging;
 
 -- foreign key index generate_ddl_session_batches$fk$2 not necessary
+
+COMMENT ON TABLE ORACLE_TOOLS.GENERATE_DDL_SESSION_BATCHES IS
+    'DDL is generated in batches.';

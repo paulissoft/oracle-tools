@@ -5,11 +5,21 @@
 <sourceObjName>SCHEMA_OBJECT_FILTER_RESULTS</sourceObjName>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<comment><![CDATA[The schema object filter results, needed because the function matches_schema_object is too expensive.]]></comment>
+<commentInRDBMS><![CDATA[The schema object filter results, needed because the function matches_schema_object is too expensive.]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>9CE36F36-7A6D-3814-F10D-576ACF862095</importedID>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>
+<propertyMap>
+<property name="applyStandards" value="1"/>
+<property name="copyComments" value="1"/>
+<property name="createIndexOnFK" value="1"/>
+<property name="setColumnsOrder" value="1"/>
+<property name="setIdentityColumn" value="1"/>
+<property name="tableToUpperCase" value="1"/>
+</propertyMap>
 <columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
 <Column name="SCHEMA_OBJECT_FILTER_ID" id="ACC9B02B-6E23-9062-4A3D-3E13B01F3D45">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -25,7 +35,13 @@
 <dataTypePrecision>*</dataTypePrecision>
 <dataTypeScale>0</dataTypeScale>
 <ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>SCHEMA_OBJECT_FILTER_RESULTS$NNC$SCHEMA_OBJECT_FILTER_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <associations>
 <colAssociation fkAssociation="6A758CAF-0130-57DE-9E5E-E5A670B23B5C" referredColumn="897C19BD-7515-AD12-9A34-320E5B62A40B"/>
 </associations>
@@ -42,8 +58,14 @@
 <use>1</use>
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>500 BYTE</dataTypeSize>
-<ownDataTypeParameters>500 BYTE,,</ownDataTypeParameters>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>SCHEMA_OBJECT_FILTER_RESULTS$NNC$SCHEMA_OBJECT_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <associations>
 <colAssociation fkAssociation="6A538357-1D78-2FDC-662B-4E9D66B80E9B" referredColumn="F9235B75-7E72-8805-F33D-16F641E2E8D2"/>
 </associations>
@@ -67,7 +89,13 @@
 <valueDef value="1" description=""/>
 </listOfValues>
 <ownDataTypeParameters>,1,0</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>SCHEMA_OBJECT_FILTER_RESULTS$NNC$GENERATE_DDL</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="CREATED" id="098F45F5-96FC-C722-CA69-ACDB14076EA3">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -83,7 +111,13 @@
 <dataTypePrecision>6</dataTypePrecision>
 <defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>SCHEMA_OBJECT_FILTER_RESULTS$NNC$CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 </columns>
 <indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
@@ -98,12 +132,15 @@
 <pk>true</pk>
 <indexState>Primary Constraint</indexState>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="ACC9B02B-6E23-9062-4A3D-3E13B01F3D45"/>
 <colUsage columnID="8805373F-984F-892B-883F-389AFFB05768"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="4D2F25EA-B005-DB94-5563-F0678F8B7D0E" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECT_FILTER_RESULTS$FK$2">
+<ind_PK_UK id="4D2F25EA-B005-DB94-5563-F0678F8B7D0E" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECT_FILTER_RESULTS$IDX$1">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>SCHEMA_OBJECT_FILTER_RESULTS$FK$2</sourceObjName>
@@ -112,8 +149,20 @@
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>67A3D783-9C78-3214-3FD8-B45639D56581</importedID>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="8805373F-984F-892B-883F-389AFFB05768"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="3FC1FA72-4A1F-7100-CB4D-374DBF5139A9" name="SCHEMA_OBJECT_FILTER_RESULTS$IDX$2">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 15:07:54 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="ACC9B02B-6E23-9062-4A3D-3E13B01F3D45"/>
 </indexColumnUsage>
 </ind_PK_UK>
 <ind_PK_UK id="3CDCC119-D8AB-B555-01F8-213E542A7983" name="SCHEMA_OBJECT_FILTER_RESULTS$FK$1">

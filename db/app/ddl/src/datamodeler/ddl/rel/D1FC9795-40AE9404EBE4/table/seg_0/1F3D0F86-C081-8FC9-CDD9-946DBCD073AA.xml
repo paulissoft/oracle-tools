@@ -5,11 +5,21 @@
 <sourceObjName>GENERATED_DDL_STATEMENT_CHUNKS</sourceObjName>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<comment><![CDATA[The generated DDL statement chunks.]]></comment>
+<commentInRDBMS><![CDATA[The generated DDL statement chunks.]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>9EEEE1DD-09F7-F878-453A-E9EFE2C039EE</importedID>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>
+<propertyMap>
+<property name="applyStandards" value="1"/>
+<property name="copyComments" value="1"/>
+<property name="createIndexOnFK" value="1"/>
+<property name="setColumnsOrder" value="1"/>
+<property name="setIdentityColumn" value="1"/>
+<property name="tableToUpperCase" value="1"/>
+</propertyMap>
 <columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
 <Column name="GENERATED_DDL_ID" id="5F2F6F25-C492-DBDE-DAEE-4717907C7A47">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -25,7 +35,13 @@
 <dataTypePrecision>*</dataTypePrecision>
 <dataTypeScale>0</dataTypeScale>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATED_DDL_STATEMENT_CHUNKS$NNC$GENERATED_DDL_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <associations>
 <colAssociation fkAssociation="92A12732-C23D-65AD-EB7F-57D9AB22F0F8" referredColumn="D0252DB8-9CC5-C8CB-0348-54F78EA7E828"/>
 </associations>
@@ -44,7 +60,13 @@
 <dataTypePrecision>*</dataTypePrecision>
 <dataTypeScale>0</dataTypeScale>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATED_DDL_STATEMENT_CHUNKS$NNC$DDL#</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <associations>
 <colAssociation fkAssociation="92A12732-C23D-65AD-EB7F-57D9AB22F0F8" referredColumn="6414C550-A545-803E-12AD-8174116E3EC3"/>
 </associations>
@@ -68,7 +90,13 @@
 <implementationDef dbType="Oracle Database 12cR2" definition="chunk# &gt;= 1"/>
 </checkConstraint>
 <ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATED_DDL_STATEMENT_CHUNKS$NNC$CHUNK#</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="CREATED" id="F76AC8A7-5EBF-B92F-496A-F3560E01CCE0">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -84,7 +112,13 @@
 <dataTypePrecision>6</dataTypePrecision>
 <defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATED_DDL_STATEMENT_CHUNKS$NNC$CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="CHUNK" id="E07B01CE-0662-E030-C901-4729B6C325D1">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -100,7 +134,12 @@
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>4000 BYTE</dataTypeSize>
 <ownDataTypeParameters>4000 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 </columns>
 <indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
@@ -115,13 +154,16 @@
 <pk>true</pk>
 <indexState>Primary Constraint</indexState>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="5F2F6F25-C492-DBDE-DAEE-4717907C7A47"/>
 <colUsage columnID="11D71616-1C2C-967F-D049-812BE6C55EE7"/>
 <colUsage columnID="CAD16085-B788-EADD-F7F2-A09EA3433845"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="6047CF80-C269-2674-973F-E0FE4010098F" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATED_DDL_STATEMENT_CHUNKS$PK">
+<ind_PK_UK id="6047CF80-C269-2674-973F-E0FE4010098F" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATED_DDL_STATEMENT_CHUNKS$IDX$1">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>GENERATED_DDL_STATEMENT_CHUNKS$PK</sourceObjName>
@@ -131,10 +173,26 @@
 <importedID>9E5C5C41-AFAA-1EFB-D338-BC30CEE295BA</importedID>
 <indexState>Unique Plain Index</indexState>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="5F2F6F25-C492-DBDE-DAEE-4717907C7A47"/>
 <colUsage columnID="11D71616-1C2C-967F-D049-812BE6C55EE7"/>
 <colUsage columnID="CAD16085-B788-EADD-F7F2-A09EA3433845"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="692B8D2F-50B6-77FD-A704-C03E51898AD5" name="GENERATED_DDL_STATEMENT_CHUNKS$IDX$2">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 15:30:24 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="5F2F6F25-C492-DBDE-DAEE-4717907C7A47"/>
+<colUsage columnID="11D71616-1C2C-967F-D049-812BE6C55EE7"/>
 </indexColumnUsage>
 </ind_PK_UK>
 <ind_PK_UK id="FA3AE516-A7FF-A9AA-75BD-70CE30CEDD57" name="GENERATED_DDL_STATEMENT_CHUNKS$FK$1">

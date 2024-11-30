@@ -1,12 +1,15 @@
 create table generate_ddl_session_schema_objects
-( session_id number not null -- Primary key #1
-, seq integer not null -- Primary key #2: Sequence within (session_id)
-  constraint generate_ddl_session_schema_objects$ck$seq check (seq >= 1) 
-, schema_object_filter_id integer not null -- derivable from session_id, however needed for generate_ddl_session_schema_objects$fk$1
-, schema_object_id varchar2(500 byte) not null
+( session_id number -- Primary key #1
+  constraint generate_ddl_session_schema_objects$nnc$session_id not null
+, seq integer -- Primary key #2: Sequence within (session_id)
+  constraint generate_ddl_session_schema_objects$nnc$seq not null
+, schema_object_filter_id integer -- derivable from session_id, however needed for generate_ddl_session_schema_objects$fk$1
+  constraint generate_ddl_session_schema_objects$nnc$schema_object_filter_id not null
+, schema_object_id varchar2(500 byte)
+  constraint generate_ddl_session_schema_objects$nnc$schema_object_id not null
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
-  not null  
+  constraint generate_ddl_session_schema_objects$nnc$created not null
 , last_ddl_time date -- all_objects.last_ddl_time
 , generate_ddl_configuration_id integer 
 , constraint generate_ddl_session_schema_objects$pk
@@ -42,3 +45,8 @@ on generate_ddl_session_schema_objects(session_id);
 -- foreign key index generate_ddl_session_schema_objects$fk$3
 create index generate_ddl_session_schema_objects$fk$3
 on generate_ddl_session_schema_objects(schema_object_id, last_ddl_time, generate_ddl_configuration_id);
+
+alter table generate_ddl_session_schema_objects add constraint generate_ddl_session_schema_objects$ck$seq check ( seq >= 1 );
+
+comment on table generate_ddl_session_schema_objects is
+    'Information about DDL to generate for schema objects for a specific session.';

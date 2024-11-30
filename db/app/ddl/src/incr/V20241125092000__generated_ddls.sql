@@ -1,11 +1,15 @@
 create table generated_ddls
 ( id integer generated always as identity
-, schema_object_id varchar2(500 byte) not null -- Unique key #1
-, last_ddl_time date not null                  -- Unique key #2
-, generate_ddl_configuration_id integer not null  -- Unique key #3
+  constraint generated_ddls$nnc$id not null
+, schema_object_id varchar2(500 byte)   -- Unique key #1
+  constraint generated_ddls$nnc$schema_object_id not null
+, last_ddl_time date                    -- Unique key #2
+  constraint generated_ddls$nnc$last_ddl_time not null
+, generate_ddl_configuration_id integer -- Unique key #3
+  constraint generated_ddls$nnc$generate_ddl_configuration_id not null
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
-  not null  
+  constraint generated_ddls$nnc$created not null
 , constraint generated_ddls$pk
   primary key (id)
 , constraint generated_ddls$uk$1
@@ -30,4 +34,5 @@ alter table generated_ddls nologging;
 create index generated_ddls$fk$2
 on generated_ddls(generate_ddl_configuration_id);
 
-
+comment on table generated_ddls is
+    'The generated DDL info for a specific schema object id, last DDL time and configuration.';
