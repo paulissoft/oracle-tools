@@ -457,7 +457,7 @@ $end
         exception
           when e_can_not_insert_null
           then raise_application_error
-               ( pkg_ddl_error.c_object_not_correct
+               ( oracle_tools.pkg_ddl_error.c_object_not_correct
                , 'No LAST_DDL_TIME for schema object id ' || p_schema_ddl.obj.id
                , true
                );
@@ -574,7 +574,7 @@ procedure add_schema_object_tab
 , p_schema_object_filter_id in positiven
 )
 is
-  l_last_seq generate_ddl_session_schema_objects.seq%type;
+  l_last_seq oracle_tools.generate_ddl_session_schema_objects.seq%type;
 $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECT_TAB';
 $end
@@ -638,7 +638,7 @@ $end
   where   gdsso.session_id = p_session_id;
 
   -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns 0
-  insert into generate_ddl_session_schema_objects
+  insert into oracle_tools.generate_ddl_session_schema_objects
   ( session_id
   , seq
   , schema_object_filter_id 
@@ -661,7 +661,7 @@ $end
               ,       rownum + l_last_seq as seq
               from    oracle_tools.generate_ddl_sessions gds
                       cross join table(p_schema_object_tab) t -- may contain duplicates (constraints)
-                      inner join schema_object_filter_results sofr
+                      inner join oracle_tools.schema_object_filter_results sofr
                       on sofr.schema_object_filter_id = p_schema_object_filter_id and
                          sofr.schema_object_id = t.id and
                          sofr.generate_ddl = 1 -- ignore objects that do not need to be generated                      
@@ -675,7 +675,7 @@ $end
                       ( select  /* GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 */
                                 gdsso.session_id
                         ,       gdsso.schema_object_id
-                        from    generate_ddl_session_schema_objects gdsso
+                        from    oracle_tools.generate_ddl_session_schema_objects gdsso
                       )              
             ) t;
 

@@ -830,7 +830,7 @@ final member function fq_object_name
 return varchar2
 deterministic
 is
-  l_object_name pkg_ddl_util.t_object_name;
+  l_object_name oracle_tools.pkg_ddl_util.t_object_name;
 
   function get_object_part(p_object_part in varchar2)
   return varchar2
@@ -948,7 +948,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.print(dbug."input", 'p_id: %s', p_id);
 $end
 
-  pkg_str_util.split
+  oracle_tools.pkg_str_util.split
   ( p_str => p_id
   , p_delimiter => ':'
   , p_str_tab => l_id_parts

@@ -28,7 +28,7 @@ function matches_schema_object
 , p_object_name in varchar2
 , p_base_object_type in varchar2 default null
 , p_base_object_name in varchar2 default null
-, p_schema_object_filter in t_schema_object_filter default null
+, p_schema_object_filter in oracle_tools.t_schema_object_filter default null
 , p_schema_object_id in varchar2 default null
 )
 return integer
@@ -301,7 +301,7 @@ $end
 end matches_schema_object;
 
 procedure serialize
-( p_schema_object_filter in t_schema_object_filter
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
 , p_json_object in out nocopy json_object_t
 )
 is
@@ -328,7 +328,7 @@ begin
 end serialize;
 
 function repr
-( p_schema_object_filter in t_schema_object_filter
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 return clob
 is
@@ -377,7 +377,7 @@ procedure construct
 , p_grantor_is_schema in integer
 , p_exclude_objects in clob
 , p_include_objects in clob
-, p_schema_object_filter in out nocopy t_schema_object_filter
+, p_schema_object_filter in out nocopy oracle_tools.t_schema_object_filter
 )
 is
   l_dependent_md_object_type_tab constant t_md_object_type_tab :=
@@ -1070,7 +1070,7 @@ begin
 end matches_schema_object;
 
 function serialize
-( p_schema_object_filter in t_schema_object_filter
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 return json_object_t
 is
@@ -1090,7 +1090,7 @@ $end
 end serialize;
 
 procedure print
-( p_schema_object_filter in t_schema_object_filter
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
   l_line_tab dbms_sql.varchar2a;
@@ -1128,7 +1128,7 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
 procedure ut_construct
 is
-  l_schema_object_filter t_schema_object_filter;
+  l_schema_object_filter oracle_tools.t_schema_object_filter;
   l_expected json_element_t;
 begin
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then

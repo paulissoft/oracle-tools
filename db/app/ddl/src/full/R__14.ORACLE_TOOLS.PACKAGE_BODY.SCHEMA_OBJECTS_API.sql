@@ -34,7 +34,7 @@ is
 
   l_excluded_tables_tab t_excluded_tables_tab;
 
-  l_schema_md_object_type_tab constant pkg_ddl_util.t_md_object_type_tab :=
+  l_schema_md_object_type_tab constant oracle_tools.pkg_ddl_util.t_md_object_type_tab :=
     oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then

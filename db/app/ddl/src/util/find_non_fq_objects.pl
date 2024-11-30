@@ -4,8 +4,18 @@ use strict;
 
 # Take the list between ( and ) from pom.xml
 
+my $line_no = 0;
+my $file = '';
+
 while (<>) {
-    printf("[%s#%04d] %s", $ARGV, $., $_) if ( m/
+    if ($ARGV ne $file) {
+        $line_no = 0;
+    }
+
+    $file = $ARGV;
+    $line_no++;
+
+    printf("[%s#%04d] %s", $file, $line_no, $_) if ( m/
 (?<!oracle_tools\.)\b
 ( ddl_crud_api
 | f_generate_ddl
