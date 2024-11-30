@@ -45,7 +45,7 @@ b. for the current session id (to_number(sys_context('USERENV', 'SESSIONID')))
 **/
 
 c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
-c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
+c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 
 subtype t_session_id is integer;  
 

@@ -268,7 +268,7 @@ $end
 
   g_ddl_tab sys.ku$_ddls; -- should be package global for better performance
 
-  g_parallel_level natural := null; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
+  g_parallel_level natural := c_default_parallel_level; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
 
   /* PRIVATE ROUTINES */
 
@@ -4390,7 +4390,7 @@ $end
     l_member_tab t_member_tab;
     -- type methods and their arguments
     l_type_method_tab t_type_method_tab;    
-    l_argument_tab t_argument_object_tab;    
+    l_argument_tab oracle_tools.t_argument_object_tab;    
 
     l_member_object oracle_tools.t_type_attribute_object;
     l_type_method_object oracle_tools.t_type_method_object;
