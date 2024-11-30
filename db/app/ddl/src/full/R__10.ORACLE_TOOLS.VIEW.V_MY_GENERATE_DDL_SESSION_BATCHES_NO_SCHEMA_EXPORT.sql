@@ -17,5 +17,5 @@ CREATE OR REPLACE FORCE VIEW "ORACLE_TOOLS"."V_MY_GENERATE_DDL_SESSION_BATCHES_N
 from    oracle_tools.v_my_generate_ddl_session_batches gdsb
 where   gdsb.object_type <> 'SCHEMA_EXPORT'
 order by
-        gdsb.ddl_batch_group; -- force TABLE to start early
+        gdsb.ddl_batch_group;
 
