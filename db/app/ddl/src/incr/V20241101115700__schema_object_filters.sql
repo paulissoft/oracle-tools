@@ -5,6 +5,7 @@ create table schema_object_filters
 ( id integer 
   default oracle_tools.schema_object_filters$seq.nextval
   constraint schema_object_filters$nnc$id not null
+  constraint schema_object_filters$ck$id check (id between 1 and 2147483647)
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   constraint schema_object_filters$nnc$created not null
@@ -18,6 +19,7 @@ create table schema_object_filters
 , hash_bucket_nr integer
   default 1
   constraint schema_object_filters$nnc$hash_bucket_nr not null
+  constraint schema_object_filters$ck$hash_bucket_nr check (hash_bucket_nr >= 1)
 , constraint schema_object_filters$pk
   primary key (id)
 -- store unique obj instances only (but add hash_bucket_nr since theoretically two objects may have the same hash)
@@ -34,11 +36,5 @@ nested table obj.object_cmp_tab$ store as schema_object_filters$obj$object_cmp_t
 
 alter table schema_object_filters nologging;
 
-ALTER TABLE ORACLE_TOOLS.SCHEMA_OBJECT_FILTERS
-    ADD constraint schema_object_filters$ck$id check (id between 1 and 2147483647)
-
-ALTER TABLE ORACLE_TOOLS.SCHEMA_OBJECT_FILTERS
-    ADD constraint schema_object_filters$ck$hash_bucket_nr check (hash_bucket_nr >= 1)
-
-COMMENT ON TABLE "ORACLE_TOOLS"."SCHEMA_OBJECT_FILTERS" IS
+comment on table schema_object_filters is
     'The filter for schema objects.';

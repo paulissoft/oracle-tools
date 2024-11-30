@@ -13,6 +13,21 @@ Only this package is used to manage CRUD operations on:
 - SCHEMA_OBJECT_FILTERS
 - SCHEMA_OBJECTS
 
+The interface for these tables is via these views (grant select to public):
+- V_MY_COMMENTS_DICT
+- V_MY_CONSTRAINTS_DICT
+- V_MY_GENERATE_DDL_SESSION_BATCHES
+- V_MY_GENERATE_DDL_SESSION_BATCHES_NO_EXPORT_SCHEMA
+- V_MY_NAMED_SCHEMA_OBJECTS
+- V_MY_OBJECT_GRANTS_DICT
+- V_MY_SCHEMA_DDLS
+- V_MY_SCHEMA_OBJECTS
+- V_MY_SCHEMA_OBJECTS_NO_DDL_YET
+- V_MY_SCHEMA_OBJECT_FILTER
+
+These are helper views:
+- V_ALL_SCHEMA_OBJECTS
+
 This package will **NOT** read dictionary objects hence **AUTHID DEFINER** is sufficient.
 
 These tables will not be granted to any other schema, so this package is the only interface: Virtual Private Database is thus not necessary.

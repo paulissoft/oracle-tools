@@ -22,7 +22,5 @@ alter table generated_ddl_statement_chunks nologging;
 
 -- no need to create foreign key index generated_ddl_statement_chunks$fk$1 since the primary key starts with those columns
 
-alter table generated_ddl_statement_chunks add constraint generated_ddl_statement_chunks$ck$chunk# check ( chunk# >= 1 );
-
 comment on table generated_ddl_statement_chunks is
     'The generated DDL statement chunks.';

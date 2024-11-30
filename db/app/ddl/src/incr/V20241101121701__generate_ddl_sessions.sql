@@ -2,7 +2,7 @@ create table generate_ddl_sessions
 ( session_id number
   default to_number(sys_context('USERENV', 'SESSIONID'))
   constraint generate_ddl_sessions$nnc$session_id not null
-, generate_ddl_configuration_id integer not null
+, generate_ddl_configuration_id integer
   constraint generate_ddl_sessions$nnc$generate_ddl_configuration_id not null
 , schema_object_filter_id integer
   constraint generate_ddl_sessions$nnc$schema_object_filter_id not null
@@ -37,6 +37,6 @@ on generate_ddl_sessions(schema_object_filter_id);
 create index generate_ddl_sessions$fk$2
 on generate_ddl_sessions(generate_ddl_configuration_id);
 
-COMMENT ON TABLE "ORACLE_TOOLS"."GENERATE_DDL_SESSIONS" IS
+comment on table generate_ddl_sessions is
     'Information about DDL generation per session id (sys_context(''USERENV'', ''SESSIONID'')). ';
 

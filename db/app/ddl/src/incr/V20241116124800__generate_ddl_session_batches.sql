@@ -32,5 +32,5 @@ alter table generate_ddl_session_batches nologging;
 
 -- foreign key index generate_ddl_session_batches$fk$2 not necessary
 
-COMMENT ON TABLE ORACLE_TOOLS.GENERATE_DDL_SESSION_BATCHES IS
+comment on table generate_ddl_session_batches is
     'DDL is generated in batches.';
