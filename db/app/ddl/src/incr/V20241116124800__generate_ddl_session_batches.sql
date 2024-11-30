@@ -14,6 +14,8 @@ create table generate_ddl_session_batches
 , object_name_tab oracle_tools.t_text_tab
 , base_object_name_tab oracle_tools.t_text_tab
 , nr_objects integer
+, start_time timestamp(6)
+, end_time timestamp(6)
 , constraint generate_ddl_session_batches$pk
   primary key (session_id, seq)
 , constraint generate_ddl_session_batches$fk$1

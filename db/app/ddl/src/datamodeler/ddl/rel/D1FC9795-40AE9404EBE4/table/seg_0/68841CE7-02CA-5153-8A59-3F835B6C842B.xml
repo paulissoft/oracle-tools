@@ -205,6 +205,32 @@
 <ownDataTypeParameters>,*,0</ownDataTypeParameters>
 <autoIncrementCycle>false</autoIncrementCycle>
 </Column>
+<Column name="START_TIME" id="3DA2F6F8-B3B4-FF6E-6632-864AC39EF8CF">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 11:42:22 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT015</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<defaultValue>sys_extract_utc(systimestamp)</defaultValue>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="END_TIME" id="1A0553DE-EF70-E580-566B-8FA56065C4E0">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 11:42:22 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT015</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<defaultValue>sys_extract_utc(systimestamp)</defaultValue>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
 </columns>
 <indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
 <ind_PK_UK id="9856CBB3-6894-3A4E-BEEA-932D2159EA68" name="GENERATE_DDL_SESSION_BATCHES$PK">

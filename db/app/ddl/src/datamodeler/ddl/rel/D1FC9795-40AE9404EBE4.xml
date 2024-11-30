@@ -10,6 +10,7 @@
 <connName>oracle_tools@free</connName>
 <connUser>bc_proxy[oracle_tools]</connUser>
 <connType>1</connType>
+<syncSelected>1</syncSelected>
 </importConnectionStamp>
 </importConnectionStamps>
 </relationalModel>

@@ -9,5 +9,8 @@
 <designDescr class="oracle.dbtools.crest.model.design.Design$DesignStorageDesc" id="382C8549-54AD-E4A5-C7C3-AA5C5DDC81C9">
 <designStoragePath>/Users/gpaulissen/dev/oracle-tools/db/app/ddl/src/datamodeler</designStoragePath>
 </designDescr>
+<designDescr class="oracle.dbtools.crest.model.design.Design$DesignStorageDesc" id="0188AAFB-86F9-C2C5-2253-558D0A3D8620">
+<designStoragePath>/Users/gpaulissen/dev/oracle-tools/db/app/ddl/src/datamodeler</designStoragePath>
+</designDescr>
 </usedDesignStorageDescriptors>
 </OSDM_Design>

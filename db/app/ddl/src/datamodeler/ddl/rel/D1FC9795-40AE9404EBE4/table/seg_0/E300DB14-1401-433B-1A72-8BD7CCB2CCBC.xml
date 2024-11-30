@@ -80,6 +80,21 @@
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
 <autoIncrementCycle>false</autoIncrementCycle>
 </Column>
+<Column name="USERNAME" id="C7968EA4-54B7-19C8-7F5F-B43342BB9771">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATE_DDL_SESSIONS</sourceObjSchema>
+<sourceObjName>USERNAME</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 11:26:53 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>420DBF58-CF78-9D83-03DE-82685D9D93E7</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>128 BYTE</dataTypeSize>
+<ownDataTypeParameters>128 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
 <Column name="UPDATED" id="6EC3F328-2F0B-3F2F-8274-D184323E5157">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>GENERATE_DDL_SESSIONS</sourceObjSchema>

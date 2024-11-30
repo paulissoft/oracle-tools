@@ -411,16 +411,13 @@ Set the number of parallel jobs; zero if run in serial; NULL uses the default pa
 See also DBMS_PARALLEL_EXECUTE.RUN_TASK.
 **/
 
-procedure ddl_batch_process
-( p_rollback in boolean default false
-);
+procedure ddl_batch_process;
 /** Invokes DBMS_PARALLEL_EXECUTE to process GENERATE_DDL_SESSION_BATCHES for the current session. **/
 
 procedure ddl_batch_process
 ( p_session_id in integer
 , p_start_id in number
 , p_end_id in number
-, p_rollback in boolean default false
 );
 /** Processes GENERATE_DDL_SESSION_BATCHES for this session within this range. **/
 

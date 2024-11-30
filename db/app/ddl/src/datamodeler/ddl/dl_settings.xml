@@ -395,8 +395,9 @@
 			<naming_option class_name="oracle.dbtools.crest.model.design.relational.Table" max_name_length="128" case_type="2" valid_characters="null" all_valid="true" />
 			<naming_option class_name="oracle.dbtools.crest.model.design.relational.Column" max_name_length="128" case_type="2" valid_characters="null" all_valid="true" />
 			<naming_option class_name="oracle.dbtools.crest.model.design.relational.TableView" max_name_length="128" case_type="2" valid_characters="null" all_valid="true" />
-			<naming_option class_name="oracle.dbtools.crest.model.design.relational.Index" max_name_length="128" case_type="2" valid_characters="null" all_valid="true" />
 			<naming_option class_name="oracle.dbtools.crest.model.design.constraint.TableLevelConstraint" max_name_length="128" case_type="2" valid_characters="null" all_valid="true" />
+			<naming_option class_name="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" max_name_length="128" case_type="2" valid_characters="" all_valid="true" />
+			<naming_option class_name="oracle.dbtools.crest.model.design.relational.Index" max_name_length="128" case_type="2" valid_characters="null" all_valid="true" />
 		</model_options>
 		<model_options objectid="2E7BAE7D-90FD-C9B0-FB49-7DAAD50A103E">
 			<naming_option class_name="oracle.dbtools.crest.model.design.logical.Entity" max_name_length="254" case_type="2" valid_characters="null" all_valid="true" />
@@ -458,6 +459,34 @@
 								<views value="70"/>
 								<triggers value="70"/>
 							</physical_model_D1FC9795-5DCC-F33D-33F9-40AE9404EBE4_Oracle_Database_21c>
+							<physical_model_D1FC9795-5DCC-F33D-33F9-40AE9404EBE4_Oracle_Database_12cR2>
+								<physical_model_name value="Oracle Database 12cR2"/>
+								<clusters value="70"/>
+								<contexts value="70"/>
+								<dBs value="70"/>
+								<dimensions value="70"/>
+								<directories value="70"/>
+								<diskGroups value="70"/>
+								<externalTables value="70"/>
+								<snapshots value="70"/>
+								<roles value="70"/>
+								<rollbackSegments value="70"/>
+								<segments value="70"/>
+								<sequences value="70"/>
+								<storedProcedures value="70"/>
+								<functions value="70"/>
+								<packages value="70"/>
+								<collectionTypes value="70"/>
+								<structuredTypes value="70"/>
+								<synonyms value="70"/>
+								<tables value="70"/>
+								<tableSpaces value="70"/>
+								<temporaryTableSpaces value="70"/>
+								<undoTableSpaces value="70"/>
+								<users value="70"/>
+								<views value="70"/>
+								<triggers value="70"/>
+							</physical_model_D1FC9795-5DCC-F33D-33F9-40AE9404EBE4_Oracle_Database_12cR2>
 				</physical_models_estimates>
 			</relational_model_0_estimates>
 		</relational_model_estimates>

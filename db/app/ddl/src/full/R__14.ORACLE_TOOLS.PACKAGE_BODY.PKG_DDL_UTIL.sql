@@ -5393,8 +5393,6 @@ $end
   end set_parallel_level;
 
   procedure ddl_batch_process
-  ( p_rollback in boolean
-  )
   is
     l_session_id constant integer := oracle_tools.ddl_crud_api.get_session_id;
     l_task_name constant varchar2(100 byte) := 'DDL_BATCH-' || to_char(l_session_id);
@@ -5403,18 +5401,13 @@ $end
       utl_lms.format_message
       ( q'[
 begin
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-  dbug.activate('LOG4PLSQL', true);
-$end      
   oracle_tools.pkg_ddl_util.ddl_batch_process
   ( p_session_id => %s
   , p_start_id => :start_id
   , p_end_id => :end_id
-  , p_rollback => %s
   );
 end;]'
       , to_char(l_session_id)
-      , case when p_rollback then 'true' else 'false' end
       );
     l_status number;
   begin
@@ -5504,7 +5497,6 @@ $end
   ( p_session_id in integer
   , p_start_id in number
   , p_end_id in number
-  , p_rollback in boolean
   )
   is
     cursor c_gdssdb
@@ -5518,9 +5510,14 @@ $end
                   gdsb.ddl_batch_group between p_start_id and p_end_id
                 )
               )
+      and     gdsb.end_time is null        
       order by
               gdsb.session_id
       ,       gdsb.seq;
+      
+    type t_gdssdb_tab is table of c_gdssdb%rowtype;
+    
+    l_gdssdb_tab t_gdssdb_tab;
   begin
     -- essential when in another process
     if oracle_tools.ddl_crud_api.get_session_id = p_session_id
@@ -5530,37 +5527,39 @@ $end
       oracle_tools.ddl_crud_api.set_session_id(p_session_id);
     end if;
 
-    savepoint spt;
-
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'DDL_BATCH_PROCESS (' || p_start_id || '-' || p_end_id || ')');
     dbug.print(dbug."input", 'p_session_id: %s; p_start_id: %s; p_end_id: %s', p_session_id, p_start_id, p_end_id);
 $end
 
-    for r_gdssdb in c_gdssdb
-    loop
-      oracle_tools.ddl_crud_api.set_batch_start_time(r_gdssdb.seq);
-      
-      get_schema_ddl
-      ( p_schema => r_gdssdb.schema
-      , p_transform_param_list => r_gdssdb.transform_param_list
-      , p_object_type => r_gdssdb.object_type
-      , p_object_schema => r_gdssdb.object_schema
-      , p_base_object_schema => r_gdssdb.base_object_schema
-      , p_object_name_tab => r_gdssdb.object_name_tab
-      , p_base_object_name_tab => r_gdssdb.base_object_name_tab
-      , p_nr_objects => r_gdssdb.nr_objects
-      , p_add_no_ddl_retrieved => (r_gdssdb.object_type = "SCHEMA_EXPORT")
-      );
-      
-      oracle_tools.ddl_crud_api.set_batch_end_time(r_gdssdb.seq);
-    end loop;
+    open c_gdssdb;
+    fetch c_gdssdb bulk collect into l_gdssdb_tab;
+    close c_gdssdb;
 
-    -- commit/rollback should be here
-    if p_rollback
-    then rollback to spt;
-    else commit;
+    if l_gdssdb_tab.count > 0
+    then
+      for i_idx in l_gdssdb_tab.first .. l_gdssdb_tab.last
+      loop
+        oracle_tools.ddl_crud_api.set_batch_start_time(l_gdssdb_tab(i_idx).seq);
+        commit;
+        
+        get_schema_ddl
+        ( p_schema => l_gdssdb_tab(i_idx).schema
+        , p_transform_param_list => l_gdssdb_tab(i_idx).transform_param_list
+        , p_object_type => l_gdssdb_tab(i_idx).object_type
+        , p_object_schema => l_gdssdb_tab(i_idx).object_schema
+        , p_base_object_schema => l_gdssdb_tab(i_idx).base_object_schema
+        , p_object_name_tab => l_gdssdb_tab(i_idx).object_name_tab
+        , p_base_object_name_tab => l_gdssdb_tab(i_idx).base_object_name_tab
+        , p_nr_objects => l_gdssdb_tab(i_idx).nr_objects
+        , p_add_no_ddl_retrieved => (l_gdssdb_tab(i_idx).object_type = "SCHEMA_EXPORT")
+        );
+        
+        oracle_tools.ddl_crud_api.set_batch_end_time(l_gdssdb_tab(i_idx).seq);
+        commit;
+      end loop;
     end if;
+
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -5807,8 +5806,6 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;      
 $end
     end loop outer_loop;
-
---    ddl_batch_process(true, oracle_tools.ddl_crud_api.get_session_id);
 
     cleanup;
 
