@@ -5435,7 +5435,7 @@ $end
         dbms_parallel_execute.create_chunks_by_number_col
         ( task_name => l_task_name
         , table_owner => 'ORACLE_TOOLS'
-        , table_name => 'ORACLE_TOOLS.V_MY_GENERATE_DDL_SESSION_BATCHES_NO_SCHEMA_EXPORT'
+        , table_name => 'V_MY_GENERATE_DDL_SESSION_BATCHES_NO_SCHEMA_EXPORT'
         , table_column => 'DDL_BATCH_GROUP'
         , chunk_size => 1
         );
