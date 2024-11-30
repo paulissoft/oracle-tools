@@ -1081,12 +1081,12 @@ begin
             -- table related                     -- result of object_type_order()
             when 'SEQUENCE'              then  0 --  1
             when 'CLUSTER'               then  0 --  3
-            when 'TABLE'                 then  0 --  6
             when 'INDEX'                 then  0 -- 16
             when 'CONSTRAINT'            then  0 -- 19
             when 'REF_CONSTRAINT'        then  0 -- 20
-            when 'COMMENT'               then  0 -- 22
             -- table related
+            when 'TABLE'                 then  1 --  6
+            when 'COMMENT'               then  1 -- 22
             when 'AQ_QUEUE_TABLE'        then  1 --  4
             when 'AQ_QUEUE'              then  1 --  5
             when 'MATERIALIZED_VIEW'     then  1 -- 12

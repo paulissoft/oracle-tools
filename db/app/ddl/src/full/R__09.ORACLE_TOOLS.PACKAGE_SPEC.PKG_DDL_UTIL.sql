@@ -49,7 +49,7 @@ c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $e
 c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 
-c_default_parallel_level constant natural := 4; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
+c_default_parallel_level constant natural := 2; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
 
 /*
 -- Start of bugs/features (oldest first)
