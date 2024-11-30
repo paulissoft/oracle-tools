@@ -30,39 +30,30 @@ exception
   then return null;
 end get_schema_object_filter_id;
 
-function find_schema_object_by_seq
-( p_session_id in t_session_id
-, p_seq in integer
-)
-return generate_ddl_session_schema_objects%rowtype
-is
-  l_rec generate_ddl_session_schema_objects%rowtype;
-begin
-  select  gdsso.*
-  into    l_rec
-  from    oracle_tools.generate_ddl_session_schema_objects gdsso
-  where   gdsso.session_id = p_session_id
-  and     gdsso.seq = p_seq;
-
-  return l_rec;
-end find_schema_object_by_seq;
-
-function find_schema_object_by_object_id
+function find_schema_object
 ( p_session_id in t_session_id
 , p_schema_object_id in varchar2
 )
-return generate_ddl_session_schema_objects%rowtype
+return oracle_tools.t_schema_object
 is
-  l_rec generate_ddl_session_schema_objects%rowtype;
+  l_obj oracle_tools.t_schema_object := null;
 begin
-  select  gdsso.*
-  into    l_rec
+  select  so.obj
+  into    l_obj
   from    oracle_tools.generate_ddl_session_schema_objects gdsso
+          inner join oracle_tools.schema_object_filter_results sofr
+          on sofr.schema_object_filter_id = gdsso.schema_object_filter_id and
+             sofr.schema_object_id = gdsso.schema_object_id
+          inner join oracle_tools.schema_objects so
+          on so.schema_object_id = sofr.schema_object_id          
   where   gdsso.session_id = p_session_id
   and     gdsso.schema_object_id = p_schema_object_id;
 
-  return l_rec;
-end find_schema_object_by_object_id;
+  return l_obj;
+exception
+  when no_data_found
+  then return null;
+end find_schema_object;
 
 function match_perc
 ( p_session_id in t_session_id
@@ -86,7 +77,8 @@ end match_perc;
 procedure add_schema_object_filter
 ( p_session_id in t_session_id
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_generate_ddl_configuration_id in oracle_tools.generate_ddl_configurations.id%type -- the GENERATE_DDL_CONFIGURATIONS.ID
+, p_generate_ddl_configuration_id in integer -- the GENERATE_DDL_CONFIGURATIONS.ID
+, p_schema_object_filter_id out nocopy integer
 )
 is
   cursor c_sof(b_schema_object_filter_id in positive)
@@ -100,7 +92,6 @@ is
 
   l_last_modification_time_schema_old oracle_tools.schema_object_filters.last_modification_time_schema%type;
   l_last_modification_time_schema_new oracle_tools.schema_object_filters.last_modification_time_schema%type;
-  l_schema_object_filter_id positive;
   l_clob constant clob := p_schema_object_filter.serialize();
   l_hash_bucket constant oracle_tools.schema_object_filters.hash_bucket%type :=
     sys.dbms_crypto.hash(l_clob, sys.dbms_crypto.hash_sh1);
@@ -121,7 +112,7 @@ $end
   select  max(case when dbms_lob.compare(sof.obj.serialize(), l_clob) = 0 then sof.id end) as id
   ,       nvl(max(sof.hash_bucket_nr), 0) + 1
   ,       count(*)
-  into    l_schema_object_filter_id
+  into    p_schema_object_filter_id
   ,       l_hash_bucket_nr
   ,       l_hash_buckets_equal
   from    oracle_tools.schema_object_filters sof
@@ -130,8 +121,8 @@ $end
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print
   ( dbug."info"
-  , 'l_schema_object_filter_id: %s; l_hash_bucket_nr: %s; l_hash_buckets_equal: %s'
-  , l_schema_object_filter_id
+  , 'p_schema_object_filter_id: %s; l_hash_bucket_nr: %s; l_hash_buckets_equal: %s'
+  , p_schema_object_filter_id
   , l_hash_bucket_nr
   , l_hash_buckets_equal
   );
@@ -166,7 +157,7 @@ $end
   where   o.owner = p_schema_object_filter.schema;
   
   -- when not found add it
-  if l_schema_object_filter_id is null
+  if p_schema_object_filter_id is null
   then
     insert into oracle_tools.schema_object_filters
     ( hash_bucket
@@ -180,9 +171,9 @@ $end
     , p_schema_object_filter
     , l_last_modification_time_schema_new
     )
-    returning id into l_schema_object_filter_id;
+    returning id into p_schema_object_filter_id;
   else
-    open c_sof(l_schema_object_filter_id);
+    open c_sof(p_schema_object_filter_id);
     fetch c_sof into l_last_modification_time_schema_old;
     if c_sof%notfound
     then raise program_error; -- should not happen
@@ -192,7 +183,7 @@ $end
       -- we must recalculate p_schema_object_filter.matches_schema_object() for every object
       delete
       from    oracle_tools.schema_object_filter_results sofr
-      where   sofr.schema_object_filter_id = l_schema_object_filter_id;
+      where   sofr.schema_object_filter_id = p_schema_object_filter_id;
     end if;
     update  oracle_tools.schema_object_filters sof
     set     sof.last_modification_time_schema = l_last_modification_time_schema_new
@@ -202,7 +193,7 @@ $end
   end if;
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
-  dbug.print(dbug."info", 'l_schema_object_filter_id: %s', l_schema_object_filter_id);
+  dbug.print(dbug."output", 'p_schema_object_filter_id: %s', p_schema_object_filter_id);
 $end
 
   -- cleanup on the fly
@@ -217,11 +208,13 @@ $end
     ( session_id
     , schema_object_filter_id
     , generate_ddl_configuration_id
+    , username
     )
     values
     ( p_session_id
-    , l_schema_object_filter_id
+    , p_schema_object_filter_id
     , p_generate_ddl_configuration_id
+    , user
     );
 $if oracle_tools.ddl_crud_api.c_debugging $then
     dbug.print(dbug."info", '# rows inserted into generate_ddl_sessions: %s', sql%rowcount);
@@ -237,7 +230,7 @@ $if oracle_tools.ddl_crud_api.c_debugging $then
 $end
 
     update  oracle_tools.generate_ddl_sessions gds
-    set     gds.schema_object_filter_id = l_schema_object_filter_id
+    set     gds.schema_object_filter_id = p_schema_object_filter_id
     ,       gds.generate_ddl_configuration_id = p_generate_ddl_configuration_id
     ,       gds.updated = sys_extract_utc(systimestamp)
     where   gds.session_id = p_session_id;
@@ -710,25 +703,15 @@ begin
   return g_session_id;
 end get_session_id;
 
-function find_schema_object_by_seq
-( p_seq in integer
-)
-return generate_ddl_session_schema_objects%rowtype
-is
-begin
-  PRAGMA INLINE (find_schema_object_by_seq, 'YES');
-  return find_schema_object_by_seq(p_session_id => get_session_id, p_seq => p_seq);
-end find_schema_object_by_seq;
-
-function find_schema_object_by_object_id
+function find_schema_object
 ( p_schema_object_id in varchar2
 )
-return generate_ddl_session_schema_objects%rowtype
+return oracle_tools.t_schema_object
 is
 begin
-  PRAGMA INLINE (find_schema_object_by_object_id, 'YES');
-  return find_schema_object_by_object_id(p_session_id => get_session_id, p_schema_object_id => p_schema_object_id);
-end find_schema_object_by_object_id;
+  PRAGMA INLINE (find_schema_object, 'YES');
+  return find_schema_object(p_session_id => get_session_id, p_schema_object_id => p_schema_object_id);
+end find_schema_object;
 
 procedure default_match_perc_threshold
 ( p_match_perc_threshold in integer
@@ -765,7 +748,7 @@ procedure add
 , p_include_objects in clob -- A newline separated list of objects to include (their schema object id actually).
 , p_transform_param_list in varchar2 -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
 , p_schema_object_filter out nocopy oracle_tools.t_schema_object_filter -- the schema object filter
-, p_generate_ddl_configuration_id out nocopy oracle_tools.generate_ddl_configurations.id%type
+, p_generate_ddl_configuration_id out nocopy integer
 )
 is
   l_param_tab1 sys.odcivarchar2list;
@@ -836,7 +819,8 @@ end add;
 
 procedure add
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_generate_ddl_configuration_id in oracle_tools.generate_ddl_configurations.id%type -- the GENERATE_DDL_CONFIGURATIONS.ID
+, p_generate_ddl_configuration_id in integer -- the GENERATE_DDL_CONFIGURATIONS.ID
+, p_schema_object_filter_id out nocopy integer
 )
 is
 begin
@@ -845,6 +829,7 @@ begin
   ( p_session_id => get_session_id
   , p_schema_object_filter => p_schema_object_filter
   , p_generate_ddl_configuration_id => p_generate_ddl_configuration_id
+  , p_schema_object_filter_id => p_schema_object_filter_id
   );
 end add;  
 
@@ -948,6 +933,44 @@ begin
   , p_schema_object_filter_id => p_schema_object_filter_id
   );
 end add;
+
+procedure set_batch_start_time
+( p_seq in integer
+)
+is
+  l_session_id constant t_session_id := get_session_id;
+begin
+  update  oracle_tools.generate_ddl_session_batches gdsb
+  set     gdsb.start_time = sys_extract_utc(systimestamp)
+  where   gdsb.session_id = l_session_id
+  and     gdsb.seq = p_seq;
+  case sql%rowcount
+    when 0
+    then raise no_data_found;
+    when 1
+    then null; -- ok
+    else raise too_many_rows;
+  end case;
+end set_batch_start_time;
+
+procedure set_batch_end_time
+( p_seq in integer
+)
+is
+  l_session_id constant t_session_id := get_session_id;
+begin
+  update  oracle_tools.generate_ddl_session_batches gdsb
+  set     gdsb.end_time = sys_extract_utc(systimestamp)
+  where   gdsb.session_id = l_session_id
+  and     gdsb.seq = p_seq;
+  case sql%rowcount
+    when 0
+    then raise no_data_found;
+    when 1
+    then null; -- ok
+    else raise too_many_rows;
+  end case;
+end set_batch_end_time;
 
 END DDL_CRUD_API;
 /
