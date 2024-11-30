@@ -5,11 +5,21 @@
 <sourceObjName>SCHEMA_OBJECTS</sourceObjName>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<comment><![CDATA[The schema objects including named object and dependent or granted objects.]]></comment>
+<commentInRDBMS><![CDATA[The schema objects including named object and dependent or granted objects.]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>07ABF4CB-F36E-406F-F9F2-E1451B82BCB0</importedID>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>
+<propertyMap>
+<property name="applyStandards" value="1"/>
+<property name="copyComments" value="1"/>
+<property name="createIndexOnFK" value="1"/>
+<property name="setColumnsOrder" value="1"/>
+<property name="setIdentityColumn" value="1"/>
+<property name="tableToUpperCase" value="1"/>
+</propertyMap>
 <columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
 <Column name="ID" id="F9235B75-7E72-8805-F33D-16F641E2E8D2">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -24,22 +34,16 @@
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>500 BYTE</dataTypeSize>
 <ownDataTypeParameters>500 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementColumn>true</autoIncrementColumn>
+<identityColumn>true</identityColumn>
 <autoIncrementCycle>false</autoIncrementCycle>
-</Column>
-<Column name="OBJ" id="A389E789-4FE5-08A6-B47C-88EAB658F56B">
-<sourceConnName>oracle_tools@free</sourceConnName>
-<sourceObjSchema>SCHEMA_OBJECTS</sourceObjSchema>
-<sourceObjName>OBJ</sourceObjName>
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<importedID>35759CC7-55B2-0688-9B71-A31964B3B5E6</importedID>
-<nullsAllowed>true</nullsAllowed>
-<useDomainConstraints>false</useDomainConstraints>
-<use>3</use>
-<structuredType>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</structuredType>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
-<autoIncrementCycle>false</autoIncrementCycle>
+<autoIncrementGenerateTrigger>false</autoIncrementGenerateTrigger>
+<notNullConstraintName>SCHEMA_OBJECTS$NNC$ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="CREATED" id="3F977B1B-5AD9-8D43-E6B1-CEB1725A4041">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -55,7 +59,33 @@
 <dataTypePrecision>6</dataTypePrecision>
 <defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>SCHEMA_OBJECTS$NNC$CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+<Column name="OBJ" id="A389E789-4FE5-08A6-B47C-88EAB658F56B">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECTS</sourceObjSchema>
+<sourceObjName>OBJ</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>35759CC7-55B2-0688-9B71-A31964B3B5E6</importedID>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>3</use>
+<structuredType>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</structuredType>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 </columns>
 <nestedColumns itemClass="oracle.dbtools.crest.model.design.relational.Column">
@@ -120,6 +150,9 @@
 <pk>true</pk>
 <indexState>Primary Constraint</indexState>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 <indexColumnUsage>
 <colUsage columnID="F9235B75-7E72-8805-F33D-16F641E2E8D2"/>
 </indexColumnUsage>
@@ -134,6 +167,9 @@
 <importedID>8BE69CFC-FF51-D56A-5B01-FEE1918FF098</importedID>
 <indexExpression>ORACLE_TOOLS, ORACLE_TOOLS, ORACLE_TOOLS</indexExpression>
 <isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </ind_PK_UK>
 <ind_PK_UK id="42D941F4-C19D-4F85-D0DB-1F6A45FD9757" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECTS$IDX$2">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -145,24 +181,13 @@
 <importedID>15C43899-7473-54DD-BC4A-871B11B17EA0</importedID>
 <indexExpression>ORACLE_TOOLS, ORACLE_TOOLS, ORACLE_TOOLS</indexExpression>
 <isSurrogateKey>false</isSurrogateKey>
-</ind_PK_UK>
-<ind_PK_UK id="2A77B697-14FC-B092-51AB-D0AA4482BBB7" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECTS$PK">
-<sourceConnName>oracle_tools@free</sourceConnName>
-<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
-<sourceObjName>SCHEMA_OBJECTS$PK</sourceObjName>
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<importedID>3A7D6668-E29B-1BC2-B060-C1BF2D82D79B</importedID>
-<indexState>Unique Plain Index</indexState>
-<isSurrogateKey>false</isSurrogateKey>
-<indexColumnUsage>
-<colUsage columnID="F9235B75-7E72-8805-F33D-16F641E2E8D2"/>
-</indexColumnUsage>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </ind_PK_UK>
 </indexes>
 <tableCheckConstraints itemClass="oracle.dbtools.crest.model.design.constraint.TableLevelConstraint">
-<tableCheckConstraint name="SCHEMA_OBJECTS$CK$OBJ" directorySegmentName="seg_0" id="5C2C118E-B086-B7A6-6AF1-9CE9D39E6CF5">
+<tableCheckConstraint name="SCHEMA_OBJECTS$CK$1" directorySegmentName="seg_0" id="5C2C118E-B086-B7A6-6AF1-9CE9D39E6CF5">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>SCHEMA_OBJECTS$CK$OBJ</sourceObjName>

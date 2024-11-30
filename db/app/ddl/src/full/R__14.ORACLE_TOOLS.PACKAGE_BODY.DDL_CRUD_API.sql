@@ -934,6 +934,15 @@ begin
   );
 end add;
 
+procedure clear_batch
+is
+  l_session_id constant t_session_id := get_session_id;
+begin
+  delete
+  from    oracle_tools.generate_ddl_session_batches gdsb
+  where   gdsb.session_id = l_session_id;
+end clear_batch;
+
 procedure set_batch_start_time
 ( p_seq in integer
 )

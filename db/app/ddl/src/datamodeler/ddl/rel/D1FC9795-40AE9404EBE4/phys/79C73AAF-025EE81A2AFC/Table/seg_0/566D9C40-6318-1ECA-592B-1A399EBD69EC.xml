@@ -40,15 +40,10 @@
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
+<autoIncrementDDL>IDENTITY_CLAUSE</autoIncrementDDL>
 </ColumnProxy>
 </columnProxies>
 <indexProxies>
-<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="SCHEMA_OBJECTS$PK" id="2A77B697-14FC-B092-51AB-D0AA4482BBB7">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<schemaObject>86E07972-0E39-656A-F568-00AE638CFEA4</schemaObject>
-</IndexProxy>
 <IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="SCHEMA_OBJECTS$IDX$2" id="42D941F4-C19D-4F85-D0DB-1F6A45FD9757">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
@@ -71,7 +66,7 @@
 </PrimaryKey>
 </primaryKeys>
 <tableCheckConstraints itemClass="oracle.dbtools.crest.model.design.storage.oracle.TableCheckConstraintOracle">
-<TableCheckConstraint name="SCHEMA_OBJECTS$CK$OBJ" id="5C2C118E-B086-B7A6-6AF1-9CE9D39E6CF5">
+<TableCheckConstraint name="SCHEMA_OBJECTS$CK$1" id="5C2C118E-B086-B7A6-6AF1-9CE9D39E6CF5">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>

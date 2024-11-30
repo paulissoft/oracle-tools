@@ -184,7 +184,7 @@ procedure add
 , p_base_object_name_tab in oracle_tools.t_text_tab
 , p_nr_objects in integer
 );
-/** Update the record in table GENERATE_DDL_SESSION_BATCHES. **/
+/** Add a record in table GENERATE_DDL_SESSION_BATCHES. **/
 
 procedure add
 ( p_schema_object_tab in oracle_tools.t_schema_object_tab
@@ -196,6 +196,9 @@ Insert (if not already there) into:
 2. SCHEMA_OBJECT_FILTER_RESULTS
 3. GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 **/
+
+procedure clear_batch;
+/** Remove all records from GENERATE_DDL_SESSION_BATCHES.START_TIME for the current session id. **/
 
 procedure set_batch_start_time
 ( p_seq in integer

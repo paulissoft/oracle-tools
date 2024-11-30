@@ -5769,38 +5769,34 @@ $end
       fetch c_params bulk collect into l_params_tab;
       close c_params;
 
-      <<params_loop>>
-      loop
-
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-        dbug.print(dbug."debug", 'l_params_tab.count: %s', l_params_tab.count);
+      dbug.print(dbug."debug", 'l_params_tab.count: %s', l_params_tab.count);
 $end
 
-        l_params_idx := l_params_tab.first;
-        <<param_loop>>
-        loop
-          exit param_loop when l_params_idx is null;
+      oracle_tools.ddl_crud_api.clear_batch;
+        
+      l_params_idx := l_params_tab.first;
+      <<param_loop>>
+      loop
+        exit param_loop when l_params_idx is null;
 
-          r_params := l_params_tab(l_params_idx);
+        r_params := l_params_tab(l_params_idx);
 
-          -- insert into generate_ddl_session_batches
-          oracle_tools.ddl_crud_api.add
-          ( p_schema => p_schema_object_filter.schema()
-          , p_transform_param_list => p_transform_param_list
-          , p_object_schema => r_params.object_schema
-          , p_object_type => r_params.object_type
-          , p_base_object_schema => r_params.base_object_schema
-          , p_base_object_type => r_params.base_object_type
-          , p_object_name_tab => r_params.object_name_tab
-          , p_base_object_name_tab => r_params.base_object_name_tab
-          , p_nr_objects => r_params.nr_objects
-          );
+        -- insert into generate_ddl_session_batches
+        oracle_tools.ddl_crud_api.add
+        ( p_schema => p_schema_object_filter.schema()
+        , p_transform_param_list => p_transform_param_list
+        , p_object_schema => r_params.object_schema
+        , p_object_type => r_params.object_type
+        , p_base_object_schema => r_params.base_object_schema
+        , p_base_object_type => r_params.base_object_type
+        , p_object_name_tab => r_params.object_name_tab
+        , p_base_object_name_tab => r_params.base_object_name_tab
+        , p_nr_objects => r_params.nr_objects
+        );
 
-          l_params_idx := l_params_tab.next(l_params_idx);
-        end loop param_loop;
-
-        exit params_loop when l_params_tab.count < g_max_fetch; -- next fetch will return 0
-      end loop params_loop;
+        l_params_idx := l_params_tab.next(l_params_idx);
+      end loop param_loop;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;      

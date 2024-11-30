@@ -24,6 +24,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <ownDataTypeParameters>,,</ownDataTypeParameters>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_SESSION_BATCHES$NNC$SESSION_ID</notNullConstraintName>
 <associations>
 <colAssociation fkAssociation="F8B527D4-9EE2-E03B-17A7-BF2BFCC20AC6" referredColumn="613B2DB2-8850-A2C4-488C-9EEF937877EA"/>
 </associations>
@@ -43,6 +44,7 @@
 <dataTypeScale>0</dataTypeScale>
 <ownDataTypeParameters>,*,0</ownDataTypeParameters>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_SESSION_BATCHES$NNC$SEQ</notNullConstraintName>
 </Column>
 <Column name="CREATED" id="550738BE-7748-BAED-7B53-FF0DBA135D39">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -59,6 +61,7 @@
 <defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
 <autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_SESSION_BATCHES$NNC$CREATED</notNullConstraintName>
 </Column>
 <Column name="SCHEMA" id="55D563EC-F349-E69E-2161-55AE33BA4B06">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -249,7 +252,7 @@
 <colUsage columnID="55981A1A-DAB7-CB06-9BCB-5E89F9B8548B"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="53E345B0-D075-F7A7-ED88-D812AC05696A" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_SESSION_BATCHES$PK">
+<ind_PK_UK id="53E345B0-D075-F7A7-ED88-D812AC05696A" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_SESSION_BATCHES$IDX$1">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>GENERATE_DDL_SESSION_BATCHES$PK</sourceObjName>
