@@ -1,7 +1,7 @@
 CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."DDL_CRUD_API" AUTHID DEFINER IS /* -*-coding: utf-8-*- */
 
 /**
-This package is used to manage CRUD operations on:
+Only this package is used to manage CRUD operations on:
 - GENERATE_DDL_CONFIGURATIONS
 - GENERATE_DDL_SESSION_BATCHES
 - GENERATE_DDL_SESSION_SCHEMA_OBJECTS
@@ -31,7 +31,7 @@ b. for the current session id (to_number(sys_context('USERENV', 'SESSIONID')))
 c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
 c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 
-subtype t_session_id is generate_ddl_session_schema_objects.session_id%type;  
+subtype t_session_id is integer;  
 
 procedure set_session_id
 ( p_session_id in t_session_id
@@ -50,16 +50,10 @@ function get_session_id
 return t_session_id;
 /** Get the session id that will be used for the CRUD operations. **/
 
-function find_schema_object_by_seq
-( p_seq in integer default 1 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, seq)
-)
-return generate_ddl_session_schema_objects%rowtype;
-/** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by seq. **/
-
-function find_schema_object_by_object_id
+function find_schema_object
 ( p_schema_object_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id)
 )
-return generate_ddl_session_schema_objects%rowtype;
+return oracle_tools.t_schema_object;
 /** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by obj.id. **/
 
 procedure default_match_perc_threshold
@@ -91,7 +85,7 @@ procedure add
 , p_include_objects in clob -- A newline separated list of objects to include (their schema object id actually).
 , p_transform_param_list in varchar2 -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
 , p_schema_object_filter out nocopy oracle_tools.t_schema_object_filter -- the schema object filter
-, p_generate_ddl_configuration_id out nocopy oracle_tools.generate_ddl_configurations.id%type -- the GENERATE_DDL_CONFIGURATIONS.ID
+, p_generate_ddl_configuration_id out nocopy integer -- the GENERATE_DDL_CONFIGURATIONS.ID
 );
 /**
 This procedure will:
@@ -111,7 +105,8 @@ Each such combination is stored as a generate DDL configuration.
 
 procedure add
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter -- the schema object filter
-, p_generate_ddl_configuration_id in oracle_tools.generate_ddl_configurations.id%type -- the GENERATE_DDL_CONFIGURATIONS.ID
+, p_generate_ddl_configuration_id in integer -- the GENERATE_DDL_CONFIGURATIONS.ID
+, p_schema_object_filter_id out nocopy integer
 );
 /**
 This procedure will:
@@ -201,6 +196,16 @@ Insert (if not already there) into:
 2. SCHEMA_OBJECT_FILTER_RESULTS
 3. GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 **/
+
+procedure set_batch_start_time
+( p_seq in integer
+);
+/** Set the GENERATE_DDL_SESSION_BATCHES.START_TIME for the current session id and seq. **/
+
+procedure set_batch_end_time
+( p_seq in integer
+);
+/** Set the GENERATE_DDL_SESSION_BATCHES.END_TIME for the current session id and seq. **/
 
 END DDL_CRUD_API;
 /
