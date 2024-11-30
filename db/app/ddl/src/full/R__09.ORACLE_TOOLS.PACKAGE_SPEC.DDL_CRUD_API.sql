@@ -210,6 +210,18 @@ procedure set_batch_end_time
 );
 /** Set the GENERATE_DDL_SESSION_BATCHES.END_TIME for the current session id and seq. **/
 
+procedure clear_all_ddl_tables;
+/**
+Clear all DDL tables.
+
+Steps:
+1. delete from generate_ddl_configurations
+2. delete from schema_objects
+3. delete from schema_object_filters
+
+And thus all related tables thanks to the cascading foreign keys.
+**/
+
 END DDL_CRUD_API;
 /
 
