@@ -423,6 +423,12 @@ $end
       when no_data_found
       then
         begin
+          -- cleanup on the fly the DDLs who will not be needed anymore
+          delete
+          from    oracle_tools.generated_ddls gd
+          where   gd.schema_object_id = p_schema_ddl.obj.id
+          and     gd.last_ddl_time < p_schema_ddl.obj.last_ddl_time;
+          
           insert into oracle_tools.generated_ddls
           ( schema_object_id
           , last_ddl_time
@@ -802,6 +808,14 @@ begin
   exception
     when no_data_found
     then
+      -- remove on the fly those configurations that will (probably) not be used anymore
+      delete
+      from   oracle_tools.generate_ddl_configurations gdc
+      where  gdc.transform_param_list = l_transform_param_list
+      and    ( gdc.db_version < l_db_version or
+               ( gdc.db_version = l_db_version and gdc.last_ddl_time_schema < l_last_ddl_time_schema )
+             );
+      
       insert
       into   oracle_tools.generate_ddl_configurations
       ( transform_param_list
@@ -980,6 +994,19 @@ begin
     else raise too_many_rows;
   end case;
 end set_batch_end_time;
+
+procedure clear_all_ddl_tables
+is
+begin
+  delete
+  from    oracle_tools.generate_ddl_configurations;
+  
+  delete
+  from    oracle_tools.schema_objects;
+  
+  delete
+  from    oracle_tools.schema_object_filters;
+end clear_all_ddl_tables;
 
 END DDL_CRUD_API;
 /
