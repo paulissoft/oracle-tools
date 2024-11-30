@@ -95,38 +95,6 @@ $end
         , p_constraint_type => r.r_constraint_type
         , p_search_condition => null
         );
-      begin
-        if oracle_tools.ddl_crud_api.find_schema_object_by_object_id(l_base_object.id).schema_object_id is null
-        then
-          raise no_data_found;
-        end if;
-      exception
-        when no_data_found
-        then
-          null;
-          /*
-          raise program_error;
-          oracle_tools.ddl_crud_api.add
-          ( p_schema_object => l_base_object
-          );
-          */
-      end;
-      begin
-        if oracle_tools.ddl_crud_api.find_schema_object_by_object_id(l_constraint_object.id).schema_object_id is null
-        then
-          raise no_data_found;
-        end if;
-      exception
-        when no_data_found
-        then
-          null;
-          /*
-          raise program_error;
-          oracle_tools.ddl_crud_api.add
-          ( p_schema_object => l_constraint_object          
-          );
-          */
-      end;
       self.ref_object_id$ := l_constraint_object.id;
       
       exit find_loop;
