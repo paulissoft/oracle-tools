@@ -45,7 +45,7 @@ begin
           on sofr.schema_object_filter_id = gdsso.schema_object_filter_id and
              sofr.schema_object_id = gdsso.schema_object_id
           inner join oracle_tools.schema_objects so
-          on so.schema_object_id = sofr.schema_object_id          
+          on so.id = sofr.schema_object_id          
   where   gdsso.session_id = p_session_id
   and     gdsso.schema_object_id = p_schema_object_id;
 
