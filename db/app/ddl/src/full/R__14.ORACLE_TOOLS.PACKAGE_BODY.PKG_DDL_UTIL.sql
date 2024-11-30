@@ -2205,7 +2205,6 @@ $end
     l_ddl_text varchar2(2000/*32767*/ char) := null;
     l_exclude_name_expr_tab oracle_tools.t_text_tab;
     l_schema_object oracle_tools.t_schema_object;
-    l_my_schema_object generate_ddl_session_schema_objects%rowtype;
     l_generate_ddl pls_integer;
 
     procedure cleanup
@@ -2296,13 +2295,12 @@ $end
       exception
         when no_data_found
         then
-          begin
-            l_my_schema_object := oracle_tools.ddl_crud_api.find_schema_object_by_object_id(p_object_key);
+          if oracle_tools.ddl_crud_api.find_schema_object(p_object_key) is null
+          then
+            l_generate_ddl := 0;
+          else
             l_generate_ddl := 1;
-          exception
-            when no_data_found
-            then l_generate_ddl := 0;
-          end;
+          end if;
 
           case
             when l_generate_ddl = 0 -- object not but on purpose
@@ -5427,7 +5425,7 @@ $end
     begin
       select  1
       into    l_status
-      from    oracle_tools.v_my_generate_ddl_session_schema_ddl_batches
+      from    oracle_tools.v_my_generate_ddl_session_batches_no_schema_export
       where   rownum = 1;
 
       -- Create the TASK for all but SCHEMA_EXPORT
@@ -5437,7 +5435,7 @@ $end
         dbms_parallel_execute.create_chunks_by_number_col
         ( task_name => l_task_name
         , table_owner => 'ORACLE_TOOLS'
-        , table_name => 'V_MY_GENERATE_DDL_SESSION_SCHEMA_DDL_BATCHES'
+        , table_name => 'ORACLE_TOOLS.V_MY_GENERATE_DDL_SESSION_BATCHES_NO_SCHEMA_EXPORT'
         , table_column => 'DDL_BATCH_GROUP'
         , chunk_size => 1
         );
@@ -5488,7 +5486,7 @@ $end
       , p_end_id => null
       );
     exception
-      when no_data_found -- nothing in oracle_tools.v_my_generate_ddl_session_schema_ddl_batches
+      when no_data_found -- nothing in ORACLE_TOOLS.V_MY_GENERATE_DDL_SESSION_BATCHES_NO_SCHEMA_EXPORT
       then null;
     end;
 
@@ -5512,23 +5510,12 @@ $end
     cursor c_gdssdb
     is
       select  gdsb.*
-      from    oracle_tools.generate_ddl_session_batches gdsb -- filter on session_id already part of view
+      from    oracle_tools.v_my_generate_ddl_session_batches gdsb -- filter on session_id already part of view
       where   gdsb.session_id = p_session_id
       and     ( p_start_id is null or
                 p_end_id is null or
                 ( gdsb.object_type <> 'SCHEMA_EXPORT' and
-                  to_number
-                  ( substr
-                    ( oracle_tools.t_schema_object.ddl_batch_order
-                      ( p_object_schema => gdsb.object_schema
-                      , p_object_type => gdsb.object_type 
-                      , p_base_object_schema => gdsb.base_object_schema 
-                      , p_base_object_type => gdsb.base_object_type 
-                      )
-                    , 1
-                    , 1
-                    )
-                  ) between p_start_id and p_end_id
+                  gdsb.ddl_batch_group between p_start_id and p_end_id
                 )
               )
       order by
@@ -5553,6 +5540,8 @@ $end
 
     for r_gdssdb in c_gdssdb
     loop
+      oracle_tools.ddl_crud_api.set_batch_start_time(r_gdssdb.seq);
+      
       get_schema_ddl
       ( p_schema => r_gdssdb.schema
       , p_transform_param_list => r_gdssdb.transform_param_list
@@ -5568,6 +5557,8 @@ $end
       delete
       from    oracle_tools.v_my_generate_ddl_session_schema_ddl_batches gdsb
       where   current of c_gdssdb;
+      
+      oracle_tools.ddl_crud_api.set_batch_end_time(r_gdssdb.seq);
     end loop;
 
     -- commit/rollback should be here
