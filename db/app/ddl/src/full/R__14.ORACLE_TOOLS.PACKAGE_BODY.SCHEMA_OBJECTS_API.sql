@@ -316,7 +316,7 @@ $end
       then
         select  oracle_tools.t_comment_object
                 ( p_base_object => treat(value(mnso) as oracle_tools.t_named_object)
-                , p_object_schema => c.base_object_schema
+                , p_object_schema => null -- c.base_object_schema
                 , p_column_name => c.column_name
                 )
         bulk collect
