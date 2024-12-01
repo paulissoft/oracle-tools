@@ -15,7 +15,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_COMMENT_OBJECT" authid current_user under oracle_t
   ( self in oracle_tools.t_comment_object
   , p_schema in varchar2
   )
-, overriding member function last_ddl_time return date
+, overriding member function dict_last_ddl_time return date
 )
 final;
 /
