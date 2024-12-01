@@ -248,6 +248,22 @@ $end
     -- object grants must depend on a base object already gathered (see above)
     when "object grants"
     then
+      with v_my_object_grants_dict as
+      ( select  p.table_schema as base_object_schema
+        ,       p.table_name as base_object_name
+        ,       p.grantee
+        ,       p.privilege
+                -- several grantors may have executed the same grant statement
+        ,       max(p.grantable) as grantable -- YES comes after NO
+        from    all_tab_privs p
+                inner join oracle_tools.v_my_schema_object_filter sof
+                on sof.schema = p.table_schema and ( sof.grantor_is_schema = 0 or p.grantor = sof.schema )
+        group by
+                p.table_schema
+        ,       p.table_name
+        ,       p.grantee
+        ,       p.privilege
+      )
       select  oracle_tools.t_object_grant_object
               ( p_base_object => value(mnso)
               , p_object_schema => null
@@ -258,7 +274,7 @@ $end
       bulk collect
       into    l_schema_object_tab                  
       from    oracle_tools.v_my_named_schema_objects mnso
-              inner join oracle_tools.v_my_object_grants_dict p
+              inner join v_my_object_grants_dict p
               on p.base_object_schema = mnso.object_schema() and p.base_object_name = mnso.object_name()
       where   mnso.object_type() not in ( 'PACKAGE_BODY'
                                         , 'TYPE_BODY'

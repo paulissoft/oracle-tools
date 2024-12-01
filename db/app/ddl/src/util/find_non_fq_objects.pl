@@ -110,7 +110,6 @@ sub match($) {
 | v_my_generate_ddl_session_batches_no_schema_export
 | v_my_include_objects
 | v_my_named_schema_objects
-| v_my_object_grants_dict
 | v_my_schema_ddls
 | v_my_schema_objects
 | v_my_schema_objects_no_ddl_yet
