@@ -161,6 +161,7 @@
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 15:07:54 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
+<deprecated>true</deprecated>
 <isSurrogateKey>false</isSurrogateKey>
 <indexColumnUsage>
 <colUsage columnID="ACC9B02B-6E23-9062-4A3D-3E13B01F3D45"/>

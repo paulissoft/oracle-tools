@@ -183,7 +183,6 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>AC082EA5-1C40-2BDF-D4AC-316AAB7AE7EE</importedID>
-<deprecated>true</deprecated>
 <isSurrogateKey>false</isSurrogateKey>
 <propertyMap>
 <property name="copyComments" value="1"/>
@@ -200,7 +199,6 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>85E7C4FD-D205-2C0C-6F4C-0BC0221AD624</importedID>
-<deprecated>true</deprecated>
 <isSurrogateKey>false</isSurrogateKey>
 <propertyMap>
 <property name="copyComments" value="1"/>

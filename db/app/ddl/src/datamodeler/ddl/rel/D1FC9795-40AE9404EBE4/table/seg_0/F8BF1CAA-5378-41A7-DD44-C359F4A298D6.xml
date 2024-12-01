@@ -45,33 +45,6 @@
 <colAssociation fkAssociation="BAB890AC-6D68-4F2C-5E81-37EDBF795A00" referredColumn="613B2DB2-8850-A2C4-488C-9EEF937877EA"/>
 </associations>
 </Column>
-<Column name="SEQ" id="26C0285D-58C8-7B53-4590-3537F8630C6C">
-<sourceConnName>oracle_tools@free</sourceConnName>
-<sourceObjSchema>GENERATE_DDL_SESSION_SCHEMA_OBJECTS</sourceObjSchema>
-<sourceObjName>SEQ</sourceObjName>
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<importedID>3EAF268F-F9EE-7BC8-E706-6CD358FFB00E</importedID>
-<constraintName>GENERATE_DDL_SESSION_SCHEMA_OBJECTS$CK$SEQ</constraintName>
-<useDomainConstraints>false</useDomainConstraints>
-<use>1</use>
-<logicalDatatype>LOGDT019</logicalDatatype>
-<dataTypePrecision>*</dataTypePrecision>
-<dataTypeScale>0</dataTypeScale>
-<checkConstraint>
-<implementationDef dbType="Generic Constraint" definition="seq &gt;= 1"/>
-<implementationDef dbType="Oracle Database 12cR2" definition="seq &gt;= 1"/>
-</checkConstraint>
-<ownDataTypeParameters>,*,0</ownDataTypeParameters>
-<containsPII>false</containsPII>
-<containsSensitiveInformation>false</containsSensitiveInformation>
-<autoIncrementCycle>false</autoIncrementCycle>
-<notNullConstraintName>GENERATE_DDL_SESSION_SCHEMA_OBJECTS$NNC$SEQ</notNullConstraintName>
-<propertyMap>
-<property name="copyComments" value="1"/>
-</propertyMap>
-</Column>
 <Column name="SCHEMA_OBJECT_ID" id="E87B3F7E-2C2B-5044-B542-E42BEC3CF9ED">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>GENERATE_DDL_SESSION_SCHEMA_OBJECTS</sourceObjSchema>
@@ -211,24 +184,6 @@
 </propertyMap>
 <indexColumnUsage>
 <colUsage columnID="AC12FEB6-1ACC-3D94-87B6-E08F9597E998"/>
-<colUsage columnID="26C0285D-58C8-7B53-4590-3537F8630C6C"/>
-</indexColumnUsage>
-</ind_PK_UK>
-<ind_PK_UK id="395469FE-4E51-B1A8-A463-77A13C25C20B" name="GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1">
-<sourceConnName>oracle_tools@free</sourceConnName>
-<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
-<sourceObjName>GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1</sourceObjName>
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<importedID>A9BF27AC-72B6-E467-382B-D013A94B8434</importedID>
-<indexState>Unique Constraint</indexState>
-<isSurrogateKey>false</isSurrogateKey>
-<propertyMap>
-<property name="copyComments" value="1"/>
-</propertyMap>
-<indexColumnUsage>
-<colUsage columnID="AC12FEB6-1ACC-3D94-87B6-E08F9597E998"/>
 <colUsage columnID="E87B3F7E-2C2B-5044-B542-E42BEC3CF9ED"/>
 </indexColumnUsage>
 </ind_PK_UK>
@@ -257,6 +212,7 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>BAD3355C-4496-E7B3-ACBA-4FB3CF92DB66</importedID>
+<deprecated>true</deprecated>
 <isSurrogateKey>false</isSurrogateKey>
 <propertyMap>
 <property name="copyComments" value="1"/>
@@ -291,6 +247,7 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>6868E573-B28A-50E9-7C9A-76EC0B79335F</importedID>
+<deprecated>true</deprecated>
 <indexState>Unique Plain Index</indexState>
 <isSurrogateKey>false</isSurrogateKey>
 <propertyMap>

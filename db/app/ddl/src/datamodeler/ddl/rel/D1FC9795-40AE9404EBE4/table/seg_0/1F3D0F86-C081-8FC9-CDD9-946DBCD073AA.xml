@@ -172,6 +172,7 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>9E5C5C41-AFAA-1EFB-D338-BC30CEE295BA</importedID>
+<deprecated>true</deprecated>
 <indexState>Unique Plain Index</indexState>
 <isSurrogateKey>false</isSurrogateKey>
 <propertyMap>
