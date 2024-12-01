@@ -610,7 +610,6 @@ procedure add_schema_object_tab
 , p_schema_object_filter_id in positiven
 )
 is
-  l_last_seq oracle_tools.generate_ddl_session_schema_objects.seq%type;
   l_rowcount pls_integer := 0;
 $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECT_TAB';
@@ -694,24 +693,15 @@ $end
   -- * SCHEMA_OBJECT_FILTER_RESULTS
   */
 
-  select  nvl(max(gdsso.seq), 0)
-  into    l_last_seq
-  from    oracle_tools.generate_ddl_session_schema_objects gdsso
-  where   gdsso.session_id = p_session_id;
-
   -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns 0
   insert into oracle_tools.generate_ddl_session_schema_objects
   ( session_id
-  , seq
   , schema_object_filter_id 
   , schema_object_id
   , last_ddl_time
   , generate_ddl_configuration_id
   )
     select  p_session_id
-    -- Since objects are inserted per Oracle session
-    -- there is never a problem with another session inserting at the same time for the same session.
-    ,       t.seq
     ,       p_schema_object_filter_id
     ,       t.schema_object_id
             -- when DDL has been generated for this last_ddl_time, save that info so we will not generate DDL again
@@ -720,7 +710,6 @@ $end
     from    ( select  t.id as schema_object_id
               ,       gd.last_ddl_time
               ,       gd.generate_ddl_configuration_id
-              ,       rownum + l_last_seq as seq
               from    oracle_tools.generate_ddl_sessions gds
                       cross join table(p_schema_object_tab) t -- may contain duplicates (constraints)
                       inner join oracle_tools.schema_object_filter_results sofr
@@ -1081,6 +1070,7 @@ begin
   set     gdsb.start_time = sys_extract_utc(systimestamp)
   where   gdsb.session_id = l_session_id
   and     gdsb.seq = p_seq;
+  
   case sql%rowcount
     when 0
     then raise no_data_found;
@@ -1102,6 +1092,7 @@ begin
   ,       gdsb.error_message = p_error_message
   where   gdsb.session_id = l_session_id
   and     gdsb.seq = p_seq;
+  
   case sql%rowcount
     when 0
     then raise no_data_found;

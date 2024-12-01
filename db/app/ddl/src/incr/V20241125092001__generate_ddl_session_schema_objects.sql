@@ -1,9 +1,6 @@
 create table generate_ddl_session_schema_objects
 ( session_id number -- Primary key #1
   constraint generate_ddl_session_schema_objects$nnc$session_id not null
-, seq integer -- Primary key #2: Sequence within (session_id)
-  constraint generate_ddl_session_schema_objects$nnc$seq not null
-  constraint generate_ddl_session_schema_objects$ck$seq check ( seq >= 1 )
 , schema_object_filter_id integer -- derivable from session_id, however needed for generate_ddl_session_schema_objects$fk$1
   constraint generate_ddl_session_schema_objects$nnc$schema_object_filter_id not null
 , schema_object_id varchar2(500 byte)
@@ -14,9 +11,7 @@ create table generate_ddl_session_schema_objects
 , last_ddl_time date -- all_objects.last_ddl_time
 , generate_ddl_configuration_id integer 
 , constraint generate_ddl_session_schema_objects$pk
-  primary key (session_id, seq)
-, constraint generate_ddl_session_schema_objects$uk$1
-  unique (session_id, schema_object_id)
+  primary key (session_id, schema_object_id)
 , constraint generate_ddl_session_schema_objects$fk$1
   foreign key (schema_object_filter_id, schema_object_id)
   references schema_object_filter_results(schema_object_filter_id, schema_object_id) on delete cascade

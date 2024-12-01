@@ -7,7 +7,7 @@ where   aso.session_id =
         (select oracle_tools.ddl_crud_api.get_session_id from dual where rownum <= 1)
 and     aso.generate_ddl = 1
 order by
-        -- primary key
+        -- order of creation
         aso.session_id
-,       aso.seq;
+,       aso.created;
 

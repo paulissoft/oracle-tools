@@ -8,7 +8,7 @@ where   aso.session_id =
 and     aso.generate_ddl = 1
 and     aso.ddl_generated = 0
 order by
-        -- primary key
+        -- order of creation
         aso.session_id
-,       aso.seq;
+,       aso.created;
 
