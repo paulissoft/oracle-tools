@@ -18,6 +18,7 @@ create table generate_ddl_session_batches
 , nr_objects integer
 , start_time timestamp(6)
 , end_time timestamp(6)
+, error_message varchar2(4000 byte)
 , constraint generate_ddl_session_batches$pk
   primary key (session_id, seq)
 , constraint generate_ddl_session_batches$fk$1

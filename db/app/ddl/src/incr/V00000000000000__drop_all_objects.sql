@@ -40,6 +40,7 @@ declare
   l_view_tab sys.odcivarchar2list :=
     sys.odcivarchar2list
     ( 'V_ALL_SCHEMA_OBJECTS'
+    , 'V_DEPENDENT_OR_GRANTED_OBJECT_TYPES'
     , 'V_DISPLAY_DDL_SCHEMA'
     , 'V_MY_COMMENTS_DICT' -- obsolete
     , 'V_MY_CONSTRAINTS_DICT' -- obsolete

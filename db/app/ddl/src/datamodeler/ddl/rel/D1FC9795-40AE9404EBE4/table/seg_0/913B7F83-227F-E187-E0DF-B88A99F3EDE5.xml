@@ -9,6 +9,7 @@
 <commentInRDBMS><![CDATA[The generated DDL info for a specific schema object id, last DDL time and configuration.]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>C60DCB60-AE7D-723C-BEF1-A6383EC47785</importedID>
+<abbreviation>GD</abbreviation>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>

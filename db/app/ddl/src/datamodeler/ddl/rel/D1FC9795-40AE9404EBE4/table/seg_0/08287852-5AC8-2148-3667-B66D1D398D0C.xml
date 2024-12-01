@@ -9,6 +9,7 @@
 <commentInRDBMS><![CDATA[The schema object filter results, needed because the function matches_schema_object is too expensive.]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>9CE36F36-7A6D-3814-F10D-576ACF862095</importedID>
+<abbreviation>SOFR</abbreviation>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>

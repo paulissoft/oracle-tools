@@ -9,6 +9,7 @@
 <commentInRDBMS><![CDATA[The generated DDL statement chunks.]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>9EEEE1DD-09F7-F878-453A-E9EFE2C039EE</importedID>
+<abbreviation>GDSC</abbreviation>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>

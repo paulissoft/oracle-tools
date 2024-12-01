@@ -9,6 +9,7 @@
 <commentInRDBMS><![CDATA[Information about DDL to generate for schema objects for a specific session.]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>958A8867-1710-D138-BA89-DD246BDFC07F</importedID>
+<abbreviation>GDSSO</abbreviation>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>

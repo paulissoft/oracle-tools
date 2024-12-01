@@ -30,6 +30,25 @@ exception
   then return null;
 end get_schema_object_filter_id;
 
+function get_schema_object_filter
+( p_session_id in t_session_id
+)
+return oracle_tools.t_schema_object_filter
+is
+  l_schema_object_filter oracle_tools.t_schema_object_filter;
+begin
+  select  sof.obj
+  into    l_schema_object_filter
+  from    oracle_tools.generate_ddl_sessions gds
+          inner join oracle_tools.schema_object_filters sof
+          on sof.id = gds.schema_object_filter_id
+  where   gds.session_id = p_session_id;
+  return l_schema_object_filter;
+exception
+  when no_data_found
+  then return null;
+end get_schema_object_filter;
+
 function find_schema_object
 ( p_session_id in t_session_id
 , p_schema_object_id in varchar2
@@ -723,6 +742,20 @@ begin
   return g_session_id;
 end get_session_id;
 
+function get_schema_object_filter_id
+return positive
+is
+begin
+  return get_schema_object_filter_id(get_session_id);
+end get_schema_object_filter_id;
+
+function get_schema_object_filter
+return oracle_tools.t_schema_object_filter
+is
+begin
+  return get_schema_object_filter(get_session_id);
+end get_schema_object_filter;
+
 function find_schema_object
 ( p_schema_object_id in varchar2
 )
@@ -1000,12 +1033,14 @@ end set_batch_start_time;
 
 procedure set_batch_end_time
 ( p_seq in integer
+, p_error_message in varchar2
 )
 is
   l_session_id constant t_session_id := get_session_id;
 begin
   update  oracle_tools.generate_ddl_session_batches gdsb
   set     gdsb.end_time = sys_extract_utc(systimestamp)
+  ,       gdsb.error_message = p_error_message
   where   gdsb.session_id = l_session_id
   and     gdsb.seq = p_seq;
   case sql%rowcount

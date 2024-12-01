@@ -64,6 +64,13 @@ Steps:
 
 **/
 
+procedure ddl_batch_process
+( p_session_id in integer -- The current session id.
+, p_start_id in number -- The start number (V_DEPENDENT_OR_GRANTED_OBJECT_TYPES.NR).
+, p_end_id in number -- The end number (V_DEPENDENT_OR_GRANTED_OBJECT_TYPES.NR).
+);
+/** Get schema objects for entries in V_DEPENDENT_OR_GRANTED_OBJECT_TYPES. **/
+
 $if oracle_tools.cfg_pkg.c_testing $then
 
 -- test functions

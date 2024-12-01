@@ -9,6 +9,7 @@
 <commentInRDBMS><![CDATA[The schema objects including named object and dependent or granted objects.]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>07ABF4CB-F36E-406F-F9F2-E1451B82BCB0</importedID>
+<abbreviation>SO</abbreviation>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>

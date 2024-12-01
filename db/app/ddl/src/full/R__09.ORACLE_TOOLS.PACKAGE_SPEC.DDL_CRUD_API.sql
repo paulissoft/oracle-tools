@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."DDL_CRUD_API" AUTHID DEFINER IS /* -*-coding: utf-8-*- */
+CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."DDL_CRUD_API" AUTHID CURRENT_USER IS /* -*-coding: utf-8-*- */
 
 /**
 Only this package is used to manage CRUD operations on:
@@ -29,7 +29,7 @@ The interface for these tables is via these views (grant select to public):
 These are helper views:
 - V_ALL_SCHEMA_OBJECTS
 
-This package will **NOT** read dictionary objects hence **AUTHID DEFINER** is sufficient.
+This package will read dictionary objects indirectly hence **AUTHID CURRENT_USER**.
 
 These tables will not be granted to any other schema, so this package is the only interface: Virtual Private Database is thus not necessary.
 
@@ -50,7 +50,7 @@ c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 subtype t_session_id is integer;  
 
 procedure set_session_id
-( p_session_id in t_session_id
+( p_session_id in t_session_id -- The session id.
 );
 /**
 
@@ -66,11 +66,44 @@ function get_session_id
 return t_session_id;
 /** Get the session id that will be used for the CRUD operations. **/
 
+function get_schema_object_filter_id
+return positive;
+/**
+
+Return the current schema object filter id.
+
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_CONFIGURATIONS         |      |
+| GENERATE_DDL_SESSION_BATCHES        |      |
+| GENERATE_DDL_SESSION_SCHEMA_OBJECTS |      |
+| GENERATE_DDL_SESSIONS               |      |
+| GENERATED_DDL_STATEMENT_CHUNKS      |      |
+| GENERATED_DDL_STATEMENTS            |      |
+| GENERATED_DDLS                      |      |
+| SCHEMA_OBJECT_FILTER_RESULTS        |      |
+| SCHEMA_OBJECT_FILTERS               |      |
+| SCHEMA_OBJECTS                      |      |
+
+**/
+function get_schema_object_filter
+return oracle_tools.t_schema_object_filter;
+
 function find_schema_object
-( p_schema_object_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id)
+( p_schema_object_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id).
 )
 return oracle_tools.t_schema_object;
-/** Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by obj.id. **/
+/**
+
+Find the schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by obj.id.
+
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_SESSION_SCHEMA_OBJECTS |  R   |
+| SCHEMA_OBJECT_FILTER_RESULTS        |  R   |
+| SCHEMA_OBJECTS                      |  R   |
+
+**/
 
 procedure default_match_perc_threshold
 ( p_match_perc_threshold in integer -- The new match percentage threshold.
@@ -100,8 +133,8 @@ procedure add
 , p_exclude_objects in clob -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in clob -- A newline separated list of objects to include (their schema object id actually).
 , p_transform_param_list in varchar2 -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
-, p_schema_object_filter out nocopy oracle_tools.t_schema_object_filter -- the schema object filter
-, p_generate_ddl_configuration_id out nocopy integer -- the GENERATE_DDL_CONFIGURATIONS.ID
+, p_schema_object_filter out nocopy oracle_tools.t_schema_object_filter -- The schema object filter.
+, p_generate_ddl_configuration_id out nocopy integer -- The GENERATE_DDL_CONFIGURATIONS.ID.
 );
 /**
 This procedure will:
@@ -117,12 +150,16 @@ c. the version of the (most) important DDL related objects (now just package spe
 
 Each such combination is stored as a generate DDL configuration.
 
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_CONFIGURATIONS         | CR D |
+
 **/
 
 procedure add
-( p_schema_object_filter in oracle_tools.t_schema_object_filter -- the schema object filter
-, p_generate_ddl_configuration_id in integer -- the GENERATE_DDL_CONFIGURATIONS.ID
-, p_schema_object_filter_id out nocopy integer
+( p_schema_object_filter in oracle_tools.t_schema_object_filter -- The schema object filter.
+, p_generate_ddl_configuration_id in integer -- The GENERATE_DDL_CONFIGURATIONS.ID.
+, p_schema_object_filter_id out nocopy integer -- The schema object filter id. 
 );
 /**
 This procedure will:
@@ -143,10 +180,18 @@ recalculate p_schema_object_filter.matches_schema_object() for every object
 since the schema is not the same anymore hence the results not reliable
 anymore. The LAST_MODIFICATION_TIME_SCHEMA and UPDATED columns will be
 updated in any case.
+
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_SESSION_SCHEMA_OBJECTS |    D |
+| GENERATE_DDL_SESSIONS               | CRUD |
+| SCHEMA_OBJECT_FILTER_RESULTS        |    D |
+| SCHEMA_OBJECT_FILTERS               | CRU  |
+
 **/
 
 procedure add
-( p_schema_object in oracle_tools.t_schema_object -- The schema object to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS
+( p_schema_object in oracle_tools.t_schema_object -- The schema object to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS.
 );
 /**
 Add a schema object to SCHEMA_OBJECTS for the current session id and update
@@ -164,10 +209,20 @@ Steps:
 
 This last step is an efficiency step: when DDL has been generated before with the same
 generate DDL configurayion, there is no need to do it again.
+
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_SESSION_SCHEMA_OBJECTS |   U  |
+| GENERATE_DDL_SESSIONS               |  R   |
+| GENERATED_DDLS                      |  R   |
+| SCHEMA_OBJECT_FILTER_RESULTS        | CR   |
+| SCHEMA_OBJECT_FILTERS               |  R   |
+| SCHEMA_OBJECTS                      | CR   |
+
 **/
 
 procedure add
-( p_schema_ddl in oracle_tools.t_schema_ddl
+( p_schema_ddl in oracle_tools.t_schema_ddl -- The schema DDL.
 );
 /**
 Add schema DDL for the current session id.
@@ -182,49 +237,102 @@ Steps:
    INSERT INTO GENERATED_DDL_STATEMENT_CHUNKS
 5. flag that DDL has been generated for this schema object:
    update GENERATE_DDL_SESSION_SCHEMA_OBJECTS and set LAST_DDL_TIME and GENERATE_DDL_CONFIGURATION_ID
+
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_SESSION_SCHEMA_OBJECTS |   U  |
+| GENERATE_DDL_SESSIONS               |  R   |
+| GENERATED_DDL_STATEMENT_CHUNKS      | C    |
+| GENERATED_DDL_STATEMENTS            | C    |
+| GENERATED_DDLS                      | CR D |
+
 **/
 
 procedure add
-( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab
+( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab -- The schema DDL table.
 );
-/** Invoke add(p_schema_ddl) for each entry. **/
+/** Invoke ADD(p_schema_ddl) for each entry. **/
 
 procedure add
-( p_schema in varchar2
-, p_transform_param_list in varchar2
-, p_object_schema in varchar2
-, p_object_type in varchar2
-, p_base_object_schema in varchar2
-, p_base_object_type in varchar2
-, p_object_name_tab in oracle_tools.t_text_tab
-, p_base_object_name_tab in oracle_tools.t_text_tab
-, p_nr_objects in integer
-);
-/** Add a record in table GENERATE_DDL_SESSION_BATCHES. **/
-
-procedure add
-( p_schema_object_tab in oracle_tools.t_schema_object_tab
-, p_schema_object_filter_id in positiven
+( p_schema in varchar2 -- The schema.
+, p_transform_param_list in varchar2 -- The DBMS_METADATA transformation parameter list separated by commas.
+, p_object_schema in varchar2 -- The object schema.
+, p_object_type in varchar2 -- The object type.
+, p_base_object_schema in varchar2 -- The base object schema.
+, p_base_object_type in varchar2 -- The base object type.
+, p_object_name_tab in oracle_tools.t_text_tab -- The table of object names.
+, p_base_object_name_tab in oracle_tools.t_text_tab -- The table of base object names.
+, p_nr_objects in integer -- The number of objects.
 );
 /**
+
+Add a record in table GENERATE_DDL_SESSION_BATCHES.
+
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_SESSION_BATCHES        | C    |
+
+**/
+
+procedure add
+( p_schema_object_tab in oracle_tools.t_schema_object_tab -- The schema object table.
+, p_schema_object_filter_id in positiven -- The schema object filter id.
+);
+/**
+
 Insert (if not already there) into:
 1. SCHEMA_OBJECTS
 2. SCHEMA_OBJECT_FILTER_RESULTS
 3. GENERATE_DDL_SESSION_SCHEMA_OBJECTS
+
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_SESSION_SCHEMA_OBJECTS | CR   |
+| GENERATE_DDL_SESSIONS               |  R   |
+| GENERATED_DDLS                      |  R   |
+| SCHEMA_OBJECT_FILTER_RESULTS        | CR   |
+| SCHEMA_OBJECT_FILTERS               |  R   |
+| SCHEMA_OBJECTS                      | CR   |
+
 **/
 
 procedure clear_batch;
-/** Remove all records from GENERATE_DDL_SESSION_BATCHES.START_TIME for the current session id. **/
+/**
+
+Remove all records from GENERATE_DDL_SESSION_BATCHES.START_TIME for the current session id.
+
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_SESSION_BATCHES        |    D |
+
+**/
 
 procedure set_batch_start_time
-( p_seq in integer
+( p_seq in integer -- The sequence within the current session batch.
 );
-/** Set the GENERATE_DDL_SESSION_BATCHES.START_TIME for the current session id and seq. **/
+/**
+
+Set the GENERATE_DDL_SESSION_BATCHES.START_TIME for the current session id and seq.
+
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_SESSION_BATCHES        |   U  |
+
+**/
 
 procedure set_batch_end_time
-( p_seq in integer
+( p_seq in integer -- The sequence within the current session batch.
+, p_error_message in varchar2 default null -- The error message (if any).
 );
-/** Set the GENERATE_DDL_SESSION_BATCHES.END_TIME for the current session id and seq. **/
+/**
+
+Set the GENERATE_DDL_SESSION_BATCHES.END_TIME for the current session id and seq.
+
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_SESSION_BATCHES        |   U  |
+
+**/
 
 procedure clear_all_ddl_tables;
 /**
@@ -236,6 +344,13 @@ Steps:
 3. delete from schema_object_filters
 
 And thus all related tables thanks to the cascading foreign keys.
+
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_CONFIGURATIONS         |    D |
+| SCHEMA_OBJECT_FILTERS               |    D |
+| SCHEMA_OBJECTS                      |    D |
+
 **/
 
 END DDL_CRUD_API;

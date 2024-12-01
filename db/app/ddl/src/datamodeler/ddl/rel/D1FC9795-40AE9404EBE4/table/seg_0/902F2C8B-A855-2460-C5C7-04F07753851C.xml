@@ -9,6 +9,7 @@
 <commentInRDBMS><![CDATA[The filter for schema objects.]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>A4D9DD09-1DE3-58F9-F1CD-F94FDAF0B005</importedID>
+<abbreviation>SOF</abbreviation>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>

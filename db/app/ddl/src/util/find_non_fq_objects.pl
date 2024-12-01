@@ -1,11 +1,13 @@
 use strict;
 
-# Usage: perl find_non_fq_objects/pl *.take
+# Usage: perl find_non_fq_objects.pl *.take
 
 # Take the list between ( and ) from pom.xml
 
 my $line_no = 0;
 my $file = '';
+
+sub match($);
 
 while (<>) {
     if ($ARGV ne $file) {
@@ -15,8 +17,17 @@ while (<>) {
     $file = $ARGV;
     $line_no++;
 
-    printf("[%s#%04d] %s", $file, $line_no, $_) if ( m/
-(?<!oracle_tools\.)\b
+    my $object = match('oracle_tools');
+    
+    printf("[%s#%04d] %s", $file, $line_no, $_)
+        if ( defined($object) && !m/("ORACLE_TOOLS"."|constructor function )$object/i );
+}
+
+sub match($) {
+    my ($look_behind) = @_;
+    
+    if (m/
+(?<!$look_behind\.)\b
 ( ddl_crud_api
 | f_generate_ddl
 | generate_ddl_configurations
@@ -93,6 +104,7 @@ while (<>) {
 | t_type_spec_object
 | t_view_object
 | v_all_schema_objects
+| v_dependent_or_granted_object_types
 | v_display_ddl_sql
 | v_my_generate_ddl_session_batches
 | v_my_generate_ddl_session_batches_no_schema_export
@@ -105,5 +117,6 @@ while (<>) {
 | v_my_schema_object_filter
 | v_my_schema_object_info
 )\b
-/iox );
+/ix) { return $1; };
+    return undef;
 }

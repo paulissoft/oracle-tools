@@ -9,6 +9,7 @@
 <commentInRDBMS><![CDATA[A DDL generate configuration including DBMS_METADATA tansformation parameters, database and schema version. ]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>1EA834A7-6306-8879-E74F-A4FCEC22B96D</importedID>
+<abbreviation>GDC</abbreviation>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>

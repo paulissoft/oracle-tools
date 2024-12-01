@@ -9,6 +9,7 @@
 <commentInRDBMS><![CDATA[Information about DDL generation per session id (sys_context('USERENV', 'SESSIONID')). ]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>D1C76D32-F356-467D-30F4-BDC83259A6E1</importedID>
+<abbreviation>GDS</abbreviation>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>
@@ -55,7 +56,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <dataTypePrecision>*</dataTypePrecision>
 <dataTypeScale>0</dataTypeScale>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
+<ownDataTypeParameters>,*,0</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>

@@ -5395,7 +5395,7 @@ $end
   procedure ddl_batch_process
   is
     l_session_id constant integer := oracle_tools.ddl_crud_api.get_session_id;
-    l_task_name constant varchar2(100 byte) := 'DDL_BATCH-' || to_char(l_session_id);
+    l_task_name constant varchar2(100 byte) := $$PLSQL_UNIT || '.DDL_BATCH-' || to_char(l_session_id);
     -- Here we substitute the session id into the statement since it may be executed by another session.
     l_sql_stmt constant varchar2(1000 byte) :=
       utl_lms.format_message
@@ -5542,24 +5542,33 @@ $end
       loop
         oracle_tools.ddl_crud_api.set_batch_start_time(l_gdssdb_tab(i_idx).seq);
         commit;
+
+        savepoint spt;        
+        begin
+          get_schema_ddl
+          ( p_schema => l_gdssdb_tab(i_idx).schema
+          , p_transform_param_list => l_gdssdb_tab(i_idx).transform_param_list
+          , p_object_type => l_gdssdb_tab(i_idx).object_type
+          , p_object_schema => l_gdssdb_tab(i_idx).object_schema
+          , p_base_object_schema => l_gdssdb_tab(i_idx).base_object_schema
+          , p_object_name_tab => l_gdssdb_tab(i_idx).object_name_tab
+          , p_base_object_name_tab => l_gdssdb_tab(i_idx).base_object_name_tab
+          , p_nr_objects => l_gdssdb_tab(i_idx).nr_objects
+          , p_add_no_ddl_retrieved => (l_gdssdb_tab(i_idx).object_type = "SCHEMA_EXPORT")
+          );
         
-        get_schema_ddl
-        ( p_schema => l_gdssdb_tab(i_idx).schema
-        , p_transform_param_list => l_gdssdb_tab(i_idx).transform_param_list
-        , p_object_type => l_gdssdb_tab(i_idx).object_type
-        , p_object_schema => l_gdssdb_tab(i_idx).object_schema
-        , p_base_object_schema => l_gdssdb_tab(i_idx).base_object_schema
-        , p_object_name_tab => l_gdssdb_tab(i_idx).object_name_tab
-        , p_base_object_name_tab => l_gdssdb_tab(i_idx).base_object_name_tab
-        , p_nr_objects => l_gdssdb_tab(i_idx).nr_objects
-        , p_add_no_ddl_retrieved => (l_gdssdb_tab(i_idx).object_type = "SCHEMA_EXPORT")
-        );
-        
-        oracle_tools.ddl_crud_api.set_batch_end_time(l_gdssdb_tab(i_idx).seq);
-        commit;
+          oracle_tools.ddl_crud_api.set_batch_end_time(l_gdssdb_tab(i_idx).seq);
+          commit;
+        exception
+          when others
+          then
+            rollback to spt;
+            oracle_tools.ddl_crud_api.set_batch_end_time(l_gdssdb_tab(i_idx).seq, sqlerrm);
+            commit;
+            raise;
+        end;
       end loop;
     end if;
-
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;

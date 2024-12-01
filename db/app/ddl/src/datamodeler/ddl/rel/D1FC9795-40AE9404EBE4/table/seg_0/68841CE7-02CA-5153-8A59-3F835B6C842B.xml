@@ -9,6 +9,7 @@
 <commentInRDBMS><![CDATA[DDL is generated in batches.]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>C1BFF7C6-3EFE-7F76-C89C-367C1FC8F22C</importedID>
+<abbreviation>GDSB</abbreviation>
 <allowColumnReorder>false</allowColumnReorder>
 <existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
 <parsed>true</parsed>
@@ -287,7 +288,6 @@
 <use>1</use>
 <logicalDatatype>LOGDT015</logicalDatatype>
 <dataTypePrecision>6</dataTypePrecision>
-<defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
@@ -305,7 +305,6 @@
 <use>1</use>
 <logicalDatatype>LOGDT015</logicalDatatype>
 <dataTypePrecision>6</dataTypePrecision>
-<defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 <ownDataTypeParameters>,6,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
@@ -313,6 +312,18 @@
 <propertyMap>
 <property name="copyComments" value="1"/>
 </propertyMap>
+</Column>
+<Column name="ERROR_MESSAGE" id="ED11F423-32B6-3CCC-0668-4CDFC5149D25">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-12-01 10:34:01 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>4000 BYTE</dataTypeSize>
+<ownDataTypeParameters>4000 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
 </Column>
 </columns>
 <indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
