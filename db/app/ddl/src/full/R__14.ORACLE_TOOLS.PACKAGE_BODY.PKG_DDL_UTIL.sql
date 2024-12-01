@@ -5461,6 +5461,24 @@ $end
           dbms_parallel_execute.resume_task(l_task_name);
         end loop;
 
+        -- check errors
+        for r in
+        ( select  upec.error_message
+          ,       upec.job_name
+          from    user_parallel_execute_chunks upec
+          where   upec.task_name = l_task_name
+          and     upec.error_message is not null
+          and     rownum = 1
+        )
+        loop
+          oracle_tools.pkg_ddl_error.raise_error
+          ( p_error_number => oracle_tools.pkg_ddl_error.c_batch_failed 
+          , p_error_message => r.error_message
+          , p_context_info => r.job_name
+          , p_context_label => 'job name'
+          );
+        end loop;
+
         -- Done with processing; drop the task
         dbms_parallel_execute.drop_task(l_task_name);
       exception

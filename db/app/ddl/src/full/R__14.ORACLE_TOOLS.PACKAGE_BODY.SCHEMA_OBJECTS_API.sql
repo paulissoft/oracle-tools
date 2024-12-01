@@ -526,6 +526,7 @@ procedure ddl_batch_process
 is
   l_session_id constant integer := oracle_tools.ddl_crud_api.get_session_id;
   l_task_name constant varchar2(100 byte) := $$PLSQL_UNIT || '.DDL_BATCH-' || to_char(l_session_id);
+
   -- Here we substitute the session id into the statement since it may be executed by another session.
   l_sql_stmt constant varchar2(1000 byte) :=
     utl_lms.format_message
@@ -585,6 +586,24 @@ $if oracle_tools.schema_objects_api.c_debugging $then
       dbug.print(dbug."info", 'dbms_parallel_execute.resume_task (try: %s, status: %s)', i_try, l_status);
 $end
       dbms_parallel_execute.resume_task(l_task_name);
+    end loop;
+
+    -- check errors
+    for r in
+    ( select  upec.error_message
+      ,       upec.job_name
+      from    user_parallel_execute_chunks upec
+      where   upec.task_name = l_task_name
+      and     upec.error_message is not null
+      and     rownum = 1
+    )
+    loop
+      oracle_tools.pkg_ddl_error.raise_error
+      ( p_error_number => oracle_tools.pkg_ddl_error.c_batch_failed 
+      , p_error_message => r.error_message
+      , p_context_info => r.job_name
+      , p_context_label => 'job name'
+      );
     end loop;
 
     -- Done with processing; drop the task
