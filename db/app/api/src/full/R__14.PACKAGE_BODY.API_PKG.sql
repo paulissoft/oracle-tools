@@ -1,5 +1,163 @@
-CREATE OR REPLACE PACKAGE BODY "API_PKG" -- -*-coding: utf-8-*-
+CREATE OR REPLACE PACKAGE BODY "API_PKG" IS -- -*-coding: utf-8-*-
+
+function get_object_no_dependencies_tab
+return t_object_natural_tab;
+
+c_object_no_dependencies_tab constant t_object_natural_tab := get_object_no_dependencies_tab; -- initialisation
+
+function get_object_no_dependencies_tab
+return t_object_natural_tab
 is
+  l_object_no_dependencies_tab t_object_natural_tab; -- initialisation
+begin
+  return l_object_no_dependencies_tab;
+end get_object_no_dependencies_tab;
+
+/*
+-- see depth-first search algorithm in https://en.wikipedia.org/wiki/Topological_sorting
+--
+-- code                                                       | marker
+-- ====                                                       | ======
+-- function visit(node n)                                     |
+--    if n has a temporary mark then stop (not a DAG)         | A
+--    if n is not marked (i.e. has not been visited yet) then | B
+--        mark n temporarily                                  | C
+--        for each node m with an graph from n to m do        | D
+--            visit(m)                                        | E
+--        mark n permanently                                  | F
+--        unmark n temporarily                                | G
+--        add n to head of L                                  | H
+*/
+procedure visit
+( p_graph in t_graph
+, p_n in t_object
+, p_unmarked_nodes in out nocopy t_object_natural_tab
+, p_marked_nodes in out nocopy t_object_natural_tab
+, p_result in out nocopy dbms_sql.varchar2_table
+, p_error_n out nocopy t_object
+)
+is
+  l_m t_object;
+begin
+  p_error_n := null;
+
+  if p_marked_nodes.exists(p_n)
+  then
+    if p_marked_nodes(p_n) = 1 /* A */
+    then
+      -- node has been visited before
+      p_error_n := p_n;
+      return;
+    end if;
+  else
+    if not p_unmarked_nodes.exists(p_n)
+    then
+      raise program_error;
+    end if;
+
+    /* B */
+    p_marked_nodes(p_n) := 1; -- /* C */
+
+    /* D */
+    if p_graph.exists(p_n)
+    then
+      l_m := p_graph(p_n).first;
+      while l_m is not null
+      loop
+        visit
+        ( p_graph => p_graph
+        , p_n => l_m
+        , p_unmarked_nodes => p_unmarked_nodes
+        , p_marked_nodes => p_marked_nodes
+        , p_result => p_result
+        , p_error_n => p_error_n
+        ); /* E */
+        if p_error_n is not null
+        then
+          return;
+        end if;
+        l_m := p_graph(p_n).next(l_m);
+      end loop;
+    end if;
+
+    p_marked_nodes(p_n) := 2; -- /* F */
+    p_unmarked_nodes.delete(p_n); -- /* G */
+    p_result(-p_result.count) := p_n; /* H */
+  end if;
+end visit;
+
+procedure tsort
+( p_graph in t_graph
+, p_result out nocopy dbms_sql.varchar2_table /* I */
+, p_error_n out nocopy t_object
+)
+is
+  l_unmarked_nodes t_object_natural_tab;
+  l_marked_nodes t_object_natural_tab; -- l_marked_nodes(n) = 1 (temporarily marked) or 2 (permanently marked)
+  l_n t_object;
+  l_m t_object;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
+  dbug.enter($$PLSQL_UNIT || '.TSORT');
+$end
+
+  /*
+  -- see depth-first search algorithm in https://en.wikipedia.org/wiki/Topological_sorting
+  --
+  -- code                                               | marker
+  -- ====                                               | ======
+  -- L := Empty list that will contain the sorted nodes | I
+  -- while there are unmarked nodes do                  | J
+  --    select an unmarked node n                       | K
+  --    visit(n)                                        | L
+  */
+
+  /* I */
+  if p_result.count <> 0
+  then
+    raise program_error;
+  end if;
+
+  /* determine unmarked nodes: all node graphs */
+  l_n := p_graph.first;
+  while l_n is not null
+  loop
+    l_unmarked_nodes(l_n) := 0; -- n not marked
+    l_m := p_graph(l_n).first;
+    while l_m is not null
+    loop
+      l_unmarked_nodes(l_m) := 0; -- m not marked
+      l_m := p_graph(l_n).next(l_m);
+    end loop;
+    l_n := p_graph.next(l_n);
+  end loop;
+  /* all nodes are unmarked */
+
+  while l_unmarked_nodes.count > 0 /* J */
+  loop
+    /* L */
+    PRAGMA INLINE (visit, 'YES');
+    visit
+    ( p_graph => p_graph
+    , p_n => l_unmarked_nodes.first /* K */
+    , p_unmarked_nodes => l_unmarked_nodes
+    , p_marked_nodes => l_marked_nodes
+    , p_result => p_result
+    , p_error_n => p_error_n
+    );
+    exit when p_error_n is not null;
+  end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
+  dbug.print(dbug."output", 'p_error_n: %s', p_error_n);
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end tsort;
 
 $if cfg_pkg.c_testing $then
 
@@ -506,6 +664,47 @@ exception
     raise;
 $end
 end dbms_output_flush;
+
+procedure dsort
+( p_graph in out nocopy t_graph
+, p_result out nocopy dbms_sql.varchar2_table /* I */
+)
+is
+  l_error_n t_object;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
+  dbug.enter($$PLSQL_UNIT || '.DSORT');
+$end
+
+  while true
+  loop
+    PRAGMA INLINE (tsort, 'YES');
+    tsort(p_graph, p_result, l_error_n);
+
+    exit when l_error_n is null; -- successful: stop
+
+    if p_graph(l_error_n).count = 0
+    then
+      raise program_error;
+    end if;
+
+    p_graph(l_error_n) := c_object_no_dependencies_tab;
+
+    if p_graph(l_error_n).count != 0
+    then
+      raise program_error;
+    end if;
+  end loop;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.api_pkg.c_debugging >= 1 $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end dsort;
 
 $if cfg_pkg.c_testing $then
 

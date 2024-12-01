@@ -56,11 +56,6 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
 
   g_max_fetch constant simple_integer := 100;
 
-  function get_object_no_dependencies_tab
-  return t_object_natural_tab;
-
-  c_object_no_dependencies_tab constant t_object_natural_tab := get_object_no_dependencies_tab; -- initialisation
-
   "SCHEMA_EXPORT" constant all_objects.object_type%type := 'SCHEMA_EXPORT';
 
   "schema_version" constant user_objects.object_name%type := 'schema_version';
@@ -2484,14 +2479,6 @@ $end
     end loop;
     return l_text_tab;
   end lines2text;
-
-  function get_object_no_dependencies_tab
-  return t_object_natural_tab
-  is
-    l_object_no_dependencies_tab t_object_natural_tab; -- initialisation
-  begin
-    return l_object_no_dependencies_tab;
-  end get_object_no_dependencies_tab;
 
   function modify_ddl_text
   ( p_ddl_text in varchar2
