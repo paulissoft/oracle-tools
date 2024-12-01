@@ -14,17 +14,6 @@ subtype t_schema_nn is oracle_tools.pkg_ddl_util.t_schema_nn;
 "triggers" constant varchar2(30 char) := 'TRIGGER';
 "indexes" constant varchar2(30 char) := 'INDEX';
 
-c_steps constant sys.odcivarchar2list :=
-  sys.odcivarchar2list
-  ( "named objects"                 -- no base object
-  , "object grants"                 -- base object (named)
-  , "synonyms"                      -- base object (named)
-  , "comments"                      -- base object (named)
-  , "constraints"                   -- base object (named)
-  , "triggers"                      -- base object (NOT named)
-  , "indexes"                       -- base object (NOT named)
-  );
-
 procedure get_named_objects
 ( p_schema in varchar2
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
@@ -557,7 +546,8 @@ $end
     , table_owner => 'ORACLE_TOOLS'
     , table_name => 'V_DEPENDENT_OR_GRANTED_OBJECT_TYPES'
     , table_column => 'NR'
-    , chunk_size => 1
+      -- V_DEPENDENT_OR_GRANTED_OBJECT_TYPES contains 6 rows
+    , chunk_size => nvl(ceil(6 / oracle_tools.pkg_ddl_util.c_default_parallel_level), 1)
     );
 
 $if oracle_tools.schema_objects_api.c_debugging $then
@@ -631,7 +621,31 @@ procedure add_schema_objects
 , p_schema_object_filter_id in positiven
 )
 is
+  c_steps constant sys.odcivarchar2list :=
+    sys.odcivarchar2list
+    ( "named objects"                 -- no base object
+    , "object grants"                 -- base object (named)
+    , "synonyms"                      -- base object (named)
+    , "comments"                      -- base object (named)
+    , "constraints"                   -- base object (named)
+    , "triggers"                      -- base object (NOT named)
+    , "indexes"                       -- base object (NOT named)
+    );
 begin
+$if false $then
+
+  for i_idx in c_steps.first .. c_steps.last
+  loop
+    -- a necessary precondition for the other steps started via DBMS_PARALLEL_EXECUTE
+    add_schema_objects
+    ( p_schema_object_filter => p_schema_object_filter
+    , p_schema_object_filter_id => p_schema_object_filter_id
+    , p_step => c_steps(i_idx)
+    );
+  end loop;
+  
+$else
+
   -- a necessary precondition for the other steps started via DBMS_PARALLEL_EXECUTE
   add_schema_objects
   ( p_schema_object_filter => p_schema_object_filter
@@ -657,6 +671,8 @@ begin
   commit; -- may need to make this an autonomous session
 
   ddl_batch_process;
+  
+$end -- $if false $then
 end add_schema_objects;
 
 -- PUBLIC
