@@ -632,6 +632,8 @@ $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
     , "triggers"                      -- base object (NOT named)
     , "indexes"                       -- base object (NOT named)
     );
+$end -- $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
+
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECTS (2)';
 $end  
