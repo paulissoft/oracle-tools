@@ -224,7 +224,7 @@ procedure add_schema_objects
 )
 is
 $if oracle_tools.schema_objects_api.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECTS';
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECTS (1)';
 $end  
   l_schema_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
   l_schema constant t_schema_nn := p_schema_object_filter.schema();
@@ -631,7 +631,14 @@ is
     , "triggers"                      -- base object (NOT named)
     , "indexes"                       -- base object (NOT named)
     );
+$if oracle_tools.schema_objects_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECTS (2)';
+$end  
 begin
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
 $if false $then
 
   for i_idx in c_steps.first .. c_steps.last
@@ -673,6 +680,15 @@ $else
   ddl_batch_process;
   
 $end -- $if false $then
+
+$if oracle_tools.schema_objects_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end add_schema_objects;
 
 -- PUBLIC
