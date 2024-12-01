@@ -546,7 +546,7 @@ $end
 end add_schema_ddl;
 
 procedure add_batch
-( p_session_id in t_session_id default null
+( p_session_id in t_session_id
 , p_schema in varchar2 default null
 , p_transform_param_list in varchar2 default null
 , p_object_schema in varchar2 default null
@@ -1000,7 +1000,8 @@ is
 begin
   PRAGMA INLINE (add_batch, 'YES');
   add_batch
-  ( p_object_type => p_object_type
+  ( p_session_id => get_session_id
+  , p_object_type => p_object_type
   , p_schema_object_filter => p_schema_object_filter
   , p_schema_object_filter_id => p_schema_object_filter_id
   );
