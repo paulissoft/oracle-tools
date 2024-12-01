@@ -36,7 +36,7 @@ $end
   self.privilege$ := p_privilege;
   self.grantable$ := p_grantable;
 
-  oracle_tools.t_schema_object.set_id(self);
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -170,7 +170,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 end chk;
 
-overriding member function last_ddl_time
+overriding member function dict_last_ddl_time
 return date
 is
   l_owner constant all_objects.owner%type := self.base_object_schema();
@@ -200,7 +200,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   return l_last_ddl_time;
-end last_ddl_time;
+end dict_last_ddl_time;
 
 end;
 /

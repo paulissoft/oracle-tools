@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."DDL_CRUD_API" AUTHID CURRENT_USER IS /* -*-coding: utf-8-*- */
+CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."DDL_CRUD_API" AUTHID DEFINER IS /* -*-coding: utf-8-*- */
 
 /**
 Only this package is used to manage CRUD operations on:
@@ -29,7 +29,7 @@ The interface for these tables is via these views (grant select to public):
 These are helper views:
 - V_ALL_SCHEMA_OBJECTS
 
-This package will read dictionary objects indirectly hence **AUTHID CURRENT_USER**.
+This package will not read dictionary objects (in)directly hence **AUTHID DEFINER**.
 
 These tables will not be granted to any other schema, so this package is the only interface: Virtual Private Database is thus not necessary.
 

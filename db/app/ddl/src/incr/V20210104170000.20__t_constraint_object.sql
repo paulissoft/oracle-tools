@@ -33,7 +33,7 @@ create type oracle_tools.t_constraint_object authid current_user under oracle_to
   ( self in oracle_tools.t_constraint_object
   , p_schema in varchar2
   )
-, overriding member function last_ddl_time return date
+, overriding member function dict_last_ddl_time return date
 )
 not final]';
 end;

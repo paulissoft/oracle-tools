@@ -30,7 +30,7 @@ $end
   self.object_schema$ := null; -- p_object_schema;
   self.column_name$ := p_column_name;
 
-  oracle_tools.t_schema_object.set_id(self);
+  oracle_tools.t_schema_object.normalize(self);
 
   self.chk(p_object_schema); -- TO DO: make it more generic
 
@@ -95,7 +95,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 end chk;
 
-overriding member function last_ddl_time
+overriding member function dict_last_ddl_time
 return date
 is
   l_last_ddl_time date;
@@ -104,7 +104,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'LAST_DDL_TIME');
 $end
 
-  l_last_ddl_time := oracle_tools.t_schema_object.last_ddl_time
+  l_last_ddl_time := oracle_tools.t_schema_object.dict_last_ddl_time
                      ( p_object_schema => self.base_object_schema()
                      , p_dict_object_type => self.base_dict_object_type()
                      , p_object_name => self.base_object_name()
@@ -116,7 +116,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   return l_last_ddl_time;
-end last_ddl_time;
+end dict_last_ddl_time;
 
 end;
 /

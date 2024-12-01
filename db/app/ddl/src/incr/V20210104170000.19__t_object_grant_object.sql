@@ -23,7 +23,7 @@ create type oracle_tools.t_object_grant_object authid current_user under oracle_
   ( self in oracle_tools.t_object_grant_object
   , p_schema in varchar2
   )
-, overriding member function last_ddl_time return date
+, overriding member function dict_last_ddl_time return date
 )
 final]';
 end;

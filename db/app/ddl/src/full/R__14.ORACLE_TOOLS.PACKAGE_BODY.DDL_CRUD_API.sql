@@ -286,6 +286,7 @@ procedure add_schema_object
 is
   l_schema_object_filter_id constant positive := get_schema_object_filter_id(p_session_id => p_session_id);
   l_schema_object_id constant oracle_tools.schema_objects.id%type := p_schema_object.id;
+  l_last_ddl_time date;
   l_found pls_integer;
 $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECT';
@@ -303,10 +304,20 @@ $end
   
   -- retrieve from or insert into SCHEMA_OBJECTS
   begin
-    select  1
-    into    l_found
+    select  so.obj.last_ddl_time()
+    into    l_last_ddl_time
     from    oracle_tools.schema_objects so
     where   so.id = l_schema_object_id;
+    
+    if l_last_ddl_time = p_schema_object.last_ddl_time
+    then
+      null; -- no change here
+    else
+      delete
+      from    oracle_tools.schema_objects so
+      where   so.id = l_schema_object_id;
+      raise no_data_found;
+    end if;
   exception
     when no_data_found
     then insert into oracle_tools.schema_objects(id, obj) values (p_schema_object.id, p_schema_object);
@@ -600,6 +611,7 @@ procedure add_schema_object_tab
 )
 is
   l_last_seq oracle_tools.generate_ddl_session_schema_objects.seq%type;
+  l_rowcount pls_integer := 0;
 $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECT_TAB';
 $end
@@ -611,19 +623,44 @@ $if oracle_tools.ddl_crud_api.c_debugging $then
 $end  
 $end
 
-  -- insert into SCHEMA_OBJECTS
-  -- Note: do not use APPEND hint since that is slow or causes problems
-  insert into oracle_tools.schema_objects
-  ( id
-  , obj
-  )
-    select  t.id
-    ,       value(t) as obj
+  for r in
+  ( select  t.id as source_id
+    ,       t.last_ddl_time$ as source_last_ddl_time
+    ,       value(t) as source_obj
+    ,       so.id as target_id
+    ,       so.obj.last_ddl_time$ as target_last_ddl_time
     from    table(p_schema_object_tab) t
-    where   t.id not in ( select so.id from oracle_tools.schema_objects so );
+            left outer join oracle_tools.schema_objects so
+            on so.id = t.id
+  )
+  loop
+    if r.source_id = r.target_id and
+       r.source_last_ddl_time = r.target_last_ddl_time
+    then
+      null; -- no need to insert/delete
+    else
+      if r.source_id = r.target_id
+      then
+        -- dates differ and udate may not work: just delete first
+        delete
+        from     oracle_tools.schema_objects so
+        where    so.id = r.target_id;
+      end if;
+      
+      insert into oracle_tools.schema_objects
+      ( id
+      , obj
+      )
+      values
+      ( r.source_id
+      , r.source_obj
+      );
+      l_rowcount := l_rowcount + 1;
+    end if;
+  end loop;
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
-  dbug.print(dbug."info", '# rows inserted into schema_objects: %s', sql%rowcount);
+  dbug.print(dbug."info", '# rows inserted into schema_objects: %s', l_rowcount);
 $end  
 
   -- insert into SCHEMA_OBJECT_FILTER_RESULTS

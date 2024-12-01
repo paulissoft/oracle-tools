@@ -23,6 +23,7 @@ $end
   -- default constructor
   self := oracle_tools.t_index_object
           ( null -- id
+          , null -- last_ddl_time$
           , null
           , p_object_schema
           , case when p_base_object is not null then p_base_object.id end
@@ -42,7 +43,7 @@ $end
     and     ind.index_name = p_object_name;
   end if;
 
-  oracle_tools.t_schema_object.set_id(self);
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -85,7 +86,7 @@ $end
   self.column_names$ := oracle_tools.t_index_object.get_column_names(p_object_schema, p_object_name);
   self.tablespace_name$ := p_tablespace_name;
 
-  oracle_tools.t_schema_object.set_id(self);
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;

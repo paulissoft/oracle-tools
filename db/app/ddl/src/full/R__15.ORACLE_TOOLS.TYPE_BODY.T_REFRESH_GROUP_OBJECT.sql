@@ -22,7 +22,7 @@ $end
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
 
-  oracle_tools.t_schema_object.set_id(self);
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -39,17 +39,17 @@ begin
   return 'REFRESH_GROUP';
 end object_type;
 
-overriding member function last_ddl_time
+overriding member function dict_last_ddl_time
 return date
 is
 begin
   -- often mapped on MV
-  return oracle_tools.t_schema_object.last_ddl_time
+  return oracle_tools.t_schema_object.dict_last_ddl_time
          ( p_object_schema => self.object_schema()
          , p_dict_object_type => 'MATERIALIZED VIEW'
          , p_object_name => self.object_name()
          );
-end last_ddl_time;
+end dict_last_ddl_time;
 
 end;
 /

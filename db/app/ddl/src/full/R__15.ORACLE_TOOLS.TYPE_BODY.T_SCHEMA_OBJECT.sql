@@ -115,6 +115,22 @@ begin
   return null;
 end grantable;
 
+final member procedure last_ddl_time
+( self in out nocopy oracle_tools.t_schema_object
+, p_last_ddl_time in date
+)
+is
+begin
+  self.last_ddl_time$ := p_last_ddl_time;
+end last_ddl_time;
+
+final member function last_ddl_time
+return date
+is
+begin
+  return self.last_ddl_time$;
+end last_ddl_time;
+
 static function object_type_order
 ( p_object_type in varchar2
 )
@@ -357,7 +373,7 @@ $end
   return l_id;
 end get_id;
 
-static procedure set_id
+static procedure normalize
 ( p_schema_object in out nocopy oracle_tools.t_schema_object
 )
 is
@@ -375,7 +391,8 @@ begin
     , p_privilege => p_schema_object.privilege()
     , p_grantable => p_schema_object.grantable()
     );
-end set_id;
+  p_schema_object.last_ddl_time(p_schema_object.dict_last_ddl_time());
+end normalize;
 
 map member function signature
 return varchar2
@@ -1018,7 +1035,7 @@ $end
   return l_id;
 end join_id;
 
-final static function last_ddl_time
+final static function dict_last_ddl_time
 ( p_object_schema in varchar2
 , p_dict_object_type in varchar2
 , p_object_name in varchar2
@@ -1037,25 +1054,18 @@ begin
 exception
   when no_data_found
   then return null;
-end last_ddl_time;
+end dict_last_ddl_time;
 
-member function last_ddl_time
+member function dict_last_ddl_time
 return date
 is
 begin
-  return oracle_tools.t_schema_object.last_ddl_time
+  return oracle_tools.t_schema_object.dict_last_ddl_time
          ( p_object_schema => self.object_schema()
          , p_dict_object_type => self.dict_object_type()
          , p_object_name => self.object_name()
          );
-end last_ddl_time;
-
-final member function dict_object_exists
-return integer -- 0/1 (is last_ddl_time not null)
-is
-begin
-  return case when self.last_ddl_time() is null then 0 else 1 end;
-end dict_object_exists;
+end dict_last_ddl_time;
 
 static function ddl_batch_order
 ( p_object_schema in varchar2

@@ -2,6 +2,7 @@ begin
   execute immediate q'[
 create type oracle_tools.t_schema_object authid current_user as object
 ( id varchar2(500 byte) /* the unique id, formerly the id() member function */
+, last_ddl_time$ date
 , network_link$ varchar2(128 byte)
 , object_schema$ varchar2(128 byte)
 -- begin of getter(s)/setter(s)
@@ -28,6 +29,11 @@ create type oracle_tools.t_schema_object authid current_user as object
 , member function grantee return varchar2 deterministic
 , member function privilege return varchar2 deterministic
 , member function grantable return varchar2 deterministic
+, final member procedure last_ddl_time
+  ( self in out nocopy oracle_tools.t_schema_object
+  , p_last_ddl_time in date
+  ) -- a setter for last_ddl_time$
+, final member function last_ddl_time return date -- a getter for last_ddl_time$
 -- end of getter(s)/setter(s)
 , static function object_type_order
   ( p_object_type in varchar2
@@ -47,9 +53,9 @@ create type oracle_tools.t_schema_object authid current_user as object
   , p_grantable in varchar2 default null
   )
   return varchar2 deterministic /*result_cache*/
-, static procedure set_id
+, static procedure normalize
   ( p_schema_object in out nocopy oracle_tools.t_schema_object
-  )
+  ) -- sets id and last_ddl_time$
 , map member function signature return varchar2 deterministic
 , static function dict2metadata_object_type
   ( p_dict_object_type in varchar2
@@ -113,14 +119,13 @@ create type oracle_tools.t_schema_object authid current_user as object
   ( p_id_parts in oracle_tools.t_text_tab
   )
   return varchar2 deterministic
-, final static function last_ddl_time
+, final static function dict_last_ddl_time
   ( p_object_schema in varchar2
   , p_dict_object_type in varchar2
   , p_object_name in varchar2
   )
   return date
-, member function last_ddl_time return date -- e.g. all_objects.last_ddl_time
-, final member function dict_object_exists return integer -- 0/1 (is last_ddl_time not null)
+, member function dict_last_ddl_time return date -- get dictionaly last_ddl_time, usually all_objects.last_ddl_time
 , static function ddl_batch_order
   ( p_object_schema in varchar2
   , p_object_type in varchar2

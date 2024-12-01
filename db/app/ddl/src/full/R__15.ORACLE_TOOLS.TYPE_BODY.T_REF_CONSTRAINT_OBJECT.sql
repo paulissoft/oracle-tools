@@ -41,6 +41,7 @@ $end
   -- default constructor
   self := oracle_tools.t_ref_constraint_object
           ( null -- id
+          , null -- last_ddl_time$
           , null
           , p_object_schema
           , case when p_base_object is not null then p_base_object.id end          
@@ -101,7 +102,7 @@ $end
     end loop find_loop;
   end if;
 
-  oracle_tools.t_schema_object.set_id(self);
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;

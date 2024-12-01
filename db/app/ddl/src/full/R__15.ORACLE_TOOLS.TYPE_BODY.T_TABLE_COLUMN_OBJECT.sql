@@ -55,7 +55,7 @@ $end
   self.char_length$ := p_char_length;
   self.char_used$ := p_char_used;
 
-  oracle_tools.t_schema_object.set_id(self);
+  oracle_tools.t_schema_object.normalize(self);
   
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -121,16 +121,16 @@ begin
   return char_used$;
 end char_used;
 
-overriding member function last_ddl_time
+overriding member function dict_last_ddl_time
 return date
 is
 begin
-  return oracle_tools.t_schema_object.last_ddl_time
+  return oracle_tools.t_schema_object.dict_last_ddl_time
   ( p_object_schema => self.base_object_schema()
   , p_dict_object_type => self.base_dict_object_type()
   , p_object_name => self.base_object_name()
   );
-end last_ddl_time;
+end dict_last_ddl_time;
 
 end;
 /
