@@ -631,16 +631,55 @@ procedure add_schema_objects
 , p_schema_object_filter_id in positiven
 )
 is
+  l_error_message varchar2(4000 byte) := null;
+  l_session_id constant positive := oracle_tools.ddl_crud_api.get_session_id;
+  l_session_schema_object_filter_id constant positive := oracle_tools.ddl_crud_api.get_schema_object_filter_id();
+  l_session_schema_object_filter constant oracle_tools.t_schema_object_filter := oracle_tools.ddl_crud_api.get_schema_object_filter();
 begin
   -- input checks
-  if dbms_lob.compare(p_schema_object_filter.serialize(), oracle_tools.ddl_crud_api.get_schema_object_filter().serialize) = 0 and
-     p_schema_object_filter_id = oracle_tools.ddl_crud_api.get_schema_object_filter_id()
+  case
+    when p_schema_object_filter_id is null
+    then
+      l_error_message := 'Parameter schema object filter id is null';
+    when l_session_schema_object_filter_id is null
+    then
+      l_error_message := 'Session schema object filter id is null';
+    when p_schema_object_filter is null
+    then
+      l_error_message := 'Parameter schema object filter is null';
+    when l_session_schema_object_filter is null
+    then
+      l_error_message := 'Session schema object filter is null';
+    when p_schema_object_filter_id != l_session_schema_object_filter_id
+    then
+      l_error_message :=
+        utl_lms.format_message
+        ( 'Parameter and session schema object filter id differ: %s versus %s'
+        , to_char(p_schema_object_filter_id)
+        , to_char(l_session_schema_object_filter_id)
+        );
+    when dbms_lob.compare(p_schema_object_filter.serialize(), l_session_schema_object_filter.serialize()) != 0
+    then
+      l_error_message :=
+        utl_lms.format_message
+        ( 'Parameter and session schema object filter differ: %s... versus %s...'
+        , dbms_lob.substr(p_schema_object_filter.serialize(), 100)
+        , dbms_lob.substr(l_session_schema_object_filter.serialize(), 100)
+        );
+    else
+      null;
+  end case;
+
+  if l_error_message is not null
   then
-    null; -- OK
-  else
-    raise program_error;
+    oracle_tools.pkg_ddl_error.raise_error
+    ( p_error_number => oracle_tools.pkg_ddl_error.c_invalid_parameters
+    , p_error_message => l_error_message
+    , p_context_info => l_session_id
+    , p_context_label => 'session id'
+    );
   end if;
-  
+
   -- a necessary precondition for the other steps started via DBMS_PARALLEL_EXECUTE
   add_schema_objects
   ( p_schema_object_filter => p_schema_object_filter
