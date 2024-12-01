@@ -546,16 +546,18 @@ $end
 end add_schema_ddl;
 
 procedure add_batch
-( p_session_id in t_session_id
-, p_schema in varchar2
-, p_transform_param_list in varchar2
-, p_object_schema in varchar2
-, p_object_type in varchar2
-, p_base_object_schema in varchar2
-, p_base_object_type in varchar2
-, p_object_name_tab in oracle_tools.t_text_tab
-, p_base_object_name_tab in oracle_tools.t_text_tab
-, p_nr_objects in integer
+( p_session_id in t_session_id default null
+, p_schema in varchar2 default null
+, p_transform_param_list in varchar2 default null
+, p_object_schema in varchar2 default null
+, p_object_type in varchar2 default null
+, p_base_object_schema in varchar2 default null
+, p_base_object_type in varchar2 default null
+, p_object_name_tab in oracle_tools.t_text_tab default null
+, p_base_object_name_tab in oracle_tools.t_text_tab default null
+, p_nr_objects in integer default null
+, p_schema_object_filter in oracle_tools.t_schema_object_filter default null
+, p_schema_object_filter_id in integer default null
 )
 is
 begin
@@ -571,6 +573,8 @@ begin
   , object_name_tab
   , base_object_name_tab
   , nr_objects
+  , schema_object_filter
+  , schema_object_filter_id
   )
   values
   ( p_session_id
@@ -584,6 +588,8 @@ begin
   , p_object_name_tab
   , p_base_object_name_tab
   , p_nr_objects
+  , p_schema_object_filter
+  , p_schema_object_filter_id
   );
 end add_batch;
 
@@ -982,6 +988,21 @@ begin
   , p_object_name_tab => p_object_name_tab
   , p_base_object_name_tab => p_base_object_name_tab
   , p_nr_objects => p_nr_objects
+  );
+end add;
+
+procedure add
+( p_object_type in varchar2
+, p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_schema_object_filter_id in integer
+)
+is
+begin
+  PRAGMA INLINE (add_batch, 'YES');
+  add_batch
+  ( p_object_type => p_object_type
+  , p_schema_object_filter => p_schema_object_filter
+  , p_schema_object_filter_id => p_schema_object_filter_id
   );
 end add;
 

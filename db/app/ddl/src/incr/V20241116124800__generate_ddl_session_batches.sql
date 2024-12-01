@@ -16,6 +16,10 @@ create table generate_ddl_session_batches
 , object_name_tab oracle_tools.t_text_tab
 , base_object_name_tab oracle_tools.t_text_tab
 , nr_objects integer
+-- for schema_objects_api.ddl_batch_process
+, schema_object_filter oracle_tools.t_schema_object_filter
+, schema_object_filter_id integer
+-- some administration
 , start_time timestamp(6)
 , end_time timestamp(6)
 , error_message varchar2(4000 byte)
@@ -27,6 +31,8 @@ create table generate_ddl_session_batches
 )
 nested table object_name_tab store as generate_ddl_session_batches$object_name_tab
 nested table base_object_name_tab store as generate_ddl_session_batches$base_object_name_tab
+nested table schema_object_filter.object_tab$ store as generate_ddl_session_batches$schema_object_filter$object_tab$
+nested table schema_object_filter.object_cmp_tab$ store as generate_ddl_session_batches$schema_object_filter$object_cmp_tab$
 ;
 
 alter table generate_ddl_session_batches nologging;

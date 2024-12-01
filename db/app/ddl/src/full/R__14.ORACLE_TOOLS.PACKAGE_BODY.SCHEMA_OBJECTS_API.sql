@@ -631,63 +631,31 @@ procedure add_schema_objects
 , p_schema_object_filter_id in positiven
 )
 is
-  l_error_message varchar2(4000 byte) := null;
-  l_session_id constant positive := oracle_tools.ddl_crud_api.get_session_id;
-  l_session_schema_object_filter_id constant positive := oracle_tools.ddl_crud_api.get_schema_object_filter_id();
-  l_session_schema_object_filter constant oracle_tools.t_schema_object_filter := oracle_tools.ddl_crud_api.get_schema_object_filter();
 begin
-  -- input checks
-  case
-    when p_schema_object_filter_id is null
-    then
-      l_error_message := 'Parameter schema object filter id is null';
-    when l_session_schema_object_filter_id is null
-    then
-      l_error_message := 'Session schema object filter id is null';
-    when p_schema_object_filter is null
-    then
-      l_error_message := 'Parameter schema object filter is null';
-    when l_session_schema_object_filter is null
-    then
-      l_error_message := 'Session schema object filter is null';
-    when p_schema_object_filter_id != l_session_schema_object_filter_id
-    then
-      l_error_message :=
-        utl_lms.format_message
-        ( 'Parameter and session schema object filter id differ: %s versus %s'
-        , to_char(p_schema_object_filter_id)
-        , to_char(l_session_schema_object_filter_id)
-        );
-    when dbms_lob.compare(p_schema_object_filter.serialize(), l_session_schema_object_filter.serialize()) != 0
-    then
-      l_error_message :=
-        utl_lms.format_message
-        ( 'Parameter and session schema object filter differ: %s... versus %s...'
-        , dbms_lob.substr(p_schema_object_filter.serialize(), 100)
-        , dbms_lob.substr(l_session_schema_object_filter.serialize(), 100)
-        );
-    else
-      null;
-  end case;
-
-  if l_error_message is not null
-  then
-    oracle_tools.pkg_ddl_error.raise_error
-    ( p_error_number => oracle_tools.pkg_ddl_error.c_invalid_parameters
-    , p_error_message => l_error_message
-    , p_context_info => l_session_id
-    , p_context_label => 'session id'
-    );
-  end if;
-
   -- a necessary precondition for the other steps started via DBMS_PARALLEL_EXECUTE
   add_schema_objects
   ( p_schema_object_filter => p_schema_object_filter
   , p_schema_object_filter_id => p_schema_object_filter_id
   , p_step => "named objects"
   );
-  commit; -- may need to make this an autonomous session
+
+  oracle_tools.ddl_crud_api.clear_batch;
+
+  for r in
+  ( select  v.nr
+    ,       v.object_type
+    from    oracle_tools.v_dependent_or_granted_object_types v
+  )
+  loop
+    oracle_tools.ddl_crud_api.add
+    ( p_object_type => r.object_type
+    , p_schema_object_filter => p_schema_object_filter 
+    , p_schema_object_filter_id => p_schema_object_filter_id 
+    );
+  end loop;
   
+  commit; -- may need to make this an autonomous session
+
   ddl_batch_process;
 end add_schema_objects;
 
@@ -878,6 +846,25 @@ procedure ddl_batch_process
 , p_end_id in number
 )
 is
+  cursor c_gdssdb
+  is
+    select  gdsb.seq
+    ,       gdsb.object_type
+    ,       gdsb.schema_object_filter
+    ,       gdsb.schema_object_filter_id
+    from    oracle_tools.v_my_generate_ddl_session_batches gdsb -- filter on session_id already part of view
+            inner join oracle_tools.v_dependent_or_granted_object_types v
+            on v.object_type = gdsb.object_type
+    where   gdsb.session_id = p_session_id
+    and     gdsb.end_time is null        
+    and     v.nr between p_start_id and p_end_id
+    order by
+            gdsb.session_id
+    ,       gdsb.seq;
+    
+  type t_gdssdb_tab is table of c_gdssdb%rowtype;
+  
+  l_gdssdb_tab t_gdssdb_tab;
 begin
   -- essential when in another process
   if oracle_tools.ddl_crud_api.get_session_id = p_session_id
@@ -894,19 +881,39 @@ $if oracle_tools.schema_objects_api.c_debugging $then
 $end  
 $end
 
-  for r in
-  ( select  v.nr
-    ,       v.object_type
-    from    oracle_tools.v_dependent_or_granted_object_types v
-    where   v.nr between p_start_id and p_end_id
-  )
-  loop
-    add_schema_objects
-    ( p_schema_object_filter => oracle_tools.ddl_crud_api.get_schema_object_filter
-    , p_schema_object_filter_id => oracle_tools.ddl_crud_api.get_schema_object_filter_id
-    , p_step => r.object_type
-    );
-  end loop;
+  open c_gdssdb;
+  fetch c_gdssdb bulk collect into l_gdssdb_tab;
+  close c_gdssdb;
+
+  if l_gdssdb_tab.count = 0
+  then
+    raise no_data_found; -- should not happen
+  else
+    for i_idx in l_gdssdb_tab.first .. l_gdssdb_tab.last
+    loop
+      oracle_tools.ddl_crud_api.set_batch_start_time(l_gdssdb_tab(i_idx).seq);
+      commit;
+
+      savepoint spt;        
+      begin
+        add_schema_objects
+        ( p_schema_object_filter => l_gdssdb_tab(i_idx).schema_object_filter
+        , p_schema_object_filter_id => l_gdssdb_tab(i_idx).schema_object_filter_id
+        , p_step => l_gdssdb_tab(i_idx).object_type
+        );
+      
+        oracle_tools.ddl_crud_api.set_batch_end_time(l_gdssdb_tab(i_idx).seq);
+        commit;
+      exception
+        when others
+        then
+          rollback to spt;
+          oracle_tools.ddl_crud_api.set_batch_end_time(l_gdssdb_tab(i_idx).seq, sqlerrm);
+          commit;
+          raise;
+      end;
+    end loop;
+  end if;
 
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;
@@ -1158,4 +1165,3 @@ $end
 
 END SCHEMA_OBJECTS_API;
 /
-

@@ -5519,7 +5519,15 @@ $end
   is
     cursor c_gdssdb
     is
-      select  gdsb.*
+      select  gdsb.seq
+      ,       gdsb.schema
+      ,       gdsb.transform_param_list
+      ,       gdsb.object_type
+      ,       gdsb.object_schema
+      ,       gdsb.base_object_schema
+      ,       gdsb.object_name_tab
+      ,       gdsb.base_object_name_tab
+      ,       gdsb.nr_objects
       from    oracle_tools.v_my_generate_ddl_session_batches gdsb -- filter on session_id already part of view
       where   gdsb.session_id = p_session_id
       and     ( p_start_id is null or

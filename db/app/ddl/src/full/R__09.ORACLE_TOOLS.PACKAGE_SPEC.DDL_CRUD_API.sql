@@ -266,7 +266,22 @@ procedure add
 );
 /**
 
-Add a record in table GENERATE_DDL_SESSION_BATCHES.
+Add a record to table GENERATE_DDL_SESSION_BATCHES.
+
+| Table                               | CRUD |
+|:------------------------------------|:-----|
+| GENERATE_DDL_SESSION_BATCHES        | C    |
+
+**/
+
+procedure add
+( p_object_type in varchar2
+, p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_schema_object_filter_id in integer
+);
+/**
+
+Add a record to table GENERATE_DDL_SESSION_BATCHES.
 
 | Table                               | CRUD |
 |:------------------------------------|:-----|
