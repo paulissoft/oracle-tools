@@ -8,6 +8,7 @@ This package is used to get objects from the dictionary with current user authen
 
 c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
 c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
+c_use_ddl_batch_process constant boolean := true;
 
 procedure add
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter -- the schema object filter

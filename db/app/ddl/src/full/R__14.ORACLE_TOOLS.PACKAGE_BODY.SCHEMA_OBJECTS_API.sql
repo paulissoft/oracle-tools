@@ -621,6 +621,7 @@ procedure add_schema_objects
 , p_schema_object_filter_id in positiven
 )
 is
+$if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
   c_steps constant sys.odcivarchar2list :=
     sys.odcivarchar2list
     ( "named objects"                 -- no base object
@@ -639,7 +640,7 @@ $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $end
 
-$if false $then
+$if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
 
   for i_idx in c_steps.first .. c_steps.last
   loop
@@ -679,7 +680,7 @@ $else
 
   ddl_batch_process;
   
-$end -- $if false $then
+$end -- $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
 
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;
