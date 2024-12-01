@@ -20,7 +20,7 @@ while (<>) {
     my $object = match('oracle_tools');
     
     printf("[%s#%04d] %s", $file, $line_no, $_)
-        if ( defined($object) && !m/("ORACLE_TOOLS"."|constructor function )$object/i );
+        if ( defined($object) && !m/("ORACLE_TOOLS"."|constructor function |end |--.*|dbug.print\(.*|'|`|"|\/\*.*)$object/i );
 }
 
 sub match($) {
