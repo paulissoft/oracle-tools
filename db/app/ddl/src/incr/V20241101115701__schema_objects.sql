@@ -6,7 +6,8 @@ create table schema_objects
   default sys_extract_utc(systimestamp)
   constraint schema_objects$nnc$created not null
 , constraint schema_objects$pk primary key (id)
-, constraint schema_objects$ck$obj check (obj is not null and obj.id = id and obj.last_ddl_time$ is not null)
+, constraint schema_objects$ck$obj check (obj is not null and obj.id = id)
+, constraint schema_objects$ck$obj$last_ddl_time$ check (obj.last_ddl_time$ is not null) deferrable initially deferred
 );
 
 alter table schema_objects nologging;

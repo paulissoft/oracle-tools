@@ -302,51 +302,33 @@ $end
     raise program_error;
   end if;
   
-  -- retrieve from or insert into SCHEMA_OBJECTS
-  begin
-    select  so.obj.last_ddl_time()
-    into    l_last_ddl_time
-    from    oracle_tools.schema_objects so
-    where   so.id = l_schema_object_id;
-    
-    if l_last_ddl_time = p_schema_object.last_ddl_time
-    then
-      null; -- no change here
-    else
-      delete
-      from    oracle_tools.schema_objects so
-      where   so.id = l_schema_object_id;
-      raise no_data_found;
-    end if;
-  exception
-    when no_data_found
-    then insert into oracle_tools.schema_objects(id, obj) values (p_schema_object.id, p_schema_object);
-  end;
+  -- merge into SCHEMA_OBJECTS (update last_ddl_time$)
+  merge
+  into    oracle_tools.schema_objects dst
+  using   ( select  p_schema_object.id as id
+            ,       p_schema_object as obj
+            from    dual
+          ) src
+  on      ( src.id = dst.id )
+  when    not matched
+  then    insert ( id, obj ) values ( src.id, src.obj )
+  when    matched 
+  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$;
 
-  -- retrieve from or insert into SCHEMA_OBJECT_FILTER_RESULTS
-  begin
-    select  1
-    into    l_found
-    from    oracle_tools.schema_object_filter_results sofr
-    where   sofr.schema_object_filter_id = l_schema_object_filter_id
-    and     sofr.schema_object_id = l_schema_object_id;
-  exception
-    when no_data_found
-    then
-      insert into oracle_tools.schema_object_filter_results
-      ( schema_object_filter_id
-      , schema_object_id
-      , generate_ddl
-      )
-      values
-      ( l_schema_object_filter_id
-      , l_schema_object_id
-      , ( select  sof.obj.matches_schema_object(l_schema_object_id)
-          from    oracle_tools.schema_object_filters sof
-          where   sof.id = l_schema_object_filter_id
-        )
-      );
-  end;
+  -- merge into SCHEMA_OBJECT_FILTER_RESULTS (but only when not matched)
+  merge
+  into    oracle_tools.schema_object_filter_results dst
+  using   ( select  l_schema_object_filter_id as schema_object_filter_id
+            ,       l_schema_object_id as schema_object_id
+            ,       sof.obj.matches_schema_object(l_schema_object_id) as generate_ddl
+            from    oracle_tools.schema_object_filters sof
+            where   sof.id = l_schema_object_filter_id
+          ) src
+  on      ( src.schema_object_filter_id = dst.schema_object_filter_id and
+            src.schema_object_id = src.schema_object_id )
+  when    not matched
+  then    insert ( schema_object_filter_id, schema_object_id, generate_ddl )
+          values ( src.schema_object_filter_id, src.schema_object_id, src.generate_ddl );
 
   /*
   -- Now the following tables have data for these parameters:
@@ -372,36 +354,35 @@ $end
 
   if l_found = 1
   then
-    for r in
-    ( select  /* key */
-              gds.session_id
-      ,       gd.schema_object_id
-              /* data */
-      ,       gd.last_ddl_time
-      ,       gd.generate_ddl_configuration_id
-      from    oracle_tools.generate_ddl_sessions gds
-              cross join oracle_tools.generated_ddls gd
-      where   gds.session_id = p_session_id
-      and     gd.schema_object_id = l_schema_object_id
-      and     gd.last_ddl_time = p_schema_object.last_ddl_time()
-      and     gd.generate_ddl_configuration_id = gds.generate_ddl_configuration_id
-    )
-    loop
-      update  oracle_tools.generate_ddl_session_schema_objects gdsso
-      set     gdsso.last_ddl_time = r.last_ddl_time
-      ,       gdsso.generate_ddl_configuration_id = r.generate_ddl_configuration_id
-      where   /* GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 */
-              gdsso.session_id = r.session_id
-      and     gdsso.schema_object_id = r.schema_object_id;
+    merge
+    into    oracle_tools.generate_ddl_session_schema_objects dst
+    using   ( select  /* key */
+                      gds.session_id
+              ,       gd.schema_object_id
+                      /* data */
+              ,       gd.last_ddl_time
+              ,       gd.generate_ddl_configuration_id
+              from    oracle_tools.generate_ddl_sessions gds
+                      cross join oracle_tools.generated_ddls gd
+              where   gds.session_id = p_session_id
+              and     gd.schema_object_id = l_schema_object_id
+              and     gd.last_ddl_time = p_schema_object.last_ddl_time$
+              and     gd.generate_ddl_configuration_id = gds.generate_ddl_configuration_id
+            ) src
+    on      ( /* GENERATE_DDL_SESSION_SCHEMA_OBJECTS$PK */
+              src.session_id = dst.session_id and
+              src.schema_object_id = dst.schema_object_id
+            )
+    when    matched
+    then    update set dst.last_ddl_time = dst.last_ddl_time, dst.generate_ddl_configuration_id = src.generate_ddl_configuration_id;
       
-      case sql%rowcount
-        when 0
-        then raise no_data_found;
-        when 1
-        then null; -- ok
-        else raise too_many_rows;
-      end case;
-    end loop;
+    case sql%rowcount
+      when 0
+      then raise no_data_found;
+      when 1
+      then null; -- ok
+      else raise too_many_rows;
+    end case;
   end if;
   
 $if oracle_tools.ddl_crud_api.c_tracing $then
@@ -421,6 +402,7 @@ procedure add_schema_ddl
 is
   l_generated_ddl_id oracle_tools.generated_ddls.id%type;
   l_generate_ddl_configuration_id oracle_tools.generate_ddl_configurations.id%type;
+  l_chunk#_tab sys.odcinumberlist := sys.odcinumberlist();
 
 $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_DDL';
@@ -447,6 +429,7 @@ $end
 
   if cardinality(p_schema_ddl.ddl_tab) > 0
   then
+    -- create or retrieve a generate DDL configuration
     select  gds.generate_ddl_configuration_id
     into    l_generate_ddl_configuration_id
     from    oracle_tools.generate_ddl_sessions gds
@@ -493,9 +476,9 @@ $end
                );
         end;
     end;
-      
-    for i_ddl_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
-    loop
+
+    -- bulk insert
+    forall i_ddl_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
       insert into generated_ddl_statements
       ( generated_ddl_id
       , ddl#
@@ -506,12 +489,24 @@ $end
       , p_schema_ddl.ddl_tab(i_ddl_idx).ddl#()
       , p_schema_ddl.ddl_tab(i_ddl_idx).verb()
       );
+      
+    for i_ddl_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
+    loop
       if cardinality(p_schema_ddl.ddl_tab(i_ddl_idx).text_tab) > 0
       then
+        l_chunk#_tab.delete;
         for i_chunk_idx in p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.first
                            ..
                            p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.last
         loop
+          l_chunk#_tab.extend(1);
+          l_chunk#_tab(l_chunk#_tab.last) := i_chunk_idx;
+        end loop;
+                            
+        -- bulk insert
+        forall i_chunk_idx in p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.first
+                              ..
+                              p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.last
           insert into generated_ddl_statement_chunks
           ( generated_ddl_id
           , ddl#
@@ -521,10 +516,9 @@ $end
           values
           ( l_generated_ddl_id
           , p_schema_ddl.ddl_tab(i_ddl_idx).ddl#()
-          , i_chunk_idx
+          , l_chunk#_tab(i_chunk_idx)
           , p_schema_ddl.ddl_tab(i_ddl_idx).text_tab(i_chunk_idx)
           );
-        end loop;
       end if;
     end loop;
 
@@ -610,7 +604,6 @@ procedure add_schema_object_tab
 , p_schema_object_filter_id in positiven
 )
 is
-  l_rowcount pls_integer := 0;
 $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECT_TAB';
 $end
@@ -622,64 +615,39 @@ $if oracle_tools.ddl_crud_api.c_debugging $then
 $end  
 $end
 
-  for r in
-  ( select  t.id as source_id
-    ,       t.last_ddl_time$ as source_last_ddl_time
-    ,       value(t) as source_obj
-    ,       so.id as target_id
-    ,       so.obj.last_ddl_time$ as target_last_ddl_time
-    from    table(p_schema_object_tab) t
-            left outer join oracle_tools.schema_objects so
-            on so.id = t.id
-  )
-  loop
-    if r.source_id = r.target_id and
-       r.source_last_ddl_time = r.target_last_ddl_time
-    then
-      null; -- no need to insert/delete
-    else
-      if r.source_id = r.target_id
-      then
-        -- dates differ and udate may not work: just delete first
-        delete
-        from     oracle_tools.schema_objects so
-        where    so.id = r.target_id;
-      end if;
-      
-      insert into oracle_tools.schema_objects
-      ( id
-      , obj
-      )
-      values
-      ( r.source_id
-      , r.source_obj
-      );
-      l_rowcount := l_rowcount + 1;
-    end if;
-  end loop;
+  merge
+  into    oracle_tools.schema_objects dst
+  using   ( select  t.id
+            ,       value(t) as obj
+            from    table(p_schema_object_tab) t
+          ) src
+  on      ( src.id = dst.id )
+  when    not matched
+  then    insert ( id, obj ) values ( src.id, src.obj )
+  when    matched 
+  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$;
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
-  dbug.print(dbug."info", '# rows inserted into schema_objects: %s', l_rowcount);
+  dbug.print(dbug."info", '# rows inserted into schema_objects: %s', sql%rowcount);
 $end  
 
   -- insert into SCHEMA_OBJECT_FILTER_RESULTS
-  insert into oracle_tools.schema_object_filter_results
-  ( schema_object_filter_id
-  , schema_object_id
-  , generate_ddl
-  )
-    select  p_schema_object_filter_id
-    ,       t.id as schema_object_id
-    ,       sof.obj.matches_schema_object(t.id) as generate_ddl
-    from    table(p_schema_object_tab) t
-            cross join oracle_tools.schema_object_filters sof
-    where   ( p_schema_object_filter_id, t.id ) not in
-            ( /* SCHEMA_OBJECT_FILTER_RESULTS$PK */
-              select  sofr.schema_object_filter_id
-              ,       sofr.schema_object_id
-              from    oracle_tools.schema_object_filter_results sofr
-            )
-    and     sof.id = p_schema_object_filter_id;
+  merge
+  into    oracle_tools.schema_object_filter_results dst
+  using   ( select  p_schema_object_filter_id as schema_object_filter_id
+            ,       t.id as schema_object_id
+            ,       sof.obj.matches_schema_object(t.id) as generate_ddl
+            from    table(p_schema_object_tab) t
+                    cross join oracle_tools.schema_object_filters sof
+            where   sof.id = p_schema_object_filter_id
+          ) src
+  on      ( /* SCHEMA_OBJECT_FILTER_RESULTS$PK */
+            src.schema_object_filter_id = dst.schema_object_filter_id and
+            src.schema_object_id = dst.schema_object_id
+          )
+  when    not matched
+  then    insert ( schema_object_filter_id, schema_object_id, generate_ddl )
+          values ( src.schema_object_filter_id, src.schema_object_id, src.generate_ddl );
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."info", '# rows inserted into schema_object_filter_results: %s', sql%rowcount);
@@ -694,41 +662,34 @@ $end
   */
 
   -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns 0
-  insert into oracle_tools.generate_ddl_session_schema_objects
-  ( session_id
-  , schema_object_filter_id 
-  , schema_object_id
-  , last_ddl_time
-  , generate_ddl_configuration_id
-  )
-    select  p_session_id
-    ,       p_schema_object_filter_id
-    ,       t.schema_object_id
-            -- when DDL has been generated for this last_ddl_time, save that info so we will not generate DDL again
-    ,       t.last_ddl_time
-    ,       t.generate_ddl_configuration_id
-    from    ( select  t.id as schema_object_id
-              ,       gd.last_ddl_time
-              ,       gd.generate_ddl_configuration_id
-              from    oracle_tools.generate_ddl_sessions gds
-                      cross join table(p_schema_object_tab) t -- may contain duplicates (constraints)
-                      inner join oracle_tools.schema_object_filter_results sofr
-                      on sofr.schema_object_filter_id = p_schema_object_filter_id and
-                         sofr.schema_object_id = t.id and
-                         sofr.generate_ddl = 1 -- ignore objects that do not need to be generated                      
-                      left outer join oracle_tools.generated_ddls gd
-                      on gd.schema_object_id = t.id and
-                         gd.last_ddl_time = t.last_ddl_time() and
-                         gd.generate_ddl_configuration_id = gds.generate_ddl_configuration_id
-              where   gds.session_id = p_session_id
-              and     gds.schema_object_filter_id = p_schema_object_filter_id
-              and     ( p_session_id, t.id ) not in
-                      ( select  /* GENERATE_DDL_SESSION_SCHEMA_OBJECTS$UK$1 */
-                                gdsso.session_id
-                        ,       gdsso.schema_object_id
-                        from    oracle_tools.generate_ddl_session_schema_objects gdsso
-                      )              
-            ) t;
+  merge
+  into    oracle_tools.generate_ddl_session_schema_objects dst
+  using   ( select  p_session_id as session_id
+            ,       p_schema_object_filter_id as schema_object_filter_id
+            ,       t.id as schema_object_id
+                    -- when DDL has been generated for this last_ddl_time, save that info so we will not generate DDL again
+            ,       gd.last_ddl_time
+            ,       gd.generate_ddl_configuration_id
+            from    oracle_tools.generate_ddl_sessions gds
+                    cross join table(p_schema_object_tab) t -- may contain duplicates (constraints)
+                    inner join oracle_tools.schema_object_filter_results sofr
+                    on sofr.schema_object_filter_id = p_schema_object_filter_id and
+                       sofr.schema_object_id = t.id and
+                       sofr.generate_ddl = 1 -- ignore objects that do not need to be generated                      
+                    left outer join oracle_tools.generated_ddls gd
+                    on gd.schema_object_id = t.id and
+                       gd.last_ddl_time = t.last_ddl_time() and
+                       gd.generate_ddl_configuration_id = gds.generate_ddl_configuration_id
+            where   gds.session_id = p_session_id
+            and     gds.schema_object_filter_id = p_schema_object_filter_id
+          ) src
+  on      ( /* GENERATE_DDL_SESSION_SCHEMA_OBJECTS$PK */
+            src.session_id = dst.session_id and
+            src.schema_object_id = dst.schema_object_id
+          )
+  when    not matched
+  then    insert ( session_id, schema_object_filter_id, schema_object_id, last_ddl_time, generate_ddl_configuration_id )
+          values ( src.session_id, src.schema_object_filter_id, src.schema_object_id, src.last_ddl_time, src.generate_ddl_configuration_id );
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."info", '# rows inserted into generate_ddl_session_schema_objects: %s', sql%rowcount);
@@ -958,8 +919,6 @@ procedure add
 ( p_schema_ddl_tab in oracle_tools.t_schema_ddl_tab
 )
 is
-  l_limit constant simple_integer := 100;
-
 $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD (T_SCHEMA_DDL_TAB)';
 $end

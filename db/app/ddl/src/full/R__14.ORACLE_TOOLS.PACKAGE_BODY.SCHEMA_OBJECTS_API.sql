@@ -294,7 +294,8 @@ $end
                   ,       t.table_name        as base_object_name
                   ,       null                as column_name
                   from    all_tab_comments t
-                  where   t.table_type in ('TABLE', 'VIEW')
+                  where   t.owner = l_schema
+                  and     t.table_type in ('TABLE', 'VIEW')
                   and     t.comments is not null
                   union all
                   -- materialized view comments
@@ -303,7 +304,8 @@ $end
                   ,       m.mview_name        
                   ,       null                
                   from    all_mview_comments m
-                  where   m.comments is not null
+                  where   m.owner = l_schema
+                  and     m.comments is not null
                   union all
                   -- column comments
                   select  c.owner             
@@ -315,7 +317,8 @@ $end
                   ,       c.table_name        
                   ,       c.column_name       
                   from    all_col_comments c
-                  where   c.comments is not null
+                  where   c.owner = l_schema
+                  and     c.comments is not null
                 ) c
       )
       select  oracle_tools.t_comment_object
@@ -348,12 +351,13 @@ $end
           from    ( select  c.owner as object_schema
                     ,       case when c.constraint_type = 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
                     ,       c.constraint_name as object_name
-                    ,       c.owner as base_object_schema
+                    ,       nvl(c.r_owner, c.owner) as base_object_schema -- referential constraint can be in another schema
                     ,       c.table_name as base_object_name
                     ,       c.constraint_type
                     ,       c.search_condition
                     from    all_constraints c
-                    where   /* Type of constraint definition:
+                    where   l_schema in (c.r_owner, c.owner)
+                    and     /* Type of constraint definition:
                                C (check constraint on a table)
                                P (primary key)
                                U (unique key)
