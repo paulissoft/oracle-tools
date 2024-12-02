@@ -722,8 +722,8 @@ sub process () {
         my @obsolete_files = grep { m/\b(R__)?(\d{2}|\d{4})\./ } glob(File::Spec->catfile($output_directory, '*.sql'));
 
         # GJP 2021-08-27  Add install files too
-        # push(@obsolete_files,
-        #     File::Spec->catfile($output_directory, 'install.sql'));
+        push(@obsolete_files,
+             File::Spec->catfile($output_directory, 'install.sql'));
 
         # When those files have not been created/modified
         @obsolete_files = get_files(FILE_READ);
@@ -1773,10 +1773,10 @@ sub add_object_info ($;$$) {
     error("Object '$object' should match 'SCHEMA:TYPE:NAME'")
         unless $object =~ m/^.+\..+\..+$/;
 
-    info(sprintf("Add object info for object '%s', object sequence '%s' and file '%s'.",
-                 (defined($object) ? $object : 'UNKNOWN'),
-                 (defined($object_seq) ? sprintf("%d", $object_seq) : 'UNKNOWN'),
-                 (defined($file) ? $file : 'UNKNOWN')));
+    debug(sprintf("Add object info for object '%s', object sequence '%s' and file '%s'.",
+                  (defined($object) ? $object : 'UNKNOWN'),
+                  (defined($object_seq) ? sprintf("%d", $object_seq) : 'UNKNOWN'),
+                  (defined($file) ? $file : 'UNKNOWN')));
 
     # object may already exists although the sequence is undefined
     if (!defined($object_seq)) {

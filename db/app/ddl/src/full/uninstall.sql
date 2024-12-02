@@ -937,17 +937,17 @@ DROP PROCEDURE ORACLE_TOOLS.P_GENERATE_DDL;
 call dbms_application_info.set_action('SQL statement 208');
 DROP VIEW ORACLE_TOOLS.V_MY_SCHEMA_OBJECT_INFO;
 
-/* SQL statement 209 (DROP;ORACLE_TOOLS;VIEW;V_MY_SCHEMA_OBJECT_FILTER;;;;;;;;2) */
+/* SQL statement 209 (DROP;ORACLE_TOOLS;VIEW;V_MY_INCLUDE_OBJECTS;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 209');
+DROP VIEW ORACLE_TOOLS.V_MY_INCLUDE_OBJECTS;
+
+/* SQL statement 210 (DROP;ORACLE_TOOLS;VIEW;V_MY_SCHEMA_OBJECT_FILTER;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 210');
 DROP VIEW ORACLE_TOOLS.V_MY_SCHEMA_OBJECT_FILTER;
 
-/* SQL statement 210 (DROP;ORACLE_TOOLS;VIEW;V_MY_SCHEMA_OBJECTS_NO_DDL_YET;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 210');
-DROP VIEW ORACLE_TOOLS.V_MY_SCHEMA_OBJECTS_NO_DDL_YET;
-
-/* SQL statement 211 (DROP;ORACLE_TOOLS;VIEW;V_MY_SCHEMA_OBJECTS;;;;;;;;2) */
+/* SQL statement 211 (DROP;ORACLE_TOOLS;VIEW;V_MY_SCHEMA_OBJECTS_NO_DDL_YET;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 211');
-DROP VIEW ORACLE_TOOLS.V_MY_SCHEMA_OBJECTS;
+DROP VIEW ORACLE_TOOLS.V_MY_SCHEMA_OBJECTS_NO_DDL_YET;
 
 /* SQL statement 212 (DROP;ORACLE_TOOLS;VIEW;V_MY_SCHEMA_DDLS;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 212');
@@ -957,313 +957,313 @@ DROP VIEW ORACLE_TOOLS.V_MY_SCHEMA_DDLS;
 call dbms_application_info.set_action('SQL statement 213');
 DROP VIEW ORACLE_TOOLS.V_MY_NAMED_SCHEMA_OBJECTS;
 
-/* SQL statement 214 (DROP;ORACLE_TOOLS;VIEW;V_MY_INCLUDE_OBJECTS;;;;;;;;2) */
+/* SQL statement 214 (DROP;ORACLE_TOOLS;VIEW;V_MY_GENERATE_DDL_SESSION_BATCHES_NO_SCHEMA_EXPORT;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 214');
-DROP VIEW ORACLE_TOOLS.V_MY_INCLUDE_OBJECTS;
-
-/* SQL statement 215 (DROP;ORACLE_TOOLS;VIEW;V_MY_GENERATE_DDL_SESSION_BATCHES_NO_SCHEMA_EXPORT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 215');
 DROP VIEW ORACLE_TOOLS.V_MY_GENERATE_DDL_SESSION_BATCHES_NO_SCHEMA_EXPORT;
 
-/* SQL statement 216 (DROP;ORACLE_TOOLS;VIEW;V_MY_GENERATE_DDL_SESSION_BATCHES;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 216');
-DROP VIEW ORACLE_TOOLS.V_MY_GENERATE_DDL_SESSION_BATCHES;
-
-/* SQL statement 217 (DROP;ORACLE_TOOLS;VIEW;V_DISPLAY_DDL_SQL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 217');
+/* SQL statement 215 (DROP;ORACLE_TOOLS;VIEW;V_DISPLAY_DDL_SQL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 215');
 DROP VIEW ORACLE_TOOLS.V_DISPLAY_DDL_SQL;
 
-/* SQL statement 218 (DROP;ORACLE_TOOLS;VIEW;V_DEPENDENT_OR_GRANTED_OBJECT_TYPES;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 218');
+/* SQL statement 216 (DROP;ORACLE_TOOLS;VIEW;V_DEPENDENT_OR_GRANTED_OBJECT_TYPES;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 216');
 DROP VIEW ORACLE_TOOLS.V_DEPENDENT_OR_GRANTED_OBJECT_TYPES;
+
+/* SQL statement 217 (DROP;ORACLE_TOOLS;VIEW;V_MY_SCHEMA_OBJECTS;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 217');
+DROP VIEW ORACLE_TOOLS.V_MY_SCHEMA_OBJECTS;
+
+/* SQL statement 218 (DROP;ORACLE_TOOLS;VIEW;V_MY_GENERATE_DDL_SESSION_BATCHES;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 218');
+DROP VIEW ORACLE_TOOLS.V_MY_GENERATE_DDL_SESSION_BATCHES;
 
 /* SQL statement 219 (DROP;ORACLE_TOOLS;VIEW;V_ALL_SCHEMA_OBJECTS;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 219');
 DROP VIEW ORACLE_TOOLS.V_ALL_SCHEMA_OBJECTS;
 
-/* SQL statement 220 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;SCHEMA_OBJECTS_API;;;;;;;;2) */
+/* SQL statement 220 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;PKG_REPLICATE_UTIL;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 220');
-DROP PACKAGE ORACLE_TOOLS.SCHEMA_OBJECTS_API;
-
-/* SQL statement 221 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;PKG_STR_UTIL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 221');
-DROP PACKAGE ORACLE_TOOLS.PKG_STR_UTIL;
-
-/* SQL statement 222 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;PKG_SCHEMA_OBJECT_FILTER;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 222');
-DROP PACKAGE ORACLE_TOOLS.PKG_SCHEMA_OBJECT_FILTER;
-
-/* SQL statement 223 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;PKG_REPLICATE_UTIL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 223');
 DROP PACKAGE ORACLE_TOOLS.PKG_REPLICATE_UTIL;
 
-/* SQL statement 224 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;PKG_DDL_UTIL;;;;;;;;2) */
+/* SQL statement 221 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;PKG_SCHEMA_OBJECT_FILTER;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 221');
+DROP PACKAGE ORACLE_TOOLS.PKG_SCHEMA_OBJECT_FILTER;
+
+/* SQL statement 222 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;SCHEMA_OBJECTS_API;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 222');
+DROP PACKAGE ORACLE_TOOLS.SCHEMA_OBJECTS_API;
+
+/* SQL statement 223 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;PKG_STR_UTIL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 223');
+DROP PACKAGE ORACLE_TOOLS.PKG_STR_UTIL;
+
+/* SQL statement 224 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DDL_CRUD_API;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 224');
-DROP PACKAGE ORACLE_TOOLS.PKG_DDL_UTIL;
+DROP PACKAGE ORACLE_TOOLS.DDL_CRUD_API;
 
 /* SQL statement 225 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;PKG_DDL_ERROR;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 225');
 DROP PACKAGE ORACLE_TOOLS.PKG_DDL_ERROR;
 
-/* SQL statement 226 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DDL_CRUD_API;;;;;;;;2) */
+/* SQL statement 226 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;PKG_DDL_UTIL;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 226');
-DROP PACKAGE ORACLE_TOOLS.DDL_CRUD_API;
+DROP PACKAGE ORACLE_TOOLS.PKG_DDL_UTIL;
 
 /* SQL statement 227 (DROP;ORACLE_TOOLS;FUNCTION;F_GENERATE_DDL;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 227');
 DROP FUNCTION ORACLE_TOOLS.F_GENERATE_DDL;
 
-/* SQL statement 228 (DROP;ORACLE_TOOLS;TABLE;SCHEMA_OBJECT_FILTER_RESULTS;;;;;;;;2) */
+/* SQL statement 228 (DROP;ORACLE_TOOLS;TABLE;GENERATE_DDL_CONFIGURATIONS;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 228');
-DROP TABLE ORACLE_TOOLS.SCHEMA_OBJECT_FILTER_RESULTS PURGE;
-
-/* SQL statement 229 (DROP;ORACLE_TOOLS;TABLE;SCHEMA_OBJECT_FILTERS;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 229');
-DROP TABLE ORACLE_TOOLS.SCHEMA_OBJECT_FILTERS PURGE;
-
-/* SQL statement 230 (DROP;ORACLE_TOOLS;TABLE;SCHEMA_OBJECTS;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 230');
-DROP TABLE ORACLE_TOOLS.SCHEMA_OBJECTS PURGE;
-
-/* SQL statement 231 (DROP;ORACLE_TOOLS;TABLE;GENERATE_DDL_SESSION_SCHEMA_OBJECTS;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 231');
-DROP TABLE ORACLE_TOOLS.GENERATE_DDL_SESSION_SCHEMA_OBJECTS PURGE;
-
-/* SQL statement 232 (DROP;ORACLE_TOOLS;TABLE;GENERATE_DDL_SESSION_BATCHES;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 232');
-DROP TABLE ORACLE_TOOLS.GENERATE_DDL_SESSION_BATCHES PURGE;
-
-/* SQL statement 233 (DROP;ORACLE_TOOLS;TABLE;GENERATE_DDL_SESSIONS;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 233');
-DROP TABLE ORACLE_TOOLS.GENERATE_DDL_SESSIONS PURGE;
-
-/* SQL statement 234 (DROP;ORACLE_TOOLS;TABLE;GENERATE_DDL_CONFIGURATIONS;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 234');
 DROP TABLE ORACLE_TOOLS.GENERATE_DDL_CONFIGURATIONS PURGE;
 
-/* SQL statement 235 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_VIEW_OBJECT;;;;;;;;2) */
+/* SQL statement 229 (DROP;ORACLE_TOOLS;TABLE;SCHEMA_OBJECT_FILTER_RESULTS;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 229');
+DROP TABLE ORACLE_TOOLS.SCHEMA_OBJECT_FILTER_RESULTS PURGE;
+
+/* SQL statement 230 (DROP;ORACLE_TOOLS;TABLE;SCHEMA_OBJECT_FILTERS;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 230');
+DROP TABLE ORACLE_TOOLS.SCHEMA_OBJECT_FILTERS PURGE;
+
+/* SQL statement 231 (DROP;ORACLE_TOOLS;TABLE;SCHEMA_OBJECTS;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 231');
+DROP TABLE ORACLE_TOOLS.SCHEMA_OBJECTS PURGE;
+
+/* SQL statement 232 (DROP;ORACLE_TOOLS;TABLE;GENERATE_DDL_SESSION_SCHEMA_OBJECTS;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 232');
+DROP TABLE ORACLE_TOOLS.GENERATE_DDL_SESSION_SCHEMA_OBJECTS PURGE;
+
+/* SQL statement 233 (DROP;ORACLE_TOOLS;TABLE;GENERATE_DDL_SESSION_BATCHES;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 233');
+DROP TABLE ORACLE_TOOLS.GENERATE_DDL_SESSION_BATCHES PURGE;
+
+/* SQL statement 234 (DROP;ORACLE_TOOLS;TABLE;GENERATE_DDL_SESSIONS;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 234');
+DROP TABLE ORACLE_TOOLS.GENERATE_DDL_SESSIONS PURGE;
+
+/* SQL statement 235 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_DDL_SEQUENCE;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 235');
-DROP TYPE ORACLE_TOOLS.T_VIEW_OBJECT FORCE;
+DROP TYPE ORACLE_TOOLS.T_DDL_SEQUENCE FORCE;
 
-/* SQL statement 236 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_SPEC_OBJECT;;;;;;;;2) */
+/* SQL statement 236 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_SPEC_DDL;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 236');
-DROP TYPE ORACLE_TOOLS.T_TYPE_SPEC_OBJECT FORCE;
-
-/* SQL statement 237 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_SPEC_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 237');
 DROP TYPE ORACLE_TOOLS.T_TYPE_SPEC_DDL FORCE;
 
-/* SQL statement 238 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_METHOD_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 238');
-DROP TYPE ORACLE_TOOLS.T_TYPE_METHOD_OBJECT FORCE;
-
-/* SQL statement 239 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_METHOD_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 239');
-DROP TYPE ORACLE_TOOLS.T_TYPE_METHOD_DDL FORCE;
-
-/* SQL statement 240 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_BODY_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 240');
-DROP TYPE ORACLE_TOOLS.T_TYPE_BODY_OBJECT FORCE;
-
-/* SQL statement 241 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_ATTRIBUTE_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 241');
-DROP TYPE ORACLE_TOOLS.T_TYPE_ATTRIBUTE_OBJECT FORCE;
-
-/* SQL statement 242 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_ATTRIBUTE_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 242');
-DROP TYPE ORACLE_TOOLS.T_TYPE_ATTRIBUTE_DDL FORCE;
-
-/* SQL statement 243 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TRIGGER_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 243');
-DROP TYPE ORACLE_TOOLS.T_TRIGGER_OBJECT FORCE;
-
-/* SQL statement 244 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TRIGGER_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 244');
+/* SQL statement 237 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TRIGGER_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 237');
 DROP TYPE ORACLE_TOOLS.T_TRIGGER_DDL FORCE;
 
-/* SQL statement 245 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TEXT_TAB;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 245');
-DROP TYPE ORACLE_TOOLS.T_TEXT_TAB FORCE;
-
-/* SQL statement 246 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TABLE_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 246');
-DROP TYPE ORACLE_TOOLS.T_TABLE_OBJECT FORCE;
-
-/* SQL statement 247 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TABLE_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 247');
+/* SQL statement 238 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TABLE_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 238');
 DROP TYPE ORACLE_TOOLS.T_TABLE_DDL FORCE;
 
-/* SQL statement 248 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TABLE_COLUMN_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 248');
-DROP TYPE ORACLE_TOOLS.T_TABLE_COLUMN_OBJECT FORCE;
-
-/* SQL statement 249 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TABLE_COLUMN_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 249');
-DROP TYPE ORACLE_TOOLS.T_TABLE_COLUMN_DDL FORCE;
-
-/* SQL statement 250 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SYNONYM_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 250');
-DROP TYPE ORACLE_TOOLS.T_SYNONYM_OBJECT FORCE;
-
-/* SQL statement 251 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SYNONYM_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 251');
+/* SQL statement 239 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SYNONYM_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 239');
 DROP TYPE ORACLE_TOOLS.T_SYNONYM_DDL FORCE;
 
-/* SQL statement 252 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SEQUENCE_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 252');
-DROP TYPE ORACLE_TOOLS.T_SEQUENCE_OBJECT FORCE;
-
-/* SQL statement 253 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SEQUENCE_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 253');
+/* SQL statement 240 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SEQUENCE_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 240');
 DROP TYPE ORACLE_TOOLS.T_SEQUENCE_DDL FORCE;
 
-/* SQL statement 254 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT_TAB;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 254');
-DROP TYPE ORACLE_TOOLS.T_SCHEMA_OBJECT_TAB FORCE;
-
-/* SQL statement 255 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT_FILTER;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 255');
-DROP TYPE ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER FORCE;
-
-/* SQL statement 256 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 256');
-DROP TYPE ORACLE_TOOLS.T_SCHEMA_OBJECT FORCE;
-
-/* SQL statement 257 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_DDL_TAB;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 257');
-DROP TYPE ORACLE_TOOLS.T_SCHEMA_DDL_TAB FORCE;
-
-/* SQL statement 258 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 258');
-DROP TYPE ORACLE_TOOLS.T_SCHEMA_DDL FORCE;
-
-/* SQL statement 259 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_REF_CONSTRAINT_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 259');
-DROP TYPE ORACLE_TOOLS.T_REF_CONSTRAINT_OBJECT FORCE;
-
-/* SQL statement 260 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_REFRESH_GROUP_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 260');
-DROP TYPE ORACLE_TOOLS.T_REFRESH_GROUP_OBJECT FORCE;
-
-/* SQL statement 261 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_REFRESH_GROUP_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 261');
+/* SQL statement 241 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_REFRESH_GROUP_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 241');
 DROP TYPE ORACLE_TOOLS.T_REFRESH_GROUP_DDL FORCE;
 
-/* SQL statement 262 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_PROCOBJ_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 262');
-DROP TYPE ORACLE_TOOLS.T_PROCOBJ_OBJECT FORCE;
-
-/* SQL statement 263 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_PROCOBJ_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 263');
+/* SQL statement 242 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_PROCOBJ_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 242');
 DROP TYPE ORACLE_TOOLS.T_PROCOBJ_DDL FORCE;
 
-/* SQL statement 264 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_PROCEDURE_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 264');
-DROP TYPE ORACLE_TOOLS.T_PROCEDURE_OBJECT FORCE;
-
-/* SQL statement 265 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_PACKAGE_SPEC_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 265');
-DROP TYPE ORACLE_TOOLS.T_PACKAGE_SPEC_OBJECT FORCE;
-
-/* SQL statement 266 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_PACKAGE_BODY_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 266');
-DROP TYPE ORACLE_TOOLS.T_PACKAGE_BODY_OBJECT FORCE;
-
-/* SQL statement 267 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_OBJECT_GRANT_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 267');
-DROP TYPE ORACLE_TOOLS.T_OBJECT_GRANT_OBJECT FORCE;
-
-/* SQL statement 268 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_OBJECT_GRANT_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 268');
+/* SQL statement 243 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_OBJECT_GRANT_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 243');
 DROP TYPE ORACLE_TOOLS.T_OBJECT_GRANT_DDL FORCE;
 
-/* SQL statement 269 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_NAMED_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 269');
-DROP TYPE ORACLE_TOOLS.T_NAMED_OBJECT FORCE;
-
-/* SQL statement 270 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_MEMBER_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 270');
-DROP TYPE ORACLE_TOOLS.T_MEMBER_OBJECT FORCE;
-
-/* SQL statement 271 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_MATERIALIZED_VIEW_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 271');
-DROP TYPE ORACLE_TOOLS.T_MATERIALIZED_VIEW_OBJECT FORCE;
-
-/* SQL statement 272 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_MATERIALIZED_VIEW_LOG_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 272');
-DROP TYPE ORACLE_TOOLS.T_MATERIALIZED_VIEW_LOG_OBJECT FORCE;
-
-/* SQL statement 273 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_MATERIALIZED_VIEW_DDL;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 273');
+/* SQL statement 244 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_MATERIALIZED_VIEW_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 244');
 DROP TYPE ORACLE_TOOLS.T_MATERIALIZED_VIEW_DDL FORCE;
 
-/* SQL statement 274 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_JAVA_SOURCE_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 274');
+/* SQL statement 245 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_INDEX_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 245');
+DROP TYPE ORACLE_TOOLS.T_INDEX_DDL FORCE;
+
+/* SQL statement 246 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_CONSTRAINT_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 246');
+DROP TYPE ORACLE_TOOLS.T_CONSTRAINT_DDL FORCE;
+
+/* SQL statement 247 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_COMMENT_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 247');
+DROP TYPE ORACLE_TOOLS.T_COMMENT_DDL FORCE;
+
+/* SQL statement 248 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_METHOD_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 248');
+DROP TYPE ORACLE_TOOLS.T_TYPE_METHOD_DDL FORCE;
+
+/* SQL statement 249 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_BODY_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 249');
+DROP TYPE ORACLE_TOOLS.T_TYPE_BODY_OBJECT FORCE;
+
+/* SQL statement 250 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TABLE_COLUMN_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 250');
+DROP TYPE ORACLE_TOOLS.T_TABLE_COLUMN_DDL FORCE;
+
+/* SQL statement 251 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_PROCEDURE_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 251');
+DROP TYPE ORACLE_TOOLS.T_PROCEDURE_OBJECT FORCE;
+
+/* SQL statement 252 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_PACKAGE_SPEC_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 252');
+DROP TYPE ORACLE_TOOLS.T_PACKAGE_SPEC_OBJECT FORCE;
+
+/* SQL statement 253 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_PACKAGE_BODY_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 253');
+DROP TYPE ORACLE_TOOLS.T_PACKAGE_BODY_OBJECT FORCE;
+
+/* SQL statement 254 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_MATERIALIZED_VIEW_LOG_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 254');
+DROP TYPE ORACLE_TOOLS.T_MATERIALIZED_VIEW_LOG_OBJECT FORCE;
+
+/* SQL statement 255 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_JAVA_SOURCE_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 255');
 DROP TYPE ORACLE_TOOLS.T_JAVA_SOURCE_OBJECT FORCE;
+
+/* SQL statement 256 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_FUNCTION_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 256');
+DROP TYPE ORACLE_TOOLS.T_FUNCTION_OBJECT FORCE;
+
+/* SQL statement 257 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_DISPLAY_DDL_SQL_REC;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 257');
+DROP TYPE ORACLE_TOOLS.T_DISPLAY_DDL_SQL_REC FORCE;
+
+/* SQL statement 258 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_CLUSTER_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 258');
+DROP TYPE ORACLE_TOOLS.T_CLUSTER_OBJECT FORCE;
+
+/* SQL statement 259 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_VIEW_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 259');
+DROP TYPE ORACLE_TOOLS.T_VIEW_OBJECT FORCE;
+
+/* SQL statement 260 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_ATTRIBUTE_DDL;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 260');
+DROP TYPE ORACLE_TOOLS.T_TYPE_ATTRIBUTE_DDL FORCE;
+
+/* SQL statement 261 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TRIGGER_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 261');
+DROP TYPE ORACLE_TOOLS.T_TRIGGER_OBJECT FORCE;
+
+/* SQL statement 262 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SYNONYM_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 262');
+DROP TYPE ORACLE_TOOLS.T_SYNONYM_OBJECT FORCE;
+
+/* SQL statement 263 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SEQUENCE_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 263');
+DROP TYPE ORACLE_TOOLS.T_SEQUENCE_OBJECT FORCE;
+
+/* SQL statement 264 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_REFRESH_GROUP_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 264');
+DROP TYPE ORACLE_TOOLS.T_REFRESH_GROUP_OBJECT FORCE;
+
+/* SQL statement 265 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_PROCOBJ_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 265');
+DROP TYPE ORACLE_TOOLS.T_PROCOBJ_OBJECT FORCE;
+
+/* SQL statement 266 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_ARGUMENT_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 266');
+DROP TYPE ORACLE_TOOLS.T_ARGUMENT_OBJECT FORCE;
+
+/* SQL statement 267 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_SPEC_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 267');
+DROP TYPE ORACLE_TOOLS.T_TYPE_SPEC_OBJECT FORCE;
+
+/* SQL statement 268 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_METHOD_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 268');
+DROP TYPE ORACLE_TOOLS.T_TYPE_METHOD_OBJECT FORCE;
+
+/* SQL statement 269 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_REF_CONSTRAINT_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 269');
+DROP TYPE ORACLE_TOOLS.T_REF_CONSTRAINT_OBJECT FORCE;
+
+/* SQL statement 270 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_OBJECT_GRANT_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 270');
+DROP TYPE ORACLE_TOOLS.T_OBJECT_GRANT_OBJECT FORCE;
+
+/* SQL statement 271 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_DISPLAY_DDL_SQL_TAB;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 271');
+DROP TYPE ORACLE_TOOLS.T_DISPLAY_DDL_SQL_TAB FORCE;
+
+/* SQL statement 272 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_COMMENT_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 272');
+DROP TYPE ORACLE_TOOLS.T_COMMENT_OBJECT FORCE;
+
+/* SQL statement 273 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TABLE_COLUMN_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 273');
+DROP TYPE ORACLE_TOOLS.T_TABLE_COLUMN_OBJECT FORCE;
+
+/* SQL statement 274 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_MATERIALIZED_VIEW_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 274');
+DROP TYPE ORACLE_TOOLS.T_MATERIALIZED_VIEW_OBJECT FORCE;
 
 /* SQL statement 275 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_INDEX_OBJECT;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 275');
 DROP TYPE ORACLE_TOOLS.T_INDEX_OBJECT FORCE;
 
-/* SQL statement 276 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_INDEX_DDL;;;;;;;;2) */
+/* SQL statement 276 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TABLE_OBJECT;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 276');
-DROP TYPE ORACLE_TOOLS.T_INDEX_DDL FORCE;
+DROP TYPE ORACLE_TOOLS.T_TABLE_OBJECT FORCE;
 
-/* SQL statement 277 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_FUNCTION_OBJECT;;;;;;;;2) */
+/* SQL statement 277 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_DDL_TAB;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 277');
-DROP TYPE ORACLE_TOOLS.T_FUNCTION_OBJECT FORCE;
+DROP TYPE ORACLE_TOOLS.T_SCHEMA_DDL_TAB FORCE;
 
-/* SQL statement 278 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_DISPLAY_DDL_SQL_TAB;;;;;;;;2) */
+/* SQL statement 278 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TYPE_ATTRIBUTE_OBJECT;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 278');
-DROP TYPE ORACLE_TOOLS.T_DISPLAY_DDL_SQL_TAB FORCE;
+DROP TYPE ORACLE_TOOLS.T_TYPE_ATTRIBUTE_OBJECT FORCE;
 
-/* SQL statement 279 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_DISPLAY_DDL_SQL_REC;;;;;;;;2) */
+/* SQL statement 279 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT_TAB;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 279');
-DROP TYPE ORACLE_TOOLS.T_DISPLAY_DDL_SQL_REC FORCE;
+DROP TYPE ORACLE_TOOLS.T_SCHEMA_OBJECT_TAB FORCE;
 
-/* SQL statement 280 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_DEPENDENT_OR_GRANTED_OBJECT;;;;;;;;2) */
+/* SQL statement 280 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_ARGUMENT_OBJECT_TAB;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 280');
-DROP TYPE ORACLE_TOOLS.T_DEPENDENT_OR_GRANTED_OBJECT FORCE;
+DROP TYPE ORACLE_TOOLS.T_ARGUMENT_OBJECT_TAB FORCE;
 
-/* SQL statement 281 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_DDL_TAB;;;;;;;;2) */
+/* SQL statement 281 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_CONSTRAINT_OBJECT;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 281');
-DROP TYPE ORACLE_TOOLS.T_DDL_TAB FORCE;
+DROP TYPE ORACLE_TOOLS.T_CONSTRAINT_OBJECT FORCE;
 
-/* SQL statement 282 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_DDL_SEQUENCE;;;;;;;;2) */
+/* SQL statement 282 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_MEMBER_OBJECT;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 282');
-DROP TYPE ORACLE_TOOLS.T_DDL_SEQUENCE FORCE;
+DROP TYPE ORACLE_TOOLS.T_MEMBER_OBJECT FORCE;
 
 /* SQL statement 283 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_DDL;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 283');
 DROP TYPE ORACLE_TOOLS.T_DDL FORCE;
 
-/* SQL statement 284 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_CONSTRAINT_OBJECT;;;;;;;;2) */
+/* SQL statement 284 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT_FILTER;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 284');
-DROP TYPE ORACLE_TOOLS.T_CONSTRAINT_OBJECT FORCE;
+DROP TYPE ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER FORCE;
 
-/* SQL statement 285 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_CONSTRAINT_DDL;;;;;;;;2) */
+/* SQL statement 285 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_DDL_TAB;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 285');
-DROP TYPE ORACLE_TOOLS.T_CONSTRAINT_DDL FORCE;
+DROP TYPE ORACLE_TOOLS.T_DDL_TAB FORCE;
 
-/* SQL statement 286 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_COMMENT_OBJECT;;;;;;;;2) */
+/* SQL statement 286 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_DEPENDENT_OR_GRANTED_OBJECT;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 286');
-DROP TYPE ORACLE_TOOLS.T_COMMENT_OBJECT FORCE;
+DROP TYPE ORACLE_TOOLS.T_DEPENDENT_OR_GRANTED_OBJECT FORCE;
 
-/* SQL statement 287 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_COMMENT_DDL;;;;;;;;2) */
+/* SQL statement 287 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_TEXT_TAB;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 287');
-DROP TYPE ORACLE_TOOLS.T_COMMENT_DDL FORCE;
+DROP TYPE ORACLE_TOOLS.T_TEXT_TAB FORCE;
 
-/* SQL statement 288 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_CLUSTER_OBJECT;;;;;;;;2) */
+/* SQL statement 288 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_DDL;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 288');
-DROP TYPE ORACLE_TOOLS.T_CLUSTER_OBJECT FORCE;
+DROP TYPE ORACLE_TOOLS.T_SCHEMA_DDL FORCE;
 
-/* SQL statement 289 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_ARGUMENT_OBJECT_TAB;;;;;;;;2) */
+/* SQL statement 289 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_NAMED_OBJECT;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 289');
-DROP TYPE ORACLE_TOOLS.T_ARGUMENT_OBJECT_TAB FORCE;
+DROP TYPE ORACLE_TOOLS.T_NAMED_OBJECT FORCE;
 
-/* SQL statement 290 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_ARGUMENT_OBJECT;;;;;;;;2) */
+/* SQL statement 290 (DROP;ORACLE_TOOLS;TYPE_SPEC;T_SCHEMA_OBJECT;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 290');
-DROP TYPE ORACLE_TOOLS.T_ARGUMENT_OBJECT FORCE;
+DROP TYPE ORACLE_TOOLS.T_SCHEMA_OBJECT FORCE;
 
 /* SQL statement 291 (DROP;ORACLE_TOOLS;SEQUENCE;SCHEMA_OBJECT_FILTERS$SEQ;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 291');
