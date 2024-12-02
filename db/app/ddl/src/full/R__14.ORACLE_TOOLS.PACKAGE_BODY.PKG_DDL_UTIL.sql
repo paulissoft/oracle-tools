@@ -3381,6 +3381,9 @@ $end
             then
               for i_row_idx in l_display_ddl_sql_prev_tab.first .. l_display_ddl_sql_prev_tab.last
               loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+                dbug.print(dbug."info", 'display_ddl_sql.schema_object_id: %s', l_display_ddl_sql_prev_tab(i_row_idx).schema_object_id);
+$end
                 pipe row (l_display_ddl_sql_prev_tab(i_row_idx));
                 oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
               end loop;
@@ -3409,6 +3412,9 @@ $end
       then
         for i_row_idx in l_display_ddl_sql_prev_tab.first .. l_display_ddl_sql_prev_tab.last
         loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          dbug.print(dbug."info", 'display_ddl_sql.schema_object_id: %s', l_display_ddl_sql_prev_tab(i_row_idx).schema_object_id);
+$end
           pipe row (l_display_ddl_sql_prev_tab(i_row_idx));
           oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
         end loop;
@@ -3469,6 +3475,7 @@ $end
   is
     l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
     l_schema_object_id_prev t_object := null;
+    l_schema_ddl oracle_tools.t_schema_ddl;
   begin
     -- use display_ddl_sql
     for r in
@@ -3500,8 +3507,12 @@ $end
       if l_schema_object_id_prev != r.obj.schema_object_id and cardinality(l_display_ddl_sql_prev_tab) > 0
       then
         -- output old
-        pipe row (oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null));
+        l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null);
+        pipe row (l_schema_ddl);
         l_display_ddl_sql_prev_tab.delete;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        dbug.print(dbug."info", 'schema_ddl.obj.id: %s', l_schema_ddl.obj.id);
+$end
       end if;
 
       -- always append the chunk to text_tab of last schema ddl
@@ -3513,7 +3524,11 @@ $end
     -- output last
     if l_schema_object_id_prev is not null and cardinality(l_display_ddl_sql_prev_tab) > 0
     then
-      pipe row (oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null));
+      l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null);
+      pipe row (l_schema_ddl);
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'schema_ddl.obj.id: %s', l_schema_ddl.obj.id);
+$end
     end if;
 
     return; -- essential
