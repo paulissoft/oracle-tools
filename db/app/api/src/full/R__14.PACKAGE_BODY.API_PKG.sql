@@ -812,6 +812,41 @@ begin
   ut.expect(excel_date_number2date(44125)).to_equal(to_date('21/10/2020', 'dd/mm/yyyy'));
 end ut_excel_date_number2date;
 
+procedure ut_dsort
+is
+  l_graph t_graph;
+  l_result dbms_sql.varchar2_table;
+  l_idx pls_integer;
+
+  l_program constant varchar2(100) := $$PLSQL_UNIT || '.UT_SORT_OBJECTS_BY_DEPS';
+begin
+  l_graph('1')('2') := 1;
+  l_graph('1')('3') := 1;
+  l_graph('1')('4') := 1;
+  l_graph('2')('1') := 1;
+  l_graph('2')('3') := 1;
+  l_graph('2')('4') := 1;
+  l_graph('3')('1') := 1;
+  l_graph('3')('2') := 1;
+  l_graph('3')('4') := 1;
+  l_graph('4')('1') := 1;
+  l_graph('4')('2') := 1;
+  l_graph('4')('3') := 1;
+
+  dsort
+  ( l_graph
+  , l_result
+  );
+
+  ut.expect(l_result.count, l_program || '#0#count').to_equal(4);
+  l_idx := l_result.first;
+  while l_idx is not null
+  loop
+    ut.expect(l_result(l_idx), l_program || '#0#' || to_char(1 + l_idx - l_result.first)).to_equal(to_char(1 + l_result.last - l_idx));      
+    l_idx := l_result.next(l_idx);
+  end loop;
+end ut_dsort;  
+
 $end -- $if cfg_pkg.c_testing $then
 
 end API_PKG;

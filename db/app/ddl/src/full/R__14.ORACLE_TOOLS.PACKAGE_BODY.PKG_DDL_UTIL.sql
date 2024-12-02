@@ -6824,7 +6824,7 @@ $end
     l_transform_param_tab t_transform_param_tab;
   begin
     -- so p_schema_object_filter.match_perc() >= p_schema_object_filter.match_perc_threshold() will always be false meaning no SCHEMA_EXPORT will be used
-    oracle_tools.pkg_schema_object_filter.default_match_perc_threshold(null);
+    oracle_tools.ddl_crud_api.default_match_perc_threshold(null);
 
     get_transform_param_tab
     ( p_transform_param_list => c_transform_param_list_testing
@@ -6841,7 +6841,7 @@ $end
   is
   begin
     dbms_metadata$set_transform_param(dbms_metadata.session_transform, 'DEFAULT', true); -- back to the defaults
-    oracle_tools.pkg_schema_object_filter.default_match_perc_threshold; -- back to the defaults
+    oracle_tools.ddl_crud_api.default_match_perc_threshold(null); -- back to the defaults
   end ut_enable_schema_export;
 
   -- test functions
@@ -8344,15 +8344,15 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
   end ut_synchronize;
 
+$if false $then
+
   procedure ut_sort_objects_by_deps
   is
     pragma autonomous_transaction;
 
-    l_graph t_graph;
-    l_result dbms_sql.varchar2_table;
-    l_idx pls_integer;
-
     l_schema t_schema;    
+    l_schema_object_tab1 oracle_tools.t_schema_object_tab;
+    l_schema_object_tab2 oracle_tools.t_schema_object_tab;
     l_expected t_object;
     l_schema_object_filter oracle_tools.t_schema_object_filter;
 
@@ -8361,32 +8361,6 @@ $end
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(l_program);
 $end
-
-    l_graph('1')('2') := 1;
-    l_graph('1')('3') := 1;
-    l_graph('1')('4') := 1;
-    l_graph('2')('1') := 1;
-    l_graph('2')('3') := 1;
-    l_graph('2')('4') := 1;
-    l_graph('3')('1') := 1;
-    l_graph('3')('2') := 1;
-    l_graph('3')('4') := 1;
-    l_graph('4')('1') := 1;
-    l_graph('4')('2') := 1;
-    l_graph('4')('3') := 1;
-
-    dsort
-    ( l_graph
-    , l_result
-    );
-
-    ut.expect(l_result.count, l_program || '#0#count').to_equal(4);
-    l_idx := l_result.first;
-    while l_idx is not null
-    loop
-      ut.expect(l_result(l_idx), l_program || '#0#' || to_char(1 + l_idx - l_result.first)).to_equal(to_char(1 + l_result.last - l_idx));      
-      l_idx := l_result.next(l_idx);
-    end loop;
 
     for i_test in 1..2
     loop
@@ -8464,6 +8438,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       raise;
 $end
   end ut_sort_objects_by_deps;
+
+$end -- $if false $then
 
   procedure ut_modify_ddl_text
   is

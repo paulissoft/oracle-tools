@@ -79,7 +79,7 @@ $if oracle_tools.cfg_pkg.c_testing $then
 procedure ut_construct;
 
 --%test;
-procedure ut_matches_schema_object
+procedure ut_matches_schema_object;
 
 --%test
 procedure ut_compatible_le_oracle_11g;

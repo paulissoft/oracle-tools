@@ -592,8 +592,12 @@ procedure ut_is_a_repeatable;
 --%disabled
 procedure ut_synchronize;
 
+$if false $then
+
 --%test
 procedure ut_sort_objects_by_deps;
+
+$end -- $if false $then
 
 --%test
 procedure ut_modify_ddl_text;

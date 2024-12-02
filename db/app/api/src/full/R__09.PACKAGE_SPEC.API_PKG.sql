@@ -202,6 +202,8 @@ procedure ut_teardown
 --%test
 procedure ut_excel_date_number2date;
 
+procedure ut_dsort;
+
 $end
 
 end API_PKG;

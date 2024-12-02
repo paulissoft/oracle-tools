@@ -3,6 +3,7 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."SCHEMA_OBJECTS_API" IS /* -*-codi
 -- PRIVATE
 subtype t_module is varchar2(100);
 subtype t_numeric_boolean is oracle_tools.pkg_ddl_util.t_numeric_boolean;
+subtype t_schema is oracle_tools.pkg_ddl_util.t_schema;
 subtype t_schema_nn is oracle_tools.pkg_ddl_util.t_schema_nn;
 
 -- steps in get_schema_objects
