@@ -568,8 +568,6 @@ sub process () {
         $in = \*STDIN;
     }
 
-    read_object_info();
-
     # These files are not needed anymore since the directory contents are used to determine the object sequence for interface V5
     unlink(File::Spec->catfile($output_directory, OLD_INSTALL_SEQUENCE_TXT),
            File::Spec->catfile($output_directory, NEW_INSTALL_SEQUENCE_TXT));
@@ -628,7 +626,12 @@ sub process () {
             debug("$.: $line");
 
             if ($line =~ m/$interface_expr/o) {
-                $interface = $1;
+                if (!defined($interface)) {
+                    $interface = $1;
+                    read_object_info();
+                } elsif ($interface ne $1) {
+                    error("Interface changes from $interface to $1")
+                }
                 last INTERFACE;
             }
         }
@@ -1082,7 +1085,8 @@ sub add_sql_statement ($$$$;$) {
     $r_sql_statements->{$object}->{seq} = scalar(keys %$r_sql_statements)
         unless exists($r_sql_statements->{$object}->{seq});
 
-    if (!get_object_seq($object)) {
+    # GJP 2024-12-02 Ignore this code for the time being.
+    if (0 && !get_object_seq($object)) {
         # ignore errors when $object does not conform to naming convention or already exists
         eval {
             add_object_info($object);
@@ -1790,21 +1794,27 @@ sub add_object_info ($;$$) {
         # strip leading zeros otherwise it will be treated as an octal number
         $object_seq =~ m/^0*(\d+)$/;
         $object_seq = int($1);
+        $object_info{$object}{seq} = $object_seq;
     } else {
-        $object_seq = 0;
+        if ($interface eq PKG_DDL_UTIL_V4) {
+            error("Object sequence should be at least 1 for object '$object'.");
+        }
+
+        # get the highest plus 1
+        $object_info{$object}{seq} = 0;
         foreach my $k (keys %object_info) {
-            if ($object_info{$k}{seq} > $object_seq) {
-                $object_seq = $object_info{$k}{seq};
+            if ($k ne $object && $object_info{$k}{seq} > $object_info{$object}{seq}) {
+                $object_info{$object}{seq} = $object_info{$k}{seq};
             }
         }
-        debug("Object sequence for object '$object' is set to $object_seq.");
+        $object_info{$object}{seq} = $object_info{$object}{seq} + 1;
     }
-    $object_info{$object}{seq} = $object_seq;
+    info("Object sequence for object '$object' is set to", $object_info{$object}{seq});
 
     if (defined($file)) {
         # is it a template?
         if ($file =~ m/0000/) {
-            $file =~ s/0000/sprintf("%04d", $object_seq)/e;
+            $file =~ s/0000/sprintf("%04d", $object_info{$object}{seq})/e;
         }
         $object_info{$object}{file} = $file;
 
