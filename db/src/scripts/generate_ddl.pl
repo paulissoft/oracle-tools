@@ -1083,9 +1083,11 @@ sub add_sql_statement ($$$$;$) {
     $r_sql_statements->{$object}->{seq} = scalar(keys %$r_sql_statements)
         unless exists($r_sql_statements->{$object}->{seq});
 
-    # ignore errors when $object does not conform to naming convention or already exists
-    eval {
-        add_object_info($object);
+    if (!get_object_seq($object)) {
+        # ignore errors when $object does not conform to naming convention or already exists
+        eval {
+            add_object_info($object);
+        };
     };
 
     $r_sql_statements->{$object}->{ddls}->[$ddl_no] = { 'ddl_info' => $ddl_info, 'ddl' => [] }
@@ -1782,29 +1784,24 @@ sub add_object_info ($;$$) {
     }
     
     # set filename?
-    if (defined(get_object_seq($object)) &&
-        !defined(get_object_file($object))) {
-        ; # may set file below
-    } else {
-        error("Object '$object' already exists.")
-            if defined(get_object_file($object));
+    error("Object '$object' already exists.")
+        if defined(get_object_file($object));
 
-        if (defined($object_seq)) {
-            # strip leading zeros otherwise it will be treated as an octal number
-            $object_seq =~ m/^0*(\d+)$/;
-            $object_seq = int($1);
-            
-            if ($object_seq <= $object_seq_max) {
-                error("Object sequence ($object_seq) for object '$object' must be greater than the maximum thus far ($object_seq_max)");
-            }
+    if (defined($object_seq)) {
+        # strip leading zeros otherwise it will be treated as an octal number
+        $object_seq =~ m/^0*(\d+)$/;
+        $object_seq = int($1);
+        
+        if ($object_seq > $object_seq_max) {
             $object_seq_max = $object_seq;
             debug("Maximum object sequence is set to object sequence ($object_seq) for object '$object'.");
-        } else {
-            $object_seq = ++$object_seq_max;
-            info("Object sequence ($object_seq) for object '$object' is set to maximum object sequence.");
         }
-        $object_info{$object}{seq} = $object_seq;
-    }    
+    } else {
+        $object_seq = ++$object_seq_max;
+        info("Object sequence ($object_seq) for object '$object' is set to maximum object sequence.");
+    }
+    $object_info{$object}{seq} = $object_seq;
+
     if (defined($file)) {
         # is it a template?
         if ($file =~ m/0000/) {
