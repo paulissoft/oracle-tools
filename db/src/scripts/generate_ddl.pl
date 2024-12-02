@@ -430,7 +430,6 @@ my %object_type_info = (
     );
 
 my %object_info = (); # a hash table with key (object: schema, type, name) and data (file, sequence, written)
-my $object_seq_max = 0; # the maximum $object_info{$object}{seq} + 1
 
 # Key: file handle; Value: base file name.
 my %fh_modified = ();
@@ -945,15 +944,15 @@ sub object_file_name ($$$) {
         my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
 
         # assign the new number by using 0000
-        $object_seq = 0;
+        $object_seq = ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : 0);
         $object_file_name = 
             uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
                        ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
-                       ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : $object_seq),
+                       $object_seq,
                        (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
                        $object_type,
                        $object_name)) . '.sql';
-        $object_file_name = add_object_info($object_info_key, undef, $object_file_name);
+        $object_file_name = add_object_info($object_info_key, $object_seq, $object_file_name);
     }
 
     debug("object: $object_info_key; file: $object_file_name");
@@ -1787,18 +1786,18 @@ sub add_object_info ($;$$) {
     error("Object '$object' already exists.")
         if defined(get_object_file($object));
 
-    if (defined($object_seq)) {
+    if (defined($object_seq) && $object_seq > 0) {
         # strip leading zeros otherwise it will be treated as an octal number
         $object_seq =~ m/^0*(\d+)$/;
         $object_seq = int($1);
-        
-        if ($object_seq > $object_seq_max) {
-            $object_seq_max = $object_seq;
-            debug("Maximum object sequence is set to object sequence ($object_seq) for object '$object'.");
-        }
     } else {
-        $object_seq = ++$object_seq_max;
-        info("Object sequence ($object_seq) for object '$object' is set to maximum object sequence.");
+        $object_seq = 0;
+        foreach my $k (keys %object_info) {
+            if ($object_info{$k}{seq} > $object_seq) {
+                $object_seq = $object_info{$k}{seq};
+            }
+        }
+        info("Object sequence for object '$object' is set to $object_seq.");
     }
     $object_info{$object}{seq} = $object_seq;
 
@@ -1851,22 +1850,21 @@ sub read_object_info () {
     trace((caller(0))[3]);
 
     my %objects;
+    my $dir = File::Spec->rel2abs($output_directory);
 
-    info("checking output directory $output_directory for files to re-use");
+    info(sprintf("checking output directory %s for files to re-use", $dir));
 
-    opendir my $dh, $output_directory or die "Could not open '$output_directory' for reading '$!'\n";
+    opendir my $dh, $dir or die "Could not open '$dir' for reading '$!'\n";
     while (my $file = readdir $dh) {
-        if (-f $file) {
-            info("checking whether file $file can be re-used");
-            if ($file =~ m/^(R__)?(\d{2}|\d{4})\.([^.]+)\.([^.]+)\.([^.]+)\.sql$/) {
-                $objects{$2}{object} = join($object_sep, $3, $4, $5);
-                $objects{$2}{file} = $file;
-            } elsif ($file =~ m/^(R__)?(\d{2}|\d{4})\.([^.]+)\.([^.]+)\.sql$/) {
-                $objects{$2}{object} = join($object_sep, $source_schema, $3, $4);
-                $objects{$2}{file} = $file;
-            } else {
-                warning("$file does not match naming conventions for e-use");
-            }
+        debug("checking whether file $file can be re-used");
+        if ($file =~ m/^(R__)?(\d{2}|\d{4})\.([^.]+)\.([^.]+)\.([^.]+)\.sql$/) {
+            $objects{$2}{object} = join($object_sep, $3, $4, $5);
+            $objects{$2}{file} = $file;
+        } elsif ($file =~ m/^(R__)?(\d{2}|\d{4})\.([^.]+)\.([^.]+)\.sql$/) {
+            $objects{$2}{object} = join($object_sep, $source_schema, $3, $4);
+            $objects{$2}{file} = $file;
+        } else {
+            warning("$file does not match naming conventions for re-use");
         }
     }
     # add the files in order
