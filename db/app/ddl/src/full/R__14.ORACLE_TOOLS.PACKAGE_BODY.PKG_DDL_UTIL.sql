@@ -68,9 +68,13 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_DDL_UTIL" IS /* -*-coding: ut
 
 $if oracle_tools.cfg_pkg.c_testing $then
 
-  "EMPTY"                    constant all_objects.owner%type := 'EMPTY';
+  "EMPTY" constant all_objects.owner%type := 'EMPTY';
+
+$if oracle_tools.pkg_ddl_util.c_test_empty $then
 
   g_empty constant all_objects.owner%type := "EMPTY";
+
+$end
 
   g_owner constant all_objects.owner%type := $$PLSQL_UNIT_OWNER;
 
@@ -78,12 +82,15 @@ $if oracle_tools.cfg_pkg.c_testing $then
 
   g_raise_exc constant boolean := true;
 
+$if oracle_tools.pkg_ddl_util.c_test_empty $then
   g_loopback constant varchar2(10 char) := 'LOOPBACK';
+$else  
+  g_loopback constant varchar2(10 char) := null;
+$end -- $if oracle_tools.pkg_ddl_util.c_test_empty $then
 
   c_transform_param_list_testing constant varchar2(4000 byte) :=
     -- c_transform_param_list = 'CONSTRAINTS,CONSTRAINTS_AS_ALTER,FORCE,PRETTY,REF_CONSTRAINTS,SEGMENT_ATTRIBUTES,TABLESPACE'
     '-CONSTRAINTS_AS_ALTER,-SEGMENT_ATTRIBUTES';
-
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
@@ -6708,6 +6715,22 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
   end eq;
 
+$if not oracle_tools.pkg_ddl_util.c_test_empty $then
+
+  procedure cleanup_empty
+  is
+  begin
+    null;
+  end;
+
+  procedure ut_cleanup_empty
+  is
+  begin
+    null;
+  end;
+
+$else -- $if oracle_tools.pkg_ddl_util.c_test_empty $then
+
   procedure cleanup_empty
   is
     l_drop_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
@@ -6819,6 +6842,8 @@ $end
     commit;
   end ut_cleanup_empty;
 
+$end -- $if oracle_tools.pkg_ddl_util.c_test_empty $then
+
   procedure ut_disable_schema_export
   is
     l_transform_param_tab t_transform_param_tab;
@@ -6858,6 +6883,8 @@ $end
     from    all_synonyms t
     where   t.table_name = 'UT';
 
+$if oracle_tools.pkg_ddl_util.c_test_empty $then
+
     if get_db_link(g_empty) is null
     then
       raise_application_error(oracle_tools.pkg_ddl_error.c_missing_db_link, 'Database link EMPTY must exist');
@@ -6885,6 +6912,8 @@ $end
       then
         raise_application_error(oracle_tools.pkg_ddl_error.c_wrong_db_link, 'Private database link LOOPBACK should point to this schema and database.', true);
     end;
+
+$end -- $if oracle_tools.pkg_ddl_util.c_test_empty $then
 
     -- GJP 2022-09-25
     -- The ddl unit test fails when the ORACLE_TOOLS schema has a synonym for a non-existing object.
@@ -7124,12 +7153,8 @@ $end
 
     l_line1_tab    dbms_sql.varchar2a;
     l_clob1        clob := null;
-    l_first1       pls_integer := null;
-    l_last1        pls_integer := null;
     l_line2_tab    dbms_sql.varchar2a;
     l_clob2        clob := null;
-    l_first2       pls_integer := null;
-    l_last2        pls_integer := null;
     l_lwb          pls_integer := 1;
     l_upb          pls_integer := 1;
 
@@ -7226,6 +7251,10 @@ $end
     , p_clob in out nocopy clob
     )
     is
+      l_first1       pls_integer := null;
+      l_last1        pls_integer := null;
+      l_first2       pls_integer := null;
+      l_last2        pls_integer := null;
     begin
       -- Copy all lines from p_clob to l_line1_tab but skip empty lines for comments.
       -- So we use an intermediary l_line2_tab first.
@@ -7296,6 +7325,7 @@ $end
     -- The oracle_tools.pkg_ddl_util PACKAGE_SPEC must be created first for an empty schema
     begin
       read_ddl(null, l_clob1, l_line1_tab);
+$if oracle_tools.pkg_ddl_util.c_test_empty $then
       read_ddl(g_empty, l_clob2, l_line2_tab);
 
       if (l_line1_tab.first is null and l_line2_tab.first is null) or l_line1_tab.first = l_line2_tab.first
@@ -7330,6 +7360,7 @@ $end
           ).to_be_null();
         end if;
       end loop;
+$end -- $if oracle_tools.pkg_ddl_util.c_test_empty $then
     end;
 
     -- Create an include object CLOB
@@ -7337,6 +7368,7 @@ $end
     then
       raise program_error;
     end if;
+$if oracle_tools.pkg_ddl_util.c_test_empty $then
     if l_clob2 is null
     then
       raise program_error;
@@ -7402,6 +7434,8 @@ $end
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."info", 'l_clob2: %s', oracle_tools.pkg_str_util.dbms_lob_substr(l_clob2, 255, 1));
 $end
+
+$end -- $if oracle_tools.pkg_ddl_util.c_test_empty $then
 
     l_upb := case when g_loopback is not null then 2 else 1 end;
 
@@ -7734,12 +7768,14 @@ $end
       );
     end loop;
 
+$if oracle_tools.pkg_ddl_util.c_test_empty $then
     chk
     ( p_description => 'Running against empty source schema should work'
     , p_sqlcode_expected => c_no_exception_raised -- oracle_tools.pkg_ddl_error.c_no_schema_objects
     , p_schema_target => g_empty
     , p_schema_source => null
     );
+$end -- $if oracle_tools.pkg_ddl_util.c_test_empty $then
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -7782,6 +7818,8 @@ $end
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
 $end
+
+$if oracle_tools.pkg_ddl_util.c_test_empty $then
 
     -- Check this schema
     for r in (select t.owner
@@ -7982,6 +8020,8 @@ $end
 
     commit;
 
+$end -- $if oracle_tools.pkg_ddl_util.c_test_empty $then
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
@@ -8123,6 +8163,16 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       raise;
 $end
   end ut_is_a_repeatable;
+
+$if not oracle_tools.pkg_ddl_util.c_test_empty $then
+
+  procedure ut_synchronize
+  is
+  begin
+    null;
+  end;
+
+$else
 
   procedure ut_synchronize
   is
@@ -8344,6 +8394,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
   end ut_synchronize;
 
+$end -- $if oracle_tools.pkg_ddl_util.c_test_empty $then
+
 $if false $then
 
   procedure ut_sort_objects_by_deps
@@ -8476,7 +8528,7 @@ $end -- $if false $then
       modify_ddl_text
       ( p_ddl_text => l_text
       , p_schema => 'ORACLE_TOOLS'
-      , p_new_schema => g_empty
+      , p_new_schema => "EMPTY"
       );
     l_text_expected constant varchar2(32767 char) :=
       chr(10) || -- test multi line

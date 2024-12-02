@@ -51,6 +51,8 @@ c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debuggi
 
 c_default_parallel_level constant natural := 2; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
 
+c_test_empty constant boolean := false;
+
 /*
 -- Start of bugs/features (oldest first)
 */

@@ -93,7 +93,6 @@ $end
     -- c_transform_param_list = 'CONSTRAINTS,CONSTRAINTS_AS_ALTER,FORCE,PRETTY,REF_CONSTRAINTS,SEGMENT_ATTRIBUTES,TABLESPACE'
     '-CONSTRAINTS_AS_ALTER,-SEGMENT_ATTRIBUTES';
 
-
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
   /* EXCEPTIONS */
