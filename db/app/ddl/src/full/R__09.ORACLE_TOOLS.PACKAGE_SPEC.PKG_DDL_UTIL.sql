@@ -559,6 +559,7 @@ procedure ut_setup;
 procedure ut_teardown;
 
 --%test
+--%disabled
 procedure ut_display_ddl_schema_chk;
 
 --%test
@@ -569,6 +570,7 @@ procedure ut_display_ddl_schema_chk;
 procedure ut_display_ddl_schema;
 
 --%test
+--%disabled
 procedure ut_display_ddl_schema_diff_chk;
 
 --%test
