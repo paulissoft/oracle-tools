@@ -430,6 +430,7 @@ my %object_type_info = (
     );
 
 my %object_info = (); # a hash table with key (object: schema, type, name) and data (file, sequence, written)
+my $object_seq_max = 0;
 
 # Key: file handle; Value: base file name.
 my %fh_modified = ();
@@ -940,22 +941,10 @@ sub object_file_name ($$$) {
     error("\$object_name undefined") unless defined($object_name);
 
     my $object_info_key = join($object_sep, $object_schema, $object_type, $object_name);
-    my $object_seq = get_object_seq($object_info_key);
     my $object_file_name = get_object_file($object_info_key);
 
     if (!defined($object_file_name)) {
-        my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
-
-        # assign the new number by using 0000
-        $object_seq = ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : 0);
-        $object_file_name = 
-            uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
-                       ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
-                       $object_seq,
-                       (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
-                       $object_type,
-                       $object_name)) . '.sql';
-        $object_file_name = add_object_info($object_info_key, $object_seq, $object_file_name);
+        $object_file_name = add_object_info($object_info_key);
     }
 
     debug("object: $object_info_key; file: $object_file_name");
@@ -1085,12 +1074,8 @@ sub add_sql_statement ($$$$;$) {
     $r_sql_statements->{$object}->{seq} = scalar(keys %$r_sql_statements)
         unless exists($r_sql_statements->{$object}->{seq});
 
-    # GJP 2024-12-02 Ignore this code for the time being.
-    if (0 && !get_object_seq($object)) {
-        # ignore errors when $object does not conform to naming convention or already exists
-        eval {
-            add_object_info($object);
-        };
+    if (!get_object_seq($object)) {
+        add_object_info($object);
     };
 
     $r_sql_statements->{$object}->{ddls}->[$ddl_no] = { 'ddl_info' => $ddl_info, 'ddl' => [] }
@@ -1776,50 +1761,40 @@ sub add_object_info ($;$$) {
     error("Object '$object' should match 'SCHEMA:TYPE:NAME'")
         unless $object =~ m/^.+\..+\..+$/;
 
+    error("Object '$object' already exists.")
+        if defined(get_object_file($object));
+
     debug(sprintf("Add object info for object '%s', object sequence '%s' and file '%s'.",
                   (defined($object) ? $object : 'UNKNOWN'),
                   (defined($object_seq) ? sprintf("%d", $object_seq) : 'UNKNOWN'),
                   (defined($file) ? $file : 'UNKNOWN')));
 
-    # object may already exists although the sequence is undefined
-    if (!defined($object_seq)) {
-        $object_seq = get_object_seq($object);
-    }
-    
-    # set filename?
-    error("Object '$object' already exists.")
-        if defined(get_object_file($object));
-
-    if (defined($object_seq) && $object_seq > 0) {
+    if (defined($object_seq) && defined($file)) {
         # strip leading zeros otherwise it will be treated as an octal number
         $object_seq =~ m/^0*(\d+)$/;
         $object_seq = int($1);
-        $object_info{$object}{seq} = $object_seq;
-    } else {
-        if ($interface eq PKG_DDL_UTIL_V4) {
-            error("Object sequence should be at least 1 for object '$object'.");
-        }
+        $object_seq_max = $object_seq
+            if ($object_seq > $object_seq_max);
+    } elsif (!(defined($object_seq) && defined($file))) {
+        my ($object_schema, $object_type, $object_name) = split(':', $object);
+        my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
 
         # get the highest plus 1
-        $object_info{$object}{seq} = 0;
-        foreach my $k (keys %object_info) {
-            if ($k ne $object && $object_info{$k}{seq} > $object_info{$object}{seq}) {
-                $object_info{$object}{seq} = $object_info{$k}{seq};
-            }
-        }
-        $object_info{$object}{seq} = $object_info{$object}{seq} + 1;
+        $object_seq = ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : ++$object_seq_max);
+        $file = 
+            uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
+                       ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
+                       $object_seq,
+                       (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
+                       $object_type,
+                       $object_name)) . '.sql';
+    } else {
+        error("Programming error.");
     }
-    info("Object sequence for object '$object' is set to", $object_info{$object}{seq});
-
-    if (defined($file)) {
-        # is it a template?
-        if ($file =~ m/0000/) {
-            $file =~ s/0000/sprintf("%04d", $object_info{$object}{seq})/e;
-        }
-        $object_info{$object}{file} = $file;
-
-        info("Object '$object' will use file '$file'.");
-    }
+    
+    $object_info{$object}{seq} = $object_seq;
+    $object_info{$object}{file} = $file;
+    info(sprintf("Object '$object' has sequence %d and file %s", $object_seq, $file));
 
     if (!exists($object_info{$object}{status})) {
         $object_info{$object}{status} = (defined($file) && -f $file ? FILE_READ : FILE_UNKNOWN);
@@ -1867,19 +1842,19 @@ sub read_object_info () {
     opendir my $dh, $dir or die "Could not open '$dir' for reading '$!'\n";
     while (my $file = readdir $dh) {
         debug("checking whether file $file can be re-used");
-        if ($file =~ m/^(R__)?(\d{2}|\d{4})\.([^.]+)\.([^.]+)\.([^.]+)\.sql$/) {
-            $objects{$2}{object} = join($object_sep, $3, $4, $5);
-            $objects{$2}{file} = $file;
-        } elsif ($file =~ m/^(R__)?(\d{2}|\d{4})\.([^.]+)\.([^.]+)\.sql$/) {
-            $objects{$2}{object} = join($object_sep, $source_schema, $3, $4);
-            $objects{$2}{file} = $file;
+        if ($file =~ m/^(R__)?(?<seq>\d+(_\d+)?)\.(?<schema>[^.]+)\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
+            $objects{$+{seq}}{object} = join($object_sep, $+{schema}, $+{type}, $+{name});
+            $objects{$+{seq}}{file} = $file;
+        } elsif ($file =~ m/^(R__)?(?<seq>\d+(_\d+)?)\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
+            $objects{$+{seq}}{object} = join($object_sep, $source_schema, $+{type}, $+{name});
+            $objects{$+{seq}}{file} = $file;
         } else {
             warning("$file does not match naming conventions for re-use");
         }
     }
     # add the files in order
     foreach my $object_seq (sort keys %objects) {
-        add_object_info($objects{$object_seq}{object}, $object_seq, $objects{$object_seq}{file});
+            add_object_info($objects{$object_seq}{object}, $object_seq, $objects{$object_seq}{file});
     }
     closedir $dh;
 } # sub read_object_info
