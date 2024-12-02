@@ -1852,19 +1852,21 @@ sub read_object_info () {
 
     my %objects;
 
-    debug("processing output directory $output_directory");
+    info("checking output directory $output_directory for files to re-use");
 
     opendir my $dh, $output_directory or die "Could not open '$output_directory' for reading '$!'\n";
     while (my $file = readdir $dh) {
-        debug("processing file $file");
-        if ($file =~ m/^(R__)?(\d{2}|\d{4})\.([^.]+)\.([^.]+)\.([^.]+)\.sql$/) {
-            $objects{$2}{object} = join($object_sep, $3, $4, $5);
-            $objects{$2}{file} = $file;
-        } elsif ($file =~ m/^(R__)?(\d{2}|\d{4})\.([^.]+)\.([^.]+)\.sql$/) {
-            $objects{$2}{object} = join($object_sep, $source_schema, $3, $4);
-            $objects{$2}{file} = $file;
-        } else {
-            debug("$file does not match naming conventions");
+        if (-f $file) {
+            info("checking whether file $file can be re-used");
+            if ($file =~ m/^(R__)?(\d{2}|\d{4})\.([^.]+)\.([^.]+)\.([^.]+)\.sql$/) {
+                $objects{$2}{object} = join($object_sep, $3, $4, $5);
+                $objects{$2}{file} = $file;
+            } elsif ($file =~ m/^(R__)?(\d{2}|\d{4})\.([^.]+)\.([^.]+)\.sql$/) {
+                $objects{$2}{object} = join($object_sep, $source_schema, $3, $4);
+                $objects{$2}{file} = $file;
+            } else {
+                warning("$file does not match naming conventions for e-use");
+            }
         }
     }
     # add the files in order
