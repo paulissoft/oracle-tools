@@ -1765,11 +1765,6 @@ sub add_object_info ($;$$) {
 
     my ($object, $object_seq, $file) = @_;
 
-    info(sprintf("Add object info for object '%s', object sequence '%s' and file '%s'.",
-                 (defined($object) ? $object : 'UNKNOWN'),
-                 (defined($object_seq) ? sprintf("%d", $object_seq) : 'UNKNOWN'),
-                 (defined($file) ? $file : 'UNKNOWN')));
-
     $object = uc($object);
 
     error("Object '$object' must be in upper case")
@@ -1777,6 +1772,11 @@ sub add_object_info ($;$$) {
 
     error("Object '$object' should match 'SCHEMA:TYPE:NAME'")
         unless $object =~ m/^.+\..+\..+$/;
+
+    info(sprintf("Add object info for object '%s', object sequence '%s' and file '%s'.",
+                 (defined($object) ? $object : 'UNKNOWN'),
+                 (defined($object_seq) ? sprintf("%d", $object_seq) : 'UNKNOWN'),
+                 (defined($file) ? $file : 'UNKNOWN')));
 
     # object may already exists although the sequence is undefined
     if (!defined($object_seq)) {
