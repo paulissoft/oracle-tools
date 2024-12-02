@@ -498,7 +498,7 @@ return oracle_tools.t_schema_object_tab
 pipelined;
 
 /**
-Sort objects on dependency order.
+Sort objects on dependency order, i.e. T_SCHEMA_OBJECT.OBJECT_TYPE_ORDER().
 **/
 
 procedure migrate_schema_ddl
