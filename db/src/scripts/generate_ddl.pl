@@ -1772,6 +1772,11 @@ sub add_object_info ($;$$) {
                   (defined($object_seq) ? sprintf("%d", $object_seq) : 'UNKNOWN'),
                   (defined($file) ? $file : 'UNKNOWN')));
 
+    # set status, just once
+    if (!exists($object_info{$object}) && !exists($object_info{$object}{status})) {
+        $object_info{$object}{status} = (defined($file) ? FILE_READ : FILE_UNKNOWN);
+    }
+
     if (defined($object_seq) && defined($file)) {
         # strip leading zeros otherwise it will be treated as an octal number
         $object_seq =~ m/^0*(\d+)$/;
@@ -1797,10 +1802,6 @@ sub add_object_info ($;$$) {
     $object_info{$object}{seq} = $object_seq;
     $object_info{$object}{file} = $file;
     info(sprintf("Object '$object' has sequence %d and file %s", $object_seq, $file));
-
-    if (!exists($object_info{$object}{status})) {
-        $object_info{$object}{status} = (defined($file) && -f $file ? FILE_READ : FILE_UNKNOWN);
-    }
 
     return $file;
 }
