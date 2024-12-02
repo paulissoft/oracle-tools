@@ -32,25 +32,25 @@ ORACLE_TOOLS:PACKAGE_SPEC:API_TIME_PKG:::::::
 */
 -- pkg_ddl_util v4
 call dbms_application_info.set_module('uninstall.sql', null);
-/* SQL statement 1 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_HEARTBEAT_PKG;;PUBLIC;EXECUTE;NO;2) */
+/* SQL statement 1 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_TIME_PKG;;PUBLIC;EXECUTE;NO;2) */
 call dbms_application_info.set_action('SQL statement 1');
-REVOKE EXECUTE ON "API_HEARTBEAT_PKG" FROM "PUBLIC";
-
-/* SQL statement 2 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_LONGOPS_PKG;;PUBLIC;EXECUTE;NO;2) */
-call dbms_application_info.set_action('SQL statement 2');
-REVOKE EXECUTE ON "API_LONGOPS_PKG" FROM "PUBLIC";
-
-/* SQL statement 3 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_CALL_STACK_PKG;;PUBLIC;EXECUTE;NO;2) */
-call dbms_application_info.set_action('SQL statement 3');
-REVOKE EXECUTE ON "API_CALL_STACK_PKG" FROM "PUBLIC";
-
-/* SQL statement 4 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_TIME_PKG;;PUBLIC;EXECUTE;NO;2) */
-call dbms_application_info.set_action('SQL statement 4');
 REVOKE EXECUTE ON "API_TIME_PKG" FROM "PUBLIC";
 
-/* SQL statement 5 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_PKG;;PUBLIC;EXECUTE;NO;2) */
-call dbms_application_info.set_action('SQL statement 5');
+/* SQL statement 2 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_PKG;;PUBLIC;EXECUTE;NO;2) */
+call dbms_application_info.set_action('SQL statement 2');
 REVOKE EXECUTE ON "API_PKG" FROM "PUBLIC";
+
+/* SQL statement 3 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_LONGOPS_PKG;;PUBLIC;EXECUTE;NO;2) */
+call dbms_application_info.set_action('SQL statement 3');
+REVOKE EXECUTE ON "API_LONGOPS_PKG" FROM "PUBLIC";
+
+/* SQL statement 4 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_HEARTBEAT_PKG;;PUBLIC;EXECUTE;NO;2) */
+call dbms_application_info.set_action('SQL statement 4');
+REVOKE EXECUTE ON "API_HEARTBEAT_PKG" FROM "PUBLIC";
+
+/* SQL statement 5 (REVOKE;;OBJECT_GRANT;;ORACLE_TOOLS;PACKAGE_SPEC;API_CALL_STACK_PKG;;PUBLIC;EXECUTE;NO;2) */
+call dbms_application_info.set_action('SQL statement 5');
+REVOKE EXECUTE ON "API_CALL_STACK_PKG" FROM "PUBLIC";
 
 /* SQL statement 6 (DROP;ORACLE_TOOLS;PACKAGE_BODY;API_TIME_PKG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 6');
