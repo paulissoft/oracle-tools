@@ -6231,6 +6231,7 @@ $end
         from    oracle_tools.v_my_schema_objects/*_no_ddl_yet*/ obj
       )
       select    objs.schema_object
+      ,         deps.nr_deps
       from      objs left outer join deps
                 on deps.dict_object_id = objs.dict_object_id
       order by
@@ -6244,7 +6245,7 @@ $end
       pipe row(r.schema_object);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."info", 'sort objects by dependencies; schema object id #%s: %s', l_nr, r.schema_object.id);
+      dbug.print(dbug."info", 'sort objects by dependencies; schema object id #%s: %s (#deps: %s)', l_nr, r.schema_object.id, r.nr_deps);
 $end
 
       oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
