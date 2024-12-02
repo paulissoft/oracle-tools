@@ -282,35 +282,35 @@ procedure ut_split3;
 procedure ut_trim1;
 
 --%test
---%disabled
+--%disabled(Not implemented)
 procedure ut_trim2;
 
 --%test
---%disabled
+--%disabled(Not implemented)
 procedure ut_compare1;
 
 --%test
---%disabled
+--%disabled(Not implemented)
 procedure ut_compare2;
 
 --%test
---%disabled
+--%disabled(Not implemented)
 procedure ut_append_text1;
 
 --%test
---%disabled
+--%disabled(Not implemented)
 procedure ut_append_text2;
 
 --%test
---%disabled
+--%disabled(Not implemented)
 procedure ut_text2clob1;
 
 --%test
---%disabled
+--%disabled(Not implemented)
 procedure ut_text2clob2;
 
 --%test
---%disabled
+--%disabled(Not implemented)
 procedure ut_clob2text;
 
 --%test

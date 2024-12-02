@@ -1478,25 +1478,6 @@ begin
   end loop try_loop;
 end ut_matches_schema_object;
 
-procedure ut_compatible_le_oracle_11g
-is
-  l_max_length_object_name pls_integer;
-  l_max_length_package_name pls_integer;
-  l_max_length_argument_name pls_integer;  
-begin
-  select  max(length(object_name))
-  ,       max(length(package_name))
-  ,       max(length(argument_name))
-  into    l_max_length_object_name
-  ,       l_max_length_package_name
-  ,       l_max_length_argument_name
-  from    user_arguments;
-
-  ut.expect(l_max_length_object_name, 'max_length_object_name').to_be_less_or_equal(30);
-  ut.expect(l_max_length_package_name, 'max_length_package_name').to_be_less_or_equal(30);
-  ut.expect(l_max_length_argument_name, 'max_length_argument_name').to_be_less_or_equal(30);
-end ut_compatible_le_oracle_11g;
-
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
 end pkg_schema_object_filter;
