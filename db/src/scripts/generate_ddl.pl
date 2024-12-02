@@ -1797,7 +1797,7 @@ sub add_object_info ($;$$) {
                 $object_seq = $object_info{$k}{seq};
             }
         }
-        info("Object sequence for object '$object' is set to $object_seq.");
+        debug("Object sequence for object '$object' is set to $object_seq.");
     }
     $object_info{$object}{seq} = $object_seq;
 
