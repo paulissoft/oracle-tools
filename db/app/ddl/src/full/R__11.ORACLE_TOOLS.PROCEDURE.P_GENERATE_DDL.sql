@@ -38,8 +38,6 @@ as
   l_chunk_tab oracle_tools.t_text_tab;
   l_text_tab oracle_tools.t_text_tab;
 
-  l_ddl_info_previous varchar2(32767 byte) := null;
-
   c_fetch_limit constant pls_integer := 100;
 
   l_buffer varchar2(32767 char) := null;
@@ -158,6 +156,9 @@ $end
               loop
                 if l_chunk#_tab(i_idx) = 1 -- first of a new ddl?
                 then
+$if oracle_tools.cfg_pkg.c_debugging $then
+                  dbug.print(dbug."info", 'ddl_info: %s', l_ddl_info_tab(i_idx));
+$end
                   -- the text column does not end with an empty newline so we do it here
                   oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(i_idx), po_clob);
                 end if;
