@@ -327,10 +327,10 @@ use constant PKG_DDL_UTIL_V4 => 'pkg_ddl_util v4';
 use constant PKG_DDL_UTIL_V5 => 'pkg_ddl_util v5';
 use constant OLD_INSTALL_SEQUENCE_TXT => 'install_sequence.txt';
 use constant NEW_INSTALL_SEQUENCE_TXT => '!README_BEFORE_ANY_CHANGE.txt';
-use constant FILE_UNKNOWN => 0; 
-use constant FILE_READ => 1; 
-use constant FILE_NOT_MODIFIED => 2;
-use constant FILE_MODIFIED => 3;
+use constant FILE_UNKNOWN => 'FILE_UNKNOWN'; 
+use constant FILE_READ => 'FILE_READ'; 
+use constant FILE_NOT_MODIFIED => 'FILE_NOT_MODIFIED';
+use constant FILE_MODIFIED => 'FILE_MODIFIED';
 
 # VARIABLES
 
@@ -1807,11 +1807,16 @@ sub add_object_info ($;$$) {
 }
 
 sub set_file_status ($$) {
-    my ($file, $status) = @_;
+    trace((caller(0))[3]);
+    
+    my ($file, $status) = (basename($_[0]), $_[1]);
+
+    debug("Calling set_file_status($file, $status)");
     
     foreach my $object (keys %object_info) {
         if (exists($object_info{$object}{file}) && $object_info{$object}{file} eq $file) {
             $object_info{$object}{status} = $status;
+            debug("Setting file status for file $file to $status");
             return $object;
         }
     }
@@ -1819,15 +1824,19 @@ sub set_file_status ($$) {
 }
 
 sub get_files (@) {
+    trace((caller(0))[3]);
+    
     my @status = @_;
     my @file = ();
     
     foreach my $object (keys %object_info) {
         if (exists($object_info{$object}{file})) {
             my $status = $object_info{$object}{status};
+            my $file = $object_info{$object}{file};
 
             if (grep(/^$status$/, @status)) {
-                push(@file, $object_info{$object}{file});
+                debug("Adding file $file to list of files for @status");
+                push(@file, $file);
             }
         }
     }
