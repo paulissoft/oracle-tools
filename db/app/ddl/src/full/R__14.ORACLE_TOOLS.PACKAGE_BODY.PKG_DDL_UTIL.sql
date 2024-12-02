@@ -6188,6 +6188,8 @@ $end
   is
     l_program constant t_module := 'SORT_OBJECTS_BY_DEPS';
 
+    l_nr pls_integer := 0;
+
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec := oracle_tools.api_longops_pkg.longops_init(p_target_desc => l_program, p_units => 'objects');
   begin
@@ -6214,14 +6216,21 @@ $end
         from    oracle_tools.v_my_schema_objects/*_no_ddl_yet*/ obj
       )
       select    objs.schema_object
-      from      objs left outer join deps on deps.dict_object_id = objs.dict_object_id
+      from      objs left outer join deps
+                on deps.dict_object_id = objs.dict_object_id
       order by
                 objs.schema_object.object_type_order() asc
       ,         deps.nr_deps desc nulls last -- the more dependencies the earlier it should be listed
       ,         objs.dict_object_id asc
     )
     loop
+      l_nr := l_nr + 1;
+      
       pipe row(r.schema_object);
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'sort objects by dependencies; schema object id #%s: %s', l_nr, r.schema_object.id);
+$end
 
       oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
     end loop;
