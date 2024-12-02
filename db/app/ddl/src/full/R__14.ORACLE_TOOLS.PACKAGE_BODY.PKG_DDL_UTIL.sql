@@ -6231,12 +6231,13 @@ $end
         from    oracle_tools.v_my_schema_objects/*_no_ddl_yet*/ obj
       )
       select    objs.schema_object
+      ,         objs.schema_object.object_type_order() as object_type_order
       ,         deps.nr_deps
       from      objs left outer join deps
                 on deps.dict_object_id = objs.dict_object_id
       order by
-                objs.schema_object.object_type_order() asc
-      ,         deps.nr_deps desc nulls last -- the more dependencies the earlier it should be listed
+                object_type_order asc
+      ,         nr_deps desc nulls last -- the more dependencies the earlier it should be listed
       ,         objs.dict_object_id asc
     )
     loop
@@ -6245,7 +6246,13 @@ $end
       pipe row(r.schema_object);
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."info", 'sort objects by dependencies; schema object id #%s: %s (#deps: %s)', l_nr, r.schema_object.id, r.nr_deps);
+      dbug.print
+      ( dbug."info"
+      , 'sort objects by dependencies; schema object id #%s: %s (type order: %s; #deps: %s)'
+      , l_nr
+      , r.schema_object.id
+      , r.object_type_order, r.nr_deps
+      );
 $end
 
       oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
