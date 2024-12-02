@@ -1230,6 +1230,7 @@ $end
       raise;
   end parse_ddl;
 
+  -- NOTE: keep this in sync with pkg_schema_object_filter.ignore_object()
   procedure i_object_exclude_name_expr_tab
   is
     procedure add(p_object_type in varchar2, p_exclude_name_expr in varchar2)
@@ -1253,48 +1254,61 @@ $end
       end loop;
     end add;
   begin
-    -- no dropped tables
+    -- 1. no dropped tables
     add(oracle_tools.t_text_tab('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT'), 'BIN$%');
 
-    -- JAVA$CLASS$MD5$TABLE
+    -- 2. JAVA$CLASS$MD5$TABLE
     add(oracle_tools.t_text_tab('TABLE'), 'JAVA$CLASS$MD5$TABLE');
 
-    -- nested tables
-    add(oracle_tools.t_text_tab('TABLE'), 'SYSNT%');
-
-    -- nested table indexes but here we must compare on base_object_name
-    -- add(oracle_tools.t_text_tab('INDEX'), 'SYSNT%');
-
-    -- no AQ indexes/views
+    -- 3. no AQ indexes/views
     add(oracle_tools.t_text_tab('INDEX', 'VIEW', 'OBJECT_GRANT'), 'AQ$%');
 
-    -- no Flashback archive tables/indexes
+    -- 4. no Flashback archive tables/indexes
     add(oracle_tools.t_text_tab('TABLE', 'INDEX'), 'SYS\_FBA\_%');
 
-    -- no system generated indexes
+    -- 5. no system generated indexes
     add('INDEX', 'SYS\_C%');
 
-    -- no generated types by declaring pl/sql table types in package specifications
+    -- 6. no generated types by declaring pl/sql table types in package specifications
     add(oracle_tools.t_text_tab('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT'), 'SYS\_PLSQL\_%');
 
-    -- see http://orasql.org/2012/04/28/a-funny-fact-about-collect/
+    -- 7. see http://orasql.org/2012/04/28/a-funny-fact-about-collect/
     add(oracle_tools.t_text_tab('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT'), 'SYSTP%');
 
-    -- no datapump tables
+    -- 8. no datapump tables
     add(oracle_tools.t_text_tab('TABLE', 'OBJECT_GRANT'), 'SYS\_SQL\_FILE\_SCHEMA%');
+    
+    -- 9. idem
     add(oracle_tools.t_text_tab('TABLE', 'OBJECT_GRANT'), user || '\_DDL');
+    
+    -- 10. idem
     add(oracle_tools.t_text_tab('TABLE', 'OBJECT_GRANT'), user || '\_DML');
-    -- no Oracle generated datapump tables
+    
+    -- 11. no Oracle generated datapump tables
     add(oracle_tools.t_text_tab('TABLE', 'OBJECT_GRANT'), 'SYS\_EXPORT\_FULL\_%');
 
-    -- no Flyway stuff and other Oracle things
+    -- 12. no Flyway stuff and other Oracle things
     for i_idx in c_object_to_ignore_tab.first .. c_object_to_ignore_tab.last
     loop
       add(oracle_tools.t_text_tab('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT'), c_object_to_ignore_tab(i_idx) || '%');
     end loop;
 
-    -- no identity column sequences
+    -- 13. no identity column sequences
     add(oracle_tools.t_text_tab('SEQUENCE', 'OBJECT_GRANT'), 'ISEQ$$%');
+
+    -- 14. nested tables
+    add(oracle_tools.t_text_tab('TABLE'), 'SYSNT%');
+    -- TO DO: nested table indexes but here we must compare on base_object_name
+    -- add(oracle_tools.t_text_tab('INDEX'), 'SYSNT%');
+    
+    -- 15. no special type specs
+    -- ORACLE_TOOLS:TYPE_SPEC:SYS_YOID0000142575$:::::::
+    add(oracle_tools.t_text_tab('TYPE_SPEC'), 'SYS\_YOID%');
+
+    -- 16. no nested table constraints
+    -- /* SQL statement 16 (ALTER;ORACLE_TOOLS;CONSTRAINT;SYS_C0022887;ORACLE_TOOLS;TABLE;GENERATE_DDL_SESSION_BATCHES;;;;;2) */
+    -- ALTER TABLE "ORACLE_TOOLS"."GENERATE_DDL_SESSION_BATCHES" DROP UNIQUE ("SYS_NC0001000011$") KEEP INDEX;
+    add(oracle_tools.t_text_tab('CONSTRAINT', 'REF_CONSTRAINT'), 'SYS\_NC%');
   end i_object_exclude_name_expr_tab;
 
   procedure get_transform_param_tab

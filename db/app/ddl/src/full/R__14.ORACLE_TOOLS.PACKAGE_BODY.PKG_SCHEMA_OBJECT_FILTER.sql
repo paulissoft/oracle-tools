@@ -62,6 +62,7 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     then return false;
   end;
 
+  -- NOTE: keep this in sync with pkg_ddl_util.is_exclude_name_expr() (i_object_exclude_name_expr_tab)
   function ignore_object
   ( p_object_type in varchar2
   , p_object_name in varchar2
@@ -77,50 +78,65 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
       case
         when p_object_type is null
         then -1
+        
         when p_object_name is null
         then -2
+        
         -- no dropped tables
         when p_object_type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and p_object_name like 'BIN$%' -- escape '\'
-        then 1        
+        then 1
+        
         -- JAVA$CLASS$MD5$TABLE
         when p_object_type in ('TABLE') and p_object_name like 'JAVA$CLASS$MD5$TABLE' -- escape '\'
         then 2
+        
         -- no AQ indexes/views
         when p_object_type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and p_object_name like 'AQ$%' -- escape '\'
         then 3
+        
         -- no Flashback archive tables/indexes
         when p_object_type in ('TABLE', 'INDEX') and p_object_name like 'SYS\_FBA\_%' escape '\'
         then 4
+        
         -- no system generated indexes
         when p_object_type in ('INDEX') and p_object_name like 'SYS\_C%' escape '\'
         then 5
+        
         -- no generated types by declaring pl/sql table types in package specifications
         when p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYS\_PLSQL\_%' escape '\'
         then 6
+        
         -- see http://orasql.org/2012/04/28/a-funny-fact-about-collect/
         when p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYSTP%' -- escape '\'
         then 7
+        
         -- no datapump tables
         when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_SQL\_FILE\_SCHEMA%' escape '\'
         then 8
+        
         -- no datapump tables
         when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DDL' escape '\'
         then 9
+        
         -- no datapump tables
         when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DML' escape '\'
         then 10
+        
         -- no Oracle generated datapump tables
         when p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_EXPORT\_FULL\_%' escape '\'
         then 11
+        
         -- no Flyway stuff and other Oracle things
         when p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and
              ( p_object_name like 'schema\_version%' escape '\' or
                p_object_name like 'flyway\_schema\_history%' escape '\' or
                p_object_name like 'CREATE$JAVA$LOB$TABLE%' /*escape '\'*/ )
         then 12
+        
         -- no identity column sequences
         when p_object_type in ('SEQUENCE', 'OBJECT_GRANT') and p_object_name like 'ISEQ$$%' -- escape '\'
         then 13
+        
         -- nested tables
         -- nested table indexes but here we must compare on base_object_name
         when p_object_type in ('TABLE', 'INDEX') and
@@ -129,8 +145,19 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
              , case when p_object_type = 'TABLE' then p_object_name else p_base_object_name end
              )
         then 14
+        
+        -- no special type specs
+        -- ORACLE_TOOLS:TYPE_SPEC:SYS_YOID0000142575$:::::::
         when p_object_type in ('TYPE_SPEC') and p_object_name like 'SYS\_YOID%' escape '\'
-        then 15 -- ORACLE_TOOLS:TYPE_SPEC:SYS_YOID0000142575$:::::::
+        then 15
+        
+        -- no nested table constraints
+        -- /* SQL statement 16 (ALTER;ORACLE_TOOLS;CONSTRAINT;SYS_C0022887;ORACLE_TOOLS;TABLE;GENERATE_DDL_SESSION_BATCHES;;;;;2) */
+        -- ALTER TABLE "ORACLE_TOOLS"."GENERATE_DDL_SESSION_BATCHES" DROP UNIQUE ("SYS_NC0001000011$") KEEP INDEX;
+        when p_object_type in ('CONSTRAINT', 'REF_CONSTRAINT') and
+             p_object_name like 'SYS\_NC%' escape '\'
+        then 16
+        
         else 0
       end;
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
