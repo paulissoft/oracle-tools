@@ -202,6 +202,7 @@ procedure ut_teardown
 --%test
 procedure ut_excel_date_number2date;
 
+--%test
 procedure ut_dsort;
 
 $end
