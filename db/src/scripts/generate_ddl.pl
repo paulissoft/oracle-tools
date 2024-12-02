@@ -1075,7 +1075,10 @@ sub add_sql_statement ($$$$;$) {
         unless exists($r_sql_statements->{$object}->{seq});
 
     if (!get_object_seq($object)) {
-        add_object_info($object);
+        # ignore any error
+        eval {
+            add_object_info($object);
+        };
     };
 
     $r_sql_statements->{$object}->{ddls}->[$ddl_no] = { 'ddl_info' => $ddl_info, 'ddl' => [] }
@@ -1776,18 +1779,17 @@ sub add_object_info ($;$$) {
         $object_seq_max = $object_seq
             if ($object_seq > $object_seq_max);
     } elsif (!(defined($object_seq) && defined($file))) {
-        my ($object_schema, $object_type, $object_name) = split(':', $object);
+        my ($object_schema, $object_type, $object_name) = split($object_sep_rex, $object);
         my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
 
         # get the highest plus 1
         $object_seq = ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : ++$object_seq_max);
-        $file = 
-            uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
-                       ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
-                       $object_seq,
-                       (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
-                       $object_type,
-                       $object_name)) . '.sql';
+        $file = uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
+                           ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
+                           $object_seq,
+                           (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
+                           $object_type,
+                           $object_name)) . '.sql';
     } else {
         error("Programming error.");
     }
@@ -1839,22 +1841,24 @@ sub read_object_info () {
 
     info(sprintf("checking output directory %s for files to re-use", $dir));
 
+    my ($seq, $schema, $type, $name);
+
     opendir my $dh, $dir or die "Could not open '$dir' for reading '$!'\n";
     while (my $file = readdir $dh) {
-        debug("checking whether file $file can be re-used");
+        info("checking whether file $file can be re-used");
         if ($file =~ m/^(R__)?(?<seq>\d+(_\d+)?)\.(?<schema>[^.]+)\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
-            $objects{$+{seq}}{object} = join($object_sep, $+{schema}, $+{type}, $+{name});
-            $objects{$+{seq}}{file} = $file;
+            ($seq, $schema, $type, $name) = ($+{seq}, $+{schema}, $+{type}, $+{name});
+            $objects{$seq}{object} = join($object_sep, $schema, $type, $name);
+            $objects{$seq}{file} = $file;
+            add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{file});
         } elsif ($file =~ m/^(R__)?(?<seq>\d+(_\d+)?)\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
-            $objects{$+{seq}}{object} = join($object_sep, $source_schema, $+{type}, $+{name});
-            $objects{$+{seq}}{file} = $file;
+            ($seq, $schema, $type, $name) = ($+{seq}, $source_schema, $+{type}, $+{name});
+            $objects{$seq}{object} = join($object_sep, $schema, $type, $name);
+            $objects{$seq}{file} = $file;
+            add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{file});
         } else {
             warning("$file does not match naming conventions for re-use");
         }
-    }
-    # add the files in order
-    foreach my $object_seq (sort keys %objects) {
-            add_object_info($objects{$object_seq}{object}, $object_seq, $objects{$object_seq}{file});
     }
     closedir $dh;
 } # sub read_object_info
