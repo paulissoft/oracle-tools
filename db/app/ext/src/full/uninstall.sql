@@ -1,7 +1,7 @@
 /* perl generate_ddl.pl (version 2023-01-05) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --strip-source-schema */
 
 /*
--- JDBC url - username : jdbc:oracle:thin:@pato - ORACLE_TOOLS
+-- JDBC url - username : jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1 - BC_PROXY[ORACLE_TOOLS]
 -- source schema       : 
 -- source database link: 
 -- target schema       : ORACLE_TOOLS
@@ -28,13 +28,13 @@ REVOKE EXECUTE ON "EXT_LOAD_FILE_PKG" FROM "PUBLIC";
 call dbms_application_info.set_action('SQL statement 2');
 DROP PACKAGE BODY EXT_LOAD_FILE_PKG;
 
-/* SQL statement 3 (DROP;ORACLE_TOOLS;VIEW;EXT_LOAD_FILE_COLUMN_V;;;;;;;;2) */
+/* SQL statement 3 (DROP;ORACLE_TOOLS;VIEW;EXT_LOAD_FILE_OBJECT_V;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 3');
-DROP VIEW EXT_LOAD_FILE_COLUMN_V;
-
-/* SQL statement 4 (DROP;ORACLE_TOOLS;VIEW;EXT_LOAD_FILE_OBJECT_V;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 4');
 DROP VIEW EXT_LOAD_FILE_OBJECT_V;
+
+/* SQL statement 4 (DROP;ORACLE_TOOLS;VIEW;EXT_LOAD_FILE_COLUMN_V;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 4');
+DROP VIEW EXT_LOAD_FILE_COLUMN_V;
 
 /* SQL statement 5 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;EXT_LOAD_FILE_PKG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 5');
