@@ -6216,7 +6216,7 @@ $end
     for r in
     ( with deps as 
       ( select  /*+ MATERIALIZE */
-                dep.referenced_owner || ':' || dep.referenced_type || dep.referenced_name as dict_object_id
+                dep.referenced_owner || ':' || dep.referenced_type || ':' || dep.referenced_name as dict_object_id
         ,       count(*) as nr_deps
         from    all_dependencies dep
         where   dep.referenced_owner = p_schema
