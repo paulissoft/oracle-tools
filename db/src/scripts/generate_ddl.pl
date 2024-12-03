@@ -1814,7 +1814,7 @@ sub set_file_status ($$;$) {
     my ($file, $status, $object) = ($_[0], $_[1], $_[2]);
     my $base_file = basename($file);
 
-    info("File $base_file has been " . (-f $file ? "changed": "created"))
+    info("File '$base_file' has been " . (-f $file ? "changed": "created"))
         if ($status eq FILE_NOT_MODIFIED || $status eq FILE_MODIFIED);
 
     $file = $base_file;
