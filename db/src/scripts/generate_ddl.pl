@@ -1048,11 +1048,9 @@ sub smart_close ($) {
     my ($tmpfile, $file) = (File::Spec->catfile($TMPDIR, $basename), File::Spec->catfile($output_directory, $basename));
 
     if (-f $file && compare($tmpfile, $file) == 0) {
-        debug("File $file has NOT been changed");        
         set_file_status($file, FILE_NOT_MODIFIED);
     } else {
         # $file not existing yet or not equal to $tmpfile
-        info("File $file has been " . (-f $file ? "changed": "created"));
         copy($tmpfile, $file) or error("Copy from '$tmpfile' to '$file' failed: $!");
         set_file_status($file, FILE_MODIFIED);
     }
@@ -1812,16 +1810,19 @@ sub add_object_info ($;$$) {
 
 sub set_file_status ($$;$) {
     trace((caller(0))[3]);
-    
-    my ($file, $status, $object) = (basename($_[0]), $_[1], $_[2]);
+
+    my ($file, $status, $object) = ($_[0], $_[1], $_[2]);
+    my $base_file = basename($file);
+
+    info("File $base_file has been " . (-f $file ? "changed": "created"))
+        if ($status eq FILE_NOT_MODIFIED || $status eq FILE_MODIFIED);
+
+    $file = $base_file;
 
     debug(sprintf("Set file status for file '%s', status '%s' and object '%s'.",
                   (defined($file) ? $file : 'UNKNOWN'),
                   (defined($status) ? $status : 'UNKNOWN'),
                   (defined($object) ? $object : 'UNKNOWN')));
-
-    error("File ($file) must be a base name")
-        if (defined($file) && basename($file) ne $file);
 
     error("File status set twice for file $file, status $status and object $object")
         if (defined($object) && exists($file_info{$file}));
