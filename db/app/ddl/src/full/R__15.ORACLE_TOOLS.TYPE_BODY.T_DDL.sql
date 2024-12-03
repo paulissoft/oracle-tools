@@ -297,7 +297,7 @@ return varchar2
 deterministic
 is
 begin
-  return oracle_tools.t_ddl.ddl_info(p_schema_object, self.verb(), self.ddl#);
+  return oracle_tools.t_ddl.ddl_info(p_schema_object => p_schema_object, p_verb => self.verb(), p_ddl# => self.ddl#);
 end ddl_info;
 
 end;

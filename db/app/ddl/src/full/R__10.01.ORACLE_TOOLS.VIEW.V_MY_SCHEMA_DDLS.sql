@@ -7,7 +7,7 @@ CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_DDLS" ("SESSION_ID", "SCHEMA_
 ,       aso.last_ddl_time
 ,       gds.verb
 -- below is output to SQL file
-,       oracle_tools.t_ddl.ddl_info(aso.obj, gds.verb, gds.ddl#) as ddl_info
+,       oracle_tools.t_ddl.ddl_info(p_schema_object => aso.obj, p_verb => gds.verb, p_ddl# => gds.ddl#) as ddl_info
 ,       gdsc.chunk
 from    oracle_tools.v_all_schema_objects aso
         inner join oracle_tools.generated_ddls gd

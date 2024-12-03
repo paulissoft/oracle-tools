@@ -3546,7 +3546,10 @@ $end
     ( select  gd.schema_object_id
       ,       gds.ddl#
       ,       gds.verb
-      ,       (select oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#) from dual) as ddl_info
+      ,       case
+                when gds.verb is not null and gds.ddl# is not null
+                then (select oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#) from dual)
+              end as ddl_info
       ,       gdsc.chunk#
       ,       gdsc.chunk
       from    oracle_tools.generate_ddl_sessions gds
@@ -3556,9 +3559,9 @@ $end
               on gd.generate_ddl_configuration_id = gdc.id
               inner join oracle_tools.schema_objects so
               on so.id = gd.schema_object_id
-              inner join oracle_tools.generated_ddl_statements gds
+              left outer join oracle_tools.generated_ddl_statements gds
               on gds.generated_ddl_id = gd.id
-              inner join oracle_tools.generated_ddl_statement_chunks gdsc
+              left outer join oracle_tools.generated_ddl_statement_chunks gdsc
               on gdsc.generated_ddl_id = gds.generated_ddl_id and
                  gdsc.ddl# = gds.ddl#              
       where   gds.session_id = p_session_id
