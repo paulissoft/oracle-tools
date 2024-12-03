@@ -1805,7 +1805,7 @@ sub add_object_info ($;$$) {
     # set status, just once
     set_file_status($file, $status, $object);
 
-    info(sprintf("Object '$object' has sequence %d and file %s", $object_seq, $file));
+    info("File '$file' is used for object '$object' and has sequence $object_seq");
 
     return $file;
 }
@@ -1881,7 +1881,8 @@ sub read_object_info () {
             $objects{$seq}{file} = $file;
             add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{file});
         } else {
-            warning("File $file does not match naming conventions for reuse");
+            warning("File $file does not match naming conventions for reuse")
+                unless ($file eq '.' || $file eq '..');
         }
     }
     closedir $dh;
