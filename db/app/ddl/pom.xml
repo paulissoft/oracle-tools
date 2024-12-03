@@ -16,6 +16,7 @@
   <properties>
     <flyway.table>schema_version_tools_ddl</flyway.table>
     <db.full.force.view>yes</db.full.force.view>
+    <db.full.skip.install.sql>yes</db.full.skip.install.sql>
     <db.generate.full.strip.source.schema>0</db.generate.full.strip.source.schema>
     <db.object.names.include>1</db.object.names.include>
     <db.object.names>DDL_CRUD_API

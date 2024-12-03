@@ -328,7 +328,7 @@ use constant PKG_DDL_UTIL_V5 => 'pkg_ddl_util v5';
 use constant OLD_INSTALL_SEQUENCE_TXT => 'install_sequence.txt';
 use constant NEW_INSTALL_SEQUENCE_TXT => '!README_BEFORE_ANY_CHANGE.txt';
 use constant FILE_UNKNOWN => 'FILE_UNKNOWN'; 
-use constant FILE_READ => 'FILE_READ'; 
+use constant FILE_NOT_REUSED => 'FILE_NOT_REUSED'; 
 use constant FILE_NOT_MODIFIED => 'FILE_NOT_MODIFIED';
 use constant FILE_MODIFIED => 'FILE_MODIFIED';
 
@@ -429,8 +429,9 @@ my %object_type_info = (
     'PROCOBJ' => { expr => \@procobj_expr, seq => 30, repeatable => 0, plsql => 1 },
     );
 
-my %object_info = (); # a hash table with key (object: schema, type, name) and data (file, sequence, written)
-my $object_seq_max = 0;
+my %object_info = (); # a hash table with key (object: schema, type, name) and data (file basename, sequence)
+my %file_info = (); # a hash table with key file basename and data object ($object_info{$file_info{$file}}{file} eq $file)
+my $object_seq_max = undef;
 
 # Key: file handle; Value: base file name.
 my %fh_modified = ();
@@ -477,7 +478,7 @@ sub split_single_output_file($);
 sub get_object_seq ($);
 sub get_object_file ($);
 sub add_object_info ($;$$);
-sub set_file_status ($$);
+sub set_file_status ($$;$);
 sub get_files (@);
 sub read_object_info ();
 sub error (@);
@@ -721,20 +722,22 @@ sub process () {
 
     # Remove obsolete SQL scripts matching the Flyway naming convention and not being modified.
     if (!defined($single_output_file)) {
-        # GJP 2021-08-21  Add SQL scripts that adhere to the naming convention
-        my @obsolete_files = grep { m/\b(R__)?(\d{2}|\d{4})\./ } glob(File::Spec->catfile($output_directory, '*.sql'));
-
-        # GJP 2021-08-27  Add install files too
-        push(@obsolete_files,
-             File::Spec->catfile($output_directory, 'install.sql'));
+        my @obsolete_files;
+        my $install_sql = File::Spec->catfile($output_directory, 'install.sql');
 
         # When those files have not been created/modified
-        @obsolete_files = get_files(FILE_READ);
+        @obsolete_files = get_files(FILE_NOT_REUSED);
+
+        # GJP 2021-08-27  Add install files too
+        push(@obsolete_files, $install_sql)
+            if (-f $install_sql);
 
         if (scalar(@obsolete_files) > 0) {
-            info('Obsolete files to delete:', @obsolete_files);
+            info('Obsolete file(s) to delete:', @obsolete_files);
         
-            unlink(@obsolete_files) == scalar(@obsolete_files) or error("Can not remove obsolete files");
+            if (unlink(@obsolete_files) != scalar(@obsolete_files)) {
+                error("Could not remove these obsolete files: ", grep(-f, @obsolete_files));
+            }
         }
     }
     info(sprintf("The number of files generated is %d (%d new or changed).", scalar(get_files(FILE_NOT_MODIFIED, FILE_MODIFIED)), scalar(get_files(FILE_MODIFIED))));
@@ -1764,6 +1767,9 @@ sub add_object_info ($;$$) {
     error("Object '$object' should match 'SCHEMA:TYPE:NAME'")
         unless $object =~ m/^.+\..+\..+$/;
 
+    error("File ($file) must be a base name")
+        if (defined($file) && basename($file) ne $file);
+
     error("Object '$object' already exists.")
         if defined(get_object_file($object));
 
@@ -1772,17 +1778,14 @@ sub add_object_info ($;$$) {
                   (defined($object_seq) ? sprintf("%d", $object_seq) : 'UNKNOWN'),
                   (defined($file) ? $file : 'UNKNOWN')));
 
-    # set status, just once
-    if (!exists($object_info{$object}) && !exists($object_info{$object}{status})) {
-        $object_info{$object}{status} = (defined($file) ? FILE_READ : FILE_UNKNOWN);
-    }
-
+    my $status = (defined($file) ? FILE_NOT_REUSED : FILE_UNKNOWN);
+    
     if (defined($object_seq) && defined($file)) {
         # strip leading zeros otherwise it will be treated as an octal number
         $object_seq =~ m/^0*(\d+)$/;
         $object_seq = int($1);
         $object_seq_max = $object_seq
-            if ($object_seq > $object_seq_max);
+            if ($interface ne PKG_DDL_UTIL_V4 && $object_seq > $object_seq_max);
     } elsif (!(defined($object_seq) && defined($file))) {
         my ($object_schema, $object_type, $object_name) = split($object_sep_rex, $object);
         my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
@@ -1801,26 +1804,35 @@ sub add_object_info ($;$$) {
     
     $object_info{$object}{seq} = $object_seq;
     $object_info{$object}{file} = $file;
+
+    # set status, just once
+    set_file_status($file, $status, $object);
+
     info(sprintf("Object '$object' has sequence %d and file %s", $object_seq, $file));
 
     return $file;
 }
 
-sub set_file_status ($$) {
+sub set_file_status ($$;$) {
     trace((caller(0))[3]);
     
-    my ($file, $status) = (basename($_[0]), $_[1]);
+    my ($file, $status, $object) = (basename($_[0]), $_[1], $_[2]);
 
-    debug("Calling set_file_status($file, $status)");
-    
-    foreach my $object (keys %object_info) {
-        if (exists($object_info{$object}{file}) && $object_info{$object}{file} eq $file) {
-            $object_info{$object}{status} = $status;
-            debug("Setting file status for file $file to $status");
-            return $object;
-        }
+    debug(sprintf("Set file status for file '%s', status '%s' and object '%s'.",
+                  (defined($file) ? $file : 'UNKNOWN'),
+                  (defined($status) ? $status : 'UNKNOWN'),
+                  (defined($object) ? $object : 'UNKNOWN')));
+
+    error("File ($file) must be a base name")
+        if (defined($file) && basename($file) ne $file);
+
+    error("File status set twice for file $file, status $status and object $object")
+        if (defined($object) && exists($file_info{$file}));
+
+    if (defined($object)) {
+        $file_info{$file}{object} = $object;
     }
-    return undef;
+    $file_info{$file}{status} = $status;
 }
 
 sub get_files (@) {
@@ -1828,16 +1840,15 @@ sub get_files (@) {
     
     my @status = @_;
     my @file = ();
-    
-    foreach my $object (keys %object_info) {
-        if (exists($object_info{$object}{file})) {
-            my $status = $object_info{$object}{status};
-            my $file = $object_info{$object}{file};
 
-            if (grep(/^$status$/, @status)) {
-                debug("Adding file $file to list of files for @status");
-                push(@file, $file);
-            }
+    debug("Getting files for status(es) @status");
+
+    foreach my $file (keys %file_info) {
+        my $status = $file_info{$file}{status};
+
+        if (grep(/^$status$/, @status)) {
+            debug("Adding file $file with status $status");
+            push(@file, $file);
         }
     }
     return @file;
@@ -1846,28 +1857,34 @@ sub get_files (@) {
 sub read_object_info () {
     trace((caller(0))[3]);
 
+    error("Interface must be defined")
+        unless (defined($interface));
+
+    $object_seq_max = 0
+        if (!defined($object_seq_max) && $interface ne PKG_DDL_UTIL_V4 );
+        
     my %objects;
     my $dir = File::Spec->rel2abs($output_directory);
 
-    info(sprintf("checking output directory %s for files to re-use", $dir));
+    info(sprintf("checking output directory %s for files to reuse", $dir));
 
     my ($seq, $schema, $type, $name);
 
     opendir my $dh, $dir or die "Could not open '$dir' for reading '$!'\n";
     while (my $file = readdir $dh) {
-        info("checking whether file $file can be re-used");
-        if ($file =~ m/^(R__)?(?<seq>\d+(_\d+)?)\.(?<schema>[^.]+)\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
+        debug("Checking whether file $file can be reused");
+        if ($file =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<schema>[^.]+)\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
             ($seq, $schema, $type, $name) = ($+{seq}, $+{schema}, $+{type}, $+{name});
             $objects{$seq}{object} = join($object_sep, $schema, $type, $name);
             $objects{$seq}{file} = $file;
             add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{file});
-        } elsif ($file =~ m/^(R__)?(?<seq>\d+(_\d+)?)\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
+        } elsif ($file =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
             ($seq, $schema, $type, $name) = ($+{seq}, $source_schema, $+{type}, $+{name});
             $objects{$seq}{object} = join($object_sep, $schema, $type, $name);
             $objects{$seq}{file} = $file;
             add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{file});
         } else {
-            warning("$file does not match naming conventions for re-use");
+            warning("File $file does not match naming conventions for reuse");
         }
     }
     closedir $dh;
