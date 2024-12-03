@@ -15,7 +15,7 @@
   
   <properties>
     <flyway.table>schema_version_tools_ddl</flyway.table>
-    <db.full.force.view>yes</db.full.force.view>
+    <db.full.force.view>no</db.full.force.view>
     <db.full.skip.install.sql>yes</db.full.skip.install.sql>
     <db.generate.full.strip.source.schema>0</db.generate.full.strip.source.schema>
     <db.object.names.include>1</db.object.names.include>
@@ -98,6 +98,7 @@
 ,V_ALL_SCHEMA_OBJECTS
 ,V_DEPENDENT_OR_GRANTED_OBJECT_TYPES
 ,V_DISPLAY_DDL_SQL
+,V_MY_GENERATE_DDL_SESSIONS
 ,V_MY_GENERATE_DDL_SESSION_BATCHES
 ,V_MY_GENERATE_DDL_SESSION_BATCHES_NO_SCHEMA_EXPORT
 ,V_MY_INCLUDE_OBJECTS

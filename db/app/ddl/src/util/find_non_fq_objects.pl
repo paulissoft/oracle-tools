@@ -106,6 +106,7 @@ sub match($) {
 | v_all_schema_objects
 | v_dependent_or_granted_object_types
 | v_display_ddl_sql
+| v_my_generate_ddl_sessions
 | v_my_generate_ddl_session_batches
 | v_my_generate_ddl_session_batches_no_schema_export
 | v_my_include_objects
