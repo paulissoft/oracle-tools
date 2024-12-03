@@ -723,21 +723,18 @@ sub process () {
     # Remove obsolete SQL scripts matching the Flyway naming convention and not being modified.
     if (!defined($single_output_file)) {
         my @obsolete_files;
-        my $install_sql = File::Spec->catfile($output_directory, 'install.sql');
 
         # When those files have not been created/modified
         @obsolete_files = get_files(FILE_NOT_REUSED);
 
         # GJP 2021-08-27  Add install files too
-        push(@obsolete_files, $install_sql)
-            if (-f $install_sql);
-
-        if (scalar(@obsolete_files) > 0) {
-            info('Obsolete file(s) to delete:', @obsolete_files);
+        push(@obsolete_files, 'install.sql');
         
-            if (unlink(@obsolete_files) != scalar(@obsolete_files)) {
-                error("Could not remove these obsolete files: ", grep(-f, @obsolete_files));
-            }
+        foreach my $file (@obsolete_files) {
+            my $output_file = File::Spec->rel2abs(File::Spec->catfile($output_directory, $file));
+
+            error("File $output_file can not be removed")
+                if (-f $output_file && unlink($output_file) != 1);
         }
     }
     info(sprintf("The number of files generated is %d (%d new or changed).", scalar(get_files(FILE_NOT_MODIFIED, FILE_MODIFIED)), scalar(get_files(FILE_MODIFIED))));
