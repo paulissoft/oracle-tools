@@ -896,6 +896,34 @@ $end
     raise;
 end get_schema_objects;
 
+function get_schema_objects
+( p_session_id in positiven
+)
+return oracle_tools.t_schema_object_tab
+pipelined
+is
+begin
+  oracle_tools.ddl_crud_api.set_session_id(p_session_id); -- just a check
+  for r in
+  ( select  so.obj
+    from    oracle_tools.generate_ddl_sessions gds
+            inner join oracle_tools.generate_ddl_session_schema_objects gdsso
+            on gdsso.session_id = gds.session_id
+            inner join oracle_tools.schema_object_filter_results sofr
+            on sofr.schema_object_filter_id = gdsso.schema_object_filter_id and
+               sofr.schema_object_id = gdsso.schema_object_id
+            inner join oracle_tools.schema_objects so
+            on so.id = sofr.schema_object_id
+    where   gds.session_id = p_session_id
+    order by
+            so.id
+  )
+  loop
+    pipe row (r.obj);
+  end loop;
+  return; -- essential
+end get_schema_objects;
+
 procedure ddl_batch_process
 ( p_session_id in integer
 , p_start_id in number

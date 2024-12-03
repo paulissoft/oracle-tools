@@ -227,6 +227,20 @@ This function will return a list of DDL text plus information about the object.
 
 **/
 
+function display_ddl_sql
+( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+)
+return oracle_tools.t_display_ddl_sql_tab
+pipelined;
+/** Returns information about generated DDL for this session. Will **NOT** generate, just read from cache. **/
+
+function display_ddl_schema
+( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+)
+return oracle_tools.t_schema_ddl_tab
+pipelined;
+/** Returns information about generated DDL for this session. Will **NOT** generate, just read from cache. **/
+
 procedure create_schema_ddl
 ( p_source_schema_ddl in oracle_tools.t_schema_ddl
 , p_target_schema_ddl in oracle_tools.t_schema_ddl

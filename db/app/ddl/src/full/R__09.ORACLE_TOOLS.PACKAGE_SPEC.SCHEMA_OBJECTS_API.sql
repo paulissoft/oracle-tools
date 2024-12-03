@@ -65,6 +65,13 @@ Steps:
 
 **/
 
+function get_schema_objects
+( p_session_id in positiven
+)
+return oracle_tools.t_schema_object_tab
+pipelined;
+/** Returns information about schema objects (to generate DDL for) for this session. Will **NOT** generate, just read from cache. **/
+
 procedure ddl_batch_process
 ( p_session_id in integer -- The current session id.
 , p_start_id in number -- The start number (V_DEPENDENT_OR_GRANTED_OBJECT_TYPES.NR).

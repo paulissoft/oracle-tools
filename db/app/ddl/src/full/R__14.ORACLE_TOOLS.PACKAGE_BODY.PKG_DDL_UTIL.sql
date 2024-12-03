@@ -3534,6 +3534,106 @@ $end
     return; -- essential
   end display_ddl_schema;
 
+  function display_ddl_sql
+  ( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+  )
+  return oracle_tools.t_display_ddl_sql_tab
+  pipelined
+  is
+  begin
+    oracle_tools.ddl_crud_api.set_session_id(p_session_id); -- just a check
+    for r in
+    ( select  gd.schema_object_id
+      ,       gds.ddl#
+      ,       gds.verb
+      ,       (select oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#) from dual) as ddl_info
+      ,       gdsc.chunk#
+      ,       gdsc.chunk
+      from    oracle_tools.generate_ddl_sessions gds
+              inner join oracle_tools.generate_ddl_configurations gdc
+              on gdc.id = gds.generate_ddl_configuration_id
+              inner join oracle_tools.generated_ddls gd
+              on gd.generate_ddl_configuration_id = gdc.id
+              inner join oracle_tools.schema_objects so
+              on so.id = gd.schema_object_id
+              inner join oracle_tools.generated_ddl_statements gds
+              on gds.generated_ddl_id = gd.id
+              inner join oracle_tools.generated_ddl_statement_chunks gdsc
+              on gdsc.generated_ddl_id = gds.generated_ddl_id and
+                 gdsc.ddl# = gds.ddl#              
+      where   gds.session_id = p_session_id
+      order by
+              gd.schema_object_id
+      ,       gds.ddl#
+      ,       gds.verb
+      ,       gdsc.chunk#
+    )
+    loop
+      pipe row
+      ( oracle_tools.t_display_ddl_sql_rec
+        ( r.schema_object_id
+        , r.ddl#
+        , r.verb
+        , r.ddl_info
+        , r.chunk#
+        , r.chunk
+        )
+      );
+    end loop;
+    return; -- essential
+  end display_ddl_sql;
+
+  function display_ddl_schema
+  ( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+  )
+  return oracle_tools.t_schema_ddl_tab
+  pipelined
+  is
+    l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
+    l_schema_object_id_prev t_object := null;
+    l_schema_ddl oracle_tools.t_schema_ddl;
+  begin
+    -- use display_ddl_sql
+    for r in
+    ( select  oracle_tools.t_display_ddl_sql_rec
+              ( t.schema_object_id
+              , t.ddl#
+              , t.verb
+              , t.ddl_info
+              , t.chunk#
+              , t.chunk
+              ) as obj
+      from    table
+              ( oracle_tools.pkg_ddl_util.display_ddl_sql
+                ( p_session_id => p_session_id
+                )
+              ) t
+    )
+    loop
+      if l_schema_object_id_prev != r.obj.schema_object_id and cardinality(l_display_ddl_sql_prev_tab) > 0
+      then
+        -- output old
+        l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null);
+        pipe row (l_schema_ddl);
+        l_display_ddl_sql_prev_tab.delete;
+      end if;
+
+      -- always append the chunk to text_tab of last schema ddl
+      l_display_ddl_sql_prev_tab.extend(1);
+      l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) := r.obj;
+      l_schema_object_id_prev := r.obj.schema_object_id;
+    end loop;
+
+    -- output last
+    if l_schema_object_id_prev is not null and cardinality(l_display_ddl_sql_prev_tab) > 0
+    then
+      l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null);
+      pipe row (l_schema_ddl);
+    end if;
+
+    return; -- essential
+  end display_ddl_schema;
+
   procedure create_schema_ddl
   ( p_source_schema_ddl in oracle_tools.t_schema_ddl
   , p_target_schema_ddl in oracle_tools.t_schema_ddl
