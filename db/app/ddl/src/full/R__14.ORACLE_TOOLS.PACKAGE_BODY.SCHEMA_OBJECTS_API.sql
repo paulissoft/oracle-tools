@@ -902,25 +902,26 @@ function get_schema_objects
 return oracle_tools.t_schema_object_tab
 pipelined
 is
+  l_cursor sys_refcursor;
+  l_schema_object_tab oracle_tools.t_schema_object_tab;
+  c_fetch_limit constant positiven := 100;
 begin
-  oracle_tools.ddl_crud_api.set_session_id(p_session_id); -- just a check
-  for r in
-  ( select  so.obj
-    from    oracle_tools.generate_ddl_sessions gds
-            inner join oracle_tools.generate_ddl_session_schema_objects gdsso
-            on gdsso.session_id = gds.session_id
-            inner join oracle_tools.schema_object_filter_results sofr
-            on sofr.schema_object_filter_id = gdsso.schema_object_filter_id and
-               sofr.schema_object_id = gdsso.schema_object_id
-            inner join oracle_tools.schema_objects so
-            on so.id = sofr.schema_object_id
-    where   gds.session_id = p_session_id
-    order by
-            so.id
-  )
+  oracle_tools.ddl_crud_api.get_schema_objects_cursor(p_session_id, l_cursor);
+
   loop
-    pipe row (r.obj);
+    fetch l_cursor bulk collect into l_schema_object_tab limit c_fetch_limit;
+
+    if l_schema_object_tab.count > 0
+    then
+      for i_idx in l_schema_object_tab.first .. l_schema_object_tab.last
+      loop
+        pipe row (l_schema_object_tab(i_idx));
+      end loop;
+    end if;
+
+    exit when l_schema_object_tab.count < c_fetch_limit; -- next fetch will return 0 rows
   end loop;
+  close l_cursor;
   return; -- essential
 end get_schema_objects;
 

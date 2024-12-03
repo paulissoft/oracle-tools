@@ -367,6 +367,16 @@ And thus all related tables thanks to the cascading foreign keys.
 
 **/
 
+procedure get_schema_objects_cursor
+( p_session_id in positiven
+, p_cursor out nocopy sys_refcursor
+);
+
+procedure get_display_ddl_sql_cursor
+( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_cursor out nocopy sys_refcursor
+);
+
 END DDL_CRUD_API;
 /
 

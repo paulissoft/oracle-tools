@@ -3540,49 +3540,35 @@ $end
   return oracle_tools.t_display_ddl_sql_tab
   pipelined
   is
+    l_cursor sys_refcursor;
+    l_display_ddl_sql_tab oracle_tools.t_display_ddl_sql_tab;
   begin
-    oracle_tools.ddl_crud_api.set_session_id(p_session_id); -- just a check
-    for r in
-    ( select  gd.schema_object_id
-      ,       gds.ddl#
-      ,       gds.verb
-      ,       case
-                when gds.verb is not null and gds.ddl# is not null
-                then (select oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#) from dual)
-              end as ddl_info
-      ,       gdsc.chunk#
-      ,       gdsc.chunk
-      from    oracle_tools.generate_ddl_sessions gds
-              inner join oracle_tools.generate_ddl_configurations gdc
-              on gdc.id = gds.generate_ddl_configuration_id
-              inner join oracle_tools.generated_ddls gd
-              on gd.generate_ddl_configuration_id = gdc.id
-              inner join oracle_tools.schema_objects so
-              on so.id = gd.schema_object_id
-              left outer join oracle_tools.generated_ddl_statements gds
-              on gds.generated_ddl_id = gd.id
-              left outer join oracle_tools.generated_ddl_statement_chunks gdsc
-              on gdsc.generated_ddl_id = gds.generated_ddl_id and
-                 gdsc.ddl# = gds.ddl#              
-      where   gds.session_id = p_session_id
-      order by
-              gd.schema_object_id
-      ,       gds.ddl#
-      ,       gds.verb
-      ,       gdsc.chunk#
-    )
+    oracle_tools.ddl_crud_api.get_display_ddl_sql_cursor(p_session_id, l_cursor);
+
     loop
-      pipe row
-      ( oracle_tools.t_display_ddl_sql_rec
-        ( r.schema_object_id
-        , r.ddl#
-        , r.verb
-        , r.ddl_info
-        , r.chunk#
-        , r.chunk
-        )
-      );
+      fetch l_cursor bulk collect into l_display_ddl_sql_tab limit c_fetch_limit;
+
+      if l_display_ddl_sql_tab.count > 0
+      then
+        for i_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
+        loop
+          pipe row
+          ( oracle_tools.t_display_ddl_sql_rec
+            ( l_display_ddl_sql_tab(i_idx).schema_object_id
+            , l_display_ddl_sql_tab(i_idx).ddl#
+            , l_display_ddl_sql_tab(i_idx).verb
+            , l_display_ddl_sql_tab(i_idx).ddl_info
+            , l_display_ddl_sql_tab(i_idx).chunk#
+            , l_display_ddl_sql_tab(i_idx).chunk
+            )
+          );
+        end loop;
+      end if;
+
+      exit when l_display_ddl_sql_tab.count < c_fetch_limit; -- next fetch will return 0 rows
     end loop;
+    close l_cursor;
+
     return; -- essential
   end display_ddl_sql;
 

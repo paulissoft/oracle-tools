@@ -1086,6 +1086,67 @@ $if oracle_tools.ddl_crud_api.c_debugging $then
 $end
 end clear_all_ddl_tables;
 
+procedure get_schema_objects_cursor
+( p_session_id in positiven
+, p_cursor out nocopy sys_refcursor
+)
+is
+begin
+  set_session_id(p_session_id); -- just a check
+  
+  open p_cursor for
+    select  so.obj
+    from    oracle_tools.generate_ddl_sessions gds
+            inner join oracle_tools.generate_ddl_session_schema_objects gdsso
+            on gdsso.session_id = gds.session_id
+            inner join oracle_tools.schema_object_filter_results sofr
+            on sofr.schema_object_filter_id = gdsso.schema_object_filter_id and
+               sofr.schema_object_id = gdsso.schema_object_id
+            inner join oracle_tools.schema_objects so
+            on so.id = sofr.schema_object_id
+    where   gds.session_id = p_session_id
+    order by
+            so.id;
+end get_schema_objects_cursor;
+
+procedure get_display_ddl_sql_cursor
+( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_cursor out nocopy sys_refcursor
+)
+is
+begin
+  set_session_id(p_session_id); -- just a check
+  
+  open p_cursor for
+    select  gd.schema_object_id
+    ,       gds.ddl#
+    ,       gds.verb
+    ,       case
+              when gds.verb is not null and gds.ddl# is not null
+              then (select oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#) from dual)
+            end as ddl_info
+    ,       gdsc.chunk#
+    ,       gdsc.chunk
+    from    oracle_tools.generate_ddl_sessions gds
+            inner join oracle_tools.generate_ddl_configurations gdc
+            on gdc.id = gds.generate_ddl_configuration_id
+            inner join oracle_tools.generated_ddls gd
+            on gd.generate_ddl_configuration_id = gdc.id
+            inner join oracle_tools.schema_objects so
+            on so.id = gd.schema_object_id
+            left outer join oracle_tools.generated_ddl_statements gds
+            on gds.generated_ddl_id = gd.id
+            left outer join oracle_tools.generated_ddl_statement_chunks gdsc
+            on gdsc.generated_ddl_id = gds.generated_ddl_id and
+               gdsc.ddl# = gds.ddl#              
+    where   gds.session_id = p_session_id
+    order by
+            gd.schema_object_id
+    ,       gds.ddl#
+    ,       gds.verb
+    ,       gdsc.chunk#;
+end get_display_ddl_sql_cursor;
+
 END DDL_CRUD_API;
 /
 
