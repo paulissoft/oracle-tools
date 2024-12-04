@@ -222,12 +222,12 @@ procedure add_schema_objects
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
 , p_schema_object_filter_id in positiven
 , p_step in varchar2
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECTS (1)';
 $end  
-  l_schema_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
   l_schema constant t_schema_nn := p_schema_object_filter.schema();
   l_grantor_is_schema constant t_numeric_boolean := p_schema_object_filter.grantor_is_schema();
 begin
@@ -243,8 +243,14 @@ $end
     then
       get_named_objects
       ( p_schema => l_schema
-      , p_schema_object_tab => l_schema_object_tab
+      , p_schema_object_tab => p_schema_object_tab
       );
+      -- must immediately insert (and empty)
+      oracle_tools.ddl_crud_api.add
+      ( p_schema_object_tab => p_schema_object_tab
+      , p_schema_object_filter_id => p_schema_object_filter_id
+      );
+      p_schema_object_tab.delete;
 
     -- object grants must depend on a base object already gathered (see above)
     when "object grants"
@@ -273,7 +279,7 @@ $end
               , p_grantable => p.grantable
               )
       bulk collect
-      into    l_schema_object_tab                  
+      into    p_schema_object_tab                  
       from    oracle_tools.v_my_named_schema_objects mnso
               inner join v_my_object_grants_dict p
               on p.base_object_schema = mnso.object_schema() and p.base_object_name = mnso.object_name()
@@ -328,7 +334,7 @@ $end
               , p_column_name => c.column_name
               )
       bulk collect
-      into    l_schema_object_tab                  
+      into    p_schema_object_tab                  
       from    oracle_tools.v_my_named_schema_objects mnso
               inner join v_my_comments_dict c
               on c.base_object_schema = mnso.object_schema() and
@@ -339,6 +345,7 @@ $end
     -- constraints must depend on a base object already gathered
     when "constraints"
     then
+      p_schema_object_tab := oracle_tools.t_schema_object_tab();
       for r in
       ( -- constraints for objects in the same schema
         with v_my_constraints_dict as
@@ -383,12 +390,12 @@ $end
                 ) t
       )
       loop
-        l_schema_object_tab.extend(1);
+        p_schema_object_tab.extend(1);
 
         case r.object_type
           when 'REF_CONSTRAINT'
           then
-            l_schema_object_tab(l_schema_object_tab.last) :=
+            p_schema_object_tab(p_schema_object_tab.last) :=
               oracle_tools.t_ref_constraint_object
               ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
               , p_object_schema => r.object_schema
@@ -399,7 +406,7 @@ $end
 
           when 'CONSTRAINT'
           then
-            l_schema_object_tab(l_schema_object_tab.last) :=
+            p_schema_object_tab(p_schema_object_tab.last) :=
               oracle_tools.t_constraint_object
               ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
               , p_object_schema => r.object_schema
@@ -448,7 +455,7 @@ $end
               , p_base_object_name => s.table_name
               )
       bulk collect
-      into    l_schema_object_tab
+      into    p_schema_object_tab
       from    syn s;
 
     when "triggers"
@@ -463,7 +470,7 @@ $end
               , p_column_name => t.column_name
               )
       bulk collect
-      into    l_schema_object_tab
+      into    p_schema_object_tab
       from    ( -- triggers for this schema which may point to another schema
                 select  t.owner as object_schema
                 ,       'TRIGGER' as object_type
@@ -499,7 +506,7 @@ $end
               , p_tablespace_name => i.tablespace_name
               )
       bulk collect
-      into    l_schema_object_tab
+      into    p_schema_object_tab
       from    all_indexes i
       where   i.owner = l_schema
               -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
@@ -514,14 +521,6 @@ $end
       ;
   end case;
 
-  if l_schema_object_tab.count > 0
-  then
-    oracle_tools.ddl_crud_api.add
-    ( p_schema_object_tab => l_schema_object_tab
-    , p_schema_object_filter_id => p_schema_object_filter_id
-    );
-  end if;
-
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;
 exception
@@ -530,6 +529,31 @@ exception
     dbug.leave_on_error;
     raise;
 $end
+end add_schema_objects;
+
+procedure add_schema_objects
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_schema_object_filter_id in positiven
+, p_step in varchar2
+)
+is
+  l_schema_object_tab oracle_tools.t_schema_object_tab;
+begin
+  add_schema_objects
+  ( p_schema_object_filter => p_schema_object_filter 
+  , p_schema_object_filter_id => p_schema_object_filter_id
+  , p_step => p_step
+  , p_schema_object_tab => l_schema_object_tab
+  );
+  if p_step = "named objects"
+  then
+    if cardinality(l_schema_object_tab) > 0 then raise program_error; end if;
+  else
+    oracle_tools.ddl_crud_api.add
+    ( p_schema_object_tab => l_schema_object_tab
+    , p_schema_object_filter_id => p_schema_object_filter_id
+    );
+  end if;  
 end add_schema_objects;
 
 procedure ddl_batch_process
@@ -655,6 +679,11 @@ $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
     );
 $end -- $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
 
+  l_schema_object_tab oracle_tools.t_schema_object_tab := null;
+$if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then  
+  l_all_schema_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
+$end  
+
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECTS (2)';
 $end  
@@ -672,9 +701,27 @@ $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
     ( p_schema_object_filter => p_schema_object_filter
     , p_schema_object_filter_id => p_schema_object_filter_id
     , p_step => c_steps(i_idx)
-    );
+    , p_schema_object_tab => l_schema_object_tab
+    );    
+    case
+      when c_steps(i_idx) = "named objects"
+      then null;
+      when cardinality(l_schema_object_tab) is null
+      then null;
+      when cardinality(l_all_schema_object_tab) is null
+      then l_all_schema_object_tab := l_schema_object_tab;
+      else l_all_schema_object_tab := l_all_schema_object_tab multiset union all l_schema_object_tab;      
+    end case;
   end loop;
-  
+
+  if cardinality(l_all_schema_object_tab) > 0
+  then
+    oracle_tools.ddl_crud_api.add
+    ( p_schema_object_tab => l_all_schema_object_tab
+    , p_schema_object_filter_id => p_schema_object_filter_id
+    );
+  end if;
+
 $else
 
   -- a necessary precondition for the other steps started via DBMS_PARALLEL_EXECUTE
