@@ -3582,7 +3582,6 @@ end display_ddl_schema;
     
     l_cursor oracle_tools.ddl_crud_api.t_display_ddl_sql_obj_cur;
     l_display_ddl_sql_obj_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_obj_tab;
-    l_output_idx pls_integer := 0;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -3594,18 +3593,10 @@ $end
     loop
       fetch l_cursor bulk collect into l_display_ddl_sql_obj_tab limit c_fetch_limit;
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."input", 'l_display_ddl_sql_obj_tab.count: %s', l_display_ddl_sql_obj_tab.count);
-$end
-
       if l_display_ddl_sql_obj_tab.count > 0
       then
         for i_idx in l_display_ddl_sql_obj_tab.first .. l_display_ddl_sql_obj_tab.last
         loop
-          l_output_idx := l_output_idx + 1;
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          dbug.print(dbug."info", '%s pipe row %s', l_program, l_output_idx);
-$end
           pipe row
           ( oracle_tools.t_display_ddl_sql_rec
             ( l_display_ddl_sql_obj_tab(i_idx).schema_object_id
@@ -3670,8 +3661,6 @@ $end
     l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
     l_schema_object_prev oracle_tools.t_schema_object := null;
     l_schema_ddl oracle_tools.t_schema_ddl;
-    l_input_idx pls_integer := 0;
-    l_output_idx pls_integer := 0;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -3684,26 +3673,16 @@ $end
     loop
       fetch l_cursor bulk collect into l_display_ddl_sql_obj_tab limit c_fetch_limit;
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."input", 'l_display_ddl_sql_obj_tab.count: %s', l_display_ddl_sql_obj_tab.count);
-$end
-
       if l_display_ddl_sql_obj_tab.count > 0
       then
         for i_idx in l_display_ddl_sql_obj_tab.first .. l_display_ddl_sql_obj_tab.last
         loop
-          l_input_idx := l_input_idx + 1;
-
           if l_schema_object_prev is not null and
              l_schema_object_prev.id != l_display_ddl_sql_obj_tab(i_idx).schema_object.id and
              cardinality(l_display_ddl_sql_prev_tab) > 0
           then
             -- output old
             l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, l_schema_object_prev);
-            l_output_idx := l_output_idx + 1;
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-            dbug.print(dbug."info", '%s pipe row %s', l_program, l_output_idx);
-$end
             pipe row (l_schema_ddl);
             l_display_ddl_sql_prev_tab.delete;
           end if;
@@ -3731,10 +3710,6 @@ $end
     if l_schema_object_prev is not null and cardinality(l_display_ddl_sql_prev_tab) > 0
     then
       l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, l_schema_object_prev);
-      l_output_idx := l_output_idx + 1;
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."info", '%s pipe row %s', l_program, l_output_idx);
-$end
       pipe row (l_schema_ddl);
     end if;
 
