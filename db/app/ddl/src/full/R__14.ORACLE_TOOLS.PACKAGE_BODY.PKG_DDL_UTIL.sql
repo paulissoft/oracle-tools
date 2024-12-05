@@ -5530,17 +5530,17 @@ $end
     begin
       select  1
       into    l_status
-      from    oracle_tools.v_my_generate_ddl_session_batches_no_schema_export
+      from    oracle_tools.v_my_generate_ddl_session_batches
       where   rownum = 1;
 
-      -- Create the TASK for all but SCHEMA_EXPORT
+      -- Create the TASK for all object types (SCHEMA_EXPORT is never part of it)
       dbms_parallel_execute.create_task(l_task_name);
 
       begin
         dbms_parallel_execute.create_chunks_by_number_col
         ( task_name => l_task_name
         , table_owner => 'ORACLE_TOOLS'
-        , table_name => 'V_MY_GENERATE_DDL_SESSION_BATCHES_NO_SCHEMA_EXPORT'
+        , table_name => 'V_MY_GENERATE_DDL_SESSION_BATCHES'
         , table_column => 'DDL_BATCH_GROUP'
         , chunk_size => 1
         );
@@ -5601,15 +5601,14 @@ $end
           raise;      
       end;
 
-      -- the rest including SCHEMA_EXPORT next
-      -- try again all variants
+      -- try again all variants to pick up left-overs
       oracle_tools.pkg_ddl_util.ddl_batch_process
       ( p_session_id => l_session_id
       , p_start_id => null
       , p_end_id => null
       );
     exception
-      when no_data_found -- nothing in ORACLE_TOOLS.V_MY_GENERATE_DDL_SESSION_BATCHES_NO_SCHEMA_EXPORT
+      when no_data_found -- nothing in ORACLE_TOOLS.V_MY_GENERATE_DDL_SESSION_BATCHES
       then null;
     end;
 
@@ -5644,9 +5643,7 @@ $end
       where   gdsb.session_id = p_session_id
       and     ( p_start_id is null or
                 p_end_id is null or
-                ( gdsb.object_type <> 'SCHEMA_EXPORT' and
-                  gdsb.ddl_batch_group between p_start_id and p_end_id
-                )
+                gdsb.ddl_batch_group between p_start_id and p_end_id
               )
       and     gdsb.end_time is null        
       order by
@@ -5725,18 +5722,8 @@ $end
   is
     l_program constant t_module := 'GET_SCHEMA_DDL (2)'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
-    -- GJP 2022-12-15
-
-    -- DBMS_METADATA DDL generation with SCHEMA_EXPORT export does not provide CONSTRAINTS AS ALTER.
-    -- https://github.com/paulissoft/oracle-tools/issues/98
-    -- Solve that by adding the individual objects as well but quitting as soon as possible.
-
-    l_use_schema_export t_numeric_boolean_nn := 0;
-
     cursor c_params
-    ( b_schema in varchar2
-    , b_use_schema_export in t_numeric_boolean_nn
-    ) is
+    is
       select  object_schema
       ,       object_type
       ,       base_object_schema
@@ -5744,94 +5731,7 @@ $end
       ,       object_name_tab
       ,       base_object_name_tab
       ,       nr_objects
-      from    ( with src as
-                ( select  "SCHEMA_EXPORT" as object_type
-                  ,       b_schema as object_schema
-                  ,       null as object_name
-                  ,       null as base_object_type
-                  ,       null as base_object_schema
-                  ,       null as base_object_name
-                  ,       null as column_name -- to get the count right
-                  ,       null as grantee -- to get the count right
-                  ,       null as privilege -- to get the count right
-                  ,       null as grantable -- to get the count right
-                  from    dual
-                  where   b_use_schema_export != 0
-                  union all
-                  select  t.object_type()
-                  ,       case
-                            when t.object_type() in ('CONSTRAINT', 'REF_CONSTRAINT')
-                            then null
-                            else t.object_schema()
-                          end as object_schema
-                  ,       case
-                            when t.object_type() in ('CONSTRAINT', 'REF_CONSTRAINT')
-                            then null
-                            else t.object_name()
-                          end as object_name
-                  ,       t.base_object_type()
-                  ,       case
-                            when t.object_type() in ('INDEX', 'TRIGGER')
-                            then null
-                            when t.object_type() = 'SYNONYM' and t.object_schema() = b_schema
-                            then null
-                            else t.base_object_schema()
-                          end as base_object_schema
-                  ,       case
-                            when t.object_type() in ('INDEX', 'TRIGGER') and t.object_schema() = b_schema
-                            then null
-                            when t.object_type() = 'SYNONYM' and t.object_schema() = b_schema
-                            then null
-                            else t.base_object_name()
-                          end as base_object_name
-                  ,       t.column_name()
-                  ,       t.grantee()
-                  ,       t.privilege()
-                  ,       t.grantable()
-                  from    oracle_tools.v_my_schema_objects_no_ddl_yet t -- here we are only interested in schema objects without DDL
-                  where   b_use_schema_export = 0
-                )
-                select  t.object_schema
-                ,       t.object_type
-                ,       t.base_object_schema
-                ,       t.base_object_type
-                ,       cast
-                        ( multiset
-                          ( select  l.object_name
-                            from    src l
-                            where   l.object_type || 'X' = t.object_type || 'X' -- null == null
-                            and     l.object_schema || 'X' = t.object_schema || 'X'
-                            and     l.base_object_schema || 'X' = t.base_object_schema || 'X'
-                            and     l.object_name is not null
-                          ) as oracle_tools.t_text_tab
-                        ) as object_name_tab
-                ,       cast
-                        ( multiset
-                          ( select  l.base_object_name
-                            from    src l
-                            where   l.object_type || 'X' = t.object_type || 'X' -- null == null
-                            and     l.object_schema || 'X' = t.object_schema || 'X'
-                            and     l.base_object_schema || 'X' = t.base_object_schema || 'X'
-                            and     l.base_object_name is not null
-                          ) as oracle_tools.t_text_tab
-                        ) as base_object_name_tab
-                ,       count(*) as nr_objects
-                from    src t
-                group by
-                        t.object_schema
-                ,       t.object_type
-                ,       t.base_object_schema
-                ,       t.base_object_type
-              )
-      order by
-              -- no trunc needed here
-              oracle_tools.t_schema_object.ddl_batch_order
-              ( p_object_schema => object_schema
-              , p_object_type => object_type 
-              , p_base_object_schema => base_object_schema 
-              , p_base_object_type => base_object_type 
-              )
-    ;
+      from    oracle_tools.v_my_generate_ddl_session_batch_parameters;
 
     type t_params_tab is table of c_params%rowtype;
 
@@ -5863,92 +5763,38 @@ $end
 3 - 00:09:42 SCHEMA_EXPORT
 */
 
-    -- only use schema export when necessary but first try per object type and some other parameters
-    oracle_tools.ddl_crud_api.default_match_perc_threshold(null);
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.print
-    ( dbug."info"
-    , 'ddl_crud_api.match_perc(): %s; ddl_crud_api.match_perc_threshold(): %s'
-    , oracle_tools.ddl_crud_api.match_perc()
-    , oracle_tools.ddl_crud_api.match_perc_threshold()
-    );
-$end
-
-    -- now we can calculate the percentage matches (after get_schema_objects)
-    l_use_schema_export :=
-      case
-        when oracle_tools.ddl_crud_api.match_perc() >= oracle_tools.ddl_crud_api.match_perc_threshold()
-        then 1
-        else 0
-      end;
-
     oracle_tools.ddl_crud_api.clear_batch;        
 
-    -- GJP 2022-12-17 Note SCHEMA_EXPORT.
-    -- Under some circumstances just a SCHEMA_EXPORT does not do the job,
-    -- for instance when named not null constraints do not show up as
-    -- ALTER TABLE commands although we have asked DBMS_METADATA to do so.
-    -- In that case we will try the other variant as well as long
-    -- as there are objects to retrieve DDL for (l_nr_objects_countdown > 0).
-    -- We may as well generalise that: if you start with use_schema_export
-    -- being 1, you may try use_schema_export 0 later. And vice versa.
-    -- So just a loop of two values and we quit the loop as soon as the
-    -- countdown is 0.
-    <<outer_loop>>
-    for i_use_schema_export in l_use_schema_export .. l_use_schema_export+1
+    open c_params;
+    fetch c_params bulk collect into l_params_tab; -- no fetch limit needed
+    close c_params;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.print(dbug."debug", 'l_params_tab.count: %s', l_params_tab.count);
+$end
+
+    l_params_idx := l_params_tab.first;
+    <<param_loop>>
     loop
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.enter(g_package_prefix || l_program || '.EXPORT.' || i_use_schema_export);
-$end
+      exit param_loop when l_params_idx is null;
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print
-      ( dbug."info"
-      , 'i_use_schema_export: %s; l_use_schema_export: %s'
-      , i_use_schema_export
-      , l_use_schema_export
+      r_params := l_params_tab(l_params_idx);
+
+      -- insert into generate_ddl_session_batches
+      oracle_tools.ddl_crud_api.add
+      ( p_schema => p_schema_object_filter.schema()
+      , p_transform_param_list => p_transform_param_list
+      , p_object_schema => r_params.object_schema
+      , p_object_type => r_params.object_type
+      , p_base_object_schema => r_params.base_object_schema
+      , p_base_object_type => r_params.base_object_type
+      , p_object_name_tab => r_params.object_name_tab
+      , p_base_object_name_tab => r_params.base_object_name_tab
+      , p_nr_objects => r_params.nr_objects
       );
-$end
 
-      open c_params
-      ( p_schema_object_filter.schema()
-      , mod(i_use_schema_export, 2) -- so it will always be 0 or 1
-      );
-      fetch c_params bulk collect into l_params_tab;
-      close c_params;
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."debug", 'l_params_tab.count: %s', l_params_tab.count);
-$end
-
-      l_params_idx := l_params_tab.first;
-      <<param_loop>>
-      loop
-        exit param_loop when l_params_idx is null;
-
-        r_params := l_params_tab(l_params_idx);
-
-        -- insert into generate_ddl_session_batches
-        oracle_tools.ddl_crud_api.add
-        ( p_schema => p_schema_object_filter.schema()
-        , p_transform_param_list => p_transform_param_list
-        , p_object_schema => r_params.object_schema
-        , p_object_type => r_params.object_type
-        , p_base_object_schema => r_params.base_object_schema
-        , p_base_object_type => r_params.base_object_type
-        , p_object_name_tab => r_params.object_name_tab
-        , p_base_object_name_tab => r_params.base_object_name_tab
-        , p_nr_objects => r_params.nr_objects
-        );
-
-        l_params_idx := l_params_tab.next(l_params_idx);
-      end loop param_loop;
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.leave;      
-$end
-    end loop outer_loop;
+      l_params_idx := l_params_tab.next(l_params_idx);
+    end loop param_loop;
 
     cleanup;
 
@@ -6964,31 +6810,6 @@ $end
   end ut_cleanup_empty;
 
 $end -- $if oracle_tools.pkg_ddl_util.c_test_empty $then
-
-  procedure ut_disable_schema_export
-  is
-    l_transform_param_tab t_transform_param_tab;
-  begin
-    -- so p_schema_object_filter.match_perc() >= p_schema_object_filter.match_perc_threshold() will always be false meaning no SCHEMA_EXPORT will be used
-    oracle_tools.ddl_crud_api.default_match_perc_threshold(null);
-
-    get_transform_param_tab
-    ( p_transform_param_list => c_transform_param_list_testing
-    , p_transform_param_tab => l_transform_param_tab
-    );
-
-    md_set_transform_param
-    ( p_use_object_type_param => false -- no SCHEMA_EXPORT
-    , p_transform_param_tab => l_transform_param_tab
-    ); -- for get_source    
-  end ut_disable_schema_export;
-
-  procedure ut_enable_schema_export
-  is
-  begin
-    dbms_metadata$set_transform_param(dbms_metadata.session_transform, 'DEFAULT', true); -- back to the defaults
-    oracle_tools.ddl_crud_api.default_match_perc_threshold(null); -- back to the defaults
-  end ut_enable_schema_export;
 
   -- test functions
   procedure ut_setup

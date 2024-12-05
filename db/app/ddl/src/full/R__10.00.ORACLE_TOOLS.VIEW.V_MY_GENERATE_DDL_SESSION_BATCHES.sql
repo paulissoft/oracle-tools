@@ -30,5 +30,8 @@ CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_GENERATE_DDL_SESSION_BATCHES" ("SESS
         ) as ddl_batch_group
 from    oracle_tools.generate_ddl_session_batches gdsb
 where   gdsb.session_id = (select oracle_tools.ddl_crud_api.get_session_id from dual where rownum = 1) -- old trick
+order by
+        -- force TABLE to start early (see also t_schema_object.ddl_batch_order)
+        ddl_batch_group;
 ;
 

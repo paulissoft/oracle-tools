@@ -16,7 +16,6 @@ Only this package is used to manage CRUD operations on:
 The interface for these tables is via these views (grant select to public):
 - V_DISPLAY_DDL_SQL
 - V_MY_GENERATE_DDL_SESSION_BATCHES
-- V_MY_GENERATE_DDL_SESSION_BATCHES_NO_SCHEMA_EXPORT
 - V_MY_INCLUDE_OBJECTS
 - V_MY_NAMED_SCHEMA_OBJECTS
 - V_MY_SCHEMA_DDLS

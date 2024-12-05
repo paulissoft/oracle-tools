@@ -559,8 +559,6 @@ procedure get_source
 );
 
 procedure ut_cleanup_empty;
-procedure ut_disable_schema_export;
-procedure ut_enable_schema_export;
 
 --%suitepath(DDL)
 --%suite

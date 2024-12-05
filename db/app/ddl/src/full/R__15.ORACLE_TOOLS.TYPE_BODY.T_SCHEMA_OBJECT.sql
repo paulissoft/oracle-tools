@@ -1076,59 +1076,54 @@ static function ddl_batch_order
 return varchar2
 deterministic /*result_cache*/
 is
+  -- must stay 1 digit number (see V_MY_GENERATE_DDL_SESSION_BATCHES)
+  l_ddl_batch_group char(1);
 begin
-  return
-    case p_object_schema
-      when 'PUBLIC'
-      then '0'
-      when 'SCHEMA_EXPORT'
-      then '1'
-      else
-        -- must stay 1 digit number
-        to_char
-        ( 2 +
-          -- TABLE must start early: so let the ddl_batch_order return the minimum here for TABLE (2)
-          case p_object_type
-            -- table related (part 1)            -- result of object_type_order()
-            when 'AQ_QUEUE_TABLE'        then  0 --  4
-            when 'AQ_QUEUE'              then  0 --  5
-            when 'TABLE'                 then  0 --  6
-            when 'MATERIALIZED_VIEW'     then  0 -- 12
-            when 'MATERIALIZED_VIEW_LOG' then  0 -- 13
-            when 'COMMENT'               then  0 -- 22
-            -- table related (part 2)            
-            when 'SEQUENCE'              then  1 --  1
-            when 'CLUSTER'               then  1 --  3
-            when 'INDEX'                 then  1 -- 16
-            when 'CONSTRAINT'            then  1 -- 19
-            when 'REF_CONSTRAINT'        then  1 -- 20
-            -- stored procedure            
-            when 'TYPE_SPEC'             then  2 --  2
-            when 'FUNCTION'              then  2 --  8
-            when 'PACKAGE_SPEC'          then  2 --  9
-            when 'VIEW'                  then  2 -- 10
-            when 'PROCEDURE'             then  2 -- 11
-            when 'PACKAGE_BODY'          then  2 -- 14
-            when 'TYPE_BODY'             then  2 -- 15
-            when 'TRIGGER'               then  2 -- 17            
-            -- dependent
-            when 'OBJECT_GRANT'          then  3 -- 18
-            when 'SYNONYM'               then  3 -- 21            
-            -- rest
-            when 'DB_LINK'               then  4 --  7
-            when 'DIMENSION'             then  4 -- 23
-            when 'INDEXTYPE'             then  4 -- 24
-            when 'JAVA_SOURCE'           then  4 -- 25
-            when 'LIBRARY'               then  4 -- 26
-            when 'OPERATOR'              then  4 -- 27
-            when 'REFRESH_GROUP'         then  4 -- 28
-            when 'XMLSCHEMA'             then  4 -- 29
-            when 'PROCOBJ'               then  4 -- 30
-            else 4
-          end
-        ) || '|' ||
-        rpad(p_object_type, 30) || '|' || rpad(p_object_schema, 128) || '|' || p_base_object_schema
-    end;
+  l_ddl_batch_group :=
+    to_char
+    ( 1 +
+      -- TABLE must start early: so let the ddl_batch_order return the minimum here for TABLE (2)
+      case p_object_type
+        -- table related (part 1)            -- result of object_type_order()
+        when 'AQ_QUEUE_TABLE'        then  0 --  4
+        when 'AQ_QUEUE'              then  0 --  5
+        when 'TABLE'                 then  0 --  6
+        when 'MATERIALIZED_VIEW'     then  0 -- 12
+        when 'MATERIALIZED_VIEW_LOG' then  0 -- 13
+        when 'COMMENT'               then  0 -- 22
+        -- table related (part 2)            
+        when 'SEQUENCE'              then  1 --  1
+        when 'CLUSTER'               then  1 --  3
+        when 'INDEX'                 then  1 -- 16
+        when 'CONSTRAINT'            then  1 -- 19
+        when 'REF_CONSTRAINT'        then  1 -- 20
+        -- stored procedure            
+        when 'TYPE_SPEC'             then  2 --  2
+        when 'FUNCTION'              then  2 --  8
+        when 'PACKAGE_SPEC'          then  2 --  9
+        when 'VIEW'                  then  2 -- 10
+        when 'PROCEDURE'             then  2 -- 11
+        when 'PACKAGE_BODY'          then  2 -- 14
+        when 'TYPE_BODY'             then  2 -- 15
+        when 'TRIGGER'               then  2 -- 17            
+        -- dependent
+        when 'OBJECT_GRANT'          then  3 -- 18
+        when 'SYNONYM'               then  3 -- 21            
+        -- rest
+        when 'DB_LINK'               then  4 --  7
+        when 'DIMENSION'             then  4 -- 23
+        when 'INDEXTYPE'             then  4 -- 24
+        when 'JAVA_SOURCE'           then  4 -- 25
+        when 'LIBRARY'               then  4 -- 26
+        when 'OPERATOR'              then  4 -- 27
+        when 'REFRESH_GROUP'         then  4 -- 28
+        when 'XMLSCHEMA'             then  4 -- 29
+        when 'PROCOBJ'               then  4 -- 30
+        else 4
+      end
+    , 'FM0'
+    );
+  return l_ddl_batch_group || '|' || rpad(p_object_type, 30) || '|' || rpad(p_object_schema, 128) || '|' || p_base_object_schema;
 end ddl_batch_order;
 
 final member function ddl_batch_order
@@ -1136,7 +1131,12 @@ return varchar2
 deterministic /*result_cache*/
 is
 begin
-  return oracle_tools.t_schema_object.ddl_batch_order(self.object_schema(), self.object_type(), self.base_object_schema(), self.base_object_type());
+  return oracle_tools.t_schema_object.ddl_batch_order
+         ( p_object_schema => self.object_schema()
+         , p_object_type => self.object_type()
+         , p_base_object_schema => self.base_object_schema()
+         , p_base_object_type => self.base_object_type()
+         );
 end ddl_batch_order;
 
 end;

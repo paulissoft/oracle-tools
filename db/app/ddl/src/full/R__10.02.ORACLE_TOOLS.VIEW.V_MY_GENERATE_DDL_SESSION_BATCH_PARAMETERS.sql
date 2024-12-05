@@ -81,7 +81,9 @@ from    ( with vmsondy as
                     ) as oracle_tools.t_text_tab
                   ) as base_object_name_tab
           ,       count(*) as nr_objects
-          ,       oracle_tools.t_schema_object.ddl_batch_order
+          ,       -- This function uses all the group by columns
+                  -- hence no special attention needed for just invoking once (I hope)
+                  oracle_tools.t_schema_object.ddl_batch_order
                   ( p_object_schema => t.object_schema
                   , p_object_type => t.object_type 
                   , p_base_object_schema => t.base_object_schema 

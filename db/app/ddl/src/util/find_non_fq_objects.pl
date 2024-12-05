@@ -108,13 +108,14 @@ sub match($) {
 | v_display_ddl_sql
 | v_my_generate_ddl_sessions
 | v_my_generate_ddl_session_batches
-| v_my_generate_ddl_session_batches_no_schema_export
+| v_my_generate_ddl_session_batch_parameters
 | v_my_include_objects
 | v_my_named_schema_objects
 | v_my_schema_ddls
 | v_my_schema_objects
 | v_my_schema_objects_no_ddl_yet
 | v_my_schema_object_filter
+| v_my_schema_object_filter_results
 | v_my_schema_object_info
 )\b
 /ix) { return $1; };
