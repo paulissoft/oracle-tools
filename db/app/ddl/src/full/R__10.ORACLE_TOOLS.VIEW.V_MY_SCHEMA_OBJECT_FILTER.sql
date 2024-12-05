@@ -1,5 +1,5 @@
 CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_OBJECT_FILTER" ("SESSION_ID", "SCHEMA_OBJECT_FILTER_ID", "OBJ", "SCHEMA", "GRANTOR_IS_SCHEMA") BEQUEATH CURRENT_USER AS 
-  select  gds.session_id
+  select  /* V_MY_SCHEMA_OBJECT_FILTER since there is just one current filter */ gds.session_id
 ,       gds.schema_object_filter_id
 ,       sof.obj as obj
 ,       sof.obj.schema$ as schema
