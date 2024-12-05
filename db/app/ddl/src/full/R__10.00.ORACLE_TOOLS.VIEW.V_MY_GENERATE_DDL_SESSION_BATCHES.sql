@@ -1,21 +1,24 @@
-CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_GENERATE_DDL_SESSION_BATCHES" ("SESSION_ID", "SEQ", "CREATED", "SCHEMA", "TRANSFORM_PARAM_LIST", "OBJECT_SCHEMA", "OBJECT_TYPE", "BASE_OBJECT_SCHEMA", "BASE_OBJECT_TYPE", "OBJECT_NAME_TAB", "BASE_OBJECT_NAME_TAB", "NR_OBJECTS", "SCHEMA_OBJECT_FILTER", "SCHEMA_OBJECT_FILTER_ID", "START_TIME", "END_TIME", "ERROR_MESSAGE", "DDL_BATCH_GROUP") BEQUEATH CURRENT_USER AS 
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_GENERATE_DDL_SESSION_BATCHES" BEQUEATH CURRENT_USER AS 
   select  gdsb.session_id
 ,       gdsb.seq
 ,       gdsb.created
+,       gdsb.start_time
+,       gdsb.end_time
+,       gdsb.error_message
+        -- parameters for schema ddl
 ,       gdsb.schema
 ,       gdsb.transform_param_list
 ,       gdsb.object_schema
 ,       gdsb.object_type
 ,       gdsb.base_object_schema
 ,       gdsb.base_object_type
+,       gdsb.nr_objects
 ,       gdsb.object_name_tab
 ,       gdsb.base_object_name_tab
-,       gdsb.nr_objects
+        -- parameters for schema objects
 ,       gdsb.schema_object_filter
 ,       gdsb.schema_object_filter_id
-,       gdsb.start_time
-,       gdsb.end_time
-,       gdsb.error_message
+        -- to know to which USER_PARALLEL_EXECUTE_CHUNKS it belongs
 ,       to_number
         ( substr
           ( oracle_tools.t_schema_object.ddl_batch_order
