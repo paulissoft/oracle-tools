@@ -3160,7 +3160,7 @@ $end
     -- GJP 2022-12-31 Not used
     -- l_transform_param_tab t_transform_param_tab;
     l_line_tab dbms_sql.varchar2a;
-    l_program constant t_module := 'DISPLAY_DDL_SQL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+    l_program constant t_module := 'DISPLAY_DDL_SQL (1)'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec :=
@@ -3198,7 +3198,7 @@ $end
     end convert_and_copy;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.enter(g_package_prefix || 'DISPLAY_DDL_SQL');
+    dbug.enter(g_package_prefix || l_program);
     dbug.print(dbug."input"
                ,'p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
                ,p_schema
@@ -3473,10 +3473,16 @@ $end
   return oracle_tools.t_schema_ddl_tab
   pipelined
   is
+    l_program constant t_module := 'DISPLAY_DDL_SCHEMA (1)'; 
+    
     l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
     l_schema_object_id_prev t_object := null;
     l_schema_ddl oracle_tools.t_schema_ddl;
   begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || l_program);
+$end
+
     -- use display_ddl_sql
     for r in
     ( select  oracle_tools.t_display_ddl_sql_rec
@@ -3531,8 +3537,40 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
     end if;
 
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+$end
+
     return; -- essential
-  end display_ddl_schema;
+
+
+  exception
+    when no_data_needed
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave;
+$end
+      null; -- not a real error, just a way to some cleanup
+
+    when no_data_found -- disappears otherwise (GJP 2022-12-29 as it should)
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave_on_error;
+$end
+      -- GJP 2022-12-29
+$if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
+      oracle_tools.pkg_ddl_error.reraise_error(l_program);
+$else      
+      null;
+$end      
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
+end display_ddl_schema;
 
   function display_ddl_sql
   ( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
@@ -3540,18 +3578,32 @@ $end
   return oracle_tools.t_display_ddl_sql_tab
   pipelined
   is
+    l_program constant t_module := 'DISPLAY_DDL_SQL (2)';
+    
     l_cursor sys_refcursor;
     l_display_ddl_sql_tab oracle_tools.t_display_ddl_sql_tab;
   begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || l_program);
+    dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+$end
+    
     oracle_tools.ddl_crud_api.get_display_ddl_sql_cursor(p_session_id, l_cursor);
 
     loop
       fetch l_cursor bulk collect into l_display_ddl_sql_tab limit c_fetch_limit;
 
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."input", 'l_display_ddl_sql_tab.count: %s', l_display_ddl_sql_tab.count);
+$end
+
       if l_display_ddl_sql_tab.count > 0
       then
         for i_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
         loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          dbug.print(dbug."info", 'pipe row');
+$end
           pipe row
           ( l_display_ddl_sql_tab(i_idx)
           );
@@ -3562,7 +3614,38 @@ $end
     end loop;
     close l_cursor;
 
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+$end
+
     return; -- essential
+
+  exception
+    when no_data_needed
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave;
+$end
+      null; -- not a real error, just a way to some cleanup
+
+    when no_data_found -- disappears otherwise (GJP 2022-12-29 as it should)
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave_on_error;
+$end
+      -- GJP 2022-12-29
+$if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
+      oracle_tools.pkg_ddl_error.reraise_error(l_program);
+$else      
+      null;
+$end      
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
   end display_ddl_sql;
 
   function display_ddl_schema
@@ -3571,10 +3654,17 @@ $end
   return oracle_tools.t_schema_ddl_tab
   pipelined
   is
+    l_program constant t_module := 'DISPLAY_DDL_SCHEMA (2)';
+    
     l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
     l_schema_object_id_prev t_object := null;
     l_schema_ddl oracle_tools.t_schema_ddl;
   begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || l_program);
+    dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+$end
+
     -- use display_ddl_sql
     for r in
     ( select  oracle_tools.t_display_ddl_sql_rec
@@ -3592,10 +3682,23 @@ $end
               ) t
     )
     loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print
+      ( dbug."info"
+      , 'l_schema_object_id_prev: %s; r.obj.schema_object_id: %s; cardinality(l_display_ddl_sql_prev_tab): %s'
+      , l_schema_object_id_prev
+      , r.obj.schema_object_id
+      , cardinality(l_display_ddl_sql_prev_tab)
+      );
+$end
+
       if l_schema_object_id_prev != r.obj.schema_object_id and cardinality(l_display_ddl_sql_prev_tab) > 0
       then
         -- output old
         l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null);
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        dbug.print(dbug."info", 'pipe row');
+$end
         pipe row (l_schema_ddl);
         l_display_ddl_sql_prev_tab.delete;
       end if;
@@ -3606,12 +3709,28 @@ $end
       l_schema_object_id_prev := r.obj.schema_object_id;
     end loop;
 
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.print
+    ( dbug."info"
+    , 'l_schema_object_id_prev: %s; cardinality(l_display_ddl_sql_prev_tab): %s'
+    , l_schema_object_id_prev
+    , cardinality(l_display_ddl_sql_prev_tab)
+    );
+$end
+
     -- output last
     if l_schema_object_id_prev is not null and cardinality(l_display_ddl_sql_prev_tab) > 0
     then
       l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null);
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'pipe row');
+$end
       pipe row (l_schema_ddl);
     end if;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+$end
 
     return; -- essential
   end display_ddl_schema;
