@@ -1,5 +1,5 @@
-create or replace view V_MY_GENERATE_DDL_SESSION_BATCH_PARAMETERS BEQUEATH CURRENT_USER as
-select  object_schema
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_GENERATE_DDL_SESSION_BATCH_PARAMETERS" ("OBJECT_SCHEMA", "OBJECT_TYPE", "BASE_OBJECT_SCHEMA", "BASE_OBJECT_TYPE", "NR_OBJECTS", "OBJECT_NAME_TAB", "BASE_OBJECT_NAME_TAB") BEQUEATH CURRENT_USER AS 
+  select  object_schema
 ,       object_type
 ,       base_object_schema
 ,       base_object_type
@@ -98,3 +98,4 @@ from    ( with vmsondy as
         )
 order by
         ddl_batch_order;
+

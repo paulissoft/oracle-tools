@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_GENERATE_DDL_SESSION_BATCHES" BEQUEATH CURRENT_USER AS 
+CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_GENERATE_DDL_SESSION_BATCHES" ("SESSION_ID", "SEQ", "CREATED", "START_TIME", "END_TIME", "ERROR_MESSAGE", "SCHEMA", "TRANSFORM_PARAM_LIST", "OBJECT_SCHEMA", "OBJECT_TYPE", "BASE_OBJECT_SCHEMA", "BASE_OBJECT_TYPE", "NR_OBJECTS", "OBJECT_NAME_TAB", "BASE_OBJECT_NAME_TAB", "SCHEMA_OBJECT_FILTER", "SCHEMA_OBJECT_FILTER_ID", "DDL_BATCH_GROUP") BEQUEATH CURRENT_USER AS 
   select  gdsb.session_id
 ,       gdsb.seq
 ,       gdsb.created
@@ -36,5 +36,4 @@ where   gdsb.session_id = (select oracle_tools.ddl_crud_api.get_session_id from 
 order by
         -- force TABLE to start early (see also t_schema_object.ddl_batch_order)
         ddl_batch_group;
-;
 
