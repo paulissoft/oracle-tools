@@ -706,9 +706,9 @@ $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
     case
       when c_steps(i_idx) = "named objects"
       then null;
-      when cardinality(l_schema_object_tab) is null
+      when nvl(cardinality(l_schema_object_tab), 0) = 0
       then null;
-      when cardinality(l_all_schema_object_tab) is null
+      when nvl(cardinality(l_all_schema_object_tab), 0) = 0
       then l_all_schema_object_tab := l_schema_object_tab;
       else l_all_schema_object_tab := l_all_schema_object_tab multiset union all l_schema_object_tab;      
     end case;
