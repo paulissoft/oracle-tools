@@ -1,11 +1,11 @@
-create or replace view V_MY_GENERATE_DDL_BATCH_SESSION_PARAMETERS BEQUEATH CURRENT_USER as
+create or replace view V_MY_GENERATE_DDL_SESSION_BATCH_PARAMETERS BEQUEATH CURRENT_USER as
 select  object_schema
 ,       object_type
 ,       base_object_schema
 ,       base_object_type
+,       nr_objects
 ,       object_name_tab
 ,       base_object_name_tab
-,       nr_objects
 from    ( with vmsondy as
           ( select  /*+ MATERIALIZE */
                     vmsondy.id
