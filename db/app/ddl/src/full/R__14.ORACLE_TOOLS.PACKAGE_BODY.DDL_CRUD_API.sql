@@ -1111,24 +1111,23 @@ end get_schema_objects_cursor;
 
 procedure get_display_ddl_sql_cursor
 ( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor out nocopy sys_refcursor
+, p_cursor out nocopy t_display_ddl_sql_obj_cur
 )
 is
 begin
   set_session_id(p_session_id); -- just a check
   
   open p_cursor for
-    select  oracle_tools.t_display_ddl_sql_rec
-            ( gd.schema_object_id
-            , gds.ddl#
-            , gds.verb
-            , case
-                when gds.verb is not null and gds.ddl# is not null
-                then oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#)
-              end
-            , gdsc.chunk#
-            , gdsc.chunk
-            )
+    select  gd.schema_object_id
+    ,       gds.ddl#
+    ,       gds.verb
+    ,       case
+              when gds.verb is not null and gds.ddl# is not null
+              then oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#)
+            end as ddl_info
+    ,       gdsc.chunk#
+    ,       gdsc.chunk
+    ,       so.obj as schema_object
     from    oracle_tools.generate_ddl_sessions gds
             inner join oracle_tools.generate_ddl_configurations gdc
             on gdc.id = gds.generate_ddl_configuration_id

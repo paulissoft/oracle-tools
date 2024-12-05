@@ -371,9 +371,23 @@ procedure get_schema_objects_cursor
 , p_cursor out nocopy sys_refcursor
 );
 
+type t_display_ddl_sql_obj_rec is record
+( schema_object_id oracle_tools.generated_ddls.schema_object_id%type
+, ddl# oracle_tools.generated_ddl_statements.ddl#%type
+, verb oracle_tools.generated_ddl_statements.verb%type
+, ddl_info varchar2(1000 byte)
+, chunk# oracle_tools.generated_ddl_statement_chunks.chunk#%type
+, chunk oracle_tools.generated_ddl_statement_chunks.chunk%type
+, schema_object oracle_tools.t_schema_object
+);
+
+type t_display_ddl_sql_obj_tab is table of t_display_ddl_sql_obj_rec;
+
+type t_display_ddl_sql_obj_cur is ref cursor return t_display_ddl_sql_obj_rec;
+
 procedure get_display_ddl_sql_cursor
 ( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor out nocopy sys_refcursor
+, p_cursor out nocopy t_display_ddl_sql_obj_cur
 );
 
 END DDL_CRUD_API;

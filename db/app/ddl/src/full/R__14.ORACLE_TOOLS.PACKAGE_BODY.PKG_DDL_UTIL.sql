@@ -3580,8 +3580,9 @@ end display_ddl_schema;
   is
     l_program constant t_module := 'DISPLAY_DDL_SQL (2)';
     
-    l_cursor sys_refcursor;
-    l_display_ddl_sql_tab oracle_tools.t_display_ddl_sql_tab;
+    l_cursor oracle_tools.ddl_crud_api.t_display_ddl_sql_obj_cur;
+    l_display_ddl_sql_obj_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_obj_tab;
+    l_output_idx pls_integer := 0;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -3591,26 +3592,34 @@ $end
     oracle_tools.ddl_crud_api.get_display_ddl_sql_cursor(p_session_id, l_cursor);
 
     loop
-      fetch l_cursor bulk collect into l_display_ddl_sql_tab limit c_fetch_limit;
+      fetch l_cursor bulk collect into l_display_ddl_sql_obj_tab limit c_fetch_limit;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."input", 'l_display_ddl_sql_tab.count: %s', l_display_ddl_sql_tab.count);
+      dbug.print(dbug."input", 'l_display_ddl_sql_obj_tab.count: %s', l_display_ddl_sql_obj_tab.count);
 $end
 
-      if l_display_ddl_sql_tab.count > 0
+      if l_display_ddl_sql_obj_tab.count > 0
       then
-        for i_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
+        for i_idx in l_display_ddl_sql_obj_tab.first .. l_display_ddl_sql_obj_tab.last
         loop
+          l_output_idx := l_output_idx + 1;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          dbug.print(dbug."info", 'pipe row');
+          dbug.print(dbug."info", '%s pipe row %s', l_program, l_output_idx);
 $end
           pipe row
-          ( l_display_ddl_sql_tab(i_idx)
+          ( oracle_tools.t_display_ddl_sql_rec
+            ( l_display_ddl_sql_obj_tab(i_idx).schema_object_id
+            , l_display_ddl_sql_obj_tab(i_idx).ddl#
+            , l_display_ddl_sql_obj_tab(i_idx).verb
+            , l_display_ddl_sql_obj_tab(i_idx).ddl_info
+            , l_display_ddl_sql_obj_tab(i_idx).chunk#
+            , l_display_ddl_sql_obj_tab(i_idx).chunk
+            )
           );
         end loop;
       end if;
 
-      exit when l_display_ddl_sql_tab.count < c_fetch_limit; -- next fetch will return 0 rows
+      exit when l_display_ddl_sql_obj_tab.count < c_fetch_limit; -- next fetch will return 0 rows
     end loop;
     close l_cursor;
 
@@ -3656,9 +3665,13 @@ $end
   is
     l_program constant t_module := 'DISPLAY_DDL_SCHEMA (2)';
     
+    l_cursor oracle_tools.ddl_crud_api.t_display_ddl_sql_obj_cur;
+    l_display_ddl_sql_obj_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_obj_tab;
     l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
-    l_schema_object_id_prev t_object := null;
+    l_schema_object_prev oracle_tools.t_schema_object := null;
     l_schema_ddl oracle_tools.t_schema_ddl;
+    l_input_idx pls_integer := 0;
+    l_output_idx pls_integer := 0;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -3666,64 +3679,61 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
     -- use display_ddl_sql
-    for r in
-    ( select  oracle_tools.t_display_ddl_sql_rec
-              ( t.schema_object_id
-              , t.ddl#
-              , t.verb
-              , t.ddl_info
-              , t.chunk#
-              , t.chunk
-              ) as obj
-      from    table
-              ( oracle_tools.pkg_ddl_util.display_ddl_sql
-                ( p_session_id => p_session_id
-                )
-              ) t
-    )
+    oracle_tools.ddl_crud_api.get_display_ddl_sql_cursor(p_session_id, l_cursor);
+
     loop
+      fetch l_cursor bulk collect into l_display_ddl_sql_obj_tab limit c_fetch_limit;
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print
-      ( dbug."info"
-      , 'l_schema_object_id_prev: %s; r.obj.schema_object_id: %s; cardinality(l_display_ddl_sql_prev_tab): %s'
-      , l_schema_object_id_prev
-      , r.obj.schema_object_id
-      , cardinality(l_display_ddl_sql_prev_tab)
-      );
+      dbug.print(dbug."input", 'l_display_ddl_sql_obj_tab.count: %s', l_display_ddl_sql_obj_tab.count);
 $end
 
-      if l_schema_object_id_prev != r.obj.schema_object_id and cardinality(l_display_ddl_sql_prev_tab) > 0
+      if l_display_ddl_sql_obj_tab.count > 0
       then
-        -- output old
-        l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null);
+        for i_idx in l_display_ddl_sql_obj_tab.first .. l_display_ddl_sql_obj_tab.last
+        loop
+          l_input_idx := l_input_idx + 1;
+
+          if l_schema_object_prev is not null and
+             l_schema_object_prev.id != l_display_ddl_sql_obj_tab(i_idx).schema_object.id and
+             cardinality(l_display_ddl_sql_prev_tab) > 0
+          then
+            -- output old
+            l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, l_schema_object_prev);
+            l_output_idx := l_output_idx + 1;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-        dbug.print(dbug."info", 'pipe row');
+            dbug.print(dbug."info", '%s pipe row %s', l_program, l_output_idx);
 $end
-        pipe row (l_schema_ddl);
-        l_display_ddl_sql_prev_tab.delete;
+            pipe row (l_schema_ddl);
+            l_display_ddl_sql_prev_tab.delete;
+          end if;
+          
+          -- always append the chunk to text_tab of last schema ddl
+          l_display_ddl_sql_prev_tab.extend(1);
+          l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) :=
+            oracle_tools.t_display_ddl_sql_rec
+            ( l_display_ddl_sql_obj_tab(i_idx).schema_object_id
+            , l_display_ddl_sql_obj_tab(i_idx).ddl#
+            , l_display_ddl_sql_obj_tab(i_idx).verb
+            , l_display_ddl_sql_obj_tab(i_idx).ddl_info
+            , l_display_ddl_sql_obj_tab(i_idx).chunk#
+            , l_display_ddl_sql_obj_tab(i_idx).chunk
+            );
+          l_schema_object_prev := l_display_ddl_sql_obj_tab(i_idx).schema_object;
+        end loop;
       end if;
 
-      -- always append the chunk to text_tab of last schema ddl
-      l_display_ddl_sql_prev_tab.extend(1);
-      l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) := r.obj;
-      l_schema_object_id_prev := r.obj.schema_object_id;
+      exit when l_display_ddl_sql_obj_tab.count < c_fetch_limit; -- next fetch will return 0 rows
     end loop;
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    dbug.print
-    ( dbug."info"
-    , 'l_schema_object_id_prev: %s; cardinality(l_display_ddl_sql_prev_tab): %s'
-    , l_schema_object_id_prev
-    , cardinality(l_display_ddl_sql_prev_tab)
-    );
-$end
+    close l_cursor;
 
     -- output last
-    if l_schema_object_id_prev is not null and cardinality(l_display_ddl_sql_prev_tab) > 0
+    if l_schema_object_prev is not null and cardinality(l_display_ddl_sql_prev_tab) > 0
     then
-      l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null);
+      l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, l_schema_object_prev);
+      l_output_idx := l_output_idx + 1;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."info", 'pipe row');
+      dbug.print(dbug."info", '%s pipe row %s', l_program, l_output_idx);
 $end
       pipe row (l_schema_ddl);
     end if;
@@ -3733,6 +3743,33 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
     return; -- essential
+
+  exception
+    when no_data_needed
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave;
+$end
+      null; -- not a real error, just a way to some cleanup
+
+    when no_data_found -- disappears otherwise (GJP 2022-12-29 as it should)
+    then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.leave_on_error;
+$end
+      -- GJP 2022-12-29
+$if oracle_tools.pkg_ddl_util.c_err_pipelined_no_data_found $then
+      oracle_tools.pkg_ddl_error.reraise_error(l_program);
+$else      
+      null;
+$end      
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end
   end display_ddl_schema;
 
   procedure create_schema_ddl
