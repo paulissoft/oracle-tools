@@ -3553,14 +3553,7 @@ $end
         for i_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
         loop
           pipe row
-          ( oracle_tools.t_display_ddl_sql_rec
-            ( l_display_ddl_sql_tab(i_idx).schema_object_id
-            , l_display_ddl_sql_tab(i_idx).ddl#
-            , l_display_ddl_sql_tab(i_idx).verb
-            , l_display_ddl_sql_tab(i_idx).ddl_info
-            , l_display_ddl_sql_tab(i_idx).chunk#
-            , l_display_ddl_sql_tab(i_idx).chunk
-            )
+          ( l_display_ddl_sql_tab(i_idx)
           );
         end loop;
       end if;

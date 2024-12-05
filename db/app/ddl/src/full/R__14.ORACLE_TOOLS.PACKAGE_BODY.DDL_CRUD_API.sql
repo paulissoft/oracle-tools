@@ -719,11 +719,11 @@ begin
   then
     g_session_id := p_session_id;
   else
-    -- can only set session id for my own sessions
+    -- can only set session id for my own sessions or when I am ORACLE_TOOLS
     select  gds.session_id
     into    g_session_id
     from    oracle_tools.generate_ddl_sessions gds
-    where   gds.username = user
+    where   user in (gds.username, $$PLSQL_UNIT_OWNER)
     and     gds.session_id = p_session_id;
   end if;
 end set_session_id;
@@ -1118,15 +1118,17 @@ begin
   set_session_id(p_session_id); -- just a check
   
   open p_cursor for
-    select  gd.schema_object_id
-    ,       gds.ddl#
-    ,       gds.verb
-    ,       case
-              when gds.verb is not null and gds.ddl# is not null
-              then (select oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#) from dual)
-            end as ddl_info
-    ,       gdsc.chunk#
-    ,       gdsc.chunk
+    select  oracle_tools.t_display_ddl_sql_rec
+            ( gd.schema_object_id
+            , gds.ddl#
+            , gds.verb
+            , case
+                when gds.verb is not null and gds.ddl# is not null
+                then oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#)
+              end
+            , gdsc.chunk#
+            , gdsc.chunk
+            )
     from    oracle_tools.generate_ddl_sessions gds
             inner join oracle_tools.generate_ddl_configurations gdc
             on gdc.id = gds.generate_ddl_configuration_id

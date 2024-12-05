@@ -55,7 +55,7 @@ procedure set_session_id
 Set the session id that will be used for the CRUD operations.
 
 The p_session_id parameter must be:
-a. on of the SESSION_ID values from GENERATE_DDL_SESSIONS (same USER) **OR**
+a. one of the SESSION_ID values from GENERATE_DDL_SESSIONS (same USER or USER is 'ORACLE_TOOLS') **OR**
 b. the current session id (to_number(sys_context('USERENV', 'SESSIONID')))
 
 **/
