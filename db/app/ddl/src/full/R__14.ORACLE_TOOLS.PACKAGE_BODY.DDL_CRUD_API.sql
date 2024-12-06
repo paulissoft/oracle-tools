@@ -1177,10 +1177,10 @@ begin
     then oracle_tools.pkg_ddl_error.raise_error
          ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
          , utl_lms.format_message
-           ( 'Could not set ORACLE_TOOLS.GENERATE_DDL_SESSION_SCHEMA_OBJECTS.DDL_OUTPUT_WRITTEN to "%s"'
-           , to_char(p_ddl_output_written)
+           ( 'Could not set ORACLE_TOOLS.GENERATE_DDL_SESSION_SCHEMA_OBJECTS.DDL_OUTPUT_WRITTEN to %s'
+           , nvl(to_char(p_ddl_output_written), 'NULL')
            )
-         , utl_lms.format_message('session id: "%s"; schema object id: "%s"', to_char(l_session_id), p_schema_object_id)
+         , utl_lms.format_message('%s, "%s"', to_char(l_session_id), nvl(p_schema_object_id, '%'))
          , 'session id, schema object id'
          );
     else null; -- ok
