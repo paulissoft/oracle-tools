@@ -39,6 +39,7 @@ as
   l_text_tab oracle_tools.t_text_tab;
   l_last_chunk_tab dbms_sql.number_table;
   l_schema_object_id_tab dbms_sql.varchar2_table;
+  l_first_row boolean := true;
 
   c_fetch_limit constant pls_integer := 100;
 
@@ -149,9 +150,6 @@ $end
           ;
         end if;
 
-        -- let's go to work
-        oracle_tools.ddl_crud_api.set_ddl_output_written(null, null); -- clear ddl_output_written
-
         dbms_lob.trim(po_clob, 0);
         oracle_tools.pkg_str_util.append_text('-- '||l_interface_tab(i_interface_idx), po_clob); -- So Perl script generate_ddl.pl knows how to read the output
 
@@ -163,6 +161,13 @@ $end
 
           if l_ddl_info_tab.count > 0
           then
+            if l_first_row
+            then
+              -- let's go to work
+              oracle_tools.ddl_crud_api.set_ddl_output_written(null, null); -- clear ddl_output_written
+              l_first_row := false;
+            end if;
+
             if l_chunk_tab.count > 0
             then
               for i_idx in l_chunk_tab.first .. l_chunk_tab.last
