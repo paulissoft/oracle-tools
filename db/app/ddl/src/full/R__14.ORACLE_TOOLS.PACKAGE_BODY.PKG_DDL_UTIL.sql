@@ -3154,7 +3154,6 @@ $end
     l_cursor sys_refcursor;
 
     l_display_ddl_sql_curr_tab oracle_tools.t_display_ddl_sql_tab;
-    l_schema_object_id_prev t_object := null;
     l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
 
     -- GJP 2022-12-31 Not used
@@ -3176,7 +3175,11 @@ $end
     is
       l_schema_ddl oracle_tools.t_schema_ddl := null;
     begin
-      l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(p_display_ddl_sql_tab, null);
+      l_schema_ddl :=
+        oracle_tools.t_schema_ddl.create_schema_ddl
+        ( p_display_ddl_sql_tab
+        , p_display_ddl_sql_tab(p_display_ddl_sql_tab.last).schema_object
+        );
       p_display_ddl_sql_tab := null;
 
       -- change of schema_ddl: print it
@@ -3255,7 +3258,7 @@ $end
       );
 
       open l_cursor for '
-select  oracle_tools.t_display_ddl_sql_rec
+select  oracle_tools.t_display_ddl_sql
         ( t.schema_object_id
         , t.ddl#
         , t.verb
@@ -3314,13 +3317,15 @@ $end
       if nvl(p_sort_objects_by_deps, 0) != 0
       then
         open l_cursor for
-          select  oracle_tools.t_display_ddl_sql_rec
+          select  oracle_tools.t_display_ddl_sql
                   ( s.obj.id
                   , s.ddl#
                   , s.verb
                   , s.ddl_info
                   , s.chunk#
                   , s.chunk
+                  , s.last_chunk
+                  , s.obj
                   )
           from    oracle_tools.v_my_schema_ddls s
                   -- GPA 27-10-2016 We should not forget objects so use left outer join
@@ -3342,13 +3347,15 @@ $end
       else
         -- normal stuff: no network link, no dependency sorting
         open l_cursor for
-          select  oracle_tools.t_display_ddl_sql_rec
+          select  oracle_tools.t_display_ddl_sql
                   ( s.obj.id
                   , s.ddl#
                   , s.verb
                   , s.ddl_info
                   , s.chunk#
                   , s.chunk
+                  , s.last_chunk
+                  , s.obj
                   )
           from    oracle_tools.v_my_schema_ddls s
           order by
@@ -3371,9 +3378,12 @@ $end
       then
         for i_idx in l_display_ddl_sql_curr_tab.first .. l_display_ddl_sql_curr_tab.last
         loop
-          if l_schema_object_id_prev != l_display_ddl_sql_curr_tab(i_idx).schema_object_id
+          -- save current values 
+          l_display_ddl_sql_prev_tab.extend(1);
+          l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) := l_display_ddl_sql_curr_tab(i_idx);
+          
+          if l_display_ddl_sql_curr_tab(i_idx).last_chunk = 1
           then
-            -- both schema object id's not null and not equal: output prev
             convert_and_copy
             ( l_display_ddl_sql_prev_tab
             );
@@ -3390,36 +3400,11 @@ $end
             end if;
             l_display_ddl_sql_prev_tab.delete;
           end if;
-
-          -- save current values 
-          l_display_ddl_sql_prev_tab.extend(1);
-          l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) := l_display_ddl_sql_curr_tab(i_idx);
-          l_schema_object_id_prev := l_display_ddl_sql_curr_tab(i_idx).schema_object_id;
         end loop;
       end if;
       exit fetch_loop when l_display_ddl_sql_curr_tab.count < c_fetch_limit;
     end loop fetch_loop;
     close l_cursor;
-
-    -- output last
-    if l_schema_object_id_prev is not null
-    then
-      -- output last
-      convert_and_copy
-      ( l_display_ddl_sql_prev_tab
-      );
-      if cardinality(l_display_ddl_sql_prev_tab) > 0
-      then
-        for i_row_idx in l_display_ddl_sql_prev_tab.first .. l_display_ddl_sql_prev_tab.last
-        loop
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-          dbug.print(dbug."info", 'display_ddl_sql.schema_object_id: %s', l_display_ddl_sql_prev_tab(i_row_idx).schema_object_id);
-$end
-          pipe row (l_display_ddl_sql_prev_tab(i_row_idx));
-          oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
-        end loop;
-      end if;
-    end if;
 
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
 
@@ -3476,7 +3461,6 @@ $end
     l_program constant t_module := 'DISPLAY_DDL_SCHEMA (1)'; 
     
     l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
-    l_schema_object_id_prev t_object := null;
     l_schema_ddl oracle_tools.t_schema_ddl;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -3485,14 +3469,7 @@ $end
 
     -- use display_ddl_sql
     for r in
-    ( select  oracle_tools.t_display_ddl_sql_rec
-              ( t.schema_object_id
-              , t.ddl#
-              , t.verb
-              , t.ddl_info
-              , t.chunk#
-              , t.chunk
-              ) as obj
+    ( select  t.*
       from    table
               ( oracle_tools.pkg_ddl_util.display_ddl_sql
                 ( p_schema => p_schema
@@ -3510,39 +3487,37 @@ $end
               ) t
     )
     loop
-      if l_schema_object_id_prev != r.obj.schema_object_id and cardinality(l_display_ddl_sql_prev_tab) > 0
+      -- always append the chunk to text_tab of last schema ddl
+      l_display_ddl_sql_prev_tab.extend(1);
+      l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) :=
+        oracle_tools.t_display_ddl_sql
+        ( r.schema_object_id
+        , r.ddl#
+        , r.verb
+        , r.ddl_info
+        , r.chunk#
+        , r.chunk
+        , r.last_chunk
+        , r.schema_object
+        );
+        
+      if r.last_chunk = 1 and cardinality(l_display_ddl_sql_prev_tab) > 0
       then
         -- output old
-        l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null);
+        l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, r.schema_object);
         pipe row (l_schema_ddl);
         l_display_ddl_sql_prev_tab.delete;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.print(dbug."info", 'schema_ddl.obj.id: %s', l_schema_ddl.obj.id);
 $end
       end if;
-
-      -- always append the chunk to text_tab of last schema ddl
-      l_display_ddl_sql_prev_tab.extend(1);
-      l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) := r.obj;
-      l_schema_object_id_prev := r.obj.schema_object_id;
     end loop;
-
-    -- output last
-    if l_schema_object_id_prev is not null and cardinality(l_display_ddl_sql_prev_tab) > 0
-    then
-      l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, null);
-      pipe row (l_schema_ddl);
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      dbug.print(dbug."info", 'schema_ddl.obj.id: %s', l_schema_ddl.obj.id);
-$end
-    end if;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
     return; -- essential
-
 
   exception
     when no_data_needed
@@ -3580,8 +3555,8 @@ end display_ddl_schema;
   is
     l_program constant t_module := 'DISPLAY_DDL_SQL (2)';
     
-    l_cursor oracle_tools.ddl_crud_api.t_display_ddl_sql_obj_cur;
-    l_display_ddl_sql_obj_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_obj_tab;
+    l_cursor oracle_tools.ddl_crud_api.t_display_ddl_sql_cur;
+    l_display_ddl_sql_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_tab;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -3591,26 +3566,28 @@ $end
     oracle_tools.ddl_crud_api.get_display_ddl_sql_cursor(p_session_id, l_cursor);
 
     loop
-      fetch l_cursor bulk collect into l_display_ddl_sql_obj_tab limit c_fetch_limit;
+      fetch l_cursor bulk collect into l_display_ddl_sql_tab limit c_fetch_limit;
 
-      if l_display_ddl_sql_obj_tab.count > 0
+      if l_display_ddl_sql_tab.count > 0
       then
-        for i_idx in l_display_ddl_sql_obj_tab.first .. l_display_ddl_sql_obj_tab.last
+        for i_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
         loop
           pipe row
-          ( oracle_tools.t_display_ddl_sql_rec
-            ( l_display_ddl_sql_obj_tab(i_idx).schema_object_id
-            , l_display_ddl_sql_obj_tab(i_idx).ddl#
-            , l_display_ddl_sql_obj_tab(i_idx).verb
-            , l_display_ddl_sql_obj_tab(i_idx).ddl_info
-            , l_display_ddl_sql_obj_tab(i_idx).chunk#
-            , l_display_ddl_sql_obj_tab(i_idx).chunk
+          ( oracle_tools.t_display_ddl_sql
+            ( l_display_ddl_sql_tab(i_idx).schema_object_id
+            , l_display_ddl_sql_tab(i_idx).ddl#
+            , l_display_ddl_sql_tab(i_idx).verb
+            , l_display_ddl_sql_tab(i_idx).ddl_info
+            , l_display_ddl_sql_tab(i_idx).chunk#
+            , l_display_ddl_sql_tab(i_idx).chunk
+            , l_display_ddl_sql_tab(i_idx).last_chunk
+            , l_display_ddl_sql_tab(i_idx).schema_object
             )
           );
         end loop;
       end if;
 
-      exit when l_display_ddl_sql_obj_tab.count < c_fetch_limit; -- next fetch will return 0 rows
+      exit when l_display_ddl_sql_tab.count < c_fetch_limit; -- next fetch will return 0 rows
     end loop;
     close l_cursor;
 
@@ -3656,10 +3633,9 @@ $end
   is
     l_program constant t_module := 'DISPLAY_DDL_SCHEMA (2)';
     
-    l_cursor oracle_tools.ddl_crud_api.t_display_ddl_sql_obj_cur;
-    l_display_ddl_sql_obj_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_obj_tab;
+    l_cursor oracle_tools.ddl_crud_api.t_display_ddl_sql_cur;
+    l_display_ddl_sql_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_tab;
     l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
-    l_schema_object_prev oracle_tools.t_schema_object := null;
     l_schema_ddl oracle_tools.t_schema_ddl;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -3671,47 +3647,41 @@ $end
     oracle_tools.ddl_crud_api.get_display_ddl_sql_cursor(p_session_id, l_cursor);
 
     loop
-      fetch l_cursor bulk collect into l_display_ddl_sql_obj_tab limit c_fetch_limit;
+      fetch l_cursor bulk collect into l_display_ddl_sql_tab limit c_fetch_limit;
 
-      if l_display_ddl_sql_obj_tab.count > 0
+      if l_display_ddl_sql_tab.count > 0
       then
-        for i_idx in l_display_ddl_sql_obj_tab.first .. l_display_ddl_sql_obj_tab.last
+        for i_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
         loop
-          if l_schema_object_prev is not null and
-             l_schema_object_prev.id != l_display_ddl_sql_obj_tab(i_idx).schema_object.id and
+          -- always append the chunk to text_tab of last schema ddl
+          l_display_ddl_sql_prev_tab.extend(1);
+          l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) :=
+            oracle_tools.t_display_ddl_sql
+            ( l_display_ddl_sql_tab(i_idx).schema_object_id
+            , l_display_ddl_sql_tab(i_idx).ddl#
+            , l_display_ddl_sql_tab(i_idx).verb
+            , l_display_ddl_sql_tab(i_idx).ddl_info
+            , l_display_ddl_sql_tab(i_idx).chunk#
+            , l_display_ddl_sql_tab(i_idx).chunk
+            , l_display_ddl_sql_tab(i_idx).last_chunk
+            , l_display_ddl_sql_tab(i_idx).schema_object
+            );
+
+          if l_display_ddl_sql_tab(i_idx).last_chunk = 1 and
              cardinality(l_display_ddl_sql_prev_tab) > 0
           then
             -- output old
-            l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, l_schema_object_prev);
+            l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, l_display_ddl_sql_tab(i_idx).schema_object);
             pipe row (l_schema_ddl);
             l_display_ddl_sql_prev_tab.delete;
           end if;
           
-          -- always append the chunk to text_tab of last schema ddl
-          l_display_ddl_sql_prev_tab.extend(1);
-          l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) :=
-            oracle_tools.t_display_ddl_sql_rec
-            ( l_display_ddl_sql_obj_tab(i_idx).schema_object_id
-            , l_display_ddl_sql_obj_tab(i_idx).ddl#
-            , l_display_ddl_sql_obj_tab(i_idx).verb
-            , l_display_ddl_sql_obj_tab(i_idx).ddl_info
-            , l_display_ddl_sql_obj_tab(i_idx).chunk#
-            , l_display_ddl_sql_obj_tab(i_idx).chunk
-            );
-          l_schema_object_prev := l_display_ddl_sql_obj_tab(i_idx).schema_object;
         end loop;
       end if;
 
-      exit when l_display_ddl_sql_obj_tab.count < c_fetch_limit; -- next fetch will return 0 rows
+      exit when l_display_ddl_sql_tab.count < c_fetch_limit; -- next fetch will return 0 rows
     end loop;
     close l_cursor;
-
-    -- output last
-    if l_schema_object_prev is not null and cardinality(l_display_ddl_sql_prev_tab) > 0
-    then
-      l_schema_ddl := oracle_tools.t_schema_ddl.create_schema_ddl(l_display_ddl_sql_prev_tab, l_schema_object_prev);
-      pipe row (l_schema_ddl);
-    end if;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -6204,7 +6174,7 @@ $end
   pipelined
   is
     l_cursor sys_refcursor;
-    l_display_ddl_sql_rec oracle_tools.t_display_ddl_sql_rec;
+    l_display_ddl_sql oracle_tools.t_display_ddl_sql;
     l_program constant t_module := 'GET_DISPLAY_DDL_SQL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
     -- dbms_application_info stuff
@@ -6225,9 +6195,9 @@ $end
     l_cursor := dbms_sql.to_refcursor(g_cursor);
     g_cursor := null;
     loop
-      fetch l_cursor into l_display_ddl_sql_rec;
+      fetch l_cursor into l_display_ddl_sql;
       exit when l_cursor%notfound;
-      pipe row (l_display_ddl_sql_rec);
+      pipe row (l_display_ddl_sql);
       oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
     end loop;
     close l_cursor;

@@ -16,7 +16,7 @@ declare
     , 'T_DDL'
     , 'T_OBJECT_INFO_REC'
     , 'T_SCHEMA_OBJECT_FILTER'
-    , 'T_DISPLAY_DDL_SQL_REC'
+    , 'T_DISPLAY_DDL_SQL'
       -- must be last
     , 'T_TEXT_TAB' 
     );
@@ -39,7 +39,7 @@ declare
     );
   l_view_tab sys.odcivarchar2list :=
     sys.odcivarchar2list
-    ( 'V_ALL_SCHEMA_OBJECTS'
+    ( 'V_ALL_SCHEMA_OBJECTS' -- obsolete
     , 'V_DEPENDENT_OR_GRANTED_OBJECT_TYPES'
     , 'V_DISPLAY_DDL_SCHEMA'
     , 'V_MY_COMMENTS_DICT' -- obsolete
@@ -58,6 +58,7 @@ declare
     , 'V_MY_SCHEMA_OBJECT_FILTER'
     , 'V_MY_SCHEMA_OBJECT_FILTER_RESULTS'
     , 'V_MY_SCHEMA_OBJECT_INFO'
+    , 'V_SCHEMA_OBJECTS'
     );
   l_sequence_tab sys.odcivarchar2list :=
     sys.odcivarchar2list

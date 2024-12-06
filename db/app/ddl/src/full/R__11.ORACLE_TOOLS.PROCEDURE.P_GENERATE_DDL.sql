@@ -37,6 +37,8 @@ as
   l_chunk#_tab dbms_sql.number_table;
   l_chunk_tab oracle_tools.t_text_tab;
   l_text_tab oracle_tools.t_text_tab;
+  l_last_chunk_tab dbms_sql.number_table;
+  l_schema_object_id_tab dbms_sql.varchar2_table;
 
   c_fetch_limit constant pls_integer := 100;
 
@@ -102,6 +104,8 @@ $end
             ,       t.ddl_info -- output
             ,       t.chunk#
             ,       t.chunk -- output
+            ,       t.last_chunk
+            ,       t.schema_object_id
             from    table
                     ( oracle_tools.pkg_ddl_util.display_ddl_sql
                       ( p_schema => pi_source_schema
@@ -125,6 +129,8 @@ $end
             ,       t.ddl_info -- output
             ,       t.chunk#
             ,       t.chunk -- output
+            ,       t.last_chunk
+            ,       t.schema_object_id
             from    table
                     ( oracle_tools.pkg_ddl_util.display_ddl_sql_diff
                       ( p_object_type => pi_object_type
@@ -142,11 +148,18 @@ $end
                     ) t
           ;
         end if;
+
+        -- let's go to work
+        oracle_tools.ddl_crud_api.set_ddl_output_written(null, null); -- clear ddl_output_written
+
         dbms_lob.trim(po_clob, 0);
         oracle_tools.pkg_str_util.append_text('-- '||l_interface_tab(i_interface_idx), po_clob); -- So Perl script generate_ddl.pl knows how to read the output
 
         loop
-          fetch l_cursor bulk collect into l_ddl#_tab, l_ddl_info_tab, l_chunk#_tab, l_chunk_tab limit c_fetch_limit;
+          fetch l_cursor
+          bulk collect
+          into l_ddl#_tab, l_ddl_info_tab, l_chunk#_tab, l_chunk_tab, l_last_chunk_tab, l_schema_object_id_tab
+          limit c_fetch_limit;
 
           if l_ddl_info_tab.count > 0
           then
@@ -163,6 +176,13 @@ $end
                   oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(i_idx), po_clob);
                 end if;
                 dbms_lob.writeappend(lob_loc => po_clob, amount => length(l_chunk_tab(i_idx)), buffer => l_chunk_tab(i_idx));
+                if l_last_chunk_tab(i_idx) = 1
+                then
+                  oracle_tools.ddl_crud_api.set_ddl_output_written
+                  ( p_schema_object_id => l_schema_object_id_tab(i_idx)
+                  , p_ddl_output_written => 1
+                  ); -- set ddl_output_written for this schema object
+                end if;
               end loop;
               oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
             end if;

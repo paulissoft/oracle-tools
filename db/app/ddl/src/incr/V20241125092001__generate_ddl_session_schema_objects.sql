@@ -4,12 +4,14 @@ create table generate_ddl_session_schema_objects
 , schema_object_filter_id integer -- derivable from session_id, however needed for generate_ddl_session_schema_objects$fk$1
   constraint generate_ddl_session_schema_objects$nnc$schema_object_filter_id not null
 , schema_object_id varchar2(500 byte)
-  constraint generate_ddl_session_schema_objects$nnc$schema_object_id not null
+  constraint generate_ddl_session_schema_objects$nnc$schema_object_id not null  
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   constraint generate_ddl_session_schema_objects$nnc$created not null
 , last_ddl_time date -- all_objects.last_ddl_time
-, generate_ddl_configuration_id integer 
+, generate_ddl_configuration_id integer
+, ddl_output_written integer
+  constraint generate_ddl_session_schema_objects$ck$ddl_output_written check (ddl_output_written = 1)
 , constraint generate_ddl_session_schema_objects$pk
   primary key (session_id, schema_object_id)
 , constraint generate_ddl_session_schema_objects$fk$1

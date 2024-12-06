@@ -25,7 +25,7 @@ The interface for these tables is via these views (grant select to public):
 - V_MY_SCHEMA_OBJECT_INFO
 
 These are helper views:
-- V_ALL_SCHEMA_OBJECTS
+- V_SCHEMA_OBJECTS
 
 This package will not read dictionary objects (in)directly hence **AUTHID DEFINER**.
 
@@ -114,7 +114,7 @@ deterministic;
 /**
 Return the match percentage for the current session id: the percentage of objects to generate DDL for.
 
-Calculated as the sum of V_ALL_SCHEMA_OBJECTS.GENERATE_DDL (0 or 1) for the current session id divided by the total count of objects.
+Calculated as the sum of V_SCHEMA_OBJECTS.GENERATE_DDL (0 or 1) for the current session id divided by the total count of objects.
 **/
 
 function match_perc_threshold
@@ -371,24 +371,31 @@ procedure get_schema_objects_cursor
 , p_cursor out nocopy sys_refcursor
 );
 
-type t_display_ddl_sql_obj_rec is record
+type t_display_ddl_sql_rec is record
 ( schema_object_id oracle_tools.generated_ddls.schema_object_id%type
 , ddl# oracle_tools.generated_ddl_statements.ddl#%type
 , verb oracle_tools.generated_ddl_statements.verb%type
 , ddl_info varchar2(1000 byte)
 , chunk# oracle_tools.generated_ddl_statement_chunks.chunk#%type
 , chunk oracle_tools.generated_ddl_statement_chunks.chunk%type
+, last_chunk number(1, 0)
 , schema_object oracle_tools.t_schema_object
 );
 
-type t_display_ddl_sql_obj_tab is table of t_display_ddl_sql_obj_rec;
+type t_display_ddl_sql_tab is table of t_display_ddl_sql_rec;
 
-type t_display_ddl_sql_obj_cur is ref cursor return t_display_ddl_sql_obj_rec;
+type t_display_ddl_sql_cur is ref cursor return t_display_ddl_sql_rec;
 
 procedure get_display_ddl_sql_cursor
 ( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor out nocopy t_display_ddl_sql_obj_cur
+, p_cursor out nocopy t_display_ddl_sql_cur
 );
+
+procedure set_ddl_output_written
+( p_schema_object_id in varchar2 -- may be null, meaning all in this session
+, p_ddl_output_written in integer -- either null or 1
+);
+/** Set GENERATE_DDL_SESSION_SCHEMA_OBJECTS.DDL_OUTPUT_WRITTEN in the current session for every schema object matching the id. **/
 
 END DDL_CRUD_API;
 /

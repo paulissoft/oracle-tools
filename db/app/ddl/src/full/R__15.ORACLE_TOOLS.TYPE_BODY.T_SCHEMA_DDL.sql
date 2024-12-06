@@ -534,13 +534,15 @@ begin
         loop
           p_display_ddl_sql_tab.extend(1);
           p_display_ddl_sql_tab(p_display_ddl_sql_tab.last) :=
-            oracle_tools.t_display_ddl_sql_rec
+            oracle_tools.t_display_ddl_sql
             ( self.obj.id
             , self.ddl_tab(i_ddl_idx).ddl#
             , self.ddl_tab(i_ddl_idx).verb
             , self.ddl_tab(i_ddl_idx).ddl_info(self.obj)
             , i_text_idx
             , self.ddl_tab(i_ddl_idx).text_tab(i_text_idx)
+            , case when i_ddl_idx = self.ddl_tab.last and i_text_idx = self.ddl_tab(i_ddl_idx).text_tab.last then 1 else null end
+            , self.obj
             );
         end loop;
       end if;                

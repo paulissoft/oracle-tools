@@ -87,7 +87,7 @@ begin
   ,       count(*) as nr_objects
   into    l_nr_objects_generate_ddl
   ,       l_nr_objects
-  from    oracle_tools.v_all_schema_objects t
+  from    oracle_tools.v_schema_objects t
   where   t.session_id = p_session_id;
   
   return case when l_nr_objects > 0 then trunc((100 * l_nr_objects_generate_ddl) / l_nr_objects) else null end;
@@ -1111,42 +1111,73 @@ end get_schema_objects_cursor;
 
 procedure get_display_ddl_sql_cursor
 ( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor out nocopy t_display_ddl_sql_obj_cur
+, p_cursor out nocopy t_display_ddl_sql_cur
 )
 is
 begin
   set_session_id(p_session_id); -- just a check
   
   open p_cursor for
-    select  gd.schema_object_id
-    ,       gds.ddl#
-    ,       gds.verb
-    ,       case
-              when gds.verb is not null and gds.ddl# is not null
-              then oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#)
-            end as ddl_info
-    ,       gdsc.chunk#
-    ,       gdsc.chunk
-    ,       so.obj as schema_object
-    from    oracle_tools.generate_ddl_sessions gds
-            inner join oracle_tools.generate_ddl_configurations gdc
-            on gdc.id = gds.generate_ddl_configuration_id
-            inner join oracle_tools.generated_ddls gd
-            on gd.generate_ddl_configuration_id = gdc.id
-            inner join oracle_tools.schema_objects so
-            on so.id = gd.schema_object_id
-            left outer join oracle_tools.generated_ddl_statements gds
-            on gds.generated_ddl_id = gd.id
-            left outer join oracle_tools.generated_ddl_statement_chunks gdsc
-            on gdsc.generated_ddl_id = gds.generated_ddl_id and
-               gdsc.ddl# = gds.ddl#              
-    where   gds.session_id = p_session_id
+    with src as
+    ( select  gd.schema_object_id
+      ,       gds.ddl#
+      ,       gds.verb
+      ,       case
+                when gds.verb is not null and gds.ddl# is not null
+                then oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#)
+              end as ddl_info
+      ,       gdsc.chunk#
+      ,       gdsc.chunk
+      ,       so.obj as schema_object
+      ,       row_number() over (partition by gd.schema_object_id order by gds.ddl# desc, gdsc.chunk# desc) as seq_per_schema_object_desc
+      from    oracle_tools.generate_ddl_sessions gds
+              inner join oracle_tools.generate_ddl_configurations gdc
+              on gdc.id = gds.generate_ddl_configuration_id
+              inner join oracle_tools.generated_ddls gd
+              on gd.generate_ddl_configuration_id = gdc.id
+              inner join oracle_tools.schema_objects so
+              on so.id = gd.schema_object_id
+              left outer join oracle_tools.generated_ddl_statements gds
+              on gds.generated_ddl_id = gd.id
+              left outer join oracle_tools.generated_ddl_statement_chunks gdsc
+              on gdsc.generated_ddl_id = gds.generated_ddl_id and
+                 gdsc.ddl# = gds.ddl#              
+      where   gds.session_id = p_session_id
+    )
+    select  src.schema_object_id
+    ,       src.ddl#
+    ,       src.verb
+    ,       src.ddl_info
+    ,       src.chunk#
+    ,       src.chunk
+    ,       case when src.seq_per_schema_object_desc = 1 then 1 else null end as last_chunk
+    ,       src.schema_object
+    from    src
     order by
-            gd.schema_object_id
-    ,       gds.ddl#
-    ,       gds.verb
-    ,       gdsc.chunk#;
+            src.schema_object_id
+    ,       src.ddl#
+    ,       src.verb
+    ,       src.chunk#;
 end get_display_ddl_sql_cursor;
+
+procedure set_ddl_output_written
+( p_schema_object_id in varchar2
+, p_ddl_output_written in integer
+)
+is
+  l_session_id constant t_session_id := get_session_id;
+begin
+  update  oracle_tools.generate_ddl_session_schema_objects gdsso
+  set     gdsso.ddl_output_written = p_ddl_output_written
+  where   gdsso.session_id = l_session_id
+  and     ( p_schema_object_id is null or gdsso.schema_object_id = p_schema_object_id );
+  
+  case sql%rowcount
+    when 0
+    then raise no_data_found;
+    else null; -- ok
+  end case;
+end set_ddl_output_written;
 
 END DDL_CRUD_API;
 /

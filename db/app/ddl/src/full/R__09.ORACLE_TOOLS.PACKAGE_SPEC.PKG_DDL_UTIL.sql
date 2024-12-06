@@ -104,7 +104,7 @@ c_exclude_system_constraints constant boolean := false; -- true: only 'USER NAME
 -- If exclude not null constraints is false code with c_#138707615_1 (true/false irrelevant) will be inactive.
 c_exclude_not_null_constraints constant boolean := false;
 
-c_err_pipelined_no_data_found constant boolean := false; -- false: no exception for no_data_found in  pipelined functions
+c_err_pipelined_no_data_found constant boolean := true; -- false: no exception for no_data_found in  pipelined functions
 
 /*
 -- End of bugs/features
