@@ -1174,7 +1174,15 @@ begin
   
   case sql%rowcount
     when 0
-    then raise no_data_found;
+    then oracle_tools.pkg_ddl_error.raise_error
+         ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
+         , utl_lms.format_message
+           ( 'Could not set ORACLE_TOOLS.GENERATE_DDL_SESSION_SCHEMA_OBJECTS.DDL_OUTPUT_WRITTEN to "%s"'
+           , to_char(p_ddl_output_written)
+           )
+         , utl_lms.format_message('session id: "%s"; schema object id: "%s"', to_char(l_session_id), p_schema_object_id)
+         , 'session id, schema object id'
+         );
     else null; -- ok
   end case;
 end set_ddl_output_written;
