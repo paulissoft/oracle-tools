@@ -172,6 +172,15 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2024-12-07
+
+For interface version 4, files will also be reused and views can be named R__10.<seq>.[<schema>.]VIEW.<name>.sql.
+This way you do not need to create FORCE views: when view A depends on B you can just have:
+- R__10.00.VIEW.B.sql
+- R__10.01.VIEW.A.sql
+
+A DDL generate report in Markdown format is created at the end with output file name "ddl-generate-report.md" (when the database generates it).
+
 =item 2023-05-03
 
 The DDL for a view with an instead of trigger should be placed into the same
