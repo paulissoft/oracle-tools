@@ -45,6 +45,31 @@
 <colAssociation fkAssociation="BAB890AC-6D68-4F2C-5E81-37EDBF795A00" referredColumn="613B2DB2-8850-A2C4-488C-9EEF937877EA"/>
 </associations>
 </Column>
+<Column name="SCHEMA_OBJECT_FILTER_ID" id="22DCF9C4-AF14-729E-053A-EBE8070F249B">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATE_DDL_SESSION_SCHEMA_OBJECTS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECT_FILTER_ID</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>D440F3D4-DAF6-1D37-4E32-C0EBFFC35D16</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>*</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_SESSION_SCHEMA_OBJECTS$NNC$SCHEMA_OBJECT_FILTER_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<associations>
+<colAssociation fkAssociation="850D52D7-DDE9-B4ED-0481-F6EF5EE09636" referredColumn="ACC9B02B-6E23-9062-4A3D-3E13B01F3D45"/>
+</associations>
+</Column>
 <Column name="SCHEMA_OBJECT_ID" id="E87B3F7E-2C2B-5044-B542-E42BEC3CF9ED">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>GENERATE_DDL_SESSION_SCHEMA_OBJECTS</sourceObjSchema>
@@ -57,7 +82,7 @@
 <use>1</use>
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>500 BYTE</dataTypeSize>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
+<ownDataTypeParameters>500 BYTE,,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
@@ -69,6 +94,28 @@
 <colAssociation fkAssociation="850D52D7-DDE9-B4ED-0481-F6EF5EE09636" referredColumn="8805373F-984F-892B-883F-389AFFB05768"/>
 <colAssociation fkAssociation="D0CA2983-358F-1868-7D33-CB6B80373F29" referredColumn="AD410528-CDAA-D79B-975E-E48495FCF411"/>
 </associations>
+</Column>
+<Column name="CREATED" id="5D9C4D2D-DEC7-A639-5300-8017E57ED1D9">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATE_DDL_SESSION_SCHEMA_OBJECTS</sourceObjSchema>
+<sourceObjName>CREATED</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>6BD2A95B-E0EF-7EA0-1CE7-0B8D83D7F2F7</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT015</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<defaultValue>sys_extract_utc(systimestamp)</defaultValue>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATE_DDL_SESSION_SCHEMA_OBJECTS$NNC$CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
 </Column>
 <Column name="LAST_DDL_TIME" id="BDE5CCBF-DDB2-A40A-B5DB-DDA3F664E7D3">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -83,7 +130,7 @@
 <use>1</use>
 <logicalDatatype>LOGDT007</logicalDatatype>
 <dataTypeSize>7</dataTypeSize>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
+<ownDataTypeParameters>7,,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
@@ -108,7 +155,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <dataTypePrecision>*</dataTypePrecision>
 <dataTypeScale>0</dataTypeScale>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
+<ownDataTypeParameters>,*,0</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
@@ -119,52 +166,27 @@
 <colAssociation fkAssociation="D0CA2983-358F-1868-7D33-CB6B80373F29" referredColumn="8EF0A29E-6139-D3EF-834A-FE57BFC90397"/>
 </associations>
 </Column>
-<Column name="SCHEMA_OBJECT_FILTER_ID" id="22DCF9C4-AF14-729E-053A-EBE8070F249B">
+<Column name="DDL_OUTPUT_WRITTEN" id="7F2CB181-8069-1491-42CA-9861F7D1B7FB">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>GENERATE_DDL_SESSION_SCHEMA_OBJECTS</sourceObjSchema>
-<sourceObjName>SCHEMA_OBJECT_FILTER_ID</sourceObjName>
+<sourceObjName>DDL_OUTPUT_WRITTEN</sourceObjName>
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-12-07 15:27:21 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<importedID>D440F3D4-DAF6-1D37-4E32-C0EBFFC35D16</importedID>
+<importedID>AD884071-823C-6373-5272-87CF395293B4</importedID>
+<constraintName>GENERATE_DDL_SESSION_SCHEMA_OBJECTS$CK$DDL_OUTPUT_WRITTEN</constraintName>
+<nullsAllowed>true</nullsAllowed>
 <useDomainConstraints>false</useDomainConstraints>
 <use>1</use>
 <logicalDatatype>LOGDT019</logicalDatatype>
 <dataTypePrecision>*</dataTypePrecision>
 <dataTypeScale>0</dataTypeScale>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
-<containsPII>false</containsPII>
-<containsSensitiveInformation>false</containsSensitiveInformation>
+<checkConstraint>
+<implementationDef dbType="Generic Constraint" definition="ddl_output_written = 1"/>
+<implementationDef dbType="Oracle Database 12cR2" definition="ddl_output_written = 1"/>
+</checkConstraint>
+<ownDataTypeParameters>,*,0</ownDataTypeParameters>
 <autoIncrementCycle>false</autoIncrementCycle>
-<notNullConstraintName>GENERATE_DDL_SESSION_SCHEMA_OBJECTS$NNC$SCHEMA_OBJECT_FILTER_ID</notNullConstraintName>
-<propertyMap>
-<property name="copyComments" value="1"/>
-</propertyMap>
-<associations>
-<colAssociation fkAssociation="850D52D7-DDE9-B4ED-0481-F6EF5EE09636" referredColumn="ACC9B02B-6E23-9062-4A3D-3E13B01F3D45"/>
-</associations>
-</Column>
-<Column name="CREATED" id="5D9C4D2D-DEC7-A639-5300-8017E57ED1D9">
-<sourceConnName>oracle_tools@free</sourceConnName>
-<sourceObjSchema>GENERATE_DDL_SESSION_SCHEMA_OBJECTS</sourceObjSchema>
-<sourceObjName>CREATED</sourceObjName>
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<importedID>6BD2A95B-E0EF-7EA0-1CE7-0B8D83D7F2F7</importedID>
-<useDomainConstraints>false</useDomainConstraints>
-<use>1</use>
-<logicalDatatype>LOGDT015</logicalDatatype>
-<dataTypePrecision>6</dataTypePrecision>
-<defaultValue>sys_extract_utc(systimestamp)</defaultValue>
-<ownDataTypeParameters>,6,</ownDataTypeParameters>
-<containsPII>false</containsPII>
-<containsSensitiveInformation>false</containsSensitiveInformation>
-<autoIncrementCycle>false</autoIncrementCycle>
-<notNullConstraintName>GENERATE_DDL_SESSION_SCHEMA_OBJECTS$NNC$CREATED</notNullConstraintName>
-<propertyMap>
-<property name="copyComments" value="1"/>
-</propertyMap>
 </Column>
 </columns>
 <indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
