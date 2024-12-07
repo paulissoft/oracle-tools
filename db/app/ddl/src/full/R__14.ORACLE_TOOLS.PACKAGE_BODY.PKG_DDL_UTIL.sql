@@ -3786,6 +3786,7 @@ $end
     is
     begin
       PRAGMA INLINE (date2str, 'YES');
+      write(''); -- write a new line
       write('# DDL generate report on ' || date2str(sysdate)); -- Markdown
       write('## Parameters');
       write('```'); -- Markdown
