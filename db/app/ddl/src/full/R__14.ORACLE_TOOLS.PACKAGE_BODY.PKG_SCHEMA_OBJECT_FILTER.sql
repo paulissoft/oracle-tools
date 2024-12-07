@@ -231,7 +231,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
       if p_details is not null
       then
-        p_details := 'case ' || to_char(i_case, 'FM00') || ': ' || p_details;
+        p_details := 'IGNORE_OBJECT' || ' - case ' || to_char(i_case, 'FM00') || ': ' || p_details;
         p_result := i_case;
         exit;
       end if;
@@ -314,6 +314,11 @@ $end
       null; -- ok
     else
       raise program_error;
+    end if;
+
+    if p_details is not null
+    then
+      p_details := 'SEARCH' || ' - ' || p_details;
     end if;
     
     if p_result is null
