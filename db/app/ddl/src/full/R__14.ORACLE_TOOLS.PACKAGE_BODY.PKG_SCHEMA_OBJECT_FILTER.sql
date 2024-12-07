@@ -74,7 +74,7 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
     PRAGMA INLINE (is_nested_table, 'YES');
     p_result := 0;
     p_details := null;
-    for i_case in -2 .. 16
+    for i_case in -2 .. 18
     loop
       case i_case
         when -1
@@ -87,123 +87,135 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
         when 1
         then if p_object_type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and p_object_name like 'BIN$%' -- escape '\'
              then
-               p_details := q'[object name like 'BIN$%']';
+               p_details := q'[p_object_type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and p_object_name like 'BIN$%']';
              end if;
         
         -- JAVA$CLASS$MD5$TABLE
         when 2
         then if p_object_type in ('TABLE') and p_object_name like 'JAVA$CLASS$MD5$TABLE' -- escape '\'
              then
-               p_details := q'[object name like 'JAVA$CLASS$MD5$TABLE']';
+               p_details := q'[p_object_type in ('TABLE') and p_object_name like 'JAVA$CLASS$MD5$TABLE']';
              end if;
         
         -- no AQ indexes/views
         when 3
         then if p_object_type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and p_object_name like 'AQ$%' -- escape '\'
              then
-               p_details := q'[object name like 'AQ$%']';
+               p_details := q'[p_object_type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and p_object_name like 'AQ$%']';
              end if;
         
         -- no Flashback archive tables/indexes
         when 4
         then if p_object_type in ('TABLE', 'INDEX') and p_object_name like 'SYS\_FBA\_%' escape '\'
              then
-               p_details := q'[object name like 'SYS\_FBA\_%' escape '\']';
+               p_details := q'[p_object_type in ('TABLE', 'INDEX') and p_object_name like 'SYS\_FBA\_%' escape '\']';
              end if;
         
         -- no system generated indexes
         when 5
         then if p_object_type in ('INDEX') and p_object_name like 'SYS\_C%' escape '\'
              then
-               p_details := q'[object name like 'SYS\_C%' escape '\']';
+               p_details := q'[p_object_type in ('INDEX') and p_object_name like 'SYS\_C%' escape '\']';
              end if;
         
         -- no generated types by declaring pl/sql table types in package specifications
         when 6
         then if p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYS\_PLSQL\_%' escape '\'
              then
-               p_details := q'[object name like 'SYS\_PLSQL\_%' escape '\']';
+               p_details := q'[p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYS\_PLSQL\_%' escape '\']';
              end if;        
         
         -- see http://orasql.org/2012/04/28/a-funny-fact-about-collect/
         when 7
         then if p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYSTP%' -- escape '\'
              then
-               p_details := q'[object name like 'SYSTP%']';
+               p_details := q'[p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and object_name like 'SYSTP%']';
              end if;        
         
         -- no datapump tables
         when 8
         then if p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_SQL\_FILE\_SCHEMA%' escape '\'
              then
-               p_details := q'[object name like 'SYS\_SQL\_FILE\_SCHEMA%' escape '\']';
+               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_SQL\_FILE\_SCHEMA%' escape '\']';
              end if;        
         
         -- no datapump tables
         when 9
         then if p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DDL' escape '\'
              then
-               p_details := q'[object name like user || '\_DDL' escape '\']';
+               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DDL' escape '\']';
              end if;
         
         -- no datapump tables
         when 10
         then if p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DML' escape '\'
              then
-               p_details := q'[object name like user || '\_DML' escape '\']';
+               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DML' escape '\']';
              end if;
         
         -- no Oracle generated datapump tables
         when 11
         then if p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_EXPORT\_FULL\_%' escape '\'
              then
-               p_details := q'[object name like 'SYS\_EXPORT\_FULL\_%' escape '\']';
+               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_EXPORT\_FULL\_%' escape '\']';
              end if;
         
         -- no Flyway stuff and other Oracle things
         when 12
         then if p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and
-                ( p_object_name like 'schema\_version%' escape '\' or
-                  p_object_name like 'flyway\_schema\_history%' escape '\' or
-                  p_object_name like 'CREATE$JAVA$LOB$TABLE%' /*escape '\'*/ )
+                p_object_name like 'schema\_version%' escape '\'
              then
-               p_details := q'[object name matches 'schema\_version%' or 'flyway\_schema\_history%' or 'CREATE$JAVA$LOB$TABLE%']';
+               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and p_object_name like 'schema\_version%' escape '\']';
              end if;
-        
-        -- no identity column sequences
+
         when 13
+        then if p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and
+                p_object_name like 'flyway\_schema\_history%' escape '\'
+             then
+               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and p_object_name like 'flyway\_schema\_history%' escape '\']';
+             end if;
+
+        when 14
+        then if p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and
+                p_object_name like 'CREATE$JAVA$LOB$TABLE%' /*escape '\'*/
+             then
+               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and p_object_name like 'CREATE$JAVA$LOB$TABLE%' /*escape '\'*/]';
+             end if;
+
+        -- no identity column sequences
+        when 15
         then if p_object_type in ('SEQUENCE', 'OBJECT_GRANT') and p_object_name like 'ISEQ$$%' -- escape '\'
              then
-               p_details := q'[object name like 'ISEQ$$%']';
+               p_details := q'[p_object_type in ('SEQUENCE', 'OBJECT_GRANT') and p_object_name like 'ISEQ$$%']';
              end if;        
         
         -- nested tables
         -- nested table indexes but here we must compare on base_object_name
-        when 14
+        when 16
         then if p_object_type in ('TABLE', 'INDEX') and
                 is_nested_table
                 ( p_schema_object_filter.schema
                 , case when p_object_type = 'TABLE' then p_object_name else p_base_object_name end
                 )
              then
-               p_details := q'[(base) object name is a nested table]';
+               p_details := q'[p_object_type in ('TABLE', 'INDEX') and "nested table"]';
              end if;
         
         -- no special type specs
         -- ORACLE_TOOLS:TYPE_SPEC:SYS_YOID0000142575$:::::::
-        when 15
+        when 17
         then if p_object_type in ('TYPE_SPEC') and p_object_name like 'SYS\_YOID%' escape '\'
              then
-               p_details := q'[object name like 'SYS\_YOID%' escape '\']';
+               p_details := q'[p_object_type in ('TYPE_SPEC') and p_object_name like 'SYS\_YOID%' escape '\']';
              end if;        
         
         -- no nested table constraints
         -- /* SQL statement 16 (ALTER;ORACLE_TOOLS;CONSTRAINT;SYS_C0022887;ORACLE_TOOLS;TABLE;GENERATE_DDL_SESSION_BATCHES;;;;;2) */
         -- ALTER TABLE "ORACLE_TOOLS"."GENERATE_DDL_SESSION_BATCHES" DROP UNIQUE ("SYS_NC0001000011$") KEEP INDEX;
-        when 16
+        when 18
         then if p_object_type in ('CONSTRAINT', 'REF_CONSTRAINT') and p_object_name like 'SYS\_NC%' escape '\'
              then
-               p_details := q'[object name like 'SYS\_NC%' escape '\']';
+               p_details := q'[p_object_type in ('CONSTRAINT', 'REF_CONSTRAINT') and p_object_name like 'SYS\_NC%' escape '\']';
              end if;
              
         else null;
@@ -273,7 +285,7 @@ $end -- $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $th
       p_details :=
         utl_lms.format_message
         ( '[%s] compare "%s" "%s" "%s": %s'
-        , to_char(i_idx)
+        , to_char(i_idx, 'FM0000') -- see also pkg_ddl_util.ddl_generate_report
         , p_schema_object_id
         , p_schema_object_filter.object_cmp_tab$(i_idx)
         , p_schema_object_filter.object_tab$(i_idx)

@@ -249,6 +249,8 @@ procedure ddl_generate_report
 
 Append a DDL generate report in Markdown format to the output CLOB.
 
+When the output parameter is null, a temporary CLOB will be created for it that YOU must free afterwards.
+
 The first line (if any) will start with:
 
 ```

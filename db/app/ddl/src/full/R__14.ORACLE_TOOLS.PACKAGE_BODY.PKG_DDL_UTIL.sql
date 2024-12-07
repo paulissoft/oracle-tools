@@ -3759,7 +3759,7 @@ $end
     end bool2str;
     
     function bool2str
-    ( p_value in positive
+    ( p_value in number
     )
     return varchar2
     is
@@ -3789,26 +3789,26 @@ $end
       write('# DDL generate report on ' || date2str(sysdate)); -- Markdown
       write('## Parameters');
       write('```'); -- Markdown
-      write('schema              : ' || p_schema_object_filter.schema());
-      write('grantor is schema   : ' || bool2str(p_schema_object_filter.grantor_is_schema()));
+      write('schema               : ' || p_schema_object_filter.schema());
+      write('grantor is schema    : ' || bool2str(p_schema_object_filter.grantor_is_schema()));
+      write('transform parameters : ' || ltrim(p_transform_param_list, ','));
+      write('database version     : ' || replace(to_char(p_db_version, 'FM00D0'), ',', '.')); -- just in case the decimal is a comma
+      write('last DDL time schema : ' || date2str(p_last_ddl_time_schema));
       if cardinality(p_schema_object_filter.object_tab$) > 0
       then
         for i_idx in p_schema_object_filter.object_tab$.first .. p_schema_object_filter.object_tab$.last
         loop          
           write
           ( utl_lms.format_message
-            ( '%s object %s   : %s %s'
+            ( '[%s] %s object: %s %s'
+            , to_char(i_idx, 'FM0000')
             , case when i_idx <= p_schema_object_filter.nr_excluded_objects$ then 'ex' else 'in' end || 'clude'
-            , to_char(i_idx, 'FM000')
             , p_schema_object_filter.object_cmp_tab$(i_idx)
             , p_schema_object_filter.object_tab$(i_idx)
             )
           );
         end loop;
       end if;
-      write('transform parameters: ' || p_transform_param_list);
-      write('database version    : ' || replace(to_char(p_db_version, 'FM00D0'), ',', '.')); -- just in case the decimal is a comma
-      write('last DDL time schema: ' || date2str(p_last_ddl_time_schema));
       write('```'); -- Markdown
     end print_header;
 
@@ -3820,11 +3820,12 @@ $end
     )
     is
       l_object_type_order constant positiven := p_schema_object.object_type_order();
-      l_result positive;
+      l_result natural;
       l_details varchar2(1000 byte);
     begin
       if not l_object_type_output_tab.exists(l_object_type_order)
       then
+        l_object_type_output_tab(l_object_type_order) := null;
         dbms_lob.createtemporary(l_object_type_output_tab(l_object_type_order), true);
         write(l_object_type_output_tab(l_object_type_order), '## ' || p_schema_object.object_type());
         write(l_object_type_output_tab(l_object_type_order), '| schema object | last DDL time | DDL generated | generate DDL | details |');
@@ -3847,8 +3848,8 @@ $end
         , p_error_message =>
             utl_lms.format_message
             ( 'expected result %s (from table SCHEMA_OBJECT_FILTER_RESULTS) not equal to actual result %s (%s)'
-            , p_generate_ddl
-            , l_result
+            , bool2str(p_generate_ddl)
+            , bool2str(l_result)
             , l_details
             )
         , p_context_info => p_schema_object.id
@@ -3862,8 +3863,8 @@ $end
         ( '| %s | %s | %s | %s | %s |'
         , p_schema_object.id
         , date2str(p_schema_object.last_ddl_time())
-        , p_ddl_generated
-        , p_generate_ddl
+        , bool2str(p_ddl_generated)
+        , bool2str(p_generate_ddl)
         , l_details
         )
       );
@@ -3885,6 +3886,11 @@ $end
       end loop;      
     end print_footer;
   begin
+    if p_output is null
+    then
+      dbms_lob.createtemporary(p_output, true);
+    end if;
+    
     oracle_tools.ddl_crud_api.get_ddl_generate_report_cursor
     ( p_session_id => nvl(p_session_id, oracle_tools.ddl_crud_api.get_session_id)
     , p_cursor => l_cursor
@@ -3899,18 +3905,18 @@ $end
           if not l_header_printed
           then
             print_header
-            ( l_ddl_generate_report_tab(i_idx).schema_object_filter
-            , l_ddl_generate_report_tab(i_idx).transform_param_list
-            , l_ddl_generate_report_tab(i_idx).db_version
-            , l_ddl_generate_report_tab(i_idx).last_ddl_time_schema
+            ( p_schema_object_filter => l_ddl_generate_report_tab(i_idx).schema_object_filter
+            , p_transform_param_list => l_ddl_generate_report_tab(i_idx).transform_param_list
+            , p_db_version => l_ddl_generate_report_tab(i_idx).db_version
+            , p_last_ddl_time_schema => l_ddl_generate_report_tab(i_idx).last_ddl_time_schema
             );
             l_header_printed := true;
           end if;
           print_schema_object
-          ( l_ddl_generate_report_tab(i_idx).schema_object_filter
-          , l_ddl_generate_report_tab(i_idx).schema_object
-          , l_ddl_generate_report_tab(i_idx).generate_ddl
-          , l_ddl_generate_report_tab(i_idx).ddl_generated
+          ( p_schema_object_filter => l_ddl_generate_report_tab(i_idx).schema_object_filter
+          , p_schema_object => l_ddl_generate_report_tab(i_idx).schema_object
+          , p_generate_ddl => l_ddl_generate_report_tab(i_idx).generate_ddl
+          , p_ddl_generated => l_ddl_generate_report_tab(i_idx).ddl_generated
           );
         end loop;
       end if;
