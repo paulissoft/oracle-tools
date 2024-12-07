@@ -1187,6 +1187,46 @@ begin
   end case;
 end set_ddl_output_written;
 
+procedure get_ddl_generate_report_cursor
+( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_cursor out nocopy t_ddl_generate_report_cur
+)
+is
+  l_session_id t_session_id;
+begin
+  set_session_id(p_session_id); -- just a check
+
+  l_session_id := get_session_id;
+
+  open p_cursor for
+    select  gdc.transform_param_list
+    ,       gdc.db_version
+    ,       gdc.last_ddl_time_schema
+    ,       sof.obj as schema_object_filter
+    ,       so.obj as schema_object
+    ,       sofr.generate_ddl
+    ,       nvl
+            ( ( select  1
+                from    oracle_tools.generate_ddl_session_schema_objects gdsso
+                where   gdsso.session_id = gds.session_id -- pk #1
+                and     gdsso.schema_object_id = sofr.schema_object_id -- pk #2
+                and     gdsso.last_ddl_time is not null
+                and     gdsso.generate_ddl_configuration_id is not null
+              )
+            , 0
+            ) as ddl_generated
+    from    oracle_tools.generate_ddl_sessions gds
+            inner join oracle_tools.generate_ddl_configurations gdc
+            on gdc.id = gds.generate_ddl_configuration_id
+            inner join oracle_tools.schema_object_filters sof
+            on sof.id = gds.schema_object_filter_id
+            inner join oracle_tools.schema_object_filter_results sofr
+            on sofr.schema_object_filter_id = sof.id
+            inner join oracle_tools.schema_objects so
+            on so.id = sofr.schema_object_id
+    where   gds.session_id = l_session_id;
+end get_ddl_generate_report_cursor;
+
 END DDL_CRUD_API;
 /
 

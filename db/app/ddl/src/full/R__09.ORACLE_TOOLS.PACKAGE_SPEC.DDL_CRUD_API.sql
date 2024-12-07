@@ -397,6 +397,30 @@ procedure set_ddl_output_written
 );
 /** Set GENERATE_DDL_SESSION_SCHEMA_OBJECTS.DDL_OUTPUT_WRITTEN in the current session for every schema object matching the id. **/
 
+type t_ddl_generate_report_rec is record
+( -- from GENERATE_DDL_CONFIGURATIONS
+  transform_param_list varchar2(4000 byte)
+, db_version number
+, last_ddl_time_schema date
+  -- from SCHEMA_OBJECT_FILTERS
+, schema_object_filter oracle_tools.t_schema_object_filter
+  -- from SCHEMA_OBJECTS
+, schema_object oracle_tools.t_schema_object
+  -- from SCHEMA_OBJECT_FILTER_RESULTS
+, generate_ddl number(1, 0) -- result of procedure PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT()
+  -- calculated
+, ddl_generated number(1, 0) -- see v_schema_objects.ddl_generated
+);
+
+type t_ddl_generate_report_tab is table of t_ddl_generate_report_rec;
+
+type t_ddl_generate_report_cur is ref cursor return t_ddl_generate_report_rec;
+
+procedure get_ddl_generate_report_cursor
+( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_cursor out nocopy t_ddl_generate_report_cur
+);
+
 END DDL_CRUD_API;
 /
 

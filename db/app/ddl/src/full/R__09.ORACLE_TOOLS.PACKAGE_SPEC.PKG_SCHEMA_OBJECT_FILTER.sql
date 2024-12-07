@@ -46,22 +46,31 @@ The constructor for an oracle_tools.t_schema_object_filter object.
 
 **/
 
+procedure matches_schema_object
+( p_schema_object_filter in oracle_tools.t_schema_object_filter -- The schema object filter
+, p_schema_object_id in varchar2 -- The schema object id
+, p_result out nocopy integer -- The result (0 = false, 1 = true)
+, p_details out nocopy varchar2 -- A varchar2(1000 char) should be enough
+);
+/** Does the schema object id match the schema object filter? **/
+
 function matches_schema_object
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
 , p_schema_object_id in varchar2
 )
 return integer
 deterministic;
+/** Does the schema object id match the schema object filter? **/
 
 function serialize
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 return json_object_t;
+/** Serialize the schema object filter to a JSON object. **/
 
 procedure print
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
 );
-
 /**
 
 Print the JSON representation of a schema object filter using the DBUG package.
