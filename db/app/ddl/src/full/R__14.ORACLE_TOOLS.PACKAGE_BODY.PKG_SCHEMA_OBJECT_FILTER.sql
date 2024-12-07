@@ -915,6 +915,7 @@ $end
       then raise program_error;
       when not(p_schema_object_filter.nr_excluded_objects$ between 0 and nvl(cardinality(p_schema_object_filter.object_tab$), 0))
       then raise program_error;
+      else null;
     end case;
     for i_idx in 1 .. nvl(cardinality(p_schema_object_filter.object_tab$), 0)
     loop
@@ -929,6 +930,8 @@ $end
         then null;
         when i_idx > p_schema_object_filter.nr_excluded_objects$
         then raise_application_error(-20000, 'compare "' || p_schema_object_filter.object_cmp_tab$(i_idx) || '" should be a positive comparison for item ' || i_idx);
+
+        else null;
       end case;
       
       -- sorted?
