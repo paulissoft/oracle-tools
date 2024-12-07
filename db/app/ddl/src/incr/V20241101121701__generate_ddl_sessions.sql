@@ -30,11 +30,11 @@ tablespace users
 alter table generate_ddl_sessions nologging;
 
 -- foreign key index generate_ddl_sessions$fk$1
-create index generate_ddl_sessions$fk$1
+create index generate_ddl_sessions$idx$1
 on generate_ddl_sessions(schema_object_filter_id);
 
 -- foreign key index generate_ddl_sessions$fk$2
-create index generate_ddl_sessions$fk$2
+create index generate_ddl_sessions$idx$2
 on generate_ddl_sessions(generate_ddl_configuration_id);
 
 comment on table generate_ddl_sessions is

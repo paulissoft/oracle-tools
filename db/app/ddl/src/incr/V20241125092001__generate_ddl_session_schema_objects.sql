@@ -33,15 +33,15 @@ tablespace users
 alter table generate_ddl_session_schema_objects nologging;
 
 -- foreign key index generate_ddl_session_schema_objects$fk$1
-create index generate_ddl_session_schema_objects$fk$1
+create index generate_ddl_session_schema_objects$idx$1
 on generate_ddl_session_schema_objects(schema_object_filter_id, schema_object_id);
 
 -- foreign key index generate_ddl_session_schema_objects$fk$2
-create index generate_ddl_session_schema_objects$fk$2
+create index generate_ddl_session_schema_objects$idx$2
 on generate_ddl_session_schema_objects(session_id);
 
 -- foreign key index generate_ddl_session_schema_objects$fk$3
-create index generate_ddl_session_schema_objects$fk$3
+create index generate_ddl_session_schema_objects$idx$3
 on generate_ddl_session_schema_objects(schema_object_id, last_ddl_time, generate_ddl_configuration_id);
 
 comment on table generate_ddl_session_schema_objects is

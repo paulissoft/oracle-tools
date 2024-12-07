@@ -3817,6 +3817,7 @@ $end
     , p_schema_object in oracle_tools.t_schema_object
     , p_generate_ddl in integer
     , p_ddl_generated in integer
+    , p_ddl_output_written in integer
     )
     is
       l_object_type_order constant positiven := p_schema_object.object_type_order();
@@ -3828,8 +3829,8 @@ $end
         l_object_type_output_tab(l_object_type_order) := null;
         dbms_lob.createtemporary(l_object_type_output_tab(l_object_type_order), true);
         write(l_object_type_output_tab(l_object_type_order), '## ' || p_schema_object.object_type());
-        write(l_object_type_output_tab(l_object_type_order), '| schema object | last DDL time | DDL generated | generate DDL | details |');
-        write(l_object_type_output_tab(l_object_type_order), '| :------------ | :------------ | :------------ | :----------- | :------ |');
+        write(l_object_type_output_tab(l_object_type_order), '| schema object | last DDL time | DDL output written | DDL generated | generate DDL | details |');
+        write(l_object_type_output_tab(l_object_type_order), '| :------------ | :------------ | :----------------- | :------------ | :----------- | :------ |');
       end if;
 
       oracle_tools.pkg_schema_object_filter.matches_schema_object
@@ -3860,9 +3861,10 @@ $end
       write
       ( l_object_type_output_tab(l_object_type_order)
       , utl_lms.format_message
-        ( '| %s | %s | %s | %s | %s |'
+        ( '| %s | %s | %s | %s | %s | %s |'
         , p_schema_object.id
         , date2str(p_schema_object.last_ddl_time())
+        , bool2str(p_ddl_output_written)
         , bool2str(p_ddl_generated)
         , bool2str(p_generate_ddl)
         , l_details
@@ -3917,6 +3919,7 @@ $end
           , p_schema_object => l_ddl_generate_report_tab(i_idx).schema_object
           , p_generate_ddl => l_ddl_generate_report_tab(i_idx).generate_ddl
           , p_ddl_generated => l_ddl_generate_report_tab(i_idx).ddl_generated
+          , p_ddl_output_written => l_ddl_generate_report_tab(i_idx).ddl_output_written
           );
         end loop;
       end if;

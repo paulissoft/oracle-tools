@@ -14,12 +14,12 @@ create table generated_ddls
   primary key (id)
 , constraint generated_ddls$uk$1
   unique (schema_object_id, last_ddl_time, generate_ddl_configuration_id)
-, constraint generated_ddls$fk$1
-  foreign key (schema_object_id)
-  references schema_objects(id) on delete cascade
-, constraint generate_ddls$fk$2
+, constraint generate_ddls$fk$1
   foreign key (generate_ddl_configuration_id)
   references oracle_tools.generate_ddl_configurations(id) on delete cascade
+, constraint generated_ddls$fk$2
+  foreign key (schema_object_id)
+  references schema_objects(id) on delete cascade
 )
 organization index
 tablespace users
@@ -29,10 +29,10 @@ overflow tablespace users
 
 alter table generated_ddls nologging;
 
--- no need to create foreign key index generated_ddls$fk$1 since the unique key starts with that column
-
-create index generated_ddls$fk$2
+create index generated_ddls$idx$1
 on generated_ddls(generate_ddl_configuration_id);
+
+-- no need to create foreign key index generated_ddls$fk$2 since the unique key starts with that column
 
 comment on table generated_ddls is
     'The generated DDL info for a specific schema object id, last DDL time and configuration.';

@@ -1205,16 +1205,12 @@ begin
     ,       sof.obj as schema_object_filter
     ,       so.obj as schema_object
     ,       sofr.generate_ddl
-    ,       nvl
-            ( ( select  1
-                from    oracle_tools.generate_ddl_session_schema_objects gdsso
-                where   gdsso.session_id = gds.session_id -- pk #1
-                and     gdsso.schema_object_id = sofr.schema_object_id -- pk #2
-                and     gdsso.last_ddl_time is not null
-                and     gdsso.generate_ddl_configuration_id is not null
-              )
-            , 0
-            ) as ddl_generated
+    ,       case
+              when gdsso.last_ddl_time is not null and gdsso.generate_ddl_configuration_id is not null
+              then 1
+              else 0
+            end as ddl_generated
+    ,       nvl(gdsso.ddl_output_written, 0) as ddl_output_written
     from    oracle_tools.generate_ddl_sessions gds
             inner join oracle_tools.generate_ddl_configurations gdc
             on gdc.id = gds.generate_ddl_configuration_id
@@ -1224,6 +1220,9 @@ begin
             on sofr.schema_object_filter_id = sof.id
             inner join oracle_tools.schema_objects so
             on so.id = sofr.schema_object_id
+            left outer join oracle_tools.generate_ddl_session_schema_objects gdsso
+            on gdsso.session_id = gds.session_id and
+               gdsso.schema_object_id = sofr.schema_object_id
     where   gds.session_id = l_session_id
     order by
             so.obj.id;

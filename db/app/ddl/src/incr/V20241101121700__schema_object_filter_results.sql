@@ -12,11 +12,11 @@ create table schema_object_filter_results
 , constraint schema_object_filter_results$pk
   primary key (schema_object_filter_id, schema_object_id)
 , constraint schema_object_filter_results$fk$1
-  foreign key (schema_object_filter_id)
-  references schema_object_filters(id) on delete cascade
-, constraint schema_object_filter_results$fk$2
   foreign key (schema_object_id)
   references schema_objects(id) on delete cascade
+, constraint schema_object_filter_results$fk$2
+  foreign key (schema_object_filter_id)
+  references schema_object_filters(id) on delete cascade
 )
 organization index
 tablespace users
@@ -24,12 +24,12 @@ tablespace users
 
 alter table schema_object_filter_results nologging;
 
--- Foreign key index schema_object_filter_results$fk$1 not necessary
--- since schema_object_filter_id is first part of primary key index.
-
--- foreign key index schema_object_filter_results$fk$2
-create index schema_object_filter_results$fk$2
+-- foreign key index schema_object_filter_results$fk$1
+create index schema_object_filter_results$idx$1
 on schema_object_filter_results(schema_object_id);
+
+-- Foreign key index schema_object_filter_results$fk$2 not necessary
+-- since schema_object_filter_id is first part of primary key index.
 
 comment on table schema_object_filter_results is
     'The schema object filter results, needed because the function matches_schema_object is too expensive.';

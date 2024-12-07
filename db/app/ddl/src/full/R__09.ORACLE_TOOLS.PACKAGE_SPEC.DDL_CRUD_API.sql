@@ -408,8 +408,9 @@ type t_ddl_generate_report_rec is record
 , schema_object oracle_tools.t_schema_object
   -- from SCHEMA_OBJECT_FILTER_RESULTS
 , generate_ddl number(1, 0) -- result of procedure PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT()
-  -- calculated
+  -- from GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 , ddl_generated number(1, 0) -- see v_schema_objects.ddl_generated
+, ddl_output_written number(1, 0)
 );
 
 type t_ddl_generate_report_tab is table of t_ddl_generate_report_rec;
