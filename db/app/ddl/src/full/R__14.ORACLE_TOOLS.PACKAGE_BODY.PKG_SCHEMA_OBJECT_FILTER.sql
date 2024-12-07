@@ -896,82 +896,6 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
   end add_items;
 
-  procedure chk
-  is
-    l_prev_idx positive := null;
-    l_prev_id varchar2(500 byte) := null;
-    l_prev_cmp varchar2(2 byte) := null;
-  begin
-    case
-      when p_schema_object_filter.schema$ is null
-      then raise program_error;
-      when p_schema_object_filter.grantor_is_schema$ is null
-      then raise program_error;
-      when p_schema_object_filter.grantor_is_schema$ not in (0, 1)
-      then raise program_error;
-      when nvl(cardinality(p_schema_object_filter.object_tab$), 0) !=
-           nvl(cardinality(p_schema_object_filter.object_cmp_tab$), 0)
-      then raise program_error;
-      when p_schema_object_filter.nr_excluded_objects$ is null
-      then raise program_error;
-      when not(p_schema_object_filter.nr_excluded_objects$ between 0 and nvl(cardinality(p_schema_object_filter.object_tab$), 0))
-      then raise program_error;
-      else null;
-    end case;
-    for i_idx in 1 .. nvl(cardinality(p_schema_object_filter.object_tab$), 0)
-    loop
-      -- compare: !~, !=, ~, =
-      case
-        when case l_prev_cmp                                    when '!~' then 1 when '!=' then 2 when '~' then 3 when '=' then 4 else 0 end
-             <=
-             case p_schema_object_filter.object_cmp_tab$(i_idx) when '!~' then 1 when '!=' then 2 when '~' then 3 when '=' then 4 end
-        then null;
-        else raise_application_error(-20000, 'previous compare "' || l_prev_cmp || '" should be before "' || p_schema_object_filter.object_cmp_tab$(i_idx) || '" for item ' || i_idx);
-      end case;
-      
-      -- all object_cmp_tab values correct?
-      case
-        when i_idx <= p_schema_object_filter.nr_excluded_objects$ and p_schema_object_filter.object_cmp_tab$(i_idx) in ('!=', '!~')
-        then null;
-        when i_idx <= p_schema_object_filter.nr_excluded_objects$
-        then raise_application_error(-20000, 'compare "' || p_schema_object_filter.object_cmp_tab$(i_idx) || '" should be a negative comparison for item ' || i_idx);
-        
-        when i_idx > p_schema_object_filter.nr_excluded_objects$ and p_schema_object_filter.object_cmp_tab$(i_idx) in ('=', '~')
-        then null;
-        when i_idx > p_schema_object_filter.nr_excluded_objects$
-        then raise_application_error(-20000, 'compare "' || p_schema_object_filter.object_cmp_tab$(i_idx) || '" should be a positive comparison for item ' || i_idx);
-
-        else null;
-      end case;
-      
-      -- sorted?
-      case
-        -- both l_prev_idx and i_idx in exclude section?
-        when i_idx <= p_schema_object_filter.nr_excluded_objects$ and
-             l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx) and
-             l_prev_id < p_schema_object_filter.object_tab$(i_idx)
-        then null;
-        when i_idx <= p_schema_object_filter.nr_excluded_objects$ and
-             l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx)
-        then raise_application_error(-20000, l_prev_id || ' should be before ' || p_schema_object_filter.object_tab$(i_idx) || ' for item ' || i_idx);
-        
-        -- both l_prev_idx and i_idx in include section?
-        when i_idx > p_schema_object_filter.nr_excluded_objects$ and
-             l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx) and
-             l_prev_id < p_schema_object_filter.object_tab$(i_idx)
-        then null;
-        when i_idx > p_schema_object_filter.nr_excluded_objects$ and
-             l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx)
-        then raise_application_error(-20000, l_prev_id || ' should be before ' || p_schema_object_filter.object_tab$(i_idx) || ' for item ' || i_idx);
-        
-        else null;
-      end case;
-      
-      l_prev_idx := i_idx;
-      l_prev_id := p_schema_object_filter.object_tab$(i_idx);
-      l_prev_cmp := p_schema_object_filter.object_cmp_tab$(i_idx);
-    end loop;
-  end chk;
 begin
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT');
@@ -1251,7 +1175,7 @@ $end
     p_schema_object_filter.object_cmp_tab$ := null;
   end if;
 
-  chk();
+  chk(p_schema_object_filter);
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   print(p_schema_object_filter);
@@ -1338,6 +1262,85 @@ $end
 
   return l_json_object;
 end serialize;
+
+procedure chk
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
+)
+is
+  l_prev_idx positive := null;
+  l_prev_id varchar2(500 byte) := null;
+  l_prev_cmp varchar2(2 byte) := null;
+begin
+  case
+    when p_schema_object_filter.schema$ is null
+    then raise program_error;
+    when p_schema_object_filter.grantor_is_schema$ is null
+    then raise program_error;
+    when p_schema_object_filter.grantor_is_schema$ not in (0, 1)
+    then raise program_error;
+    when nvl(cardinality(p_schema_object_filter.object_tab$), 0) !=
+         nvl(cardinality(p_schema_object_filter.object_cmp_tab$), 0)
+    then raise program_error;
+    when p_schema_object_filter.nr_excluded_objects$ is null
+    then raise program_error;
+    when not(p_schema_object_filter.nr_excluded_objects$ between 0 and nvl(cardinality(p_schema_object_filter.object_tab$), 0))
+    then raise program_error;
+    else null;
+  end case;
+  for i_idx in 1 .. nvl(cardinality(p_schema_object_filter.object_tab$), 0)
+  loop
+    -- compare: !~, !=, ~, =
+    case
+      when case l_prev_cmp                                    when '!~' then 1 when '!=' then 2 when '~' then 3 when '=' then 4 else 0 end
+           <=
+           case p_schema_object_filter.object_cmp_tab$(i_idx) when '!~' then 1 when '!=' then 2 when '~' then 3 when '=' then 4 end
+      then null;
+      else raise_application_error(-20000, 'previous compare "' || l_prev_cmp || '" should be before "' || p_schema_object_filter.object_cmp_tab$(i_idx) || '" for item ' || i_idx);
+    end case;
+    
+    -- all object_cmp_tab values correct?
+    case
+      when i_idx <= p_schema_object_filter.nr_excluded_objects$ and p_schema_object_filter.object_cmp_tab$(i_idx) in ('!=', '!~')
+      then null;
+      when i_idx <= p_schema_object_filter.nr_excluded_objects$
+      then raise_application_error(-20000, 'compare "' || p_schema_object_filter.object_cmp_tab$(i_idx) || '" should be a negative comparison for item ' || i_idx);
+      
+      when i_idx > p_schema_object_filter.nr_excluded_objects$ and p_schema_object_filter.object_cmp_tab$(i_idx) in ('=', '~')
+      then null;
+      when i_idx > p_schema_object_filter.nr_excluded_objects$
+      then raise_application_error(-20000, 'compare "' || p_schema_object_filter.object_cmp_tab$(i_idx) || '" should be a positive comparison for item ' || i_idx);
+
+      else null;
+    end case;
+    
+    -- sorted?
+    case
+      -- both l_prev_idx and i_idx in exclude section?
+      when i_idx <= p_schema_object_filter.nr_excluded_objects$ and
+           l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx) and
+           l_prev_id < p_schema_object_filter.object_tab$(i_idx)
+      then null;
+      when i_idx <= p_schema_object_filter.nr_excluded_objects$ and
+           l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx)
+      then raise_application_error(-20000, l_prev_id || ' should be before ' || p_schema_object_filter.object_tab$(i_idx) || ' for item ' || i_idx);
+      
+      -- both l_prev_idx and i_idx in include section?
+      when i_idx > p_schema_object_filter.nr_excluded_objects$ and
+           l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx) and
+           l_prev_id < p_schema_object_filter.object_tab$(i_idx)
+      then null;
+      when i_idx > p_schema_object_filter.nr_excluded_objects$ and
+           l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx)
+      then raise_application_error(-20000, l_prev_id || ' should be before ' || p_schema_object_filter.object_tab$(i_idx) || ' for item ' || i_idx);
+      
+      else null;
+    end case;
+    
+    l_prev_idx := i_idx;
+    l_prev_id := p_schema_object_filter.object_tab$(i_idx);
+    l_prev_cmp := p_schema_object_filter.object_cmp_tab$(i_idx);
+  end loop;
+end chk;
 
 procedure print
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter

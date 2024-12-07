@@ -68,6 +68,10 @@ function serialize
 return json_object_t;
 /** Serialize the schema object filter to a JSON object. **/
 
+procedure chk
+( p_schema_object_filter in oracle_tools.t_schema_object_filter
+);
+
 procedure print
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
 );

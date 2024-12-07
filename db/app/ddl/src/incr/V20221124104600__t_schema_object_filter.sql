@@ -26,6 +26,9 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" authid current_user as objec
   return integer
   deterministic
 , member function serialize return clob deterministic  
+, member procedure chk
+  ( self in oracle_tools.t_schema_object_filter
+  )
 , member procedure print
   ( self in oracle_tools.t_schema_object_filter
   )

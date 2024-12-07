@@ -178,6 +178,7 @@ $end
   -- when not found add it
   if p_schema_object_filter_id is null
   then
+    p_schema_object_filter.chk();
     insert into oracle_tools.schema_object_filters
     ( hash_bucket
     , hash_bucket_nr

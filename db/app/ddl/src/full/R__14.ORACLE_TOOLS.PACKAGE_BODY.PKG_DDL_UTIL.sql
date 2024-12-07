@@ -3786,6 +3786,7 @@ $end
     )
     is
     begin
+      p_schema_object_filter.chk();
       PRAGMA INLINE (date2str, 'YES');
       write(''); -- write a new line
       write('# DDL generate report on ' || date2str(sysdate)); -- Markdown

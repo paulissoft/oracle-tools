@@ -61,6 +61,16 @@ begin
   return oracle_tools.pkg_schema_object_filter.serialize(self).to_clob();
 end;
 
+member procedure chk
+( self in oracle_tools.t_schema_object_filter
+)
+is
+begin
+  oracle_tools.pkg_schema_object_filter.chk
+  ( p_schema_object_filter => self
+  );
+end chk;
+
 member procedure print
 ( self in oracle_tools.t_schema_object_filter
 )
