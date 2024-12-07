@@ -3732,8 +3732,9 @@ $end
     begin
       if p_nl != 0
       then
-        dbms_lob.writeappend(lob_loc => p_output, amount => length(p_buffer) + 1, buffer => p_buffer || chr(10));
-      else
+        write(p_output => p_output, p_buffer => p_buffer || chr(10), p_nl => 0);
+      elsif p_buffer is not null
+      then
         dbms_lob.writeappend(lob_loc => p_output, amount => length(p_buffer), buffer => p_buffer);
       end if;
     end write;
@@ -3741,7 +3742,7 @@ $end
     procedure write(p_buffer in varchar2, p_nl in naturaln default 1)
     is
     begin
-      write(p_output, p_buffer, p_nl);
+      write(p_output => p_output, p_buffer => p_buffer, p_nl => p_nl);
     end write;
 
     function bool2str
