@@ -66,7 +66,12 @@
 </PrimaryKey>
 </primaryKeys>
 <tableCheckConstraints itemClass="oracle.dbtools.crest.model.design.storage.oracle.TableCheckConstraintOracle">
-<TableCheckConstraint name="SCHEMA_OBJECTS$CK$1" id="5C2C118E-B086-B7A6-6AF1-9CE9D39E6CF5">
+<TableCheckConstraint name="SCHEMA_OBJECTS$CK$OBJ$LAST_DDL_TIME$" id="39AAEF9A-255E-E00C-065F-AED90F649BD9">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-12-07 15:36:16 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+</TableCheckConstraint>
+<TableCheckConstraint name="SCHEMA_OBJECTS$CK$OBJ" id="5C2C118E-B086-B7A6-6AF1-9CE9D39E6CF5">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
