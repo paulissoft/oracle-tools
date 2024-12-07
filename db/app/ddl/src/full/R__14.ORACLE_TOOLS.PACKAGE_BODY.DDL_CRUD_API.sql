@@ -1224,7 +1224,9 @@ begin
             on sofr.schema_object_filter_id = sof.id
             inner join oracle_tools.schema_objects so
             on so.id = sofr.schema_object_id
-    where   gds.session_id = l_session_id;
+    where   gds.session_id = l_session_id
+    order by
+            so.obj.id;
 end get_ddl_generate_report_cursor;
 
 END DDL_CRUD_API;

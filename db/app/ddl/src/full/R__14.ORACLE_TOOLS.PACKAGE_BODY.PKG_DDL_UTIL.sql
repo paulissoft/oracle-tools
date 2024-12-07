@@ -3717,6 +3717,212 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
   end display_ddl_schema;
 
+  procedure ddl_generate_report
+  ( p_session_id in positive
+  , p_output in out nocopy clob -- the CLOB to append the report to
+  )
+  is
+    l_cursor oracle_tools.ddl_crud_api.t_ddl_generate_report_cur;
+    l_ddl_generate_report_tab oracle_tools.ddl_crud_api.t_ddl_generate_report_tab;
+    l_header_printed boolean := false;
+    l_object_type_output_tab dbms_sql.clob_table;
+
+    procedure write(p_output in out nocopy clob, p_buffer in varchar2, p_nl in naturaln default 1)
+    is
+    begin
+      if p_nl != 0
+      then
+        dbms_lob.writeappend(lob_loc => p_output, amount => length(p_buffer) + 1, buffer => p_buffer || chr(10));
+      else
+        dbms_lob.writeappend(lob_loc => p_output, amount => length(p_buffer), buffer => p_buffer);
+      end if;
+    end write;
+
+    procedure write(p_buffer in varchar2, p_nl in naturaln default 1)
+    is
+    begin
+      write(p_output, p_buffer, p_nl);
+    end write;
+
+    function bool2str
+    ( p_value in boolean
+    )
+    return varchar2
+    is
+    begin
+      return
+        case p_value
+          when true then 'Y'
+          when false then 'N'
+          else '?'
+        end;
+    end bool2str;
+    
+    function bool2str
+    ( p_value in positive
+    )
+    return varchar2
+    is
+    begin
+      PRAGMA INLINE (bool2str, 'YES');
+      return bool2str(p_value != 0);
+    end bool2str;
+
+    function date2str
+    ( p_value in date
+    )
+    return varchar2
+    is
+    begin
+      return case when p_value is not null then to_char(p_value, 'yyyy-mm-dd hh24:mi:ss') end;
+    end date2str;
+    
+    procedure print_header
+    ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+    , p_transform_param_list in varchar2
+    , p_db_version in number
+    , p_last_ddl_time_schema in date
+    )
+    is
+    begin
+      PRAGMA INLINE (date2str, 'YES');
+      write('# DDL generate report on ' || date2str(sysdate)); -- Markdown
+      write('## Parameters');
+      write('```'); -- Markdown
+      write('schema              : ' || p_schema_object_filter.schema());
+      write('grantor is schema   : ' || bool2str(p_schema_object_filter.grantor_is_schema()));
+      if cardinality(p_schema_object_filter.object_tab$) > 0
+      then
+        for i_idx in p_schema_object_filter.object_tab$.first .. p_schema_object_filter.object_tab$.last
+        loop          
+          write
+          ( utl_lms.format_message
+            ( '%s object %s   : %s %s'
+            , case when i_idx <= p_schema_object_filter.nr_excluded_objects$ then 'ex' else 'in' end || 'clude'
+            , to_char(i_idx, 'FM000')
+            , p_schema_object_filter.object_cmp_tab$(i_idx)
+            , p_schema_object_filter.object_tab$(i_idx)
+            )
+          );
+        end loop;
+      end if;
+      write('transform parameters: ' || p_transform_param_list);
+      write('database version    : ' || replace(to_char(p_db_version, 'FM00D0'), ',', '.')); -- just in case the decimal is a comma
+      write('last DDL time schema: ' || date2str(p_last_ddl_time_schema));
+      write('```'); -- Markdown
+    end print_header;
+
+    procedure print_schema_object
+    ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+    , p_schema_object in oracle_tools.t_schema_object
+    , p_generate_ddl in integer
+    , p_ddl_generated in integer
+    )
+    is
+      l_object_type_order constant positiven := p_schema_object.object_type_order();
+      l_result positive;
+      l_details varchar2(1000 byte);
+    begin
+      if not l_object_type_output_tab.exists(l_object_type_order)
+      then
+        dbms_lob.createtemporary(l_object_type_output_tab(l_object_type_order), true);
+        write(l_object_type_output_tab(l_object_type_order), '## ' || p_schema_object.object_type());
+        write(l_object_type_output_tab(l_object_type_order), '| schema object | last DDL time | DDL generated | generate DDL | details |');
+        write(l_object_type_output_tab(l_object_type_order), '| :------------ | :------------ | :------------ | :----------- | :------ |');
+      end if;
+
+      oracle_tools.pkg_schema_object_filter.matches_schema_object
+      ( p_schema_object_filter => p_schema_object_filter
+      , p_schema_object_id => p_schema_object.id
+      , p_result => l_result
+      , p_details => l_details
+      );
+
+      if p_generate_ddl = l_result
+      then
+        null; -- ok
+      else
+        oracle_tools.pkg_ddl_error.raise_error
+        ( p_error_number => oracle_tools.pkg_ddl_error.c_matches_schema_object_exp_ne_act
+        , p_error_message =>
+            utl_lms.format_message
+            ( 'expected result %s (from table SCHEMA_OBJECT_FILTER_RESULTS) not equal to actual result %s (%s)'
+            , p_generate_ddl
+            , l_result
+            , l_details
+            )
+        , p_context_info => p_schema_object.id
+        , p_context_label => 'object schema'
+        );
+      end if;
+
+      write
+      ( l_object_type_output_tab(l_object_type_order)
+      , utl_lms.format_message
+        ( '| %s | %s | %s | %s | %s |'
+        , p_schema_object.id
+        , date2str(p_schema_object.last_ddl_time())
+        , p_ddl_generated
+        , p_generate_ddl
+        , l_details
+        )
+      );
+    end print_schema_object;
+
+    procedure print_footer
+    is
+      l_object_type_order positive := l_object_type_output_tab.first;
+    begin
+      while l_object_type_order is not null
+      loop
+        if l_object_type_output_tab(l_object_type_order) is not null
+        then
+          dbms_lob.append(dest_lob => p_output, src_lob => l_object_type_output_tab(l_object_type_order));
+          dbms_lob.freetemporary(l_object_type_output_tab(l_object_type_order));
+        end if;
+
+        l_object_type_order := l_object_type_output_tab.next(l_object_type_order);
+      end loop;      
+    end print_footer;
+  begin
+    oracle_tools.ddl_crud_api.get_ddl_generate_report_cursor
+    ( p_session_id => nvl(p_session_id, oracle_tools.ddl_crud_api.get_session_id)
+    , p_cursor => l_cursor
+    );
+    loop
+      fetch l_cursor bulk collect into l_ddl_generate_report_tab limit c_fetch_limit;
+
+      if l_ddl_generate_report_tab.count > 0
+      then
+        for i_idx in l_ddl_generate_report_tab.first .. l_ddl_generate_report_tab.last
+        loop
+          if not l_header_printed
+          then
+            print_header
+            ( l_ddl_generate_report_tab(i_idx).schema_object_filter
+            , l_ddl_generate_report_tab(i_idx).transform_param_list
+            , l_ddl_generate_report_tab(i_idx).db_version
+            , l_ddl_generate_report_tab(i_idx).last_ddl_time_schema
+            );
+            l_header_printed := true;
+          end if;
+          print_schema_object
+          ( l_ddl_generate_report_tab(i_idx).schema_object_filter
+          , l_ddl_generate_report_tab(i_idx).schema_object
+          , l_ddl_generate_report_tab(i_idx).generate_ddl
+          , l_ddl_generate_report_tab(i_idx).ddl_generated
+          );
+        end loop;
+      end if;
+      exit when l_ddl_generate_report_tab.count < c_fetch_limit; -- next fetch will return 0 rows
+    end loop;
+    close l_cursor;
+    if l_header_printed
+    then
+      print_footer;
+    end if;
+  end ddl_generate_report;
+
   procedure create_schema_ddl
   ( p_source_schema_ddl in oracle_tools.t_schema_ddl
   , p_target_schema_ddl in oracle_tools.t_schema_ddl

@@ -334,7 +334,7 @@ use constant FILE_MODIFIED => 'FILE_MODIFIED';
 
 # VARIABLES
 
-my $VERSION = "2023-01-05";
+my $VERSION = "2024-12-07";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
@@ -617,6 +617,7 @@ sub process () {
         # read interface (first line with '-- ')
         #
         my $interface_expr = '^-- (' . PKG_DDL_UTIL_V4 . '|' . PKG_DDL_UTIL_V5 . ')$';
+        my $ddl_generate_report_fh = undef;
 
       INTERFACE:
         while (defined(my $line = <$in>)) {
@@ -646,7 +647,7 @@ sub process () {
 
         # reset the line number back to 0 since the interface line may not be the first
         $. = 0; # $. = $. - 1;
-
+        
         while (defined(my $line = <$in>)) {
             print $fh $line
                 if (defined($fh) && !defined($single_output_file));
@@ -658,7 +659,13 @@ sub process () {
             # $. starts from 1
 
             if ($interface eq PKG_DDL_UTIL_V4 || $interface eq PKG_DDL_UTIL_V5) {
-                if ($line =~ m/^-- ddl info:\s*(?<ddl_info>\S.+)$/o) {
+                if (!defined($ddl_generate_report_fh) && $line =~ m/^# DDL generate report on/) {
+                    open($ddl_generate_report_fh, ">$encoding", File::Spec->catfile($output_directory, 'ddl-generate-report.md'));
+                }
+
+                if (defined($ddl_generate_report_fh)) {
+                    print { $ddl_generate_report_fh } $line, qq(\n);
+                } elsif ($line =~ m/^-- ddl info:\s*(?<ddl_info>\S.+)$/o) {
                     # Since all the grantees for one object will be saved in one file, we must determine the ddl# ourselves.
                     $ddl_info = $+{ddl_info};
                     
@@ -691,6 +698,9 @@ sub process () {
                         if (defined($next_line));
                 }
             }
+        }
+        if (defined($ddl_generate_report_fh)) {
+            close($ddl_generate_report_fh);
         }
     };
     if ($@) {

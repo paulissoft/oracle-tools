@@ -241,6 +241,24 @@ return oracle_tools.t_schema_ddl_tab
 pipelined;
 /** Returns information about generated DDL for this session. Will **NOT** generate, just read from cache. **/
 
+procedure ddl_generate_report
+( p_session_id in positive default null -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_output in out nocopy clob -- the CLOB to append the report to
+);
+/**
+
+Append a DDL generate report in Markdown format to the output CLOB.
+
+The first line (if any) will start with:
+
+```
+# DDL generate report on <sysdate>
+```
+
+This will be used by the procedure P_GENERATE_DDL, hence also by Perl script `generate_ddl.pl`.
+
+**/
+
 procedure create_schema_ddl
 ( p_source_schema_ddl in oracle_tools.t_schema_ddl
 , p_target_schema_ddl in oracle_tools.t_schema_ddl
