@@ -33,7 +33,9 @@
 <useDomainConstraints>false</useDomainConstraints>
 <use>1</use>
 <logicalDatatype>LOGDT019</logicalDatatype>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
+<dataTypePrecision>*</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,*,0</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementColumn>true</autoIncrementColumn>
@@ -57,7 +59,7 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>320343A6-F827-4980-5B8A-9B61F0EA0C90</importedID>
-<constraintName>GENERATE_DDL_CONFIGURATIONS$CK$TRANSFORM_PARAM_LIST</constraintName>
+<constraintName>GENERATE_DDL_CONFIGURATIONS$CK$1</constraintName>
 <useDomainConstraints>false</useDomainConstraints>
 <use>1</use>
 <logicalDatatype>LOGDT024</logicalDatatype>
@@ -173,7 +175,7 @@
 <colUsage columnID="AD4A98FB-D840-2A98-08CC-2CD14138D9AE"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="4FA34533-F3EF-1B31-58EF-9A7021E587E2" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_CONFIGURATIONS$IDX$1">
+<ind_PK_UK id="4FA34533-F3EF-1B31-58EF-9A7021E587E2" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_CONFIGURATIONS$PK">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>GENERATE_DDL_CONFIGURATIONS$PK</sourceObjName>
@@ -189,6 +191,22 @@
 </propertyMap>
 <indexColumnUsage>
 <colUsage columnID="4F392E8D-3FC7-BEB7-EB63-5AE2152699F5"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="4E5C6C42-CB87-758E-7D84-ED2EE078F8E3" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_CONFIGURATIONS$UK$1">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATE_DDL_CONFIGURATIONS$UK$1</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-12-07 15:23:24 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>886B39CB-1801-FCB0-3A23-0F43725045B5</importedID>
+<indexState>Unique Plain Index</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="AD52CCFA-86D7-3710-56BA-439B0B4149E2"/>
+<colUsage columnID="4739C7C6-C7BA-EF7F-C532-91296D8A0569"/>
+<colUsage columnID="AD4A98FB-D840-2A98-08CC-2CD14138D9AE"/>
 </indexColumnUsage>
 </ind_PK_UK>
 </indexes>
