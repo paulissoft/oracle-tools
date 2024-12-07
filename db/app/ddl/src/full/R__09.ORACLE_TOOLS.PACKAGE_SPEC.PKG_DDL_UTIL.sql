@@ -254,7 +254,7 @@ When the output parameter is null, a temporary CLOB will be created for it that 
 The first line (if any) will start with:
 
 ```
-# DDL generate report on <sysdate>
+# DDL generate report
 ```
 
 This will be used by the procedure P_GENERATE_DDL, hence also by Perl script `generate_ddl.pl`.
