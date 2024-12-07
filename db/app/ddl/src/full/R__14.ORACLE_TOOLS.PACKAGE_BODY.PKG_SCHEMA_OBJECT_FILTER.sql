@@ -922,11 +922,11 @@ $end
     loop
       -- compare: !~, !=, ~, =
       case
-        when case l_prev_cmp                                    when '!~' then 1 when '!=' then 2 when '~' then 3 when '=' 4 else 0 end
+        when case l_prev_cmp                                    when '!~' then 1 when '!=' then 2 when '~' then 3 when '=' then 4 else 0 end
              <=
-             case p_schema_object_filter.object_cmp_tab$(i_idx) when '!~' then 1 when '!=' then 2 when '~' then 3 when '=' 4 end
+             case p_schema_object_filter.object_cmp_tab$(i_idx) when '!~' then 1 when '!=' then 2 when '~' then 3 when '=' then 4 end
         then null;
-        then raise_application_error(-20000, 'previous compare "' || l_prev_cmp || '" should be before "' || p_schema_object_filter.object_cmp_tab$(i_idx) || '" for item ' || i_idx);
+        else raise_application_error(-20000, 'previous compare "' || l_prev_cmp || '" should be before "' || p_schema_object_filter.object_cmp_tab$(i_idx) || '" for item ' || i_idx);
       end case;
       
       -- all object_cmp_tab values correct?
@@ -961,7 +961,7 @@ $end
              l_prev_id < p_schema_object_filter.object_tab$(i_idx)
         then null;
         when i_idx > p_schema_object_filter.nr_excluded_objects$ and
-             l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx) and
+             l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx)
         then raise_application_error(-20000, l_prev_id || ' should be before ' || p_schema_object_filter.object_tab$(i_idx) || ' for item ' || i_idx);
         
         else null;
