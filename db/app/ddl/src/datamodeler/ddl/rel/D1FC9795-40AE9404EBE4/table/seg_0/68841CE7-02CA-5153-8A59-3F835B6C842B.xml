@@ -346,7 +346,7 @@
 <colUsage columnID="55981A1A-DAB7-CB06-9BCB-5E89F9B8548B"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="53E345B0-D075-F7A7-ED88-D812AC05696A" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_SESSION_BATCHES$IDX$1">
+<ind_PK_UK id="53E345B0-D075-F7A7-ED88-D812AC05696A" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATE_DDL_SESSION_BATCHES$PK">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>GENERATE_DDL_SESSION_BATCHES$PK</sourceObjName>
@@ -365,7 +365,7 @@
 <colUsage columnID="55981A1A-DAB7-CB06-9BCB-5E89F9B8548B"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="465ED803-A1F6-222B-3306-AED96E44686F" name="GENERATE_DDL_SESSION_BATCHES$IDX$2">
+<ind_PK_UK id="465ED803-A1F6-222B-3306-AED96E44686F" name="GENERATE_DDL_SESSION_BATCHES$IDX$1">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 14:08:03 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
