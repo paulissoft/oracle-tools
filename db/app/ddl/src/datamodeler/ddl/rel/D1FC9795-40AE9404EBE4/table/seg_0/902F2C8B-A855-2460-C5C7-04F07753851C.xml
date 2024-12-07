@@ -300,7 +300,7 @@
 <colUsage columnID="628E453F-976F-3EDB-60E8-EB0EC42BFCF2"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="04FCAF81-2E44-D6B6-C780-3C9BB58B0151" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECT_FILTERS$IDX$1">
+<ind_PK_UK id="04FCAF81-2E44-D6B6-C780-3C9BB58B0151" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECT_FILTERS$UK$1">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>SCHEMA_OBJECT_FILTERS$UK$1</sourceObjName>
