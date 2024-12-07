@@ -63,7 +63,7 @@
 <use>1</use>
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>500 BYTE</dataTypeSize>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
+<ownDataTypeParameters>500 BYTE,,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
@@ -198,7 +198,7 @@
 <colUsage columnID="8EF0A29E-6139-D3EF-834A-FE57BFC90397"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="50250A90-B2C1-BEDC-C1F8-A202CF59BC5D" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATED_DDLS$IDX$2">
+<ind_PK_UK id="50250A90-B2C1-BEDC-C1F8-A202CF59BC5D" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATED_DDLS$UK$1">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>GENERATED_DDLS$UK$1</sourceObjName>
@@ -237,7 +237,7 @@
 <colUsage columnID="AD410528-CDAA-D79B-975E-E48495FCF411"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="97D2FC95-4BEE-6554-9510-099C36024E19" name="GENERATED_DDLS$FK$2">
+<ind_PK_UK id="97D2FC95-4BEE-6554-9510-099C36024E19" name="GENERATE_DDLS$FK$1">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
@@ -245,6 +245,7 @@
 <isSurrogateKey>false</isSurrogateKey>
 <indexColumnUsage>
 <colUsage columnID="8EF0A29E-6139-D3EF-834A-FE57BFC90397"/>
+<colUsage columnID="AD410528-CDAA-D79B-975E-E48495FCF411"/>
 </indexColumnUsage>
 </ind_PK_UK>
 </indexes>
