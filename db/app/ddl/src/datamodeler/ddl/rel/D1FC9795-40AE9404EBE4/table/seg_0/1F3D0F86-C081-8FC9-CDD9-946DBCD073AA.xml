@@ -164,7 +164,7 @@
 <colUsage columnID="CAD16085-B788-EADD-F7F2-A09EA3433845"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="6047CF80-C269-2674-973F-E0FE4010098F" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATED_DDL_STATEMENT_CHUNKS$IDX$1">
+<ind_PK_UK id="6047CF80-C269-2674-973F-E0FE4010098F" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATED_DDL_STATEMENT_CHUNKS$PK">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
 <sourceObjName>GENERATED_DDL_STATEMENT_CHUNKS$PK</sourceObjName>
@@ -184,7 +184,7 @@
 <colUsage columnID="CAD16085-B788-EADD-F7F2-A09EA3433845"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="692B8D2F-50B6-77FD-A704-C03E51898AD5" name="GENERATED_DDL_STATEMENT_CHUNKS$IDX$2">
+<ind_PK_UK id="692B8D2F-50B6-77FD-A704-C03E51898AD5" name="GENERATED_DDL_STATEMENT_CHUNKS$IDX$1">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 15:30:24 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
