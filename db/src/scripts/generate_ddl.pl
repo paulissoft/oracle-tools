@@ -668,7 +668,7 @@ sub process () {
             # $. starts from 1
 
             if ($interface eq PKG_DDL_UTIL_V4 || $interface eq PKG_DDL_UTIL_V5) {
-                if (!defined($ddl_generate_report_fh) && $line =~ m/^# DDL generate report on/) {
+                if (!defined($ddl_generate_report_fh) && $line =~ m/^# DDL generate report on \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/) {
                     open($ddl_generate_report_fh, ">$encoding", File::Spec->catfile($output_directory, 'ddl-generate-report.md'));
                 }
 
