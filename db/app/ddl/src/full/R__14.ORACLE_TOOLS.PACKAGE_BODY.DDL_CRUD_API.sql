@@ -89,7 +89,7 @@ begin
   ,       l_nr_objects
   from    oracle_tools.v_schema_objects t
   where   t.session_id = p_session_id;
-  
+
   return case when l_nr_objects > 0 then trunc((100 * l_nr_objects_generate_ddl) / l_nr_objects) else null end;
 end match_perc;
 
@@ -174,7 +174,7 @@ $end
   into    l_last_modification_time_schema_new
   from    all_objects o
   where   o.owner = p_schema_object_filter.schema;
-  
+
   -- when not found add it
   if p_schema_object_filter_id is null
   then
@@ -250,7 +250,7 @@ $end
     delete
     from    oracle_tools.generate_ddl_session_schema_objects gdsso
     where   gdsso.session_id = p_session_id;
-    
+
 $if oracle_tools.ddl_crud_api.c_debugging $then
     dbug.print(dbug."info", '# rows deleted from generate_ddl_session_schema_objects: %s', sql%rowcount);
 $end
@@ -260,7 +260,7 @@ $end
     ,       gds.generate_ddl_configuration_id = p_generate_ddl_configuration_id
     ,       gds.updated = sys_extract_utc(systimestamp)
     where   gds.session_id = p_session_id;
-    
+
 $if oracle_tools.ddl_crud_api.c_debugging $then
     dbug.print(dbug."info", '# rows updated for generate_ddl_sessions: %s', sql%rowcount);
 $end
@@ -301,7 +301,7 @@ $end
   then
     raise program_error;
   end if;
-  
+
   -- merge into SCHEMA_OBJECTS (update last_ddl_time$)
   merge
   into    oracle_tools.schema_objects dst
@@ -375,7 +375,7 @@ $end
             )
     when    matched
     then    update set dst.last_ddl_time = dst.last_ddl_time, dst.generate_ddl_configuration_id = src.generate_ddl_configuration_id;
-      
+
     case sql%rowcount
       when 0
       then raise no_data_found;
@@ -384,7 +384,7 @@ $end
       else raise too_many_rows;
     end case;
   end if;
-  
+
 $if oracle_tools.ddl_crud_api.c_tracing $then
   dbug.leave;
 exception
@@ -489,7 +489,7 @@ $end
       , p_schema_ddl.ddl_tab(i_ddl_idx).ddl#()
       , p_schema_ddl.ddl_tab(i_ddl_idx).verb()
       );
-      
+
     for i_ddl_idx in p_schema_ddl.ddl_tab.first .. p_schema_ddl.ddl_tab.last
     loop
       if cardinality(p_schema_ddl.ddl_tab(i_ddl_idx).text_tab) > 0
@@ -502,7 +502,7 @@ $end
           l_chunk#_tab.extend(1);
           l_chunk#_tab(l_chunk#_tab.last) := i_chunk_idx;
         end loop;
-                            
+
         -- bulk insert
         forall i_chunk_idx in p_schema_ddl.ddl_tab(i_ddl_idx).text_tab.first
                               ..
@@ -694,7 +694,7 @@ $end
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."info", '# rows inserted into generate_ddl_session_schema_objects: %s', sql%rowcount);
 $end  
-  
+
 $if oracle_tools.ddl_crud_api.c_tracing $then
   dbug.leave;
 exception
@@ -1013,7 +1013,7 @@ begin
   delete
   from    oracle_tools.generate_ddl_session_batches gdsb
   where   gdsb.session_id = l_session_id;
-  
+
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."info", '# rows deleted from generate_ddl_session_batches: %s', sql%rowcount);
 $end
@@ -1029,7 +1029,7 @@ begin
   set     gdsb.start_time = sys_extract_utc(systimestamp)
   where   gdsb.session_id = l_session_id
   and     gdsb.seq = p_seq;
-  
+
   case sql%rowcount
     when 0
     then raise no_data_found;
@@ -1051,7 +1051,7 @@ begin
   ,       gdsb.error_message = p_error_message
   where   gdsb.session_id = l_session_id
   and     gdsb.seq = p_seq;
-  
+
   case sql%rowcount
     when 0
     then raise no_data_found;
@@ -1070,7 +1070,7 @@ begin
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."info", '# rows deleted from generate_ddl_configurations: %s', sql%rowcount);
 $end
-  
+
   delete
   from    oracle_tools.schema_objects;
 
@@ -1093,7 +1093,7 @@ procedure get_schema_objects_cursor
 is
 begin
   set_session_id(p_session_id); -- just a check
-  
+
   open p_cursor for
     select  so.obj
     from    oracle_tools.generate_ddl_sessions gds
@@ -1116,7 +1116,7 @@ procedure get_display_ddl_sql_cursor
 is
 begin
   set_session_id(p_session_id); -- just a check
-  
+
   open p_cursor for
     with src as
     ( select  gd.schema_object_id
@@ -1171,7 +1171,7 @@ begin
   set     gdsso.ddl_output_written = p_ddl_output_written
   where   gdsso.session_id = l_session_id
   and     ( p_schema_object_id is null or gdsso.schema_object_id = p_schema_object_id );
-  
+
   case sql%rowcount
     when 0
     then oracle_tools.pkg_ddl_error.raise_error
