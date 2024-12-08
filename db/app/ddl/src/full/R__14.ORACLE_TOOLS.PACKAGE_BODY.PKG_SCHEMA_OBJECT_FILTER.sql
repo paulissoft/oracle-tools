@@ -64,25 +64,27 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
   procedure ignore_object
   ( p_object_type in varchar2
   , p_object_name in varchar2
-  , p_base_object_type in varchar2
-  , p_base_object_name in varchar2
   , p_result out nocopy integer
   , p_details out nocopy varchar2
   )
   is
   begin
+    -- input checks
+    if p_object_type is null
+    then
+      raise program_error;
+    elsif p_object_name is null
+    then
+      raise program_error;      
+    end if;
+
     PRAGMA INLINE (is_nested_table, 'YES');
     p_result := 0;
     p_details := null;
-    for i_case in -2 .. 18
+    
+    for i_case in 1 .. 18
     loop
       case i_case
-        when -1
-        then if p_object_type is null then p_details := 'object type null'; end if;
-        
-        when -2
-        then if p_object_name is null then p_details := 'object name null'; end if;
-        
         -- no dropped tables
         when 1
         then if p_object_type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and p_object_name like 'BIN$%' -- escape '\'
@@ -192,13 +194,13 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
         -- nested tables
         -- nested table indexes but here we must compare on base_object_name
         when 16
-        then if p_object_type in ('TABLE', 'INDEX') and
+        then if p_object_type in ('TABLE') and
                 is_nested_table
                 ( p_schema_object_filter.schema
-                , case when p_object_type = 'TABLE' then p_object_name else p_base_object_name end
+                , p_object_name
                 )
              then
-               p_details := q'[p_object_type in ('TABLE', 'INDEX') and "nested table"]';
+               p_details := q'[p_object_type in ('TABLE') and is_nested_table( p_schema_object_filter.schema, p_object_name)]';
              end if;
         
         -- no special type specs
@@ -217,15 +219,12 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
              then
                p_details := q'[p_object_type in ('CONSTRAINT', 'REF_CONSTRAINT') and p_object_name like 'SYS\_NC%' escape '\']';
              end if;
-             
-        else null;
       end case;
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
       dbug.print
       ( dbug."info"
-      , 'object type/name: "%s"; base object type/name: "%s"; ignore_object case: %s'
+      , 'object type/name: "%s"; ignore_object case: %s'
       , p_object_type || '|' || p_object_name
-      , p_base_object_type || '|' || p_base_object_name
       , i_case
       );
 $end
@@ -365,7 +364,7 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
         p_result := 0;
       end if;
 $else         
-      ignore_object(p_base_object_type, p_base_object_name, null, null, p_result, p_details);
+      ignore_object(p_base_object_type, p_base_object_name, p_result, p_details);
 $end
        
       exit result_loop when p_result = 0;
@@ -384,7 +383,7 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
         p_result := 0;
       end if;
 $else         
-      ignore_object(p_object_type, p_object_name, p_base_object_type, p_base_object_name, p_result, p_details);
+      ignore_object(p_object_type, p_object_name, p_result, p_details);
 $end
 
       exit result_loop when p_result = 0;
