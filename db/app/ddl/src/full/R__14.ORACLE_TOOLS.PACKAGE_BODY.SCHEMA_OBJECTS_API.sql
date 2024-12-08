@@ -982,7 +982,7 @@ is
   is
     select  gdsb.seq
     ,       gdsb.object_type
-    ,       treat(oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_PARAMS', gdsb.params) as ORACLE_TOOLS.T_SCHEMA_OBJECT_PARAMS).schema_object_filter_id as schema_object_filter_id
+    ,       treat(oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_PARAMS', gdsb.params) as oracle_tools.t_schema_object_params).schema_object_filter_id as schema_object_filter_id
     from    oracle_tools.v_my_generate_ddl_session_batches gdsb -- filter on session_id already part of view
             inner join oracle_tools.v_dependent_or_granted_object_types v
             on v.object_type = gdsb.object_type
