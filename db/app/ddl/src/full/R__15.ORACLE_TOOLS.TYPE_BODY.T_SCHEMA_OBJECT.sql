@@ -1068,10 +1068,7 @@ begin
 end dict_last_ddl_time;
 
 static function ddl_batch_order
-( p_object_schema in varchar2
-, p_object_type in varchar2
-, p_base_object_schema in varchar2
-, p_base_object_type in varchar2
+( p_object_type in varchar2
 )
 return varchar2
 deterministic /*result_cache*/
@@ -1123,7 +1120,7 @@ begin
       end
     , 'FM0'
     );
-  return l_ddl_batch_group || '|' || rpad(p_object_type, 30) || '|' || rpad(p_object_schema, 128) || '|' || p_base_object_schema;
+  return l_ddl_batch_group || '|' || rpad(p_object_type, 30);
 end ddl_batch_order;
 
 final member function ddl_batch_order
@@ -1132,10 +1129,7 @@ deterministic /*result_cache*/
 is
 begin
   return oracle_tools.t_schema_object.ddl_batch_order
-         ( p_object_schema => self.object_schema()
-         , p_object_type => self.object_type()
-         , p_base_object_schema => self.base_object_schema()
-         , p_base_object_type => self.base_object_type()
+         ( p_object_type => self.object_type()
          );
 end ddl_batch_order;
 

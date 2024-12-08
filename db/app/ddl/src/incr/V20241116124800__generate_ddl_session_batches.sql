@@ -8,17 +8,13 @@ create table generate_ddl_session_batches
   constraint generate_ddl_session_batches$nnc$created not null
 , schema varchar2(128 byte)
 , transform_param_list varchar2(4000 byte) -- parameter from pkg_ddl_util.get_schema_ddl
--- select list from cursor c_params in body pkg_ddl_util
-, object_schema varchar2(128 byte)
 , object_type varchar2(30 byte)
-, base_object_schema varchar2(128 byte)
-, base_object_type varchar2(30 byte)
-, object_name_tab oracle_tools.t_text_tab
-, base_object_name_tab oracle_tools.t_text_tab
-, nr_objects integer
--- for schema_objects_api.ddl_batch_process
-, schema_object_filter oracle_tools.t_schema_object_filter
-, schema_object_filter_id integer
+-- two purposes for params
+-- 1. select list from cursor c_params in body pkg_ddl_util
+-- 2. for schema_objects_api.ddl_batch_process
+, params clob
+  constraint generate_ddl_session_batches$nnc$params not null
+  constraint generate_ddl_session_batches$ck$params check (params is json)
 -- some administration
 , start_time timestamp(6)
 , end_time timestamp(6)
@@ -29,10 +25,6 @@ create table generate_ddl_session_batches
   foreign key (session_id)
   references generate_ddl_sessions(session_id) on delete cascade
 )
-nested table object_name_tab store as generate_ddl_session_batches$object_name_tab
-nested table base_object_name_tab store as generate_ddl_session_batches$base_object_name_tab
-nested table schema_object_filter.object_tab$ store as generate_ddl_session_batches$schema_object_filter$object_tab$
-nested table schema_object_filter.object_cmp_tab$ store as generate_ddl_session_batches$schema_object_filter$object_cmp_tab$
 ;
 
 alter table generate_ddl_session_batches nologging;

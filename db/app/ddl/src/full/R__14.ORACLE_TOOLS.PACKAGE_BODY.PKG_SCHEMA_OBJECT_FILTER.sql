@@ -262,11 +262,11 @@ $end -- $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $th
     for i_idx in p_lwb .. p_upb
     loop      
       l_cmp := 
-        case substr(p_schema_object_filter.object_cmp_tab$(i_idx), -1)
+        case substr(p_schema_object_filter.op(i_idx), -1)
           when '~'
           then
             case
-              when p_schema_object_id like p_schema_object_filter.object_tab$(i_idx) escape '\'
+              when p_schema_object_id like p_schema_object_filter.object_id_expr(i_idx) escape '\'
               then 0 -- found
               else 1 -- try further
             end
@@ -274,11 +274,11 @@ $end -- $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $th
           when '='
           then
             case
-              when p_schema_object_id = p_schema_object_filter.object_tab$(i_idx)
+              when p_schema_object_id = p_schema_object_filter.object_id_expr(i_idx)
               then 0 -- found
-              when p_schema_object_id > p_schema_object_filter.object_tab$(i_idx)
-              then 1 -- try further: p_schema_object_filter.object_tab$(i_idx+1) > p_schema_object_filter.object_tab$(i_idx)
-              else -1 -- will never find it since ordered (first object_cmp_tab$ !?~, then object_cmp_tab$ !?= and in ascending object_tab$ order)
+              when p_schema_object_id > p_schema_object_filter.object_id_expr(i_idx)
+              then 1 -- try further: p_schema_object_filter.object_id_expr(i_idx+1) > p_schema_object_filter.object_id_expr(i_idx)
+              else -1 -- will never find it since ordered (first op_object_id_expr_tab$ !~, then op_object_id_expr_tab$ != and in ascending object_id_expr order)
             end
         end;
 
@@ -287,8 +287,8 @@ $end -- $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $th
         ( '[%s] compare "%s" "%s" "%s": %s'
         , to_char(i_idx, 'FM0000') -- see also pkg_ddl_util.ddl_generate_report
         , p_schema_object_id
-        , p_schema_object_filter.object_cmp_tab$(i_idx)
-        , p_schema_object_filter.object_tab$(i_idx)
+        , p_schema_object_filter.op(i_idx)
+        , p_schema_object_filter.object_id_expr(i_idx)
         , to_char(l_cmp)
         );
 
@@ -338,9 +338,9 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   );
   dbug.print
   ( dbug."input"
-  , 'cardinality(p_schema_object_filter.object_tab$): %s; p_schema_object_filter.nr_excluded_objects$: %s'
-  , case when p_schema_object_filter is not null and p_schema_object_filter.object_tab$ is not null then p_schema_object_filter.object_tab$.count end
-  , case when p_schema_object_filter is not null then p_schema_object_filter.nr_excluded_objects$ end
+  , 'cardinality(p_schema_object_filter.object_id_expr): %s; p_schema_object_filter.nr_objects_to_exclude$: %s'
+  , case when p_schema_object_filter is not null and p_schema_object_filter.object_id_expr is not null then p_schema_object_filter.object_id_expr.count end
+  , case when p_schema_object_filter is not null then p_schema_object_filter.nr_objects_to_exclude$ end
   );
 $end
 
@@ -392,8 +392,7 @@ $end
 
     if p_schema_object_filter is null or
        p_schema_object_id is null or
-       p_schema_object_filter.object_tab$ is null or
-       p_schema_object_filter.object_tab$.count = 0
+       p_schema_object_filter.nr_objects() = 0
     then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then  
       dbug.print(dbug."info", 'case 3');
@@ -402,7 +401,7 @@ $end
       exit result_loop;
     end if;
 
-    search(1, p_schema_object_filter.nr_excluded_objects$, p_result, p_details);    
+    search(1, p_schema_object_filter.nr_objects_to_exclude$, p_result, p_details);    
     if p_result = 1
     then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then  
@@ -418,12 +417,11 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 $end
 
     search
-    ( p_schema_object_filter.nr_excluded_objects$ + 1
+    ( p_schema_object_filter.nr_objects_to_exclude$ + 1
     , case
-        when p_schema_object_filter is null or
-             p_schema_object_filter.object_tab$ is null
+        when p_schema_object_filter is null
         then 0
-        else p_schema_object_filter.object_tab$.count
+        else p_schema_object_filter.nr_objects()
       end
     , p_result
     , p_details
@@ -447,47 +445,6 @@ exception
     raise;
 $end
 end matches_schema_object;
-
-procedure serialize
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_json_object in out nocopy json_object_t
-)
-is
-  procedure to_json_array(p_attribute in varchar2, p_str_tab in oracle_tools.t_text_tab)
-  is
-    l_json_array json_array_t;
-  begin
-    if p_str_tab is not null and p_str_tab.count > 0
-    then
-      l_json_array := json_array_t();
-      for i_idx in 1 .. p_str_tab.count -- show all items
-      loop
-        l_json_array.append(p_str_tab(i_idx));
-      end loop;
-      p_json_object.put(p_attribute, l_json_array);
-    end if;
-  end to_json_array;
-begin
-  p_json_object.put('SCHEMA$', p_schema_object_filter.schema$);
-  p_json_object.put('GRANTOR_IS_SCHEMA$', p_schema_object_filter.grantor_is_schema$);
-  to_json_array('OBJECT_TAB$', p_schema_object_filter.object_tab$);
-  to_json_array('OBJECT_CMP_TAB$', p_schema_object_filter.object_cmp_tab$);
-  p_json_object.put('NR_EXCLUDED_OBJECTS$', p_schema_object_filter.nr_excluded_objects$);
-end serialize;
-
-function repr
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
-)
-return clob
-is
-  l_clob clob := serialize(p_schema_object_filter).to_clob();
-begin
-  select  json_serialize(l_clob returning clob pretty)
-  into    l_clob
-  from    dual;
-
-  return l_clob;
-end repr;
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 
@@ -685,8 +642,8 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT.ADD_ITEM (2)');
     dbug.print
     ( dbug."input"
-    , 'p_schema_object_filter.object_tab$.count: %s; p_id : %s; p_cmp: %s'
-    , p_schema_object_filter.object_tab$.count
+    , 'p_schema_object_filter.object_id_expr.count: %s; p_id : %s; p_cmp: %s'
+    , p_schema_object_filter.object_id_expr.count
     , p_id
     , p_cmp
     );
@@ -694,10 +651,8 @@ $end
 
     if instr(p_id, ':', 1, 9) > 0 and instr(p_id, ':', 1, 10) = 0
     then
-      p_schema_object_filter.object_tab$.extend(1);
-      p_schema_object_filter.object_tab$(p_schema_object_filter.object_tab$.last) := p_id;
-      p_schema_object_filter.object_cmp_tab$.extend(1);
-      p_schema_object_filter.object_cmp_tab$(p_schema_object_filter.object_cmp_tab$.last) := p_cmp;
+      p_schema_object_filter.op_object_id_expr_tab$.extend(1);
+      p_schema_object_filter.op_object_id_expr_tab$(p_schema_object_filter.op_object_id_expr_tab$.last) := p_cmp || ' ' || p_id;
     else
       oracle_tools.pkg_ddl_error.raise_error
       ( p_error_number => oracle_tools.pkg_ddl_error.c_objects_wrong
@@ -710,8 +665,8 @@ $end
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     dbug.print
     ( dbug."output"
-    , 'p_schema_object_filter.object_tab$.count: %s'
-    , p_schema_object_filter.object_tab$.count
+    , 'p_schema_object_filter.object_id_expr.count: %s'
+    , p_schema_object_filter.object_id_expr.count
     );
     dbug.leave;
 $end
@@ -881,14 +836,14 @@ $end
       end loop;
     end if;
 
-    for r in c_objects(l_object_tab, case when p_exclude then '!' end)
+    for r in c_objects(l_object_tab, case when p_exclude then '!' else ' ' end)
     loop
       add_item(r.id, r.cmp);
     end loop;
 
     if p_exclude
     then
-      p_schema_object_filter.nr_excluded_objects$ := p_schema_object_filter.object_tab$.count;
+      p_schema_object_filter.nr_objects_to_exclude$ := p_schema_object_filter.nr_objects();
     end if;
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
@@ -925,9 +880,8 @@ $end
 
   p_schema_object_filter.schema$ := p_schema;
   p_schema_object_filter.grantor_is_schema$ := p_grantor_is_schema;
-  p_schema_object_filter.object_tab$ := oracle_tools.t_text_tab();
-  p_schema_object_filter.object_cmp_tab$ := oracle_tools.t_text_tab();
-  p_schema_object_filter.nr_excluded_objects$ := 0;
+  p_schema_object_filter.op_object_id_expr_tab$ := oracle_tools.t_text_tab();
+  p_schema_object_filter.nr_objects_to_exclude$ := 0;
 
   if p_exclude_objects is not null
   then
@@ -1168,11 +1122,10 @@ $end
   add_items(l_exclude_object_tab, true);
   add_items(l_include_object_tab);
 
-  -- make the tables null if they are empty
-  if p_schema_object_filter.object_tab$.count = 0
+  -- make the table null when empty
+  if p_schema_object_filter.op_object_id_expr_tab$.count = 0
   then
-    p_schema_object_filter.object_tab$ := null;
-    p_schema_object_filter.object_cmp_tab$ := null;
+    p_schema_object_filter.op_object_id_expr_tab$ := null;
   end if;
 
   chk(p_schema_object_filter);
@@ -1243,24 +1196,30 @@ begin
   return l_result;
 end matches_schema_object;
 
-function serialize
+procedure serialize
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
+, p_json_object in out nocopy json_object_t
 )
-return json_object_t
 is
-  l_json_object json_object_t := json_object_t();
+  procedure to_json_array(p_attribute in varchar2, p_str_tab in oracle_tools.t_text_tab)
+  is
+    l_json_array json_array_t;
+  begin
+    if p_str_tab is not null and p_str_tab.count > 0
+    then
+      l_json_array := json_array_t();
+      for i_idx in 1 .. p_str_tab.count -- show all items
+      loop
+        l_json_array.append(p_str_tab(i_idx));
+      end loop;
+      p_json_object.put(p_attribute, l_json_array);
+    end if;
+  end to_json_array;
 begin
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.SERIALIZE');
-$end
-
-  serialize(p_schema_object_filter, l_json_object);
-
-$if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  dbug.leave;
-$end
-
-  return l_json_object;
+  p_json_object.put('SCHEMA$', p_schema_object_filter.schema$);
+  p_json_object.put('GRANTOR_IS_SCHEMA$', p_schema_object_filter.grantor_is_schema$);
+  to_json_array('OP_OBJECT_ID_EXPR_TAB$', p_schema_object_filter.op_object_id_expr_tab$);
+  p_json_object.put('NR_OBJECTS_TO_EXCLUDE$', p_schema_object_filter.nr_objects_to_exclude$);
 end serialize;
 
 procedure chk
@@ -1278,37 +1237,34 @@ begin
     then raise program_error;
     when p_schema_object_filter.grantor_is_schema$ not in (0, 1)
     then raise program_error;
-    when nvl(cardinality(p_schema_object_filter.object_tab$), 0) !=
-         nvl(cardinality(p_schema_object_filter.object_cmp_tab$), 0)
+    when p_schema_object_filter.nr_objects_to_exclude$ is null
     then raise program_error;
-    when p_schema_object_filter.nr_excluded_objects$ is null
-    then raise program_error;
-    when not(p_schema_object_filter.nr_excluded_objects$ between 0 and nvl(cardinality(p_schema_object_filter.object_tab$), 0))
+    when not(p_schema_object_filter.nr_objects_to_exclude$ between 0 and nvl(cardinality(p_schema_object_filter.op_object_id_expr_tab$), 0))
     then raise program_error;
     else null;
   end case;
-  for i_idx in 1 .. nvl(cardinality(p_schema_object_filter.object_tab$), 0)
+  for i_idx in 1 .. nvl(cardinality(p_schema_object_filter.op_object_id_expr_tab$), 0)
   loop
     -- compare: !~, !=, ~, =
     case
-      when case l_prev_cmp                                    when '!~' then 1 when '!=' then 2 when '~' then 3 when '=' then 4 else 0 end
+      when case l_prev_cmp when '!~' then 1 when '!=' then 2 when ' ~' then 3 when ' =' then 4 else 0 end
            <=
-           case p_schema_object_filter.object_cmp_tab$(i_idx) when '!~' then 1 when '!=' then 2 when '~' then 3 when '=' then 4 end
+           case p_schema_object_filter.op(i_idx) when '!~' then 1 when '!=' then 2 when ' ~' then 3 when ' =' then 4 end
       then null;
-      else raise_application_error(-20000, 'previous compare "' || l_prev_cmp || '" should be before "' || p_schema_object_filter.object_cmp_tab$(i_idx) || '" for item ' || i_idx);
+      else raise_application_error(-20000, 'previous compare "' || l_prev_cmp || '" should be before "' || p_schema_object_filter.op(i_idx) || '" for item ' || i_idx);
     end case;
     
     -- all object_cmp_tab values correct?
     case
-      when i_idx <= p_schema_object_filter.nr_excluded_objects$ and p_schema_object_filter.object_cmp_tab$(i_idx) in ('!=', '!~')
+      when i_idx <= p_schema_object_filter.nr_objects_to_exclude$ and p_schema_object_filter.op(i_idx) in ('!=', '!~')
       then null;
-      when i_idx <= p_schema_object_filter.nr_excluded_objects$
-      then raise_application_error(-20000, 'compare "' || p_schema_object_filter.object_cmp_tab$(i_idx) || '" should be a negative comparison for item ' || i_idx);
+      when i_idx <= p_schema_object_filter.nr_objects_to_exclude$
+      then raise_application_error(-20000, 'compare "' || p_schema_object_filter.op(i_idx) || '" should be a negative comparison for item ' || i_idx);
       
-      when i_idx > p_schema_object_filter.nr_excluded_objects$ and p_schema_object_filter.object_cmp_tab$(i_idx) in ('=', '~')
+      when i_idx > p_schema_object_filter.nr_objects_to_exclude$ and p_schema_object_filter.op(i_idx) in (' =', ' ~')
       then null;
-      when i_idx > p_schema_object_filter.nr_excluded_objects$
-      then raise_application_error(-20000, 'compare "' || p_schema_object_filter.object_cmp_tab$(i_idx) || '" should be a positive comparison for item ' || i_idx);
+      when i_idx > p_schema_object_filter.nr_objects_to_exclude$
+      then raise_application_error(-20000, 'compare "' || p_schema_object_filter.op(i_idx) || '" should be a positive comparison for item ' || i_idx);
 
       else null;
     end case;
@@ -1316,29 +1272,29 @@ begin
     -- sorted?
     case
       -- both l_prev_idx and i_idx in exclude section?
-      when i_idx <= p_schema_object_filter.nr_excluded_objects$ and
-           l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx) and
-           l_prev_id < p_schema_object_filter.object_tab$(i_idx)
+      when i_idx <= p_schema_object_filter.nr_objects_to_exclude$ and
+           l_prev_cmp = p_schema_object_filter.op(i_idx) and
+           l_prev_id < p_schema_object_filter.object_id_expr(i_idx)
       then null;
-      when i_idx <= p_schema_object_filter.nr_excluded_objects$ and
-           l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx)
-      then raise_application_error(-20000, l_prev_id || ' should be before ' || p_schema_object_filter.object_tab$(i_idx) || ' for item ' || i_idx);
+      when i_idx <= p_schema_object_filter.nr_objects_to_exclude$ and
+           l_prev_cmp = p_schema_object_filter.op(i_idx)
+      then raise_application_error(-20000, l_prev_id || ' should be before ' || p_schema_object_filter.object_id_expr(i_idx) || ' for item ' || i_idx);
       
       -- both l_prev_idx and i_idx in include section?
-      when i_idx > p_schema_object_filter.nr_excluded_objects$ and
-           l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx) and
-           l_prev_id < p_schema_object_filter.object_tab$(i_idx)
+      when i_idx > p_schema_object_filter.nr_objects_to_exclude$ and
+           l_prev_cmp = p_schema_object_filter.op(i_idx) and
+           l_prev_id < p_schema_object_filter.object_id_expr(i_idx)
       then null;
-      when i_idx > p_schema_object_filter.nr_excluded_objects$ and
-           l_prev_cmp = p_schema_object_filter.object_cmp_tab$(i_idx)
-      then raise_application_error(-20000, l_prev_id || ' should be before ' || p_schema_object_filter.object_tab$(i_idx) || ' for item ' || i_idx);
+      when i_idx > p_schema_object_filter.nr_objects_to_exclude$ and
+           l_prev_cmp = p_schema_object_filter.op(i_idx)
+      then raise_application_error(-20000, l_prev_id || ' should be before ' || p_schema_object_filter.object_id_expr(i_idx) || ' for item ' || i_idx);
       
       else null;
     end case;
     
     l_prev_idx := i_idx;
-    l_prev_id := p_schema_object_filter.object_tab$(i_idx);
-    l_prev_cmp := p_schema_object_filter.object_cmp_tab$(i_idx);
+    l_prev_id := p_schema_object_filter.object_id_expr(i_idx);
+    l_prev_cmp := p_schema_object_filter.op(i_idx);
   end loop;
 end chk;
 
@@ -1353,7 +1309,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
 
   oracle_tools.pkg_str_util.split
-  ( p_str => repr(p_schema_object_filter)
+  ( p_str => p_schema_object_filter.repr()
   , p_delimiter => chr(10)
   , p_str_tab => l_line_tab
   );
@@ -1417,7 +1373,7 @@ $end
         l_expected := json_element_t.parse('{
   "SCHEMA$" : null,
   "GRANTOR_IS_SCHEMA$" : 0,
-  "NR_EXCLUDED_OBJECTS$" : 0
+  "NR_OBJECTS_TO_EXCLUDE$" : 0
 }');  
 
       when 2
@@ -1434,7 +1390,7 @@ $end
     "%:TABLE:%:%:%:%::%:%:%",
     ":COMMENT::%:TABLE:%:%:::"
   ],
-  "OBJECT_CMP_TAB$" :
+  "OP_OBJECT_ID_EXPR_TAB$" :
   [
     "~",
     "~",
@@ -1442,7 +1398,7 @@ $end
     "~",
     "~"
   ],
-  "NR_EXCLUDED_OBJECTS$" : 0
+  "NR_OBJECTS_TO_EXCLUDE$" : 0
 }');
 
       when 3
@@ -1477,7 +1433,7 @@ DBMS_SQL
      ":OBJECT\\_GRANT::%::DBMS\\_OUTPUT::%:%:%",
      ":OBJECT\\_GRANT::%::DBMS\\_SQL::%:%:%"
    ],
-   "OBJECT_CMP_TAB$" :
+   "OP_OBJECT_ID_EXPR_TAB$" :
    [
      "!~",
      "!~",
@@ -1492,7 +1448,7 @@ DBMS_SQL
      "!~",
      "!~"
    ],
-   "NR_EXCLUDED_OBJECTS$" : 12
+   "NR_OBJECTS_TO_EXCLUDE$" : 12
  }');
 
       when 4
@@ -1517,13 +1473,13 @@ DBMS_SQL
     ":OBJECT\\_GRANT::%::DBMS\\_SQL::%:%:%",
     ":OBJECT\\_GRANT::%::%::%:%:%"
   ],
-  "OBJECT_CMP_TAB$" :
+  "OP_OBJECT_ID_EXPR_TAB$" :
   [
     "!~",
     "!~",
     "~"
   ],
-  "NR_EXCLUDED_OBJECTS$" : 2
+  "NR_OBJECTS_TO_EXCLUDE$" : 2
 }');
 
       when 5
@@ -1558,7 +1514,7 @@ DBMS_SQL
      ":OBJECT\\_GRANT::%::DBMS\\_OUTPUT::%:%:%",
      ":OBJECT\\_GRANT::%::DBMS\\_SQL::%:%:%"
    ],
-   "OBJECT_CMP_TAB$" :
+   "OP_OBJECT_ID_EXPR_TAB$" :
    [
      "~",
      "~",
@@ -1573,7 +1529,7 @@ DBMS_SQL
      "~",
      "~"
    ],
-   "NR_EXCLUDED_OBJECTS$" : 0
+   "NR_OBJECTS_TO_EXCLUDE$" : 0
  }');
 
       when 6
@@ -1597,14 +1553,14 @@ DBMS_SQL
     ":OBJECT\\_GRANT::%::DBMS\\_METADATA::%:%:%",
     ":OBJECT\\_GRANT::%::DBMS\\_VERSION::%:%:%"
   ],
-  "OBJECT_CMP_TAB$" :
+  "OP_OBJECT_ID_EXPR_TAB$" :
   [
     "~",
     "~",
     "~",
     "~"
   ],
-  "NR_EXCLUDED_OBJECTS$" : 0
+  "NR_OBJECTS_TO_EXCLUDE$" : 0
 }');
     end case;
 

@@ -62,10 +62,10 @@ return integer
 deterministic;
 /** Does the schema object id match the schema object filter? **/
 
-function serialize
+procedure serialize
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-)
-return json_object_t;
+, p_json_object in out nocopy json_object_t
+);
 /** Serialize the schema object filter to a JSON object. **/
 
 procedure chk

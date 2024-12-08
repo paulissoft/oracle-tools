@@ -35,15 +35,8 @@ function get_schema_object_filter
 )
 return oracle_tools.t_schema_object_filter
 is
-  l_schema_object_filter oracle_tools.t_schema_object_filter;
 begin
-  select  sof.obj
-  into    l_schema_object_filter
-  from    oracle_tools.generate_ddl_sessions gds
-          inner join oracle_tools.schema_object_filters sof
-          on sof.id = gds.schema_object_filter_id
-  where   gds.session_id = p_session_id;
-  return l_schema_object_filter;
+  return get_schema_object_filter(p_schema_object_filter_id => get_schema_object_filter_id(p_session_id => p_session_id));
 exception
   when no_data_found
   then return null;
@@ -111,7 +104,7 @@ is
 
   l_last_modification_time_schema_old oracle_tools.schema_object_filters.last_modification_time_schema%type;
   l_last_modification_time_schema_new oracle_tools.schema_object_filters.last_modification_time_schema%type;
-  l_clob constant clob := p_schema_object_filter.serialize();
+  l_clob constant clob := p_schema_object_filter.repr();
   l_hash_bucket constant oracle_tools.schema_object_filters.hash_bucket%type :=
     sys.dbms_crypto.hash(l_clob, sys.dbms_crypto.hash_sh1);
   l_hash_bucket_nr oracle_tools.schema_object_filters.hash_bucket_nr%type;
@@ -128,7 +121,7 @@ $if oracle_tools.ddl_crud_api.c_debugging $then
 $end
 $end
 
-  select  max(case when dbms_lob.compare(sof.obj.serialize(), l_clob) = 0 then sof.id end) as id
+  select  max(case when dbms_lob.compare(sof.obj_json, l_clob) = 0 then sof.id end) as id
   ,       nvl(max(sof.hash_bucket_nr), 0) + 1
   ,       count(*)
   into    p_schema_object_filter_id
@@ -182,13 +175,13 @@ $end
     insert into oracle_tools.schema_object_filters
     ( hash_bucket
     , hash_bucket_nr
-    , obj
+    , obj_json
     , last_modification_time_schema
     )
     values
     ( l_hash_bucket
     , l_hash_bucket_nr
-    , p_schema_object_filter
+    , p_schema_object_filter.repr()
     , l_last_modification_time_schema_new
     )
     returning id into p_schema_object_filter_id;
@@ -321,7 +314,9 @@ $end
   into    oracle_tools.schema_object_filter_results dst
   using   ( select  l_schema_object_filter_id as schema_object_filter_id
             ,       l_schema_object_id as schema_object_id
-            ,       sof.obj.matches_schema_object(l_schema_object_id) as generate_ddl
+            ,       treat
+                    ( oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER', sof.obj_json) as oracle_tools.t_schema_object_filter
+                    ).matches_schema_object(l_schema_object_id) as generate_ddl
             from    oracle_tools.schema_object_filters sof
             where   sof.id = l_schema_object_filter_id
           ) src
@@ -572,30 +567,31 @@ begin
   , seq
   , schema
   , transform_param_list
-  , object_schema
   , object_type
-  , base_object_schema
-  , base_object_type
-  , object_name_tab
-  , base_object_name_tab
-  , nr_objects
-  , schema_object_filter
-  , schema_object_filter_id
+  , params
   )
   values
   ( p_session_id
   , (select nvl(max(gdsb.seq), 0) + 1 from oracle_tools.generate_ddl_session_batches gdsb where gdsb.session_id = p_session_id)
   , p_schema
   , p_transform_param_list
-  , p_object_schema
   , p_object_type
-  , p_base_object_schema
-  , p_base_object_type
-  , p_object_name_tab
-  , p_base_object_name_tab
-  , p_nr_objects
-  , p_schema_object_filter
-  , p_schema_object_filter_id
+  , case
+      when p_schema_object_filter_id is null
+      then oracle_tools.t_schema_ddl_params
+           ( null -- dummy$
+           , p_object_schema
+           , p_base_object_schema
+           , p_base_object_type
+           , p_object_name_tab
+           , p_base_object_name_tab
+           , p_nr_objects
+           ).repr()
+      else oracle_tools.t_schema_object_params
+           ( null -- dummy$ 
+           , p_schema_object_filter_id
+           ).repr()
+     end
   );
 end add_batch;
 
@@ -637,7 +633,9 @@ $end
   into    oracle_tools.schema_object_filter_results dst
   using   ( select  p_schema_object_filter_id as schema_object_filter_id
             ,       t.id as schema_object_id
-            ,       sof.obj.matches_schema_object(t.id) as generate_ddl
+            ,       treat
+                    ( oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER', sof.obj_json) as oracle_tools.t_schema_object_filter
+                    ).matches_schema_object(t.id) as generate_ddl
             from    table(p_schema_object_tab) t
                     cross join oracle_tools.schema_object_filters sof
             where   sof.id = p_schema_object_filter_id
@@ -740,14 +738,31 @@ function get_schema_object_filter_id
 return positive
 is
 begin
-  return get_schema_object_filter_id(get_session_id);
+  return get_schema_object_filter_id(p_session_id => get_session_id);
 end get_schema_object_filter_id;
 
 function get_schema_object_filter
 return oracle_tools.t_schema_object_filter
 is
 begin
-  return get_schema_object_filter(get_session_id);
+  return get_schema_object_filter(p_session_id => get_session_id);
+end get_schema_object_filter;
+
+function get_schema_object_filter
+( p_schema_object_filter_id in positiven
+)
+return oracle_tools.t_schema_object_filter
+is
+begin
+  for r in
+  ( select  sof.obj_json 
+    from    oracle_tools.schema_object_filters sof
+    where   sof.id = p_schema_object_filter_id
+  )
+  loop
+    return treat(oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER', r.obj_json) as oracle_tools.t_schema_object_filter);
+  end loop;
+  return null;
 end get_schema_object_filter;
 
 function find_schema_object
@@ -1203,7 +1218,7 @@ begin
     select  gdc.transform_param_list
     ,       gdc.db_version
     ,       gdc.last_ddl_time_schema
-    ,       sof.obj as schema_object_filter
+    ,       treat(oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER', sof.obj_json) as oracle_tools.t_schema_object_filter) as schema_object_filter
     ,       so.obj as schema_object
     ,       sofr.generate_ddl
     ,       case

@@ -3797,17 +3797,17 @@ $end
       write('transform parameters : ' || ltrim(p_transform_param_list, ','));
       write('database version     : ' || replace(to_char(p_db_version, 'FM00D0'), ',', '.')); -- just in case the decimal is a comma
       write('last DDL time schema : ' || date2str(p_last_ddl_time_schema));
-      if cardinality(p_schema_object_filter.object_tab$) > 0
+      if p_schema_object_filter.nr_objects() > 0
       then
-        for i_idx in p_schema_object_filter.object_tab$.first .. p_schema_object_filter.object_tab$.last
+        for i_idx in 1..p_schema_object_filter.nr_objects()
         loop          
           write
           ( utl_lms.format_message
             ( '[%s] %s object: %s %s'
             , to_char(i_idx, 'FM0000')
-            , case when i_idx <= p_schema_object_filter.nr_excluded_objects$ then 'ex' else 'in' end || 'clude'
-            , p_schema_object_filter.object_cmp_tab$(i_idx)
-            , p_schema_object_filter.object_tab$(i_idx)
+            , case when i_idx <= p_schema_object_filter.nr_objects_to_exclude() then 'ex' else 'in' end || 'clude'
+            , p_schema_object_filter.op(i_idx)
+            , p_schema_object_filter.object_id_expr(i_idx)
             )
           );
         end loop;
@@ -5946,11 +5946,7 @@ $end
       ,       gdsb.schema
       ,       gdsb.transform_param_list
       ,       gdsb.object_type
-      ,       gdsb.object_schema
-      ,       gdsb.base_object_schema
-      ,       gdsb.object_name_tab
-      ,       gdsb.base_object_name_tab
-      ,       gdsb.nr_objects
+      ,       treat(oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_DDL_PARAMS', gdsb.params) as oracle_tools.t_schema_ddl_params) as schema_ddl_params
       from    oracle_tools.v_my_generate_ddl_session_batches gdsb -- filter on session_id already part of view
       where   gdsb.session_id = p_session_id
       and     ( p_start_id is null or
@@ -5996,11 +5992,11 @@ $end
           ( p_schema => l_gdssdb_tab(i_idx).schema
           , p_transform_param_list => l_gdssdb_tab(i_idx).transform_param_list
           , p_object_type => l_gdssdb_tab(i_idx).object_type
-          , p_object_schema => l_gdssdb_tab(i_idx).object_schema
-          , p_base_object_schema => l_gdssdb_tab(i_idx).base_object_schema
-          , p_object_name_tab => l_gdssdb_tab(i_idx).object_name_tab
-          , p_base_object_name_tab => l_gdssdb_tab(i_idx).base_object_name_tab
-          , p_nr_objects => l_gdssdb_tab(i_idx).nr_objects
+          , p_object_schema => l_gdssdb_tab(i_idx).schema_ddl_params.object_schema
+          , p_base_object_schema => l_gdssdb_tab(i_idx).schema_ddl_params.base_object_schema
+          , p_object_name_tab => l_gdssdb_tab(i_idx).schema_ddl_params.object_name_tab
+          , p_base_object_name_tab => l_gdssdb_tab(i_idx).schema_ddl_params.base_object_name_tab
+          , p_nr_objects => l_gdssdb_tab(i_idx).schema_ddl_params.nr_objects
           , p_add_no_ddl_retrieved => (l_gdssdb_tab(i_idx).object_type = "SCHEMA_EXPORT")
           );
         

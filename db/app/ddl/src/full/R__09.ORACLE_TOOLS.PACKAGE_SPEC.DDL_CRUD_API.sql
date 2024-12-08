@@ -87,6 +87,11 @@ Return the current schema object filter id.
 function get_schema_object_filter
 return oracle_tools.t_schema_object_filter;
 
+function get_schema_object_filter
+( p_schema_object_filter_id in positiven
+)
+return oracle_tools.t_schema_object_filter;
+
 function find_schema_object
 ( p_schema_object_id in varchar2 -- Find schema object in GENERATE_DDL_SESSION_SCHEMA_OBJECTS by (schema_object_filter_id, obj.id).
 )

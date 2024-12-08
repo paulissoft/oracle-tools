@@ -669,7 +669,7 @@ sub process () {
 
             if ($interface eq PKG_DDL_UTIL_V4 || $interface eq PKG_DDL_UTIL_V5) {
                 if (!defined($ddl_generate_report_fh) && $line =~ m/^# DDL generate report on \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/) {
-                    open($ddl_generate_report_fh, ">$encoding", File::Spec->catfile($output_directory, 'ddl-generate-report.md'));
+                    open($ddl_generate_report_fh, ">$encoding", 'ddl-generate-report.md'); # put it in the current directory (usually of the POM)
                 }
 
                 if (defined($ddl_generate_report_fh)) {

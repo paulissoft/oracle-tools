@@ -227,7 +227,7 @@ procedure add_schema_objects
 is
 $if oracle_tools.schema_objects_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECTS (1)';
-$end  
+$end
   l_schema constant t_schema_nn := p_schema_object_filter.schema();
   l_grantor_is_schema constant t_numeric_boolean := p_schema_object_filter.grantor_is_schema();
 begin
@@ -982,8 +982,7 @@ is
   is
     select  gdsb.seq
     ,       gdsb.object_type
-    ,       gdsb.schema_object_filter
-    ,       gdsb.schema_object_filter_id
+    ,       treat(oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_PARAMS', gdsb.params) as ORACLE_TOOLS.T_SCHEMA_OBJECT_PARAMS).schema_object_filter_id as schema_object_filter_id
     from    oracle_tools.v_my_generate_ddl_session_batches gdsb -- filter on session_id already part of view
             inner join oracle_tools.v_dependent_or_granted_object_types v
             on v.object_type = gdsb.object_type
@@ -1029,7 +1028,7 @@ $end
       savepoint spt;        
       begin
         add_schema_objects
-        ( p_schema_object_filter => l_gdssdb_tab(i_idx).schema_object_filter
+        ( p_schema_object_filter => oracle_tools.ddl_crud_api.get_schema_object_filter(p_schema_object_filter_id => l_gdssdb_tab(i_idx).schema_object_filter_id)
         , p_schema_object_filter_id => l_gdssdb_tab(i_idx).schema_object_filter_id
         , p_step => l_gdssdb_tab(i_idx).object_type
         );
