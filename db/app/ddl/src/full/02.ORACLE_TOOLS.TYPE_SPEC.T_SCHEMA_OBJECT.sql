@@ -125,28 +125,10 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
   return date
 , member function dict_last_ddl_time return date -- get dictionaly last_ddl_time, usually all_objects.last_ddl_time
 , static function ddl_batch_order
-  ( p_object_schema in varchar2
-  , p_object_type in varchar2
-  , p_base_object_schema in varchar2
-  , p_base_object_type in varchar2
+  ( p_object_type in varchar2
   )
   return varchar2
   deterministic /*result_cache*/
-  /*
-    Equivalent of order by from cursor c_params in package body PKG_DDL_UTIL:
-    
-    cursor c_params is
-      select  ...
-      order by
-              case object_schema when 'PUBLIC' then 0 when b_schema then 1 else 2 end -- PUBLIC synonyms first
-      ,       case object_type
-                when 'SCHEMA_EXPORT' then 0
-                else 1
-              end -- SCHEMA_EXPORT next
-      ,       object_type
-      ,       object_schema
-      ,       base_object_schema
-  */
 , final member function ddl_batch_order return varchar2 deterministic /*result_cache*/
 )
 not instantiable

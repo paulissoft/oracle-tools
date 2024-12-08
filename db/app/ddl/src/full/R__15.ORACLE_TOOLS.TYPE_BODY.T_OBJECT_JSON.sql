@@ -1,4 +1,4 @@
-create or replace type body t_object_json as
+CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_OBJECT_JSON" AS
 
 static
 function deserialize
@@ -104,3 +104,4 @@ end print;
 
 end t_object_json;
 /
+

@@ -1382,21 +1382,13 @@ $end
         l_expected := json_element_t.parse('{
   "SCHEMA$" : "ORACLE_TOOLS",
   "GRANTOR_IS_SCHEMA$" : 0,
-  "OBJECT_TAB$" :
-  [
-    "%:CONSTRAINT:%:%:TABLE:%::%:%:%",
-    "%:INDEX:%:%::%::::",
-    "%:REF\\_CONSTRAINT:%:%:TABLE:%::%:%:%",
-    "%:TABLE:%:%:%:%::%:%:%",
-    ":COMMENT::%:TABLE:%:%:::"
-  ],
   "OP_OBJECT_ID_EXPR_TAB$" :
   [
-    "~",
-    "~",
-    "~",
-    "~",
-    "~"
+    " ~ %:CONSTRAINT:%:%:TABLE:%::%:%:%",
+    " ~ %:INDEX:%:%::%::::",
+    " ~ %:REF\\_CONSTRAINT:%:%:TABLE:%::%:%:%",
+    " ~ %:TABLE:%:%:%:%::%:%:%",
+    " ~ :COMMENT::%:TABLE:%:%:::"
   ],
   "NR_OBJECTS_TO_EXCLUDE$" : 0
 }');
@@ -1418,35 +1410,20 @@ DBMS_SQL
         l_expected := json_element_t.parse('{
    "SCHEMA$" : "ORDSYS",
    "GRANTOR_IS_SCHEMA$" : 1,
-   "OBJECT_TAB$" :
-   [
-     "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
-     "%:%:DBMS\\_SQL:%:%:%:%:%:%:%",
-     "%:CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
-     "%:CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
-     "%:INDEX:%:%::DBMS\\_OUTPUT::::",
-     "%:INDEX:%:%::DBMS\\_SQL::::",
-     "%:REF\\_CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
-     "%:REF\\_CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
-     ":COMMENT::%:%:DBMS\\_OUTPUT:%:::",
-     ":COMMENT::%:%:DBMS\\_SQL:%:::",
-     ":OBJECT\\_GRANT::%::DBMS\\_OUTPUT::%:%:%",
-     ":OBJECT\\_GRANT::%::DBMS\\_SQL::%:%:%"
-   ],
    "OP_OBJECT_ID_EXPR_TAB$" :
    [
-     "!~",
-     "!~",
-     "!~",
-     "!~",
-     "!~",
-     "!~",
-     "!~",
-     "!~",
-     "!~",
-     "!~",
-     "!~",
-     "!~"
+     "!~ %:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+     "!~ %:%:DBMS\\_SQL:%:%:%:%:%:%:%",
+     "!~ %:CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
+     "!~ %:CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
+     "!~ %:INDEX:%:%::DBMS\\_OUTPUT::::",
+     "!~ %:INDEX:%:%::DBMS\\_SQL::::",
+     "!~ %:REF\\_CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
+     "!~ %:REF\\_CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
+     "!~ :COMMENT::%:%:DBMS\\_OUTPUT:%:::",
+     "!~ :COMMENT::%:%:DBMS\\_SQL:%:::",
+     "!~ :OBJECT\\_GRANT::%::DBMS\\_OUTPUT::%:%:%",
+     "!~ :OBJECT\\_GRANT::%::DBMS\\_SQL::%:%:%"
    ],
    "NR_OBJECTS_TO_EXCLUDE$" : 12
  }');
@@ -1467,17 +1444,11 @@ DBMS_SQL
 {
   "SCHEMA$" : "ORDSYS",
   "GRANTOR_IS_SCHEMA$" : 1,
-  "OBJECT_TAB$" :
-  [
-    ":OBJECT\\_GRANT::%::DBMS\\_OUTPUT::%:%:%",
-    ":OBJECT\\_GRANT::%::DBMS\\_SQL::%:%:%",
-    ":OBJECT\\_GRANT::%::%::%:%:%"
-  ],
   "OP_OBJECT_ID_EXPR_TAB$" :
   [
-    "!~",
-    "!~",
-    "~"
+    "!~ :OBJECT\\_GRANT::%::DBMS\\_OUTPUT::%:%:%",
+    "!~ :OBJECT\\_GRANT::%::DBMS\\_SQL::%:%:%",
+    " ~ :OBJECT\\_GRANT::%::%::%:%:%"
   ],
   "NR_OBJECTS_TO_EXCLUDE$" : 2
 }');
@@ -1499,35 +1470,20 @@ DBMS_SQL
         l_expected := json_element_t.parse('{
    "SCHEMA$" : "ORDSYS",
    "GRANTOR_IS_SCHEMA$" : 1,
-   "OBJECT_TAB$" :
-   [
-     "%:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
-     "%:%:DBMS\\_SQL:%:%:%:%:%:%:%",
-     "%:CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
-     "%:CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
-     "%:INDEX:%:%::DBMS\\_OUTPUT::::",
-     "%:INDEX:%:%::DBMS\\_SQL::::",
-     "%:REF\\_CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
-     "%:REF\\_CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
-     ":COMMENT::%:%:DBMS\\_OUTPUT:%:::",
-     ":COMMENT::%:%:DBMS\\_SQL:%:::",
-     ":OBJECT\\_GRANT::%::DBMS\\_OUTPUT::%:%:%",
-     ":OBJECT\\_GRANT::%::DBMS\\_SQL::%:%:%"
-   ],
    "OP_OBJECT_ID_EXPR_TAB$" :
    [
-     "~",
-     "~",
-     "~",
-     "~",
-     "~",
-     "~",
-     "~",
-     "~",
-     "~",
-     "~",
-     "~",
-     "~"
+     " ~ %:%:DBMS\\_OUTPUT:%:%:%:%:%:%:%",
+     " ~ %:%:DBMS\\_SQL:%:%:%:%:%:%:%",
+     " ~ %:CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
+     " ~ %:CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
+     " ~ %:INDEX:%:%::DBMS\\_OUTPUT::::",
+     " ~ %:INDEX:%:%::DBMS\\_SQL::::",
+     " ~ %:REF\\_CONSTRAINT:%:%:%:DBMS\\_OUTPUT::%:%:%",
+     " ~ %:REF\\_CONSTRAINT:%:%:%:DBMS\\_SQL::%:%:%",
+     " ~ :COMMENT::%:%:DBMS\\_OUTPUT:%:::",
+     " ~ :COMMENT::%:%:DBMS\\_SQL:%:::",
+     " ~ :OBJECT\\_GRANT::%::DBMS\\_OUTPUT::%:%:%",
+     " ~ :OBJECT\\_GRANT::%::DBMS\\_SQL::%:%:%"
    ],
    "NR_OBJECTS_TO_EXCLUDE$" : 0
  }');
@@ -1546,19 +1502,12 @@ DBMS_SQL
         l_expected := json_element_t.parse('{
   "SCHEMA$" : "ORDSYS",
   "GRANTOR_IS_SCHEMA$" : 1,
-  "OBJECT_TAB$" :
-  [
-    "%:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%::%:%:%",
-    "%:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%::%:%:%",
-    ":OBJECT\\_GRANT::%::DBMS\\_METADATA::%:%:%",
-    ":OBJECT\\_GRANT::%::DBMS\\_VERSION::%:%:%"
-  ],
   "OP_OBJECT_ID_EXPR_TAB$" :
   [
-    "~",
-    "~",
-    "~",
-    "~"
+    " ~ %:PACKAGE\\_SPEC:DBMS\\_METADATA:%:%:%::%:%:%",
+    " ~ %:PACKAGE\\_SPEC:DBMS\\_VERSION:%:%:%::%:%:%",
+    " ~ :OBJECT\\_GRANT::%::DBMS\\_METADATA::%:%:%",
+    " ~ :OBJECT\\_GRANT::%::DBMS\\_VERSION::%:%:%"
   ],
   "NR_OBJECTS_TO_EXCLUDE$" : 0
 }');
