@@ -234,7 +234,17 @@ begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $if oracle_tools.schema_objects_api.c_debugging $then
-  p_schema_object_filter.print();
+  dbug.print
+  ( dbug."input"
+  , 'p_schema_object_filter null?: %s; p_schema_object_filter_id: %s; p_step: %s'
+  , dbug.cast_to_varchar2(p_schema_object_filter is not null)
+  , p_schema_object_filter_id
+  , p_step
+  );
+  if p_schema_object_filter is not null
+  then
+    p_schema_object_filter.print();
+  end if;
 $end  
 $end
 
@@ -522,6 +532,13 @@ $end
   end case;
 
 $if oracle_tools.schema_objects_api.c_tracing $then
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print
+  ( dbug."output"
+  , 'cardinality(p_schema_object_tab): %s'
+  , cardinality(p_schema_object_tab)
+  );
+$end  
   dbug.leave;
 exception
   when others
@@ -712,6 +729,13 @@ $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
       then l_all_schema_object_tab := l_schema_object_tab;
       else l_all_schema_object_tab := l_all_schema_object_tab multiset union all l_schema_object_tab;      
     end case;
+$if oracle_tools.schema_objects_api.c_debugging $then
+    dbug.print
+    ( dbug."output"
+    , 'cardinality(l_all_schema_object_tab): %s'
+    , cardinality(l_all_schema_object_tab)
+    );
+$end
   end loop;
 
   if cardinality(l_all_schema_object_tab) > 0
@@ -778,8 +802,8 @@ begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $if oracle_tools.schema_objects_api.c_debugging $then
-  dbug.print(dbug."input", 'p_add_schema_objects: %s', p_add_schema_objects);
   dbug.print(dbug."input", 'p_generate_ddl_configuration_id: %s', p_generate_ddl_configuration_id);  
+  dbug.print(dbug."input", 'p_add_schema_objects: %s', p_add_schema_objects);
 $end
 $end
 
