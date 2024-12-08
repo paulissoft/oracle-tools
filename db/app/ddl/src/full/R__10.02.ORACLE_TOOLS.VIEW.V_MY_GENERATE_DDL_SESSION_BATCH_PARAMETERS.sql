@@ -20,10 +20,6 @@ from    ( with vmsondy as
             ,       vmsondy.privilege() as privilege
             ,       vmsondy.grantable() as grantable
             from    oracle_tools.v_my_schema_objects_no_ddl_yet  vmsondy
-          ), vmsofr as
-          ( select  /*+ MATERIALIZE */ vmsofr.schema_object_id
-            ,       vmsofr.schema_object_filter_json.schema$ as schema
-            from    oracle_tools.v_my_schema_object_filter_results vmsofr
           ), src as
           ( select  vmsondy.object_type as object_type
             ,       case
@@ -57,7 +53,7 @@ from    ( with vmsondy as
             ,       vmsondy.grantable
             from    -- here we are only interested in schema objects without DDL
                     vmsondy
-                    inner join vmsofr
+                    inner join oracle_tools.v_my_schema_object_filter_results vmsofr
                     on vmsofr.schema_object_id = vmsondy.id
           )
           select  t.object_schema
