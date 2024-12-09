@@ -859,7 +859,7 @@ $end
   exception
     when dup_val_on_index
     then
-      -- should be there now: get the id (merge does not have returning)
+      -- should be there now: get the id
       select  gdc.id
       into    p_generate_ddl_configuration_id
       from    oracle_tools.generate_ddl_configurations gdc
