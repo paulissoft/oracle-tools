@@ -554,8 +554,6 @@ procedure add_batch
 , p_object_name_tab in oracle_tools.t_text_tab default null
 , p_base_object_name_tab in oracle_tools.t_text_tab default null
 , p_nr_objects in integer default null
-, p_schema_object_filter in oracle_tools.t_schema_object_filter default null
-, p_schema_object_filter_id in integer default null
 )
 is
 begin
@@ -573,22 +571,15 @@ begin
   , p_schema
   , p_transform_param_list
   , p_object_type
-  , case
-      when p_schema_object_filter_id is null
-      then oracle_tools.t_schema_ddl_params
-           ( null -- dummy$
-           , p_object_schema
-           , p_base_object_schema
-           , p_base_object_type
-           , p_object_name_tab
-           , p_base_object_name_tab
-           , p_nr_objects
-           ).repr()
-      else oracle_tools.t_schema_object_params
-           ( null -- dummy$ 
-           , p_schema_object_filter_id
-           ).repr()
-     end
+  , oracle_tools.t_schema_ddl_params
+    ( null -- dummy$
+    , p_object_schema
+    , p_base_object_schema
+    , p_base_object_type
+    , p_object_name_tab
+    , p_base_object_name_tab
+    , p_nr_objects
+    ).repr()
   );
 end add_batch;
 
@@ -987,8 +978,6 @@ end add;
 
 procedure add
 ( p_object_type in varchar2
-, p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_schema_object_filter_id in integer
 )
 is
 begin
@@ -996,8 +985,6 @@ begin
   add_batch
   ( p_session_id => get_session_id
   , p_object_type => p_object_type
-  , p_schema_object_filter => p_schema_object_filter
-  , p_schema_object_filter_id => p_schema_object_filter_id
   );
 end add;
 

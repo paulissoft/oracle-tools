@@ -764,8 +764,6 @@ $else
   loop
     oracle_tools.ddl_crud_api.add
     ( p_object_type => r.object_type
-    , p_schema_object_filter => p_schema_object_filter 
-    , p_schema_object_filter_id => p_schema_object_filter_id 
     );
   end loop;
   
