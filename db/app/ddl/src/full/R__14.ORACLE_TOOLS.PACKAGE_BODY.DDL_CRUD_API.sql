@@ -308,7 +308,8 @@ $end
   when    not matched
   then    insert ( id, obj ) values ( src.id, src.obj )
   when    matched 
-  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$;
+  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$
+          delete where src.obj.last_ddl_time$ is null /* check constraint SCHEMA_OBJECTS$CK$OBJ$LAST_DDL_TIME$ */;
 
   -- merge into SCHEMA_OBJECT_FILTER_RESULTS (but only when not matched)
   merge
@@ -611,7 +612,8 @@ $end
   when    not matched
   then    insert ( id, obj ) values ( src.id, src.obj )
   when    matched 
-  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$;
+  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$
+          delete where src.obj.last_ddl_time$ is null /* check constraint SCHEMA_OBJECTS$CK$OBJ$LAST_DDL_TIME$ */;
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."info", '# rows inserted into schema_objects: %s', sql%rowcount);
