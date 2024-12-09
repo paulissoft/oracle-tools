@@ -338,8 +338,8 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.print
   ( dbug."input"
   , 'cardinality(p_schema_object_filter.object_id_expr): %s; p_schema_object_filter.nr_objects_to_exclude$: %s'
-  , case when p_schema_object_filter is not null and p_schema_object_filter.object_id_expr is not null then p_schema_object_filter.object_id_expr.count end
-  , case when p_schema_object_filter is not null then p_schema_object_filter.nr_objects_to_exclude$ end
+  , case when p_schema_object_filter is not null then p_schema_object_filter.nr_objects() end
+  , case when p_schema_object_filter is not null then p_schema_object_filter.nr_objects_to_exclude() end
   );
 $end
 
@@ -641,8 +641,8 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT.ADD_ITEM (2)');
     dbug.print
     ( dbug."input"
-    , 'p_schema_object_filter.object_id_expr.count: %s; p_id : %s; p_cmp: %s'
-    , p_schema_object_filter.object_id_expr.count
+    , 'p_schema_object_filter.nr_objects(): %s; p_id : %s; p_cmp: %s'
+    , p_schema_object_filter.nr_objects()
     , p_id
     , p_cmp
     );
@@ -664,8 +664,8 @@ $end
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     dbug.print
     ( dbug."output"
-    , 'p_schema_object_filter.object_id_expr.count: %s'
-    , p_schema_object_filter.object_id_expr.count
+    , 'p_schema_object_filter.nr_objects(): %s'
+    , p_schema_object_filter.nr_objects()
     );
     dbug.leave;
 $end
@@ -1122,7 +1122,7 @@ $end
   add_items(l_include_object_tab);
 
   -- make the table null when empty
-  if p_schema_object_filter.op_object_id_expr_tab$.count = 0
+  if p_schema_object_filter.nr_objects() = 0
   then
     p_schema_object_filter.op_object_id_expr_tab$ := null;
   end if;
