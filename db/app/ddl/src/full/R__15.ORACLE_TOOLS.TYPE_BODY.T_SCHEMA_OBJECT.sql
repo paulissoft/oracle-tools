@@ -446,10 +446,13 @@ member procedure print(self in oracle_tools.t_schema_object)
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
-  dbug.print(dbug."info", 'network link: %s; id: %s', self.network_link(), self.id);
-  dbug.print(dbug."info", 'signature: %s', self.signature());
-  dbug.leave;
+  dbug.print
+  ( dbug."info"
+  , 'network link: %s; id: %s; last_ddl_time: %s'
+  , self.network_link()
+  , self.id
+  , to_char(self.last_ddl_time(), 'yyyy-mm-dd hh24:mi:ss')
+  );
 $else
   null;
 $end
