@@ -102,6 +102,6 @@ $else
 $end  
 end print;
 
-end t_object_json;
+end;
 /
 
