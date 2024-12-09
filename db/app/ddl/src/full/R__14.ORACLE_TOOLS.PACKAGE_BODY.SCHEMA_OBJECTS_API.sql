@@ -576,7 +576,7 @@ end add_schema_objects;
 
 procedure ddl_batch_process
 is
-  l_session_id constant integer := oracle_tools.ddl_crud_api.get_session_id;
+  l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
   l_task_name constant varchar2(100 byte) := $$PLSQL_UNIT || '.DDL_BATCH-' || to_char(l_session_id);
 
   -- Here we substitute the session id into the statement since it may be executed by another session.
@@ -961,7 +961,7 @@ $end
 end get_schema_objects;
 
 function get_schema_objects
-( p_session_id in positiven
+( p_session_id in t_session_id_nn
 )
 return oracle_tools.t_schema_object_tab
 pipelined
@@ -990,7 +990,7 @@ begin
 end get_schema_objects;
 
 procedure ddl_batch_process
-( p_session_id in integer
+( p_session_id in t_session_id_nn
 , p_start_id in number
 , p_end_id in number
 )
@@ -1015,7 +1015,7 @@ is
   l_gdssdb_tab t_gdssdb_tab;
 
   -- to restore session id at the end
-  l_session_id constant positiven := oracle_tools.ddl_crud_api.get_session_id;
+  l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
 
   procedure cleanup
   is

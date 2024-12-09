@@ -8,12 +8,12 @@ pragma exception_init(e_can_not_insert_null, -1400);
 
 g_default_match_perc_threshold integer := 50;
 
-g_session_id t_session_id := to_number(sys_context('USERENV', 'SESSIONID'));
+g_session_id t_session_id_nn := to_number(sys_context('USERENV', 'SESSIONID'));
 
 g_min_timestamp_to_keep constant oracle_tools.generate_ddl_sessions.created%type := c_min_timestamp_to_keep;
 
 function get_schema_object_filter_id
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 )
 return positive
 is
@@ -30,7 +30,7 @@ exception
 end get_schema_object_filter_id;
 
 function get_schema_object_filter
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 )
 return oracle_tools.t_schema_object_filter
 is
@@ -42,7 +42,7 @@ exception
 end get_schema_object_filter;
 
 function find_schema_object
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 , p_schema_object_id in varchar2
 )
 return oracle_tools.t_schema_object
@@ -67,7 +67,7 @@ exception
 end find_schema_object;
 
 function match_perc
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 )
 return integer
 deterministic
@@ -86,7 +86,7 @@ begin
 end match_perc;
 
 procedure add_schema_object_filter
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 , p_generate_ddl_configuration_id in integer -- the GENERATE_DDL_CONFIGURATIONS.ID
 , p_schema_object_filter_id out nocopy integer
@@ -267,7 +267,7 @@ $end
 end add_schema_object_filter;
 
 procedure add_schema_object
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 , p_schema_object in oracle_tools.t_schema_object
 , p_schema_object_filter_id in positiven
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
@@ -383,7 +383,7 @@ $end
 end add_schema_object;
 
 procedure add_schema_ddl
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 , p_schema_ddl in oracle_tools.t_schema_ddl
 )
 is
@@ -538,7 +538,7 @@ $end
 end add_schema_ddl;
 
 procedure add_batch
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 , p_schema in varchar2 default null
 , p_transform_param_list in varchar2 default null
 , p_object_schema in varchar2 default null
@@ -578,7 +578,7 @@ begin
 end add_batch;
 
 procedure add_schema_object_tab
-( p_session_id in integer
+( p_session_id in t_session_id_nn
 , p_schema_object_tab in oracle_tools.t_schema_object_tab
 , p_schema_object_filter_id in positiven
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
@@ -686,14 +686,14 @@ end add_schema_object_tab;
 -- PUBLIC
 
 procedure set_session_id
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 )
 is
 begin
-  if p_session_id is null
+  /*if p_session_id is null
   then
     raise value_error;
-  elsif p_session_id = to_number(sys_context('USERENV', 'SESSIONID'))
+  els*/if p_session_id = to_number(sys_context('USERENV', 'SESSIONID'))
   then
     g_session_id := p_session_id;
   else
@@ -707,7 +707,7 @@ begin
 end set_session_id;
 
 function get_session_id
-return t_session_id
+return t_session_id_nn
 is
 begin
   return g_session_id;
@@ -1009,7 +1009,7 @@ end add;
 
 procedure clear_batch
 is
-  l_session_id constant t_session_id := get_session_id;
+  l_session_id constant t_session_id_nn := get_session_id;
 begin
   delete
   from    oracle_tools.generate_ddl_session_batches gdsb
@@ -1024,7 +1024,7 @@ procedure set_batch_start_time
 ( p_seq in integer
 )
 is
-  l_session_id constant t_session_id := get_session_id;
+  l_session_id constant t_session_id_nn := get_session_id;
 begin
   update  oracle_tools.generate_ddl_session_batches gdsb
   set     gdsb.start_time = sys_extract_utc(systimestamp)
@@ -1045,7 +1045,7 @@ procedure set_batch_end_time
 , p_error_message in varchar2
 )
 is
-  l_session_id constant t_session_id := get_session_id;
+  l_session_id constant t_session_id_nn := get_session_id;
 begin
   update  oracle_tools.generate_ddl_session_batches gdsb
   set     gdsb.end_time = sys_extract_utc(systimestamp)
@@ -1088,7 +1088,7 @@ $end
 end clear_all_ddl_tables;
 
 procedure get_schema_objects_cursor
-( p_session_id in positiven
+( p_session_id in t_session_id_nn
 , p_cursor out nocopy sys_refcursor
 )
 is
@@ -1111,7 +1111,7 @@ begin
 end get_schema_objects_cursor;
 
 procedure get_display_ddl_sql_cursor
-( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
 , p_cursor out nocopy t_display_ddl_sql_cur
 )
 is
@@ -1189,7 +1189,7 @@ begin
 end set_ddl_output_written;
 
 procedure get_ddl_generate_report_cursor
-( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
 , p_cursor out nocopy t_ddl_generate_report_cur
 )
 is
@@ -1229,7 +1229,7 @@ begin
 end get_ddl_generate_report_cursor;
 
 procedure delete_generate_ddl_sessions
-( p_session_id in t_session_id default null
+( p_session_id in t_session_id 
 )
 is
 begin

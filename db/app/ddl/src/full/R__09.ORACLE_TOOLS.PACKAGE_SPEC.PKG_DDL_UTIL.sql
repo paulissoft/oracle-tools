@@ -51,6 +51,10 @@ c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debuggi
 
 c_default_parallel_level constant natural := 2; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
 
+-- Duplicate code see DDL_CRUD_API but we do notwant package spec A to invoke package spec B and vice versa.
+subtype t_session_id is integer;
+subtype t_session_id_nn is t_session_id not null;  
+
 c_test_empty constant boolean := false;
 
 /*
@@ -228,21 +232,21 @@ This function will return a list of DDL text plus information about the object.
 **/
 
 function display_ddl_sql
-( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
 )
 return oracle_tools.t_display_ddl_sql_tab
 pipelined;
 /** Returns information about generated DDL for this session. Will **NOT** generate, just read from cache. **/
 
 function display_ddl_schema
-( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
 )
 return oracle_tools.t_schema_ddl_tab
 pipelined;
 /** Returns information about generated DDL for this session. Will **NOT** generate, just read from cache. **/
 
 procedure ddl_generate_report
-( p_session_id in positive default null -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+( p_session_id in t_session_id default null -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
 , p_output in out nocopy clob -- the CLOB to append the report to
 );
 /**
@@ -453,7 +457,7 @@ procedure ddl_batch_process;
 /** Invokes DBMS_PARALLEL_EXECUTE to process GENERATE_DDL_SESSION_BATCHES for the current session. **/
 
 procedure ddl_batch_process
-( p_session_id in integer
+( p_session_id in t_session_id_nn
 , p_start_id in number
 , p_end_id in number
 );

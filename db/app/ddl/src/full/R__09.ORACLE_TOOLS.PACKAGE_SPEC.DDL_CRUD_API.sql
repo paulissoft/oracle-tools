@@ -48,10 +48,11 @@ c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 c_min_timestamp_to_keep constant timestamp(6) :=
   (sys_extract_utc(current_timestamp) - interval '2' day);
 
-subtype t_session_id is integer;  
+subtype t_session_id is integer;
+subtype t_session_id_nn is t_session_id not null;  
 
 procedure set_session_id
-( p_session_id in t_session_id -- The session id.
+( p_session_id in t_session_id_nn -- The session id.
 );
 /**
 
@@ -64,7 +65,7 @@ b. the current session id (to_number(sys_context('USERENV', 'SESSIONID')))
 **/
 
 function get_session_id
-return t_session_id;
+return t_session_id_nn;
 /** Get the session id that will be used for the CRUD operations. **/
 
 function get_schema_object_filter_id
@@ -376,7 +377,7 @@ And thus all related tables thanks to the cascading foreign keys.
 **/
 
 procedure get_schema_objects_cursor
-( p_session_id in positiven
+( p_session_id in t_session_id_nn
 , p_cursor out nocopy sys_refcursor
 );
 
@@ -396,7 +397,7 @@ type t_display_ddl_sql_tab is table of t_display_ddl_sql_rec;
 type t_display_ddl_sql_cur is ref cursor return t_display_ddl_sql_rec;
 
 procedure get_display_ddl_sql_cursor
-( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
 , p_cursor out nocopy t_display_ddl_sql_cur
 );
 
@@ -425,7 +426,7 @@ type t_ddl_generate_report_tab is table of t_ddl_generate_report_rec;
 type t_ddl_generate_report_cur is ref cursor return t_ddl_generate_report_rec;
 
 procedure get_ddl_generate_report_cursor
-( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
 , p_cursor out nocopy t_ddl_generate_report_cur
 );
 

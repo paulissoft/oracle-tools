@@ -3548,7 +3548,7 @@ $end
 end display_ddl_schema;
 
   function display_ddl_sql
-  ( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+  ( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
   )
   return oracle_tools.t_display_ddl_sql_tab
   pipelined
@@ -3559,7 +3559,7 @@ end display_ddl_schema;
     l_display_ddl_sql_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_tab;
 
     -- to restore session id at the end
-    l_session_id constant positiven := oracle_tools.ddl_crud_api.get_session_id;
+    l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
 
     procedure cleanup
     is
@@ -3640,7 +3640,7 @@ $end
   end display_ddl_sql;
 
   function display_ddl_schema
-  ( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+  ( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
   )
   return oracle_tools.t_schema_ddl_tab
   pipelined
@@ -3653,7 +3653,7 @@ $end
     l_schema_ddl oracle_tools.t_schema_ddl;
     
     -- to restore session id at the end
-    l_session_id constant positiven := oracle_tools.ddl_crud_api.get_session_id;
+    l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
 
     procedure cleanup
     is
@@ -3746,7 +3746,7 @@ $end
   end display_ddl_schema;
 
   procedure ddl_generate_report
-  ( p_session_id in positive
+  ( p_session_id in t_session_id
   , p_output in out nocopy clob -- the CLOB to append the report to
   )
   is
@@ -3758,7 +3758,7 @@ $end
     l_object_type_output_tab dbms_sql.clob_table;
 
     -- to restore session id at the end
-    l_session_id constant positiven := oracle_tools.ddl_crud_api.get_session_id;
+    l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
 
     procedure cleanup
     is
@@ -5864,7 +5864,7 @@ $end
 
   procedure ddl_batch_process
   is
-    l_session_id constant integer := oracle_tools.ddl_crud_api.get_session_id;
+    l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
     l_task_name constant varchar2(100 byte) := $$PLSQL_UNIT || '.DDL_BATCH-' || to_char(l_session_id);
     -- Here we substitute the session id into the statement since it may be executed by another session.
     l_sql_stmt constant varchar2(1000 byte) :=
@@ -5974,7 +5974,7 @@ $end
   end ddl_batch_process;
 
   procedure ddl_batch_process
-  ( p_session_id in integer
+  ( p_session_id in t_session_id_nn
   , p_start_id in number
   , p_end_id in number
   )
@@ -6002,7 +6002,7 @@ $end
     l_gdssdb_tab t_gdssdb_tab;
 
     -- to restore session id at the end
-    l_session_id constant positiven := oracle_tools.ddl_crud_api.get_session_id;
+    l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
 
     procedure cleanup
     is

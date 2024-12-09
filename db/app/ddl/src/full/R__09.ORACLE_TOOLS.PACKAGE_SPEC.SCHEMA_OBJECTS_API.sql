@@ -10,6 +10,10 @@ c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
 c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 c_use_ddl_batch_process constant boolean := true;
 
+-- Some duplicate code, see DDL_CRUD_API but for the time being okay.
+subtype t_session_id is integer;
+subtype t_session_id_nn is t_session_id not null;  
+
 procedure add
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter -- the schema object filter
 , p_generate_ddl_configuration_id in integer -- the GENERATE_DDL_CONFIGURATIONS.ID
@@ -66,14 +70,14 @@ Steps:
 **/
 
 function get_schema_objects
-( p_session_id in positiven
+( p_session_id in t_session_id_nn
 )
 return oracle_tools.t_schema_object_tab
 pipelined;
 /** Returns information about schema objects (to generate DDL for) for this session. Will **NOT** generate, just read from cache. **/
 
 procedure ddl_batch_process
-( p_session_id in integer -- The current session id.
+( p_session_id in t_session_id_nn -- The current session id.
 , p_start_id in number -- The start number (V_DEPENDENT_OR_GRANTED_OBJECT_TYPES.NR).
 , p_end_id in number -- The end number (V_DEPENDENT_OR_GRANTED_OBJECT_TYPES.NR).
 );
