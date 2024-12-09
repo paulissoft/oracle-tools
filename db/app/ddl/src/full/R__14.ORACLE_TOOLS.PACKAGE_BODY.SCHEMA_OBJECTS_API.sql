@@ -205,6 +205,11 @@ $end
 $if oracle_tools.schema_objects_api.c_tracing $then
 $if oracle_tools.schema_objects_api.c_debugging $then
   dbug.print(dbug."output", 'p_schema_object_tab.count: %s', p_schema_object_tab.count);
+  for i_idx in 1..p_schema_object_tab.count
+  loop
+    dbug.print(dbug."output", 'p_schema_object_tab(%s)', i_idx);
+    p_schema_object_tab(i_idx).print();
+  end loop;
 $end  
   dbug.leave;
 $end
@@ -538,6 +543,11 @@ $if oracle_tools.schema_objects_api.c_debugging $then
   , 'cardinality(p_schema_object_tab): %s'
   , cardinality(p_schema_object_tab)
   );
+  for i_idx in 1 .. nvl(cardinality(p_schema_object_tab), 0)
+  loop
+    dbug.print(dbug."output", 'p_schema_object_tab(%s)', i_idx);
+    p_schema_object_tab(i_idx).print();
+  end loop;
 $end  
   dbug.leave;
 exception
