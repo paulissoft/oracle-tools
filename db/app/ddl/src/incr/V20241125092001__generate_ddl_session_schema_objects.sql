@@ -8,12 +8,10 @@ create table generate_ddl_session_schema_objects
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   constraint generate_ddl_session_schema_objects$nnc$created not null
-, ddl_output_written integer
-  default 0
-  constraint generate_ddl_session_schema_objects$nnc$ddl_output_written not null
-  constraint generate_ddl_session_schema_objects$ck$ddl_output_written check (ddl_output_written = 1)
 , last_ddl_time date -- all_objects.last_ddl_time
 , generate_ddl_configuration_id integer
+, ddl_output_written integer -- will be set to null when writing starts
+  constraint generate_ddl_session_schema_objects$ck$ddl_output_written check (ddl_output_written = 1)
 , constraint generate_ddl_session_schema_objects$pk
   primary key (session_id, schema_object_id)
 , constraint generate_ddl_session_schema_objects$fk$1
