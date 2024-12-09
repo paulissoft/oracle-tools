@@ -315,7 +315,7 @@ $end
   merge
   into    oracle_tools.schema_object_filter_results dst
   using   ( select  p_schema_object_filter_id as schema_object_filter_id
-            ,       p_schema_object_id as schema_object_id
+            ,       l_schema_object_id as schema_object_id
             from    dual
           ) src
   on      ( src.schema_object_filter_id = dst.schema_object_filter_id and
