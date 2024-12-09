@@ -300,7 +300,7 @@ $end
   -- merge into SCHEMA_OBJECTS (update last_ddl_time$)
   merge
   into    oracle_tools.schema_objects dst
-  using   ( select  p_schema_object.id as id
+  using   ( select  l_schema_object_id as id
             ,       p_schema_object as obj
             from    dual
           ) src
