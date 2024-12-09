@@ -276,10 +276,10 @@ end add_schema_object_filter;
 procedure add_schema_object
 ( p_session_id in t_session_id
 , p_schema_object in oracle_tools.t_schema_object
+, p_schema_object_filter_id in positiven
+, p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
-  l_schema_object_filter_id constant positive := get_schema_object_filter_id(p_session_id => p_session_id);
-  l_schema_object_filter constant oracle_tools.t_schema_object_filter := get_schema_object_filter(p_session_id => p_session_id);
   l_schema_object_id constant oracle_tools.schema_objects.id%type := p_schema_object.id;
   l_last_ddl_time date;
   l_found pls_integer;
@@ -292,7 +292,7 @@ $if oracle_tools.ddl_crud_api.c_tracing $then
 $end
 
   -- check precondition (in GENERATE_DDL_SESSIONS and thus SCHEMA_OBJECT_FILTERS)
-  if l_schema_object_filter_id is null
+  if p_schema_object_filter_id is null
   then
     raise program_error;
   end if;
@@ -314,15 +314,15 @@ $end
   -- merge into SCHEMA_OBJECT_FILTER_RESULTS (but only when not matched)
   merge
   into    oracle_tools.schema_object_filter_results dst
-  using   ( select  l_schema_object_filter_id as schema_object_filter_id
-            ,       l_schema_object_id as schema_object_id
+  using   ( select  p_schema_object_filter_id as schema_object_filter_id
+            ,       p_schema_object_id as schema_object_id
             from    dual
           ) src
   on      ( src.schema_object_filter_id = dst.schema_object_filter_id and
             src.schema_object_id = src.schema_object_id )
   when    not matched
   then    insert ( schema_object_filter_id, schema_object_id, generate_ddl )
-          values ( src.schema_object_filter_id, src.schema_object_id, l_schema_object_filter.matches_schema_object(src.schema_object_id) );
+          values ( src.schema_object_filter_id, src.schema_object_id, p_schema_object_filter.matches_schema_object(src.schema_object_id) );
 
   /*
   -- Now the following tables have data for these parameters:
@@ -337,7 +337,7 @@ $end
     select  1
     into    l_found
     from    oracle_tools.schema_object_filter_results sofr
-    where   sofr.schema_object_filter_id = l_schema_object_filter_id
+    where   sofr.schema_object_filter_id = p_schema_object_filter_id
     and     sofr.schema_object_id = l_schema_object_id
     and     sofr.generate_ddl = 1;
   exception
@@ -588,12 +588,12 @@ procedure add_schema_object_tab
 ( p_session_id in integer
 , p_schema_object_tab in oracle_tools.t_schema_object_tab
 , p_schema_object_filter_id in positiven
+, p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
 $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECT_TAB';
 $end
-  l_schema_object_filter constant oracle_tools.t_schema_object_filter := get_schema_object_filter(p_schema_object_filter_id => p_schema_object_filter_id);
 begin
 $if oracle_tools.ddl_crud_api.c_tracing $then
   dbug.enter(l_module_name);
@@ -632,7 +632,7 @@ $end
           )
   when    not matched
   then    insert ( schema_object_filter_id, schema_object_id, generate_ddl )
-          values ( src.schema_object_filter_id, src.schema_object_id, l_schema_object_filter.matches_schema_object(src.schema_object_id) );
+          values ( src.schema_object_filter_id, src.schema_object_id, p_schema_object_filter.matches_schema_object(src.schema_object_id) );
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."info", '# rows inserted into schema_object_filter_results: %s', sql%rowcount);
@@ -658,7 +658,7 @@ $end
             from    oracle_tools.generate_ddl_sessions gds
                     cross join table(p_schema_object_tab) t -- may contain duplicates (constraints)
                     inner join oracle_tools.schema_object_filter_results sofr
-                    on sofr.schema_object_filter_id = p_schema_object_filter_id and
+                    on sofr.schema_object_filter_id = gds.schema_object_filter_id and
                        sofr.schema_object_id = t.id and
                        sofr.generate_ddl = 1 -- ignore objects that do not need to be generated                      
                     left outer join oracle_tools.generated_ddls gd
@@ -895,6 +895,8 @@ end add;
 
 procedure add
 ( p_schema_object in oracle_tools.t_schema_object
+, p_schema_object_filter_id in positiven
+, p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
 begin
@@ -902,6 +904,8 @@ begin
   add_schema_object
   ( p_session_id => get_session_id
   , p_schema_object => p_schema_object
+  , p_schema_object_filter_id => p_schema_object_filter_id
+  , p_schema_object_filter => p_schema_object_filter
   );
 end add;
 
@@ -993,6 +997,7 @@ end add;
 procedure add
 ( p_schema_object_tab in oracle_tools.t_schema_object_tab
 , p_schema_object_filter_id in positiven
+, p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
 begin
@@ -1001,6 +1006,7 @@ begin
   ( p_session_id => get_session_id
   , p_schema_object_tab => p_schema_object_tab
   , p_schema_object_filter_id => p_schema_object_filter_id
+  , p_schema_object_filter => p_schema_object_filter
   );
 end add;
 

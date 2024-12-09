@@ -3016,7 +3016,7 @@ $end
 
             if not(p_object_lookup_tab(l_object_key).ready)
             then
-              oracle_tools.ddl_crud_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
+              oracle_tools.ddl_crud_api.add(p_schema_ddl => p_object_lookup_tab(l_object_key).schema_ddl);
               p_object_lookup_tab(l_object_key).ready := true;
               p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
@@ -3086,7 +3086,7 @@ $end
             , p_text => '-- No DDL retrieved.'
             );
 
-            oracle_tools.ddl_crud_api.add(p_object_lookup_tab(l_object_key).schema_ddl);
+            oracle_tools.ddl_crud_api.add(p_schema_ddl => p_object_lookup_tab(l_object_key).schema_ddl);
             p_object_lookup_tab(l_object_key).ready := true;
             p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
           end if;          

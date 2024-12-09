@@ -19,7 +19,7 @@ procedure add
 
 Steps:
 1. invoke DDL_CRUD_API.ADD(p_schema_object_filter, p_generate_ddl_configuration_id)
-2. add schema objects (when the parameter is true) matching the schema object filter using DDL_CRUD_API.ADD(p_schema_object_tab, p_schema_object_filter_id) for:
+2. add schema objects (when the parameter is true) matching the schema object filter using DDL_CRUD_API.ADD(p_schema_object_tab, p_schema_object_filter_id, p_schema_object_filter) for:
    a. named objects -- no base object
    b. object grants -- base object (using named objects from step 2a)
    c. synonyms      -- base object (idem)

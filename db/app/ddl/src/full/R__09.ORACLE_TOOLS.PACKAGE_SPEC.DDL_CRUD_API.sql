@@ -195,6 +195,8 @@ updated in any case.
 
 procedure add
 ( p_schema_object in oracle_tools.t_schema_object -- The schema object to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS.
+, p_schema_object_filter_id in positiven
+, p_schema_object_filter in oracle_tools.t_schema_object_filter
 );
 /**
 Add a schema object to SCHEMA_OBJECTS for the current session id and update
@@ -293,6 +295,7 @@ Add a record to table GENERATE_DDL_SESSION_BATCHES.
 procedure add
 ( p_schema_object_tab in oracle_tools.t_schema_object_tab -- The schema object table.
 , p_schema_object_filter_id in positiven -- The schema object filter id.
+, p_schema_object_filter in oracle_tools.t_schema_object_filter
 );
 /**
 

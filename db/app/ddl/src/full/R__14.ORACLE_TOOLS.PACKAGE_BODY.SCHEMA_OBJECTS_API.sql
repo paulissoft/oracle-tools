@@ -259,6 +259,7 @@ $end
       oracle_tools.ddl_crud_api.add
       ( p_schema_object_tab => p_schema_object_tab
       , p_schema_object_filter_id => p_schema_object_filter_id
+      , p_schema_object_filter => p_schema_object_filter
       );
       p_schema_object_tab.delete;
 
@@ -568,6 +569,7 @@ begin
     oracle_tools.ddl_crud_api.add
     ( p_schema_object_tab => l_schema_object_tab
     , p_schema_object_filter_id => p_schema_object_filter_id
+    , p_schema_object_filter => p_schema_object_filter
     );
   end if;  
 end add_schema_objects;
@@ -742,6 +744,7 @@ $end
     oracle_tools.ddl_crud_api.add
     ( p_schema_object_tab => l_all_schema_object_tab
     , p_schema_object_filter_id => p_schema_object_filter_id
+    , p_schema_object_filter => p_schema_object_filter
     );
   end if;
 
