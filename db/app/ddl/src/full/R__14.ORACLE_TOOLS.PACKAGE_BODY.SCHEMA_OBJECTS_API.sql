@@ -630,42 +630,35 @@ $if oracle_tools.schema_objects_api.c_debugging $then
 $end
 
     -- If there is error, RESUME it for at most 2 times.
+    <<try_loop>>
     for i_try in 1..2
     loop
       l_status := dbms_parallel_execute.task_status(l_task_name);
-      exit when l_status = dbms_parallel_execute.finished;
+      exit try_loop when l_status = dbms_parallel_execute.finished;
 
 $if oracle_tools.schema_objects_api.c_debugging $then
       dbug.print(dbug."info", 'dbms_parallel_execute.resume_task (try: %s, status: %s)', i_try, l_status);
 $end
       dbms_parallel_execute.resume_task(l_task_name);
-    end loop;
+    end loop try_loop;
 
-    -- check errors
-    for r in
-    ( select  upec.error_message
-      ,       upec.job_name
-      from    user_parallel_execute_chunks upec
-      where   upec.task_name = l_task_name
-      and     upec.error_message is not null
-      and     rownum = 1
-    )
-    loop
+    if l_status = dbms_parallel_execute.finished
+    then
+      -- Done with processing; drop the task
+      dbms_parallel_execute.drop_task(l_task_name);
+    else
       oracle_tools.pkg_ddl_error.raise_error
       ( p_error_number => oracle_tools.pkg_ddl_error.c_batch_failed 
-      , p_error_message => r.error_message
-      , p_context_info => r.job_name
-      , p_context_label => 'job name'
+      , p_error_message => 'Task did not finish correctly: please look at USER_PARALLEL_EXECUTE_TASKS/USER_PARALLEL_EXECUTE_CHUNKS.'
+      , p_context_info => l_task_name
+      , p_context_label => 'task name'
       );
-    end loop;
-
-    -- Done with processing; drop the task
-    dbms_parallel_execute.drop_task(l_task_name);
+    end if;
   exception
     when others
     then
-      -- On error also done with processing; drop the task
-      dbms_parallel_execute.drop_task(l_task_name);
+      -- Github issue #186: When a DBMS_PARALLEL_EXECUTE task fails it should NOT be dropped for further investigation.
+      -- dbms_parallel_execute.drop_task(l_task_name);
       raise;      
   end;
 

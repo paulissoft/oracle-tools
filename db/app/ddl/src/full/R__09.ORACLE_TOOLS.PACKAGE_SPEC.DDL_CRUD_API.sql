@@ -45,6 +45,9 @@ b. for the current session id (to_number(sys_context('USERENV', 'SESSIONID')))
 c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
 c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 
+c_min_timestamp_to_keep constant timestamp(6) :=
+  (sys_extract_utc(current_timestamp) - interval '2' day);
+
 subtype t_session_id is integer;  
 
 procedure set_session_id
@@ -425,6 +428,11 @@ procedure get_ddl_generate_report_cursor
 ( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
 , p_cursor out nocopy t_ddl_generate_report_cur
 );
+
+procedure delete_generate_ddl_sessions
+( p_session_id in t_session_id default null -- The session id to delete (or sessions longer than 2 days ago).
+);
+/** Delete rows from GENERATE_DDL_SESSIONS. **/
 
 END DDL_CRUD_API;
 /

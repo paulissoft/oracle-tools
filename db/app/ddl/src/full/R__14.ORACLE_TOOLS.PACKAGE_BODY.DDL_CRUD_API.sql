@@ -10,8 +10,7 @@ g_default_match_perc_threshold integer := 50;
 
 g_session_id t_session_id := to_number(sys_context('USERENV', 'SESSIONID'));
 
-g_min_timestamp_to_keep constant oracle_tools.generate_ddl_sessions.created%type :=
-  (sys_extract_utc(current_timestamp) - interval '2' day);
+g_min_timestamp_to_keep constant oracle_tools.generate_ddl_sessions.created%type := c_min_timestamp_to_keep;
 
 function get_schema_object_filter_id
 ( p_session_id in t_session_id
@@ -213,13 +212,7 @@ $if oracle_tools.ddl_crud_api.c_debugging $then
 $end
 
   -- cleanup on the fly
-  delete
-  from    oracle_tools.generate_ddl_sessions gds
-  where   gds.created <= g_min_timestamp_to_keep;
-
-$if oracle_tools.ddl_crud_api.c_debugging $then
-  dbug.print(dbug."info", '# rows deleted from generate_ddl_sessions: %s', sql%rowcount);
-$end
+  delete_generate_ddl_sessions;
 
   -- either insert or update GENERATE_DDL_SESSIONS
   if get_schema_object_filter_id(p_session_id => p_session_id) is null
@@ -1234,6 +1227,28 @@ begin
     order by
             so.obj.id;
 end get_ddl_generate_report_cursor;
+
+procedure delete_generate_ddl_sessions
+( p_session_id in t_session_id default null
+)
+is
+begin
+  if p_session_id is null
+  then
+    delete
+    from    oracle_tools.generate_ddl_sessions gds
+    where   gds.created <= g_min_timestamp_to_keep;
+  else
+    delete
+    from    oracle_tools.generate_ddl_sessions gds
+    where   gds.session_id = p_session_id;
+  end if;
+
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."info", '# rows deleted from generate_ddl_sessions: %s', sql%rowcount);
+$end
+
+end delete_generate_ddl_sessions;  
 
 END DDL_CRUD_API;
 /
