@@ -1,7 +1,7 @@
 create table schema_objects
 ( id varchar2(500 byte)
   constraint schema_objects$nnc$id not null
-, obj t_schema_object 
+, obj oracle_tools.t_schema_object 
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   constraint schema_objects$nnc$created not null
