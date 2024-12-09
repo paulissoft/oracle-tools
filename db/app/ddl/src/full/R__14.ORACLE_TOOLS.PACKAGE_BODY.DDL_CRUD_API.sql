@@ -325,14 +325,14 @@ $end
   -- * SCHEMA_OBJECT_FILTER_RESULTS
   */
 
-  -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns 0
+  -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns null
   begin
     select  1
     into    l_found
     from    oracle_tools.schema_object_filter_results sofr
     where   sofr.schema_object_filter_id = p_schema_object_filter_id
     and     sofr.schema_object_id = l_schema_object_id
-    and     sofr.generate_ddl = 1;
+    and     sofr.generate_ddl in (0, 1);
   exception
     when no_data_found
     then -- no match
@@ -639,7 +639,7 @@ $end
   -- * SCHEMA_OBJECT_FILTER_RESULTS
   */
 
-  -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns 0
+  -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns null
   merge
   into    oracle_tools.generate_ddl_session_schema_objects dst
   using   ( select  p_session_id as session_id
@@ -653,7 +653,7 @@ $end
                     inner join oracle_tools.schema_object_filter_results sofr
                     on sofr.schema_object_filter_id = gds.schema_object_filter_id and
                        sofr.schema_object_id = t.id and
-                       sofr.generate_ddl = 1 -- ignore objects that do not need to be generated                      
+                       sofr.generate_ddl in (0, 1) -- ignore objects that never ever need to be generated                      
                     left outer join oracle_tools.generated_ddls gd
                     on gd.schema_object_id = t.id and
                        gd.last_ddl_time = t.last_ddl_time() and

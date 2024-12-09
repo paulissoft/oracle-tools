@@ -38,14 +38,17 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" AUTHID CURRENT_USER UNDER T_
   )
   return integer
   deterministic
+  /** Returns null when schema object must always be ignored (BIN, system generated, etcetera), 0 when it does NOT match (now) due to the filter and 1 when it matches. **/
 , member procedure chk
   ( self in oracle_tools.t_schema_object_filter
   )
+  /** Check the consistency of the attributes. **/
 , overriding  
   member procedure serialize
   ( self in oracle_tools.t_schema_object_filter
   , p_json_object in out nocopy json_object_t
   )
+  /** Serialize into a JSON object. **/
 )
 instantiable
 final]';

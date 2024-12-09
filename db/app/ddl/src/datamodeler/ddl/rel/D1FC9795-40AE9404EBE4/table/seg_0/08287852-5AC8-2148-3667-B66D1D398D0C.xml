@@ -34,8 +34,8 @@
 <use>1</use>
 <logicalDatatype>LOGDT019</logicalDatatype>
 <dataTypePrecision>*</dataTypePrecision>
-<dataTypeScale>0</dataTypeScale>
-<ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<dataTypeSize>500 BYTE</dataTypeSize>
+<ownDataTypeParameters>500 BYTE,,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
@@ -45,6 +45,7 @@
 </propertyMap>
 <associations>
 <colAssociation fkAssociation="6A758CAF-0130-57DE-9E5E-E5A670B23B5C" referredColumn="897C19BD-7515-AD12-9A34-320E5B62A40B"/>
+<colAssociation fkAssociation="6A538357-1D78-2FDC-662B-4E9D66B80E9B" referredColumn="F9235B75-7E72-8805-F33D-16F641E2E8D2"/>
 </associations>
 </Column>
 <Column name="SCHEMA_OBJECT_ID" id="8805373F-984F-892B-883F-389AFFB05768">
@@ -58,8 +59,9 @@
 <useDomainConstraints>false</useDomainConstraints>
 <use>1</use>
 <logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypePrecision>*</dataTypePrecision>
 <dataTypeSize>500 BYTE</dataTypeSize>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
+<ownDataTypeParameters>,*,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
@@ -69,34 +71,8 @@
 </propertyMap>
 <associations>
 <colAssociation fkAssociation="6A538357-1D78-2FDC-662B-4E9D66B80E9B" referredColumn="F9235B75-7E72-8805-F33D-16F641E2E8D2"/>
+<colAssociation fkAssociation="6A758CAF-0130-57DE-9E5E-E5A670B23B5C" referredColumn="897C19BD-7515-AD12-9A34-320E5B62A40B"/>
 </associations>
-</Column>
-<Column name="GENERATE_DDL" id="12282FF0-C0B9-27F0-3E42-F0D759FE8FC0">
-<sourceConnName>oracle_tools@free</sourceConnName>
-<sourceObjSchema>SCHEMA_OBJECT_FILTER_RESULTS</sourceObjSchema>
-<sourceObjName>GENERATE_DDL</sourceObjName>
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<importedID>BBC209D7-0176-2D97-096B-CB24DA054641</importedID>
-<constraintName>SCHEMA_OBJECT_FILTER_RESULTS$CK$GENERATE_DDL</constraintName>
-<useDomainConstraints>false</useDomainConstraints>
-<use>1</use>
-<logicalDatatype>LOGDT019</logicalDatatype>
-<dataTypePrecision>1</dataTypePrecision>
-<dataTypeScale>0</dataTypeScale>
-<listOfValues>
-<valueDef value="0" description=""/>
-<valueDef value="1" description=""/>
-</listOfValues>
-<ownDataTypeParameters>,1,0</ownDataTypeParameters>
-<containsPII>false</containsPII>
-<containsSensitiveInformation>false</containsSensitiveInformation>
-<autoIncrementCycle>false</autoIncrementCycle>
-<notNullConstraintName>SCHEMA_OBJECT_FILTER_RESULTS$NNC$GENERATE_DDL</notNullConstraintName>
-<propertyMap>
-<property name="copyComments" value="1"/>
-</propertyMap>
 </Column>
 <Column name="CREATED" id="098F45F5-96FC-C722-CA69-ACDB14076EA3">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -116,6 +92,32 @@
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
 <notNullConstraintName>SCHEMA_OBJECT_FILTER_RESULTS$NNC$CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+<Column name="GENERATE_DDL" id="12282FF0-C0B9-27F0-3E42-F0D759FE8FC0">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECT_FILTER_RESULTS</sourceObjSchema>
+<sourceObjName>GENERATE_DDL</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>BBC209D7-0176-2D97-096B-CB24DA054641</importedID>
+<constraintName>SCHEMA_OBJECT_FILTER_RESULTS$CK$GENERATE_DDL</constraintName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>1</dataTypePrecision>
+<listOfValues>
+<valueDef value="0" description=""/>
+<valueDef value="1" description=""/>
+</listOfValues>
+<ownDataTypeParameters>,1,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
 <propertyMap>
 <property name="copyComments" value="1"/>
 </propertyMap>
@@ -174,7 +176,7 @@
 <indexState>Foreign Key</indexState>
 <isSurrogateKey>false</isSurrogateKey>
 <indexColumnUsage>
-<colUsage columnID="ACC9B02B-6E23-9062-4A3D-3E13B01F3D45"/>
+<colUsage columnID="8805373F-984F-892B-883F-389AFFB05768"/>
 </indexColumnUsage>
 </ind_PK_UK>
 <ind_PK_UK id="7114359E-E001-ECA0-DF88-5FB7F0258AA6" name="SCHEMA_OBJECT_FILTER_RESULTS$FK$2">
@@ -184,7 +186,7 @@
 <indexState>Foreign Key</indexState>
 <isSurrogateKey>false</isSurrogateKey>
 <indexColumnUsage>
-<colUsage columnID="8805373F-984F-892B-883F-389AFFB05768"/>
+<colUsage columnID="ACC9B02B-6E23-9062-4A3D-3E13B01F3D45"/>
 </indexColumnUsage>
 </ind_PK_UK>
 </indexes>

@@ -366,8 +366,8 @@ $if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 $else         
       ignore_object(p_base_object_type, p_base_object_name, p_result, p_details);
 $end
-       
-      exit result_loop when p_result = 0;
+      if p_result = 0 then p_result := null; end if; 
+      exit result_loop when p_result is null;
     end if;
 
     -- exclude certain named objects
@@ -386,7 +386,8 @@ $else
       ignore_object(p_object_type, p_object_name, p_result, p_details);
 $end
 
-      exit result_loop when p_result = 0;
+      if p_result = 0 then p_result := null; end if; 
+      exit result_loop when p_result is null;
     end if;
 
     if p_schema_object_filter is null or

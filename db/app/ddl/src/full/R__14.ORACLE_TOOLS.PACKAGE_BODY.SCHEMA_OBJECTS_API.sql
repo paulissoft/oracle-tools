@@ -235,16 +235,19 @@ $if oracle_tools.schema_objects_api.c_tracing $then
 $end
   l_schema constant t_schema_nn := p_schema_object_filter.schema();
   l_grantor_is_schema constant t_numeric_boolean := p_schema_object_filter.grantor_is_schema();
+  l_my_named_objects_count pls_integer := null;
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $if oracle_tools.schema_objects_api.c_debugging $then
   dbug.print
   ( dbug."input"
-  , 'p_schema_object_filter null?: %s; p_schema_object_filter_id: %s; p_step: %s'
+  , 'p_schema_object_filter not null?: %s; p_schema_object_filter_id: %s; p_step: %s: schema: %s; grantor_is_schema: %s'
   , dbug.cast_to_varchar2(p_schema_object_filter is not null)
   , p_schema_object_filter_id
   , p_step
+  , l_schema
+  , l_grantor_is_schema
   );
   if p_schema_object_filter is not null
   then
@@ -267,6 +270,24 @@ $end
       , p_schema_object_filter => p_schema_object_filter
       );
       p_schema_object_tab.delete;
+      -- there must be something in oracle_tools.v_my_named_schema_objects mnso
+      select  count(*)
+      into    l_my_named_objects_count
+      from    oracle_tools.v_my_named_schema_objects mnso;
+
+      if l_my_named_objects_count = 0
+      then
+        oracle_tools.pkg_ddl_error.raise_error
+        ( oracle_tools.pkg_ddl_error.c_object_not_found
+        , 'There are no named objects (ORACLE_TOOLS.V_MY_NAMED_SCHEMA_OBJECTS)'
+        , oracle_tools.ddl_crud_api.get_session_id
+        , 'session id'
+        );
+      end if;
+
+$if oracle_tools.schema_objects_api.c_debugging $then
+      dbug.print(dbug."info", 'l_my_named_objects_count: %s', l_my_named_objects_count);
+$end
 
     -- object grants must depend on a base object already gathered (see above)
     when "object grants"

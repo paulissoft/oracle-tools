@@ -49,16 +49,15 @@ The constructor for an oracle_tools.t_schema_object_filter object.
 procedure matches_schema_object
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter -- The schema object filter
 , p_schema_object_id in varchar2 -- The schema object id
-, p_result out nocopy integer -- The result (0 = false, 1 = true)
+, p_result out nocopy integer -- The result (null = ignore object, 0 = false, 1 = true)
 , p_details out nocopy varchar2 -- A varchar2(1000 char) should be enough
 );
-/** Does the schema object id match the schema object filter? **/
 
 function matches_schema_object
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_schema_object_id in varchar2
+( p_schema_object_filter in oracle_tools.t_schema_object_filter -- The schema object filter
+, p_schema_object_id in varchar2 -- The schema object id
 )
-return integer
+return integer -- The result (null = ignore object, 0 = false, 1 = true)
 deterministic;
 /** Does the schema object id match the schema object filter? **/
 

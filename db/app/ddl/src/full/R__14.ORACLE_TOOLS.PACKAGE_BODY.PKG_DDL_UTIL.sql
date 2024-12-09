@@ -3882,7 +3882,7 @@ $end
       , p_details => l_details
       );
 
-      if p_generate_ddl = l_result
+      if to_char(p_generate_ddl) || 'X' = to_char(l_result) || 'X' -- result can be null
       then
         null; -- ok
       else
