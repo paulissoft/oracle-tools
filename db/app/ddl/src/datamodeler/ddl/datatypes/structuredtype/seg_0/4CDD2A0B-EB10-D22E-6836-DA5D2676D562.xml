@@ -1,0 +1,336 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<StructuredType class="oracle.dbtools.crest.model.design.datatypes.StructuredType" name="T_SCHEMA_DDL" directorySegmentName="seg_0" id="4CDD2A0B-EB10-D22E-6836-DA5D2676D562">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>T_SCHEMA_DDL</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:38 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<predefined>false</predefined>
+<final>false</final>
+<instantiable>true</instantiable>
+<attributes itemClass="oracle.dbtools.crest.model.design.datatypes.TypeElement">
+<Attribute name="OBJ" id="9CFA02A3-A851-D794-3A59-313C43E2D09F">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<referencerelation>38C8B871-6588-E2DD-3AFF-DA2A639CCFA0</referencerelation>
+<scale>0</scale>
+<type>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</type>
+<referenceID>38C8B871-6588-E2DD-3AFF-DA2A639CCFA0</referenceID>
+</Attribute>
+<Attribute name="DDL_TAB" id="771F1E8D-3A25-D584-F6B1-1D23B4B37C1B">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<referencerelation>3758D615-CB32-0F62-F72C-48D221DEF250</referencerelation>
+<scale>0</scale>
+<type>819CC9E5-1FD3-7D41-78D0-56F63C59F25A</type>
+<referenceID>3758D615-CB32-0F62-F72C-48D221DEF250</referenceID>
+</Attribute>
+</attributes>
+<methods itemClass="oracle.dbtools.crest.model.design.datatypes.Method">
+<Method name="CREATE_SCHEMA_DDL" id="68C877F4-65EA-ACB3-2AFA-F80A78860EC1">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>1</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJ" id="42952F3D-B69A-4913-0EDF-2D91DC84638B">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_DDL_TAB" id="3C621111-1487-6E5B-2452-A1B862BFDF2B">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>819CC9E5-1FD3-7D41-78D0-56F63C59F25A</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA_DDL" id="A76F4F81-51CA-C9CB-1ADC-2BFC0380750A">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>4CDD2A0B-EB10-D22E-6836-DA5D2676D562</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="CREATE_SCHEMA_DDL" id="6C70745C-2991-2A61-CF83-BC258DDA71AA">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>2</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="CREATE_SCHEMA_DDL" id="57E219A0-02A1-BD02-9C38-6E8350BCA39F">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>4CDD2A0B-EB10-D22E-6836-DA5D2676D562</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJ" id="C2E81AAC-B88B-53A9-7B56-74DF80EAD1B8">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_DDL_TAB" id="89155665-B293-DE8D-5B47-AA238470CACF">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>819CC9E5-1FD3-7D41-78D0-56F63C59F25A</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="PRINT" id="CED37D62-0E06-FB11-23AE-124DF844F70E">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>3</number>
+</Method>
+<Method name="ADD_DDL" id="2D770732-09B9-D62A-CC9C-794867A742CE">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>4</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_VERB" id="B644761B-EE7C-445D-5776-366A0482E71B">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_TEXT_TAB" id="FF1E7E0E-F3B7-AFCE-449B-07A82C84A785">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>65B8C0C7-3DB1-AFA3-046A-99384CC4A2DC</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="ADD_DDL" id="A9132256-3086-586F-9331-84B551E4474C">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>5</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_VERB" id="1760A147-566E-CDA9-C20A-8563E5AC4F27">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_TEXT" id="588D098A-3929-BAB5-FAFD-4050AC83EC50">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT028</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_ADD_SQLTERMINATOR" id="50CD13D3-1F5E-D4CE-730A-9E683BF5FB3D">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT011</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="MATCH" id="78640FC4-4733-7D8D-3668-D84039A77606">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>6</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="MATCH" id="9D6A4EFE-D7C4-9F52-1B0B-3A22CD7AC1F4">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT011</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA_DDL" id="32A26A48-A11D-5FEF-F09A-6BE7FD72D4C4">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>4CDD2A0B-EB10-D22E-6836-DA5D2676D562</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="INSTALL" id="67BB8208-C7D7-AA18-EF3A-92977E0D21DC">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>7</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SOURCE" id="AFE863FF-52CD-2851-C132-7830EAE01599">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>4CDD2A0B-EB10-D22E-6836-DA5D2676D562</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="MIGRATE" id="4037C271-EDFD-9C8C-2E22-F36BEFD034CE">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>8</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SOURCE" id="D4E937AA-14C5-A776-3D0B-91A439981849">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>4CDD2A0B-EB10-D22E-6836-DA5D2676D562</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_TARGET" id="30C9B6DC-C3C1-33FC-6AB3-B9479CA1D0C8">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>4CDD2A0B-EB10-D22E-6836-DA5D2676D562</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA_DDL" id="95583A19-0ED6-5B5D-C6A9-E77214BAC4C7">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>4CDD2A0B-EB10-D22E-6836-DA5D2676D562</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="MIGRATE" id="45704528-B09B-6D61-9C2C-4453BBC18B77">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>9</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SOURCE" id="91669F5B-9E8B-D932-0E6A-F8E77C10C744">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>4CDD2A0B-EB10-D22E-6836-DA5D2676D562</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_TARGET" id="2B3D27D1-2D9B-C1D6-89F3-97762B5CDCBF">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>4CDD2A0B-EB10-D22E-6836-DA5D2676D562</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="UNINSTALL" id="88DCEBE2-ECA4-7223-E975-8DF1526F3C7A">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>10</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_TARGET" id="172D893E-E9D4-0CB4-8ECB-982500DBDDA1">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>4CDD2A0B-EB10-D22E-6836-DA5D2676D562</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="CHK" id="5B313EA5-996D-1283-B011-5864CC18A30A">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>11</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA" id="1D936A9C-7344-BB57-1EB3-2A6A46047156">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="EXECUTE_DDL" id="92BAC2FC-6309-900A-87C0-0FA63488F5E3">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>12</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_ID" id="29093C17-1BC1-F85C-F85D-E1AD1B23F03E">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_TEXT" id="C8111295-3EC5-EB84-2A6F-D96068C8B6A9">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="EXECUTE_DDL" id="02A3D293-B873-76E2-2584-496E4A55D0BB">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>13</number>
+</Method>
+<Method name="EXECUTE_DDL" id="27D1D1A2-4AF5-AAA4-D82C-4DC1BF70E015">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>14</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA_DDL" id="CDAD0026-2D8C-4330-A9A5-5EB690A0989F">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>4CDD2A0B-EB10-D22E-6836-DA5D2676D562</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="CREATE_SCHEMA_DDL" id="7FBA6E45-3046-8B41-6CA3-0E48FBEB739C">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<generatorID>6044C216-8C9C-6F21-6F2B-22EE42C2BC65</generatorID>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>6044C216-8C9C-6F21-6F2B-22EE42C2BC65</importedID>
+<number>0</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="CREATE_SCHEMA_DDL" id="D05A1D0B-D83E-667B-1297-E7B138D170BC">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>4CDD2A0B-EB10-D22E-6836-DA5D2676D562</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_DISPLAY_DDL_SQL_TAB" id="C94899C5-5220-D796-E19A-D75321058F8C">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>96134052-B5F5-C8A8-A16D-330EF1DACCDB</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJ" id="B54391DC-5EFE-568D-320F-52822E0DD589">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="COPY" id="23930FBA-4C4A-7869-D91B-E566F6833EA8">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<generatorID>0EFF2BFA-5A3A-B11D-3597-5014347DD743</generatorID>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>0EFF2BFA-5A3A-B11D-3597-5014347DD743</importedID>
+<number>0</number>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_DISPLAY_DDL_SQL_TAB" id="BAB6758C-19FF-0820-2574-7CF5EE957D04">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>96134052-B5F5-C8A8-A16D-330EF1DACCDB</typeID>
+</Parameter>
+</parameters>
+</Method>
+</methods>
+</StructuredType>

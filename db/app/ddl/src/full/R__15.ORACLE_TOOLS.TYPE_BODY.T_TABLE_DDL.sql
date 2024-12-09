@@ -8,13 +8,13 @@ overriding member procedure migrate
 is
   l_source_table_object oracle_tools.t_table_object := treat(p_source.obj as oracle_tools.t_table_object);
   l_target_table_object oracle_tools.t_table_object := treat(p_target.obj as oracle_tools.t_table_object);
-  l_source_member_ddl_tab t_schema_ddl_tab;
-  l_target_member_ddl_tab t_schema_ddl_tab;
+  l_source_member_ddl_tab oracle_tools.t_schema_ddl_tab;
+  l_target_member_ddl_tab oracle_tools.t_schema_ddl_tab;
   l_table_column_ddl oracle_tools.t_schema_ddl;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
-  dbug.print(dbug."input", 'p_source.obj.id(): %s; p_target.obj.id(): %s', p_source.obj.id(), p_target.obj.id());
+  dbug.print(dbug."input", 'p_source.obj.id: %s; p_target.obj.id: %s', p_source.obj.id, p_target.obj.id);
 $end
 
   -- first the standard things
@@ -100,7 +100,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
       oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.target_schema_ddl.obj
-      , t_ddl_tab()
+      , oracle_tools.t_ddl_tab()
       , l_table_column_ddl
       );
       l_table_column_ddl.uninstall(r.target_schema_ddl);
@@ -112,7 +112,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
       oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
-      , t_ddl_tab()
+      , oracle_tools.t_ddl_tab()
       , l_table_column_ddl
       );
       l_table_column_ddl.install(r.source_schema_ddl);
@@ -126,7 +126,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
       oracle_tools.t_schema_ddl.create_schema_ddl
       ( r.source_schema_ddl.obj
-      , t_ddl_tab()
+      , oracle_tools.t_ddl_tab()
       , l_table_column_ddl
       );
       l_table_column_ddl.migrate
@@ -141,7 +141,7 @@ $end
         self.add_ddl
         ( p_verb => l_table_column_ddl.ddl_tab(i_idx).verb()
           -- the schema is
-        , p_text => l_table_column_ddl.ddl_tab(i_idx).text
+        , p_text_tab => l_table_column_ddl.ddl_tab(i_idx).text_tab
         );
       end loop;
     end if;

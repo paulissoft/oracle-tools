@@ -107,6 +107,18 @@ c_transform_parameter_wrong    constant pls_integer := -20124;
 e_transform_parameter_wrong    exception;
 pragma exception_init(e_transform_parameter_wrong, -20124);
 
+c_ddl_not_correct           constant pls_integer := -20125;
+e_ddl_not_correct           exception;
+pragma exception_init(e_ddl_not_correct, -20125);
+
+c_batch_failed              constant pls_integer := -20126;
+e_batch_failed              exception;
+pragma exception_init(e_batch_failed, -20126);
+
+c_matches_schema_object_exp_ne_act   constant pls_integer := -20127;
+e_matches_schema_object_exp_ne_act   exception;
+pragma exception_init(e_matches_schema_object_exp_ne_act, -20127);
+
 /**
  * Raise an error.
  *

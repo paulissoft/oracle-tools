@@ -20,7 +20,17 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   -- default constructor
-  self := oracle_tools.t_constraint_object(null, p_object_schema, p_base_object, p_object_name, p_column_names, p_search_condition, p_constraint_type);
+  self := oracle_tools.t_constraint_object
+          ( null -- id
+          , null -- last_ddl_time$
+          , null
+          , p_object_schema
+          , case when p_base_object is not null then p_base_object.id end
+          , p_object_name
+          , p_column_names
+          , p_search_condition
+          , p_constraint_type
+          );
 
   if p_constraint_type is not null and (p_constraint_type <> 'C' or p_search_condition is not null)
   then
@@ -56,6 +66,8 @@ $end
       self.column_names$ := null;
       self.search_condition$ := dbms_utility.get_hash_value(self.search_condition$, 37, 1073741824);
   end case;
+
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
@@ -216,6 +228,66 @@ exception
     raise;
 $end
 end chk;
+
+overriding member function dict_last_ddl_time
+return date
+is
+  l_last_ddl_time all_objects.last_ddl_time%type;
+  l_object_schema constant all_objects.owner%type := self.object_schema();
+  l_constraint_name constant all_objects.object_name%type := self.object_name();
+  l_object_type constant all_objects.object_type%type := self.base_dict_object_type();
+  l_table_name constant all_objects.object_name%type := self.base_object_name();
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'LAST_DDL_TIME');
+  dbug.print
+  ( dbug."input"
+  , 'l_object_schema: %s; l_constraint_name: %s; l_object_type: %s; l_table_name: %s'
+  , l_object_schema
+  , l_constraint_name
+  , l_object_type
+  , l_table_name
+  );
+$end
+
+  begin
+    select  c.last_change
+    into    l_last_ddl_time
+    from    all_constraints c /* this is where we are interested in */
+    where   l_object_type in ('TABLE', 'VIEW')
+    and     c.owner = l_object_schema
+    and     c.constraint_name = l_constraint_name
+    and     c.table_name = l_table_name;
+  exception
+    when others
+    then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+      dbug.on_error;
+$end
+      -- get last_ddl_time from base object
+      select  o.last_ddl_time
+      into    l_last_ddl_time
+      from    all_objects o
+      where   o.owner = l_object_schema
+      and     o.object_type = l_object_type
+      and     o.object_name = l_table_name;    
+  end;  
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print(dbug."output", 'return: %s', l_last_ddl_time);
+  dbug.leave;
+$end
+
+  return l_last_ddl_time;
+exception
+  when others
+  then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+    dbug.print(dbug."output", 'return: %s', to_date(null));
+    dbug.leave_on_error;
+$end
+    return null;
+end dict_last_ddl_time;
 
 end;
 /

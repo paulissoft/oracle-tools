@@ -58,5 +58,22 @@ return t_object_tab
 pipelined;
 /** Show locked objects (select * from v$db_object_cache where locks > 0) for the current session user or for the owner of this package. **/
 
+function does_session_exist
+( p_sid in number -- the session id
+, p_serial# in number default null -- the serial number
+)
+return integer; -- 0 (false) or 1 (true)
+/**
+Does this sesion exist?
+**/
+
+function does_session_exist
+( p_audsid in number -- the v$session.audsid value as returned by sys_context('USERENV', 'SESSIONID')
+)
+return integer; -- 0 (false) or 1 (true)
+/**
+Does this sesion exist?
+**/
+
 END ADMIN_SYSTEM_PKG;
 /

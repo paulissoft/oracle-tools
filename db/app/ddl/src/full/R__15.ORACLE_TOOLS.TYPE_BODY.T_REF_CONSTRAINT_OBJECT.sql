@@ -18,13 +18,15 @@ constructor function t_ref_constraint_object
 )
 return self as result
 is
+  l_base_object oracle_tools.t_named_object;
+  l_constraint_object oracle_tools.t_constraint_object;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR');
   dbug.print
   ( dbug."input"
-  , 'p_base_object.id(): %s; p_object_schema: %s; p_object_name: %s; p_constraint_type: %s; p_column_names: %s'
-  , p_base_object.id()
+  , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s; p_constraint_type: %s; p_column_names: %s'
+  , p_base_object.id
   , p_object_schema
   , p_object_name
   , p_constraint_type
@@ -38,9 +40,11 @@ $end
 
   -- default constructor
   self := oracle_tools.t_ref_constraint_object
-          ( null
+          ( null -- id
+          , null -- last_ddl_time$
+          , null
           , p_object_schema
-          , p_base_object
+          , case when p_base_object is not null then p_base_object.id end          
           , p_object_name
           , nvl
             ( p_column_names
@@ -52,10 +56,10 @@ $end
             )
           , null -- search condition
           , nvl(p_constraint_type, 'R')
-          , p_ref_object
+          , case when p_ref_object is not null then p_ref_object.id end          
           );
 
-  if self.ref_object$ is null
+  if self.ref_object_id$ is null
   then
     -- find referenced primary / unique key and its base table / view
     <<find_loop>>
@@ -78,21 +82,27 @@ $end
       and     r.constraint_type in ('P', 'U')
     )
     loop
-      self.ref_object$ :=
+      l_base_object :=
+        oracle_tools.t_named_object.create_named_object
+        ( p_object_schema => r.r_owner
+        , p_object_type => r.r_object_type
+        , p_object_name => r.r_table_name
+        );
+      l_constraint_object :=
         oracle_tools.t_constraint_object
-        ( p_base_object => oracle_tools.t_named_object.create_named_object
-                           ( p_object_schema => r.r_owner
-                           , p_object_type => r.r_object_type
-                           , p_object_name => r.r_table_name
-                           )
+        ( p_base_object => l_base_object
         , p_object_schema => r.r_owner
         , p_object_name => r.r_constraint_name
         , p_constraint_type => r.r_constraint_type
         , p_search_condition => null
         );
+      self.ref_object_id$ := l_constraint_object.id;
+      
       exit find_loop;
     end loop find_loop;
   end if;
+
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -116,7 +126,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object$.object_schema() end;
+  return oracle_tools.t_schema_object.split_id(self.ref_object_id$)(1);
 end ref_object_schema;
 
 member function ref_object_type
@@ -124,7 +134,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object$.object_type() end;
+  return oracle_tools.t_schema_object.split_id(self.ref_object_id$)(2);
 end ref_object_type;
 
 member function ref_object_name
@@ -132,7 +142,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object$.object_name() end;
+  return oracle_tools.t_schema_object.split_id(self.ref_object_id$)(3);
 end ref_object_name;
 
 member function ref_base_object_schema
@@ -140,7 +150,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object$.base_object_schema() end;
+  return oracle_tools.t_schema_object.split_id(self.ref_object_id$)(4);
 end ref_base_object_schema;
 
 member function ref_base_object_type
@@ -148,7 +158,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object$.base_object_type() end;
+  return oracle_tools.t_schema_object.split_id(self.ref_object_id$)(5);
 end ref_base_object_type;
 
 member function ref_base_object_name
@@ -156,7 +166,7 @@ return varchar2
 deterministic
 is
 begin
-  return case when self.ref_object$ is not null then self.ref_object$.base_object_name() end;
+  return oracle_tools.t_schema_object.split_id(self.ref_object_id$)(6);
 end ref_base_object_name;
 
 -- end of getter(s)
@@ -206,7 +216,7 @@ $end
     oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Constraint type should not be empty.', self.schema_object_info());
   end if;
 
-  if self.ref_object$ is null
+  if self.ref_object_id$ is null
   then
     oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'Reference object should not be empty.', self.schema_object_info());
   end if;
@@ -221,11 +231,16 @@ final member procedure ref_object_schema
 , p_ref_object_schema in varchar2
 )
 is
+  l_id_parts oracle_tools.t_text_tab;
 begin
-  -- the constraint changes from schema name
-  self.ref_object$.object_schema(p_ref_object_schema);
-  -- the constraint base object changes from schema name too (must be in the same schema)
-  self.ref_object$.base_object$.object_schema(p_ref_object_schema);
+  -- ref_object first
+  l_id_parts := oracle_tools.t_schema_object.split_id(self.ref_object_id$);
+  l_id_parts(1) := p_ref_object_schema;
+  self.ref_object_id$ := oracle_tools.t_schema_object.join_id(l_id_parts);
+  -- base_object next
+  l_id_parts := oracle_tools.t_schema_object.split_id(self.base_object_id$);
+  l_id_parts(1) := p_ref_object_schema;
+  self.base_object_id$ := oracle_tools.t_schema_object.join_id(l_id_parts);
 end ref_object_schema;
 
 static function get_ref_constraint -- get referenced primary / unique key constraint whose base object is the referencing table / view with those columns
@@ -334,6 +349,14 @@ $end
 
   return l_ref_object;
 end get_ref_constraint;
+
+member function ref_object_id
+return varchar2
+deterministic
+is
+begin
+  return self.ref_object_id$;
+end ref_object_id;
 
 end;
 /

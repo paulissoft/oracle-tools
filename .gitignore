@@ -31,4 +31,4 @@ terraform.tfstate
 terraform.tfstate.backup
 cloud/terraform/backend.tf
 cloud/pulumi/
-db/app/ddl/src/datamodeler
+ddl-generate-report.md

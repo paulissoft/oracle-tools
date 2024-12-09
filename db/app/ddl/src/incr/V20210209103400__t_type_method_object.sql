@@ -28,7 +28,7 @@ create type oracle_tools.t_type_method_object authid current_user under oracle_t
 
 , constructor function t_type_method_object
   ( self in out nocopy oracle_tools.t_type_method_object
-  , p_base_object in oracle_tools.t_named_object -- the type specification
+  , p_base_object in oracle_tools.t_named_object
   , p_member# in integer -- the METHOD_NO
   , p_member_name in varchar2 -- the METHOD_NAME
   , p_method_type in varchar2
@@ -52,6 +52,7 @@ create type oracle_tools.t_type_method_object authid current_user under oracle_t
 , member function static_or_member return varchar2 deterministic
 , overriding final map member function signature return varchar2 deterministic
 , overriding member procedure chk( self in oracle_tools.t_type_method_object, p_schema in varchar2 )
+, overriding member function dict_last_ddl_time return date
 )
 not final]';
 end;

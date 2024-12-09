@@ -13,17 +13,24 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR');
   dbug.print
   ( dbug."input"
-  , 'p_base_object.id(): %s; p_object_schema: %s; p_object_name: %s'
-  , p_base_object.id()
+  , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s'
+  , p_base_object.id
   , p_object_schema
   , p_object_name
   );
 $end
 
-  self.base_object$ := p_base_object;
+  if p_base_object is null
+  then
+    self.base_object_id$ := null;
+  else
+    self.base_object_id$ := p_base_object.id;
+  end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
+
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;

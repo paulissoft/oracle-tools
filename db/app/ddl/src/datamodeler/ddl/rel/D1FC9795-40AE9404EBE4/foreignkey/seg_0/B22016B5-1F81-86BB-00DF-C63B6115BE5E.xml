@@ -1,0 +1,23 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="B22016B5-1F81-86BB-00DF-C63B6115BE5E" containerWithKeyObject="913B7F83-227F-E187-E0DF-B88A99F3EDE5" localFKIndex="54F78397-31D7-8C2D-D3DE-BF0B35B0CB00" name="GENERATED_DDLS$FK$2">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATED_DDLS$FK$1</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>99A114AB-3FD8-9931-FBAD-74F56BD21FBC</importedID>
+<referredTableLongName>ORACLE_TOOLS.SCHEMA_OBJECTS</referredTableLongName>
+<deleteRule>CASCADE</deleteRule>
+<referredTableID>566D9C40-6318-1ECA-592B-1A399EBD69EC</referredTableID>
+<keyObject>6A7B268F-DBC9-AB65-A4A2-A26A2F72DEBC</keyObject>
+<referredKeyID>6A7B268F-DBC9-AB65-A4A2-A26A2F72DEBC</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>ID</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</FKIndexAssociation>

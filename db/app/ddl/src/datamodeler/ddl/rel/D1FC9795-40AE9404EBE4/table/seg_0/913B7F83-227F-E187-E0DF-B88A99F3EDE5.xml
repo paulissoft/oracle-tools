@@ -1,0 +1,252 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="913B7F83-227F-E187-E0DF-B88A99F3EDE5" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATED_DDLS">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATED_DDLS</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<comment><![CDATA[The generated DDL info for a specific schema object id, last DDL time and configuration.]]></comment>
+<commentInRDBMS><![CDATA[The generated DDL info for a specific schema object id, last DDL time and configuration.]]></commentInRDBMS>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>C60DCB60-AE7D-723C-BEF1-A6383EC47785</importedID>
+<abbreviation>GD</abbreviation>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<propertyMap>
+<property name="applyStandards" value="1"/>
+<property name="copyComments" value="1"/>
+<property name="createIndexOnFK" value="1"/>
+<property name="setColumnsOrder" value="1"/>
+<property name="setIdentityColumn" value="1"/>
+<property name="tableToUpperCase" value="1"/>
+</propertyMap>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID" id="25FCB72A-4BDC-B95A-83F3-2C909E708C5F">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATED_DDLS</sourceObjSchema>
+<sourceObjName>ID</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>292F221B-C5CE-02B7-CA27-680E521997D0</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>*</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementColumn>true</autoIncrementColumn>
+<identityColumn>true</identityColumn>
+<autoIncrementGenerateAlways>true</autoIncrementGenerateAlways>
+<autoIncrementCycle>false</autoIncrementCycle>
+<autoIncrementDisableCache>false</autoIncrementDisableCache>
+<autoIncrementCache>20</autoIncrementCache>
+<autoIncrementOrder>false</autoIncrementOrder>
+<autoIncrementGenerateTrigger>false</autoIncrementGenerateTrigger>
+<notNullConstraintName>GENERATED_DDLS$NNC$ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+<Column name="SCHEMA_OBJECT_ID" id="AD410528-CDAA-D79B-975E-E48495FCF411">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATED_DDLS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECT_ID</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>1431387C-577B-440F-AF00-55A8C1E19298</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>500 BYTE</dataTypeSize>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATED_DDLS$NNC$SCHEMA_OBJECT_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<associations>
+<colAssociation fkAssociation="B22016B5-1F81-86BB-00DF-C63B6115BE5E" referredColumn="F9235B75-7E72-8805-F33D-16F641E2E8D2"/>
+</associations>
+</Column>
+<Column name="LAST_DDL_TIME" id="A6FA1104-AC8B-1C89-F7B7-083A95D29A66">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATED_DDLS</sourceObjSchema>
+<sourceObjName>LAST_DDL_TIME</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>FF2E2419-77B3-F871-E8D9-2F41B6C0870F</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT007</logicalDatatype>
+<dataTypeSize>7</dataTypeSize>
+<ownDataTypeParameters>7,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATED_DDLS$NNC$LAST_DDL_TIME</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+<Column name="GENERATE_DDL_CONFIGURATION_ID" id="8EF0A29E-6139-D3EF-834A-FE57BFC90397">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATED_DDLS</sourceObjSchema>
+<sourceObjName>GENERATE_DDL_CONFIGURATION_ID</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>99681D2F-D66A-A306-CE70-50A4873B82F7</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>*</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATED_DDLS$NNC$GENERATE_DDL_CONFIGURATION_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<associations>
+<colAssociation fkAssociation="E8A0FD0C-713F-C5C7-9AFA-CDC5A3979BAB" referredColumn="4F392E8D-3FC7-BEB7-EB63-5AE2152699F5"/>
+</associations>
+</Column>
+<Column name="CREATED" id="A98E89E5-EB12-2438-D155-640E59C0A734">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>GENERATED_DDLS</sourceObjSchema>
+<sourceObjName>CREATED</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>FA21457F-A84F-4848-E375-EF509E4FD0A1</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT015</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<defaultValue>sys_extract_utc(systimestamp)</defaultValue>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>GENERATED_DDLS$NNC$CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="445128CA-5EA6-F426-89C1-08E9276500C8" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATED_DDLS$PK">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATED_DDLS$PK</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>B82C1E26-D429-FC31-CA1F-DDA8A819F442</importedID>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="25FCB72A-4BDC-B95A-83F3-2C909E708C5F"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="2BEA6072-6E31-61AB-E27E-788239DA09E3" name="GENERATED_DDLS$UK$1">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATED_DDLS$UK$1</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>09DA43FA-AFA7-E14F-603A-E0D82F09E61E</importedID>
+<indexState>Unique Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="AD410528-CDAA-D79B-975E-E48495FCF411"/>
+<colUsage columnID="A6FA1104-AC8B-1C89-F7B7-083A95D29A66"/>
+<colUsage columnID="8EF0A29E-6139-D3EF-834A-FE57BFC90397"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="1AFA0B70-A4AA-0AB5-E3A4-023DCF0526DC" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATED_DDLS$IDX$1">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATED_DDLS$FK$2</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>8DB38489-2979-8C7D-4C54-58F4F61CF9A1</importedID>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="8EF0A29E-6139-D3EF-834A-FE57BFC90397"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="50250A90-B2C1-BEDC-C1F8-A202CF59BC5D" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="GENERATED_DDLS$UK$1">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATED_DDLS$UK$1</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>C88A5D73-BDCB-B4D9-E8D4-9D04484551D5</importedID>
+<deprecated>true</deprecated>
+<indexState>Unique Plain Index</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="AD410528-CDAA-D79B-975E-E48495FCF411"/>
+<colUsage columnID="A6FA1104-AC8B-1C89-F7B7-083A95D29A66"/>
+<colUsage columnID="8EF0A29E-6139-D3EF-834A-FE57BFC90397"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="EE2DB155-3494-4BFF-4379-AE0D1760D4B4" name="GENERATED_DDLS$IDX$3">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 15:15:13 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<deprecated>true</deprecated>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="AD410528-CDAA-D79B-975E-E48495FCF411"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="54F78397-31D7-8C2D-D3DE-BF0B35B0CB00" name="GENERATED_DDLS$FK$2">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="AD410528-CDAA-D79B-975E-E48495FCF411"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="97D2FC95-4BEE-6554-9510-099C36024E19" name="GENERATED_DDLS$FK$1">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="8EF0A29E-6139-D3EF-834A-FE57BFC90397"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

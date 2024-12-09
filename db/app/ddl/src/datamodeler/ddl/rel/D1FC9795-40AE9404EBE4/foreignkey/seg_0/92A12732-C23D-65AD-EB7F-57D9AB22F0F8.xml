@@ -1,0 +1,23 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="92A12732-C23D-65AD-EB7F-57D9AB22F0F8" containerWithKeyObject="1F3D0F86-C081-8FC9-CDD9-946DBCD073AA" localFKIndex="FA3AE516-A7FF-A9AA-75BD-70CE30CEDD57" name="GENERATED_DDL_STATEMENT_CHUNKS$FK$1">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>GENERATED_DDL_STATEMENT_CHUNKS$FK$1</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>338A9B44-C4BF-1C04-0749-3957EC468DB3</importedID>
+<referredTableLongName>ORACLE_TOOLS.GENERATED_DDL_STATEMENTS</referredTableLongName>
+<deleteRule>CASCADE</deleteRule>
+<referredTableID>04D9FFC3-A983-6ECE-83B8-ED9B5E6119EF</referredTableID>
+<keyObject>5853602B-4834-F4B2-F386-817D9CB35D75</keyObject>
+<referredKeyID>5853602B-4834-F4B2-F386-817D9CB35D75</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>GENERATED_DDL_ID,DDL#</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</FKIndexAssociation>

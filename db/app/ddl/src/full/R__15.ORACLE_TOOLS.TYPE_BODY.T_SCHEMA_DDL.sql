@@ -12,22 +12,38 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   case
+    /* T_COMMENT_DDL */
     when p_obj is of (oracle_tools.t_comment_object) then p_schema_ddl := oracle_tools.t_comment_ddl(p_obj, p_ddl_tab);
+    /* T_CONSTRAINT_DDL */
+    when p_obj is of (oracle_tools.t_constraint_object) then p_schema_ddl := oracle_tools.t_constraint_ddl(p_obj, p_ddl_tab);    
+    /* T_INDEX_DDL */
     when p_obj is of (oracle_tools.t_index_object) then p_schema_ddl := oracle_tools.t_index_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_object_grant_object) then p_schema_ddl := oracle_tools.t_object_grant_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_procobj_object) then p_schema_ddl := oracle_tools.t_procobj_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_refresh_group_object) then p_schema_ddl := oracle_tools.t_refresh_group_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_constraint_object) then p_schema_ddl := oracle_tools.t_constraint_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_synonym_object) then p_schema_ddl := oracle_tools.t_synonym_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_table_object) then p_schema_ddl := oracle_tools.t_table_ddl(p_obj, p_ddl_tab);
-    when p_obj is of (oracle_tools.t_type_spec_object) then p_schema_ddl := oracle_tools.t_type_spec_ddl(p_obj, p_ddl_tab);
+    /* T_MATERIALIZED_VIEW_DDL */
     when p_obj is of (oracle_tools.t_materialized_view_object) then p_schema_ddl := oracle_tools.t_materialized_view_ddl(p_obj, p_ddl_tab);
+    /* T_OBJECT_GRANT_DDL */
+    when p_obj is of (oracle_tools.t_object_grant_object) then p_schema_ddl := oracle_tools.t_object_grant_ddl(p_obj, p_ddl_tab);
+    /* T_PROCOBJ_DDL */
+    when p_obj is of (oracle_tools.t_procobj_object) then p_schema_ddl := oracle_tools.t_procobj_ddl(p_obj, p_ddl_tab);
+    /* T_REFRESH_GROUP_DDL */
+    when p_obj is of (oracle_tools.t_refresh_group_object) then p_schema_ddl := oracle_tools.t_refresh_group_ddl(p_obj, p_ddl_tab);
+    /* T_SEQUENCE_DDL */
     when p_obj is of (oracle_tools.t_sequence_object) then p_schema_ddl := oracle_tools.t_sequence_ddl(p_obj, p_ddl_tab);
-    -- GPA 2017-03-27 #142494703 The DDL generator should remove leading whitespace before WHEN clauses in triggers because that generates differences.
-    when p_obj is of (oracle_tools.t_trigger_object) then p_schema_ddl := oracle_tools.t_trigger_ddl(p_obj, p_ddl_tab);
+    /* T_SYNONYM_DDL */
+    when p_obj is of (oracle_tools.t_synonym_object) then p_schema_ddl := oracle_tools.t_synonym_ddl(p_obj, p_ddl_tab);
     -- oracle_tools.t_table_column_object inherits from oracle_tools.t_type_attribute_object
+    /* T_TABLE_COLUMN_DDL */
     when p_obj is of (oracle_tools.t_table_column_object) then p_schema_ddl := oracle_tools.t_table_column_ddl(p_obj, p_ddl_tab);
+    /* T_TABLE_DDL */
+    when p_obj is of (oracle_tools.t_table_object) then p_schema_ddl := oracle_tools.t_table_ddl(p_obj, p_ddl_tab);
+    /* T_TRIGGER_DDL */
+    when p_obj is of (oracle_tools.t_trigger_object) then p_schema_ddl := oracle_tools.t_trigger_ddl(p_obj, p_ddl_tab);
+    /* T_TYPE_ATTRIBUTE_DDL */
     when p_obj is of (oracle_tools.t_type_attribute_object) then p_schema_ddl := oracle_tools.t_type_attribute_ddl(p_obj, p_ddl_tab);
+    /* T_TYPE_METHOD_DDL */
+    when p_obj is of (oracle_tools.t_type_method_object) then p_schema_ddl := oracle_tools.t_type_method_ddl(p_obj, p_ddl_tab);
+    /* T_TYPE_SPEC_DDL */
+    when p_obj is of (oracle_tools.t_type_spec_object) then p_schema_ddl := oracle_tools.t_type_spec_ddl(p_obj, p_ddl_tab);
+    -- GPA 2017-03-27 #142494703 The DDL generator should remove leading whitespace before WHEN clauses in triggers because that generates differences.
     else p_schema_ddl := oracle_tools.t_schema_ddl(p_obj, p_ddl_tab);
   end case;
 
@@ -61,6 +77,79 @@ $end
   return l_schema_ddl;
 end create_schema_ddl;
 
+static function create_schema_ddl
+( p_display_ddl_sql_tab in oracle_tools.t_display_ddl_sql_tab
+, p_obj in oracle_tools.t_schema_object
+)
+return oracle_tools.t_schema_ddl
+is
+  l_schema_ddl oracle_tools.t_schema_ddl := null;
+  l_obj oracle_tools.t_schema_object := p_obj;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_SCHEMA_DDL (3)');
+$end
+
+  if cardinality(p_display_ddl_sql_tab) > 0
+  then
+    -- create a schema ddl with an empty ddl table based on the first schema_object_id
+    if l_obj is null
+    then
+      l_obj := oracle_tools.ddl_crud_api.find_schema_object(p_display_ddl_sql_tab(1).schema_object_id);
+      if l_obj is null
+      then
+        raise no_data_found;
+      end if;
+    end if;
+
+    l_schema_ddl := 
+      oracle_tools.t_schema_ddl.create_schema_ddl
+      ( p_obj => l_obj
+      , p_ddl_tab => oracle_tools.t_ddl_tab()
+      );
+
+    -- append to l_schema_ddl.ddl_tab (ddl# is number of items in ddl_tab)
+    for i_idx in p_display_ddl_sql_tab.first .. p_display_ddl_sql_tab.last
+    loop
+      if p_display_ddl_sql_tab(i_idx).ddl# > cardinality(l_schema_ddl.ddl_tab)
+      then
+        l_schema_ddl.ddl_tab.extend(1);
+        l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last) :=
+          oracle_tools.t_ddl
+          ( p_ddl# => p_display_ddl_sql_tab(i_idx).ddl#
+          , p_verb => p_display_ddl_sql_tab(i_idx).verb
+          , p_text_tab => oracle_tools.t_text_tab()
+          );
+      end if;
+
+      if p_display_ddl_sql_tab(i_idx).ddl# = l_schema_ddl.ddl_tab.last
+      then
+        null; -- OK
+      else
+        raise program_error;
+      end if;
+
+      -- always append to l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab
+      l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.extend(1);
+      l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab(l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.last) :=
+        p_display_ddl_sql_tab(i_idx).chunk;
+        
+      if p_display_ddl_sql_tab(i_idx).chunk# = l_schema_ddl.ddl_tab(l_schema_ddl.ddl_tab.last).text_tab.last
+      then
+        null; -- OK
+      else
+        raise program_error;
+      end if;
+    end loop;
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+  dbug.leave;
+$end
+
+  return l_schema_ddl;
+end create_schema_ddl;
+
 member procedure print
 ( self in oracle_tools.t_schema_ddl
 )
@@ -69,7 +158,7 @@ begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
   self.obj.print();
-  dbug.print(dbug."info", 'cardinality(self.ddl_tab): %s', cardinality(self.ddl_tab));
+  dbug.print(dbug."info", 'cardinality(self.ddl_tab): %s', case when self.ddl_tab is not null then self.ddl_tab.count end);
   if self.ddl_tab is not null and self.ddl_tab.count > 0
   then
     for i_idx in self.ddl_tab.first .. self.ddl_tab.last
@@ -87,13 +176,13 @@ end print;
 member procedure add_ddl
 ( self in out nocopy oracle_tools.t_schema_ddl
 , p_verb in varchar2
-, p_text in oracle_tools.t_text_tab
+, p_text_tab in oracle_tools.t_text_tab
 )
 is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL (1)');
-  dbug.print(dbug."input", 'self.obj.id(): %s; self.ddl_tab.count: %s; p_text.count: %s', self.obj.id(), self.ddl_tab.count, case when p_text is not null then p_text.count end);
+  dbug.print(dbug."input", 'self.obj.id: %s; self.ddl_tab.count: %s; p_text_tab.count: %s', self.obj.id, self.ddl_tab.count, case when p_text_tab is not null then p_text_tab.count end);
 $end
 
   self.ddl_tab.extend(1);
@@ -101,8 +190,9 @@ $end
     oracle_tools.t_ddl
     ( p_ddl# => self.ddl_tab.last
     , p_verb => p_verb
-    , p_text => p_text
+    , p_text_tab => p_text_tab
     );
+  self.chk(null);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
@@ -131,7 +221,7 @@ $end
 
   l_text_tab := oracle_tools.pkg_str_util.clob2text(p_text, 1); -- text
   -- ORA-20113: Object BC_PORTAL:INDEX:bcp_addresses_l1:BC_PORTAL::BCP_ADDRESSES:::: is not correct.
-  if cardinality(l_text_tab) > 0
+  if l_text_tab is not null and l_text_tab.count > 0
   then
     if p_add_sqlterminator > 0
     then
@@ -140,7 +230,7 @@ $end
     end if;
     self.add_ddl
     ( p_verb => p_verb
-    , p_text => l_text_tab
+    , p_text_tab => l_text_tab
     );
   end if;
 
@@ -224,7 +314,7 @@ $end
   loop
     self.add_ddl
     ( p_verb => p_source.ddl_tab(i_ddl_idx).verb()
-    , p_text => p_source.ddl_tab(i_ddl_idx).text
+    , p_text_tab => p_source.ddl_tab(i_ddl_idx).text_tab
     );
   end loop;
 
@@ -300,7 +390,10 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
-  self.obj.chk(p_schema);
+  if p_schema is not null
+  then
+    self.obj.chk(p_schema);
+  end if;
 
   if self.ddl_tab is null or self.ddl_tab.count = 0
   then
@@ -308,9 +401,10 @@ $end
   else
     for i_idx in self.ddl_tab.first .. self.ddl_tab.last
     loop
-      if self.ddl_tab(i_idx).text is null or self.ddl_tab(i_idx).text.count = 0
+      if self.ddl_tab(i_idx).text_tab is null or self.ddl_tab(i_idx).text_tab.count = 0
       then
         oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, 'There is no ddl text for ddl statement ' || i_idx, self.obj.schema_object_info());
+        self.ddl_tab(i_idx).chk();
       end if;
     end loop;
   end if;
@@ -352,7 +446,7 @@ $end
                , p_privilege => l_part_tab(l_part_tab.first+8)
                , p_grantable => l_part_tab(l_part_tab.first+9)
                )
-    , p_ddl_tab => oracle_tools.t_ddl_tab(oracle_tools.t_ddl(p_ddl# => 1, p_verb => l_verb_tab(l_verb_tab.first+0), p_text => oracle_tools.t_text_tab(p_text)))
+    , p_ddl_tab => oracle_tools.t_ddl_tab(oracle_tools.t_ddl(p_ddl# => 1, p_verb => l_verb_tab(l_verb_tab.first+0), p_text_tab => oracle_tools.t_text_tab(p_text)))
     );
   l_schema_ddl.execute_ddl();
 
@@ -409,7 +503,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL (3)');
 $end
 
-  execute immediate p_schema_ddl.ddl_tab(1).text(1);
+  execute immediate p_schema_ddl.ddl_tab(1).text_tab(1);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;
@@ -419,6 +513,42 @@ exception
     dbug.leave_on_error;
 $end
 end execute_ddl;
+
+final member procedure copy
+( self in oracle_tools.t_schema_ddl
+, p_display_ddl_sql_tab out nocopy oracle_tools.t_display_ddl_sql_tab 
+)
+is
+begin
+  p_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab();
+
+  if cardinality(self.ddl_tab) > 0
+  then
+    for i_ddl_idx in self.ddl_tab.first .. self.ddl_tab.last
+    loop
+      if cardinality(self.ddl_tab(i_ddl_idx).text_tab) > 0
+      then
+        for i_text_idx in self.ddl_tab(i_ddl_idx).text_tab.first
+                          ..
+                          self.ddl_tab(i_ddl_idx).text_tab.last
+        loop
+          p_display_ddl_sql_tab.extend(1);
+          p_display_ddl_sql_tab(p_display_ddl_sql_tab.last) :=
+            oracle_tools.t_display_ddl_sql
+            ( self.obj.id
+            , self.ddl_tab(i_ddl_idx).ddl#
+            , self.ddl_tab(i_ddl_idx).verb
+            , self.ddl_tab(i_ddl_idx).ddl_info(self.obj)
+            , i_text_idx
+            , self.ddl_tab(i_ddl_idx).text_tab(i_text_idx)
+            , case when i_ddl_idx = self.ddl_tab.last and i_text_idx = self.ddl_tab(i_ddl_idx).text_tab.last then 1 else null end
+            , self.obj
+            );
+        end loop;
+      end if;                
+    end loop;
+  end if;
+end copy;
 
 end;
 /

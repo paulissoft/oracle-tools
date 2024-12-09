@@ -57,6 +57,7 @@ create type oracle_tools.t_table_column_object authid current_user under oracle_
 , overriding member function char_length return number deterministic
 , overriding member function char_used return varchar2 deterministic
 -- end of getter(s)/setter(s)
+, overriding member function dict_last_ddl_time return date
 )
 final]';
 end;

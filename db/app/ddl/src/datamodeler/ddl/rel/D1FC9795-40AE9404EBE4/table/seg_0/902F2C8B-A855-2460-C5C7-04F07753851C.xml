@@ -1,0 +1,249 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="902F2C8B-A855-2460-C5C7-04F07753851C" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECT_FILTERS">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECT_FILTERS</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<comment><![CDATA[The filter for schema objects.]]></comment>
+<commentInRDBMS><![CDATA[The filter for schema objects.]]></commentInRDBMS>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>A4D9DD09-1DE3-58F9-F1CD-F94FDAF0B005</importedID>
+<abbreviation>SOF</abbreviation>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<propertyMap>
+<property name="applyStandards" value="1"/>
+<property name="copyComments" value="1"/>
+<property name="createIndexOnFK" value="1"/>
+<property name="setColumnsOrder" value="0"/>
+<property name="setIdentityColumn" value="0"/>
+<property name="tableToUpperCase" value="1"/>
+</propertyMap>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID" id="897C19BD-7515-AD12-9A34-320E5B62A40B">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECT_FILTERS</sourceObjSchema>
+<sourceObjName>ID</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>2E9FCC40-FA9B-6168-A31E-1F4883F60F1B</importedID>
+<constraintName>SCHEMA_OBJECT_FILTERS$CK$ID</constraintName>
+<sourceType>System</sourceType>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>*</dataTypePrecision>
+<ownDataTypeParameters>,*,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementColumn>true</autoIncrementColumn>
+<identityColumn>true</identityColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+<autoIncrementSequenceName>schema_object_filters$seq</autoIncrementSequenceName>
+<autoIncrementGenerateTrigger>false</autoIncrementGenerateTrigger>
+<notNullConstraintName>SCHEMA_OBJECT_FILTERS$NNC$ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<listOfRanges>
+<rangeDef class="oracle.dbtools.crest.model.design.constraint.AVT">
+<beginValue>1</beginValue>
+<endValue>2147483647</endValue>
+</rangeDef>
+</listOfRanges>
+</Column>
+<Column name="CREATED" id="0A8DC93B-3D0B-E202-E4FC-8BF09E1B83EB">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECT_FILTERS</sourceObjSchema>
+<sourceObjName>CREATED</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>F24EEAFE-BA1D-9C7A-AE7B-1F98A9ED3BFC</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT015</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<defaultValue>sys_extract_utc(systimestamp)</defaultValue>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>SCHEMA_OBJECT_FILTERS$NNC$CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+<Column name="LAST_MODIFICATION_TIME_SCHEMA" id="2BF7787D-55E4-48DA-D821-2784E0507677">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECT_FILTERS</sourceObjSchema>
+<sourceObjName>LAST_MODIFICATION_TIME_SCHEMA</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>C328E1F6-A012-339A-8EF7-542DC6166427</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT007</logicalDatatype>
+<dataTypeSize>7</dataTypeSize>
+<ownDataTypeParameters>7,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>SCHEMA_OBJECT_FILTERS$NNC$LAST_MODIFICATION_TIME_SCHEMA</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+<Column name="UPDATED" id="798960BC-5AB2-87EA-1AD5-F6B55433F58E">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECT_FILTERS</sourceObjSchema>
+<sourceObjName>UPDATED</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>B99501FE-99C3-5214-D421-92268AC99A0C</importedID>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT015</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+<Column name="OBJ_JSON" id="441AAB0A-9F0B-A2B9-9EE9-E7DE24DD4B74">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECT_FILTERS</sourceObjSchema>
+<sourceObjName>OBJ_JSON</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-12-09 11:43:56 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>1AB329B4-5E43-2096-0FB0-8746D00AA1FB</importedID>
+<constraintName>SCHEMA_OBJECT_FILTERS$CK$OBJ_JSON</constraintName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT028</logicalDatatype>
+<dataTypeSize>4000</dataTypeSize>
+<checkConstraint>
+<implementationDef dbType="Generic Constraint" definition="obj_json is json strict"/>
+<implementationDef dbType="Oracle Database 12cR2" definition="obj_json is json strict"/>
+</checkConstraint>
+<ownDataTypeParameters>4000,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>SCHEMA_OBJECT_FILTERS$NNC$OBJ_JSON</notNullConstraintName>
+</Column>
+<Column name="HASH_BUCKET" id="46A02F60-2F97-A4ED-ABCE-A2E6CA6E7806">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECT_FILTERS</sourceObjSchema>
+<sourceObjName>HASH_BUCKET</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>B8CF9788-9182-7E8F-4B52-3604F912BDE4</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LogDes-4BABEC65-108B-2A3C-F7C4-84AC47D292B0@LOGDT10040</logicalDatatype>
+<dataTypeSize>2000</dataTypeSize>
+<ownDataTypeParameters>2000,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>SCHEMA_OBJECT_FILTERS$NNC$HASH_BUCKET</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+<Column name="HASH_BUCKET_NR" id="628E453F-976F-3EDB-60E8-EB0EC42BFCF2">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECT_FILTERS</sourceObjSchema>
+<sourceObjName>HASH_BUCKET_NR</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>91993D6A-37D4-88D6-46F9-8CF58DE80AFB</importedID>
+<constraintName>SCHEMA_OBJECT_FILTERS$CK$HASH_BUCKET_NR</constraintName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>*</dataTypePrecision>
+<checkConstraint>
+<implementationDef dbType="Generic Constraint" definition="hash_bucket_nr &gt;= 1"/>
+<implementationDef dbType="Oracle Database 12cR2" definition="hash_bucket_nr &gt;= 1"/>
+</checkConstraint>
+<defaultValue>1</defaultValue>
+<ownDataTypeParameters>,*,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>SCHEMA_OBJECT_FILTERS$NNC$HASH_BUCKET_NR</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="4C178E85-B0FA-BCF0-0266-AE63FDE1EA0E" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECT_FILTERS$PK">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECT_FILTERS$PK</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>983B081E-B6A8-8A6F-F4CC-18E4FD5B1345</importedID>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="897C19BD-7515-AD12-9A34-320E5B62A40B"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="74FC5E01-7D14-2200-CD36-E7FCA560CBED" name="SCHEMA_OBJECT_FILTERS$UK$1">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECT_FILTERS$UK$1</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>532E69E6-3ABE-F95B-E881-E4E1B680EA42</importedID>
+<indexState>Unique Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="46A02F60-2F97-A4ED-ABCE-A2E6CA6E7806"/>
+<colUsage columnID="628E453F-976F-3EDB-60E8-EB0EC42BFCF2"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="04FCAF81-2E44-D6B6-C780-3C9BB58B0151" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECT_FILTERS$UK$1">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECT_FILTERS$UK$1</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>99F25382-A29D-C25C-66EF-129F2E40E47F</importedID>
+<deprecated>true</deprecated>
+<indexState>Unique Plain Index</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="46A02F60-2F97-A4ED-ABCE-A2E6CA6E7806"/>
+<colUsage columnID="628E453F-976F-3EDB-60E8-EB0EC42BFCF2"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

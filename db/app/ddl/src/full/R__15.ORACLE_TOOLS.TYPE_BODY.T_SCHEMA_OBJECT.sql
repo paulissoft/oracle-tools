@@ -115,11 +115,27 @@ begin
   return null;
 end grantable;
 
+final member procedure last_ddl_time
+( self in out nocopy oracle_tools.t_schema_object
+, p_last_ddl_time in date
+)
+is
+begin
+  self.last_ddl_time$ := p_last_ddl_time;
+end last_ddl_time;
+
+final member function last_ddl_time
+return date
+is
+begin
+  return self.last_ddl_time$;
+end last_ddl_time;
+
 static function object_type_order
 ( p_object_type in varchar2
 )
 return integer
-deterministic
+deterministic /*result_cache*/
 is
 begin
   return
@@ -166,7 +182,7 @@ begin
   return oracle_tools.t_schema_object.object_type_order(self.object_type);
 end object_type_order;
 
-static function id
+static function get_id
 ( p_object_schema in varchar2
 , p_object_type in varchar2
 , p_object_name in varchar2
@@ -179,12 +195,12 @@ static function id
 , p_grantable in varchar2
 )
 return varchar2
-deterministic
+deterministic /*result_cache*/
 is
-  l_id varchar2(4000 char) := null;
+  l_id varchar2(500 byte) := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ID');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_ID');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_type: %s; p_object_name: %s', p_object_schema, p_object_type, p_object_name);
   if not(p_base_object_schema is null and p_base_object_type is null and p_base_object_name is null)
   then
@@ -355,26 +371,28 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   return l_id;
-end id;
+end get_id;
 
-member function id
-return varchar2
-deterministic
+static procedure normalize
+( p_schema_object in out nocopy oracle_tools.t_schema_object
+)
 is
 begin
-  return oracle_tools.t_schema_object.id
-         ( p_object_schema => self.object_schema
-         , p_object_type => self.object_type
-         , p_object_name => self.object_name
-         , p_base_object_schema => self.base_object_schema
-         , p_base_object_type => self.base_object_type
-         , p_base_object_name => self.base_object_name
-         , p_column_name => self.column_name
-         , p_grantee => self.grantee
-         , p_privilege => self.privilege
-         , p_grantable => self.grantable
-         );
-end id;
+  p_schema_object.id := 
+    get_id
+    ( p_object_schema => p_schema_object.object_schema()
+    , p_object_type => p_schema_object.object_type()
+    , p_object_name => p_schema_object.object_name()
+    , p_base_object_schema => p_schema_object.base_object_schema()
+    , p_base_object_type => p_schema_object.base_object_type()
+    , p_base_object_name => p_schema_object.base_object_name()
+    , p_column_name => p_schema_object.column_name()
+    , p_grantee => p_schema_object.grantee()
+    , p_privilege => p_schema_object.privilege()
+    , p_grantable => p_schema_object.grantable()
+    );
+  p_schema_object.last_ddl_time(p_schema_object.dict_last_ddl_time());
+end normalize;
 
 map member function signature
 return varchar2
@@ -388,7 +406,7 @@ static function dict2metadata_object_type
 ( p_dict_object_type in varchar2
 )
 return varchar2
-deterministic
+deterministic /*result_cache*/
 is
   l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
 begin
@@ -429,7 +447,7 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
-  dbug.print(dbug."info", 'network link: %s; id: %s', self.network_link(), self.id());
+  dbug.print(dbug."info", 'network link: %s; id: %s', self.network_link(), self.id);
   dbug.print(dbug."info", 'signature: %s', self.signature());
   dbug.leave;
 $else
@@ -480,7 +498,7 @@ is
         , p_base_object_schema
         , p_base_object_name
         , p_base_object_type
-        , oracle_tools.t_schema_object.id
+        , oracle_tools.t_schema_object.get_id
           ( p_object_schema 
           , p_object_type
           , p_object_name
@@ -772,7 +790,7 @@ static function is_a_repeatable
 ( p_object_type in varchar2
 )
 return integer
-deterministic
+deterministic /*result_cache*/
 is
 begin
   -- See generate_ddl.pl documentatation
@@ -829,7 +847,7 @@ final member function fq_object_name
 return varchar2
 deterministic
 is
-  l_object_name varchar2(4000 char);
+  l_object_name oracle_tools.pkg_ddl_util.t_object_name;
 
   function get_object_part(p_object_part in varchar2)
   return varchar2
@@ -856,9 +874,11 @@ $end
   return l_object_name;
 end fq_object_name;
 
-member function dict_object_type
+static function dict_object_type
+( p_object_type in varchar2
+)
 return varchar2
-deterministic
+deterministic /*result_cache*/
 is
   l_dict_object_type oracle_tools.pkg_ddl_util.t_dict_object_type;
   l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
@@ -867,7 +887,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'DICT_OBJECT_TYPE');
 $end
 
-  l_metadata_object_type := self.object_type();
+  l_metadata_object_type := p_object_type;
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."info", 'l_metadata_object_type: %s', l_metadata_object_type);
@@ -888,6 +908,14 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   return l_dict_object_type;
+end dict_object_type;
+
+member function dict_object_type
+return varchar2
+deterministic
+is
+begin
+  return oracle_tools.t_schema_object.dict_object_type(self.object_type());
 end dict_object_type;
 
 member procedure chk
@@ -923,6 +951,187 @@ begin
          self.privilege() || ':' ||
          self.grantable();  
 end schema_object_info;
+
+static function split_id
+( p_id in varchar2
+)
+return oracle_tools.t_text_tab
+deterministic
+is
+  l_id_parts dbms_sql.varchar2a;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SPLIT_ID');
+  dbug.print(dbug."input", 'p_id: %s', p_id);
+$end
+
+  oracle_tools.pkg_str_util.split
+  ( p_str => p_id
+  , p_delimiter => ':'
+  , p_str_tab => l_id_parts
+  );
+  if l_id_parts.count != 10
+  then
+    raise program_error;
+  end if;
+  
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print(dbug."output", '1-5: %s:%s:%s:%s:%s', l_id_parts(1), l_id_parts(2), l_id_parts(3), l_id_parts(4), l_id_parts(5));
+  dbug.print(dbug."output", '6-10: %s:%s:%s:%s:%s', l_id_parts(6), l_id_parts(7), l_id_parts(8), l_id_parts(9), l_id_parts(10));
+  dbug.leave;
+$end
+
+  return
+    oracle_tools.t_text_tab
+         ( l_id_parts( 1)
+         , l_id_parts( 2)
+         , l_id_parts( 3)
+         , l_id_parts( 4)
+         , l_id_parts( 5)
+         , l_id_parts( 6)
+         , l_id_parts( 7)
+         , l_id_parts( 8)
+         , l_id_parts( 9)
+         , l_id_parts(10)
+         );
+
+end split_id;
+
+static function join_id
+( p_id_parts in oracle_tools.t_text_tab
+)
+return varchar2
+deterministic
+is
+  l_id varchar2(500 byte);
+begin
+  if p_id_parts.count != 10
+  then
+    raise program_error;
+  end if;
+  
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SPLIT_ID');
+  dbug.print(dbug."input", '1-5: %s:%s:%s:%s:%s', p_id_parts(1), p_id_parts(2), p_id_parts(3), p_id_parts(4), p_id_parts(5));
+  dbug.print(dbug."input", '6-10: %s:%s:%s:%s:%s', p_id_parts(6), p_id_parts(7), p_id_parts(8), p_id_parts(9), p_id_parts(10));
+$end
+  
+  l_id := p_id_parts( 1) || ':' ||
+          p_id_parts( 2) || ':' ||
+          p_id_parts( 3) || ':' ||
+          p_id_parts( 4) || ':' ||
+          p_id_parts( 5) || ':' ||
+          p_id_parts( 6) || ':' ||
+          p_id_parts( 7) || ':' ||
+          p_id_parts( 8) || ':' ||
+          p_id_parts( 9) || ':' ||
+          p_id_parts(10);
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print(dbug."output", 'return: %s', l_id);
+  dbug.leave;
+$end
+
+  return l_id;
+end join_id;
+
+final static function dict_last_ddl_time
+( p_object_schema in varchar2
+, p_dict_object_type in varchar2
+, p_object_name in varchar2
+)
+return date
+is
+  l_last_ddl_time all_objects.last_ddl_time%type;
+begin
+  select  o.last_ddl_time
+  into    l_last_ddl_time
+  from    all_objects o
+  where   o.owner = p_object_schema
+  and     o.object_type = p_dict_object_type
+  and     o.object_name = p_object_name;
+  return l_last_ddl_time;
+exception
+  when no_data_found
+  then return null;
+end dict_last_ddl_time;
+
+member function dict_last_ddl_time
+return date
+is
+begin
+  return oracle_tools.t_schema_object.dict_last_ddl_time
+         ( p_object_schema => self.object_schema()
+         , p_dict_object_type => self.dict_object_type()
+         , p_object_name => self.object_name()
+         );
+end dict_last_ddl_time;
+
+static function ddl_batch_order
+( p_object_type in varchar2
+)
+return varchar2
+deterministic /*result_cache*/
+is
+  -- must stay 1 digit number (see V_MY_GENERATE_DDL_SESSION_BATCHES)
+  l_ddl_batch_group char(1);
+begin
+  l_ddl_batch_group :=
+    to_char
+    ( 1 +
+      -- TABLE must start early: so let the ddl_batch_order return the minimum here for TABLE (2)
+      case p_object_type
+        -- table related (part 1)            -- result of object_type_order()
+        when 'AQ_QUEUE_TABLE'        then  0 --  4
+        when 'AQ_QUEUE'              then  0 --  5
+        when 'TABLE'                 then  0 --  6
+        when 'MATERIALIZED_VIEW'     then  0 -- 12
+        when 'MATERIALIZED_VIEW_LOG' then  0 -- 13
+        when 'COMMENT'               then  0 -- 22
+        -- table related (part 2)            
+        when 'SEQUENCE'              then  1 --  1
+        when 'CLUSTER'               then  1 --  3
+        when 'INDEX'                 then  1 -- 16
+        when 'CONSTRAINT'            then  1 -- 19
+        when 'REF_CONSTRAINT'        then  1 -- 20
+        -- stored procedure            
+        when 'TYPE_SPEC'             then  2 --  2
+        when 'FUNCTION'              then  2 --  8
+        when 'PACKAGE_SPEC'          then  2 --  9
+        when 'VIEW'                  then  2 -- 10
+        when 'PROCEDURE'             then  2 -- 11
+        when 'PACKAGE_BODY'          then  2 -- 14
+        when 'TYPE_BODY'             then  2 -- 15
+        when 'TRIGGER'               then  2 -- 17            
+        -- dependent
+        when 'OBJECT_GRANT'          then  3 -- 18
+        when 'SYNONYM'               then  3 -- 21            
+        -- rest
+        when 'DB_LINK'               then  4 --  7
+        when 'DIMENSION'             then  4 -- 23
+        when 'INDEXTYPE'             then  4 -- 24
+        when 'JAVA_SOURCE'           then  4 -- 25
+        when 'LIBRARY'               then  4 -- 26
+        when 'OPERATOR'              then  4 -- 27
+        when 'REFRESH_GROUP'         then  4 -- 28
+        when 'XMLSCHEMA'             then  4 -- 29
+        when 'PROCOBJ'               then  4 -- 30
+        else 4
+      end
+    , 'FM0'
+    );
+  return l_ddl_batch_group || '|' || rpad(p_object_type, 30);
+end ddl_batch_order;
+
+final member function ddl_batch_order
+return varchar2
+deterministic /*result_cache*/
+is
+begin
+  return oracle_tools.t_schema_object.ddl_batch_order
+         ( p_object_type => self.object_type()
+         );
+end ddl_batch_order;
 
 end;
 /

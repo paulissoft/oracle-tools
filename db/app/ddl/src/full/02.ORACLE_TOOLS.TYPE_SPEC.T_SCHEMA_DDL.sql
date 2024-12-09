@@ -11,13 +11,18 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_DDL" authid current_user as object
   , p_ddl_tab in oracle_tools.t_ddl_tab
   )
   return oracle_tools.t_schema_ddl
+, static function create_schema_ddl
+  ( p_display_ddl_sql_tab in oracle_tools.t_display_ddl_sql_tab
+  , p_obj in oracle_tools.t_schema_object default null
+  )
+  return oracle_tools.t_schema_ddl
 , member procedure print
   ( self in oracle_tools.t_schema_ddl
   )
 , member procedure add_ddl
   ( self in out nocopy oracle_tools.t_schema_ddl
   , p_verb in varchar2
-  , p_text in oracle_tools.t_text_tab
+  , p_text_tab in oracle_tools.t_text_tab
   )
 , member procedure add_ddl
   ( self in out nocopy oracle_tools.t_schema_ddl
@@ -57,6 +62,10 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_DDL" authid current_user as object
   ( self in oracle_tools.t_schema_ddl
   )
 , static procedure execute_ddl(p_schema_ddl in oracle_tools.t_schema_ddl)
+, final member procedure copy
+  ( self in oracle_tools.t_schema_ddl
+  , p_display_ddl_sql_tab out nocopy oracle_tools.t_display_ddl_sql_tab 
+  )
 )
 not final;
 /

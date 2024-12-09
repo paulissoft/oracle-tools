@@ -1,0 +1,2 @@
+COMMENT ON TABLE "ORACLE_TOOLS"."GENERATE_DDL_SESSION_BATCHES"  IS 'DDL is generated in batches.';
+

@@ -5,7 +5,7 @@ create type oracle_tools.t_sequence_ddl authid current_user under oracle_tools.t
 ( overriding member procedure add_ddl
   ( self in out nocopy oracle_tools.t_sequence_ddl
   , p_verb in varchar2
-  , p_text in oracle_tools.t_text_tab
+  , p_text_tab in oracle_tools.t_text_tab
   )
 )
 final]';
