@@ -1,0 +1,65 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TableProxyOraclev12c class="oracle.dbtools.crest.model.design.storage.oracle.v12c.TableProxyOraclev12c" name="GENERATE_DDL_CONFIGURATIONS" directorySegmentName="seg_0" id="CCE1DA15-51E4-1968-28EF-6D5783EF812A">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<schemaObject>86E07972-0E39-656A-F568-00AE638CFEA4</schemaObject>
+<logging>YES</logging>
+<partitionedRowMovement>DISABLE</partitionedRowMovement>
+<temporaryChanged>false</temporaryChanged>
+<accessDriverType>oracle_loader</accessDriverType>
+<rejectLimit></rejectLimit>
+<columnProxies itemClass="oracle.dbtools.crest.model.design.storage.oracle.v12c.ColumnProxyOraclev12c">
+<ColumnProxy name="CREATED" id="1CC83909-2C09-9FFC-3A58-1B0BB013EACD">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<defaultValue>sys_extract_utc(systimestamp)</defaultValue>
+</ColumnProxy>
+<ColumnProxy name="DB_VERSION" id="4739C7C6-C7BA-EF7F-C532-91296D8A0569">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ID" id="4F392E8D-3FC7-BEB7-EB63-5AE2152699F5">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<autoIncrementDDL>IDENTITY_CLAUSE</autoIncrementDDL>
+</ColumnProxy>
+<ColumnProxy name="LAST_DDL_TIME_SCHEMA" id="AD4A98FB-D840-2A98-08CC-2CD14138D9AE">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="TRANSFORM_PARAM_LIST" id="AD52CCFA-86D7-3710-56BA-439B0B4149E2">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+</ColumnProxy>
+</columnProxies>
+<indexProxies>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="GENERATE_DDL_CONFIGURATIONS$PK" id="4FA34533-F3EF-1B31-58EF-9A7021E587E2">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<schemaObject>86E07972-0E39-656A-F568-00AE638CFEA4</schemaObject>
+</IndexProxy>
+</indexProxies>
+<primaryKeys>
+<PrimaryKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.PKProxyOraclev10g" name="GENERATE_DDL_CONFIGURATIONS$PK" id="DD21943E-8D0E-F477-3791-F0E88EA6D94A">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<indexSort>SORTED</indexSort>
+</PrimaryKey>
+</primaryKeys>
+<uniqueKeys>
+<UniqueKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.UniqueOraclev10g" name="GENERATE_DDL_CONFIGURATIONS$UK$1" id="E06B141C-0632-0870-48B4-B5A6F063D39D">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<indexSort>SORTED</indexSort>
+</UniqueKey>
+</uniqueKeys>
+</TableProxyOraclev12c>

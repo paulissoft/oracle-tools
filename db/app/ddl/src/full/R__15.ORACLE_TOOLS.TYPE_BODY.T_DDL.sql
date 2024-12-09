@@ -4,7 +4,7 @@ constructor function t_ddl
 ( self in out nocopy oracle_tools.t_ddl
 , p_ddl# in integer
 , p_verb in varchar2
-, p_text in oracle_tools.t_text_tab
+, p_text_tab in oracle_tools.t_text_tab
 )
 return self as result
 is
@@ -15,7 +15,7 @@ $end
 
   self.ddl#$ := p_ddl#;
   self.verb$ := p_verb;
-  self.text := p_text;
+  set_text_tab(p_text_tab);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -56,13 +56,13 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   , 'ddl#: %s; verb: %s; cardinality: %s'
   , self.ddl#()
   , self.verb()
-  , cardinality(self.text)
+  , case when self.text_tab is not null then self.text_tab.count end
   );
 --$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
-  if cardinality(self.text) > 0
+  if self.text_tab is not null and self.text_tab.count > 0
   then
     oracle_tools.pkg_str_util.text2clob
-    ( pi_text_tab => self.text
+    ( pi_text_tab => self.text_tab
     , pio_clob => l_clob
     , pi_append => false
     );
@@ -224,8 +224,81 @@ end compare;
 member procedure text_to_compare( self in oracle_tools.t_ddl, p_text_tab out nocopy oracle_tools.t_text_tab )
 is
 begin
-  p_text_tab := self.text;
+  p_text_tab := self.text_tab;
 end text_to_compare;
+
+member procedure set_text_tab
+( self in out nocopy oracle_tools.t_ddl
+, p_text_tab in oracle_tools.t_text_tab
+)
+is
+begin
+  case
+    when p_text_tab is null
+    then self.text_tab := null;
+    when p_text_tab.count = 0
+    then self.text_tab := oracle_tools.t_text_tab();
+    else
+      self.text_tab := oracle_tools.t_text_tab();
+      for i_idx in p_text_tab.first .. p_text_tab.last
+      loop
+        self.text_tab.extend(1);
+        self.text_tab(self.text_tab.last) := p_text_tab(i_idx);
+      end loop;
+  end case;
+  chk();
+end set_text_tab;
+
+member procedure chk
+( self in oracle_tools.t_ddl
+)
+is
+begin
+  if self is null or
+     self.text_tab is null or
+     self.text_tab.count = 0 or
+     ( self.verb$ is null and self.text_tab(1) like 'BEGIN%' ) or -- PROCOBJ
+     ( self.verb$ not in ('ALTER', 'AUDIT', 'COMMENT', 'CREATE', 'DROP', 'GRANT', 'REVOKE', '--') )
+  then
+    null; -- OK
+  elsif not( self.text_tab(1) like self.verb$ || ' %' )
+  then
+    oracle_tools.pkg_ddl_error.raise_error
+    ( oracle_tools.pkg_ddl_error.c_ddl_not_correct
+    , 'First line should start with ALTER, AUDIT, COMMENT, CREATE, DROP, GRANT, REVOKE or --.'
+    , utl_lms.format_message
+      ('verb="%s"; line[1:100]="%s"'
+      , self.verb$
+      , case when cardinality(self.text_tab) > 0 then substr(self.text_tab(1), 1, 100) end
+      )
+    );
+  end if;
+end chk;
+
+static function ddl_info
+( p_schema_object in oracle_tools.t_schema_object
+, p_verb in varchar2
+, p_ddl# in integer
+)
+return varchar2
+deterministic
+is
+begin
+  return '-- ddl info: ' ||
+         p_verb || ';' ||
+         replace(p_schema_object.schema_object_info(), ':', ';') || ';' ||
+         p_ddl# || chr(10);
+end ddl_info;
+
+final member function ddl_info
+( p_schema_object in oracle_tools.t_schema_object
+)
+return varchar2
+deterministic
+is
+begin
+  return oracle_tools.t_ddl.ddl_info(p_schema_object => p_schema_object, p_verb => self.verb(), p_ddl# => self.ddl#);
+end ddl_info;
 
 end;
 /

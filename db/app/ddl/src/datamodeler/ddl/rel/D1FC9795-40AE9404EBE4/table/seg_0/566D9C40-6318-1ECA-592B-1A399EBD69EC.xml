@@ -1,0 +1,208 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="566D9C40-6318-1ECA-592B-1A399EBD69EC" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECTS">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECTS</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<comment><![CDATA[The schema objects including named object and dependent or granted objects.]]></comment>
+<commentInRDBMS><![CDATA[The schema objects including named object and dependent or granted objects.]]></commentInRDBMS>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>07ABF4CB-F36E-406F-F9F2-E1451B82BCB0</importedID>
+<abbreviation>SO</abbreviation>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<propertyMap>
+<property name="applyStandards" value="1"/>
+<property name="copyComments" value="1"/>
+<property name="createIndexOnFK" value="1"/>
+<property name="setColumnsOrder" value="1"/>
+<property name="setIdentityColumn" value="1"/>
+<property name="tableToUpperCase" value="1"/>
+</propertyMap>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID" id="F9235B75-7E72-8805-F33D-16F641E2E8D2">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECTS</sourceObjSchema>
+<sourceObjName>ID</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>CDC32331-04DD-51ED-CE5A-9C1B47240A1A</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>500 BYTE</dataTypeSize>
+<ownDataTypeParameters>500 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementColumn>true</autoIncrementColumn>
+<identityColumn>true</identityColumn>
+<autoIncrementCycle>false</autoIncrementCycle>
+<autoIncrementGenerateTrigger>false</autoIncrementGenerateTrigger>
+<notNullConstraintName>SCHEMA_OBJECTS$NNC$ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+<Column name="CREATED" id="3F977B1B-5AD9-8D43-E6B1-CEB1725A4041">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECTS</sourceObjSchema>
+<sourceObjName>CREATED</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>110715DB-066B-F07D-9E65-9E63D0585EA3</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT015</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<defaultValue>sys_extract_utc(systimestamp)</defaultValue>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>SCHEMA_OBJECTS$NNC$CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+<Column name="OBJ" id="A389E789-4FE5-08A6-B47C-88EAB658F56B">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECTS</sourceObjSchema>
+<sourceObjName>OBJ</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>35759CC7-55B2-0688-9B71-A31964B3B5E6</importedID>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>3</use>
+<structuredType>10BFC0E4-0AFA-B8D4-A7CD-972D9CA127A8</structuredType>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</Column>
+</columns>
+<nestedColumns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<nestedColumn name="OBJ.ID" id="2EC96F4A-0139-82C9-0FCE-7185FE257702">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<parentObject>A389E789-4FE5-08A6-B47C-88EAB658F56B</parentObject>
+<structAttributeID>75783273-F0B9-FF3A-11B1-13C4A8F45288</structAttributeID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypePrecision>0</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<dataTypeSize>500</dataTypeSize>
+<ownDataTypeParameters>500,0,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</nestedColumn>
+<nestedColumn name="OBJ.NETWORK_LINK$" id="E4EC3A52-D52A-242D-6B7A-47C7CA9FA5B4">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<parentObject>A389E789-4FE5-08A6-B47C-88EAB658F56B</parentObject>
+<structAttributeID>642B8178-C257-4E09-BD93-4837E2FF7834</structAttributeID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypePrecision>0</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<dataTypeSize>128</dataTypeSize>
+<ownDataTypeParameters>128,0,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</nestedColumn>
+<nestedColumn name="OBJ.OBJECT_SCHEMA$" id="CF6EE8FC-9D12-2EB0-7D6D-AB216F82E51A">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<parentObject>A389E789-4FE5-08A6-B47C-88EAB658F56B</parentObject>
+<structAttributeID>855C29D6-2636-9413-8FA3-FE29105DBE00</structAttributeID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypePrecision>0</dataTypePrecision>
+<dataTypeScale>0</dataTypeScale>
+<dataTypeSize>128</dataTypeSize>
+<ownDataTypeParameters>128,0,0</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</nestedColumn>
+</nestedColumns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="6A7B268F-DBC9-AB65-A4A2-A26A2F72DEBC" name="SCHEMA_OBJECTS$PK">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECTS$PK</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>5203368C-73B0-9C92-0000-7925C0517B4C</importedID>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="F9235B75-7E72-8805-F33D-16F641E2E8D2"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="D9E5D1A6-53A5-2983-0280-8AE66DDEAA64" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECTS$IDX$1">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECTS$IDX$1</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>8BE69CFC-FF51-D56A-5B01-FEE1918FF098</importedID>
+<indexExpression>ORACLE_TOOLS, ORACLE_TOOLS, ORACLE_TOOLS</indexExpression>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</ind_PK_UK>
+<ind_PK_UK id="42D941F4-C19D-4F85-D0DB-1F6A45FD9757" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECTS$IDX$2">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECTS$IDX$2</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>15C43899-7473-54DD-BC4A-871B11B17EA0</importedID>
+<indexExpression>ORACLE_TOOLS, ORACLE_TOOLS, ORACLE_TOOLS</indexExpression>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+</propertyMap>
+</ind_PK_UK>
+</indexes>
+<tableCheckConstraints itemClass="oracle.dbtools.crest.model.design.constraint.TableLevelConstraint">
+<tableCheckConstraint name="SCHEMA_OBJECTS$CK$OBJ" directorySegmentName="seg_0" id="5C2C118E-B086-B7A6-6AF1-9CE9D39E6CF5">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECTS$CK$OBJ</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>E456EABE-C3D0-F62A-56C3-520AFADBEBED</importedID>
+<rule><![CDATA[obj is not null and obj.id = id]]></rule>
+</tableCheckConstraint>
+<tableCheckConstraint name="SCHEMA_OBJECTS$CK$OBJ$LAST_DDL_TIME$" directorySegmentName="seg_0" id="39AAEF9A-255E-E00C-065F-AED90F649BD9">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-12-07 15:36:16 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<rule><![CDATA[obj.last_ddl_time$ is not null]]></rule>
+</tableCheckConstraint>
+</tableCheckConstraints>
+</Table>

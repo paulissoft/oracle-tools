@@ -1,0 +1,91 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<StructuredType class="oracle.dbtools.crest.model.design.datatypes.StructuredType" name="T_DISPLAY_DDL_SQL_REC" directorySegmentName="seg_0" id="7621EEA4-571F-F148-CA59-07A5DA2C32B5">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>T_DISPLAY_DDL_SQL_REC</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>FA5F74CD-5AFE-E654-A403-DF342BCDF45A</importedID>
+<predefined>false</predefined>
+<final>true</final>
+<instantiable>true</instantiable>
+<attributes itemClass="oracle.dbtools.crest.model.design.datatypes.TypeElement">
+<Attribute name="SCHEMA_OBJECT_ID" id="9554B33A-7886-22E0-5425-FABC86B91B86">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<generatorID>208EDC1E-E4FB-EE17-568F-DEFD704B42AC</generatorID>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>208EDC1E-E4FB-EE17-568F-DEFD704B42AC</importedID>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<size>500</size>
+<type>LOGDT024</type>
+</Attribute>
+<Attribute name="DDL#" id="0D4C6BB6-7B02-B6E2-048B-3D5CCB24424F">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<generatorID>75AF4B86-4E59-D420-CDAF-3C7A2B52BF18</generatorID>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>75AF4B86-4E59-D420-CDAF-3C7A2B52BF18</importedID>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<type>LOGDT011</type>
+</Attribute>
+<Attribute name="VERB" id="40A213AA-B4B9-554E-6F16-C139A87E3BFD">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<generatorID>ED5837CB-63FD-88D2-AE0A-2851A26D2AA1</generatorID>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>ED5837CB-63FD-88D2-AE0A-2851A26D2AA1</importedID>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<size>128</size>
+<type>LOGDT024</type>
+</Attribute>
+<Attribute name="DDL_INFO" id="E507194B-E667-B49C-6D08-06F482FB1D0E">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<generatorID>FD71A946-0E7D-A481-7F51-4137E64A231A</generatorID>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>FD71A946-0E7D-A481-7F51-4137E64A231A</importedID>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<size>1000</size>
+<type>LOGDT024</type>
+</Attribute>
+<Attribute name="CHUNK#" id="A1BE2861-D308-BC09-6447-D7FC519F636D">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<generatorID>CEF1F2EF-BBAC-D579-D51E-2248CD109BAF</generatorID>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>CEF1F2EF-BBAC-D579-D51E-2248CD109BAF</importedID>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<type>LOGDT011</type>
+</Attribute>
+<Attribute name="CHUNK" id="CF112D5E-41C7-23BC-DC4A-F93418ACF074">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<generatorID>B27BC00F-2ED4-F0E1-2B0A-D6755CED72DC</generatorID>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>B27BC00F-2ED4-F0E1-2B0A-D6755CED72DC</importedID>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<size>4000</size>
+<type>LOGDT024</type>
+</Attribute>
+</attributes>
+</StructuredType>

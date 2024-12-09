@@ -1,5 +1,7 @@
 CREATE TYPE "ORACLE_TOOLS"."T_DEPENDENT_OR_GRANTED_OBJECT" authid current_user under oracle_tools.t_schema_object
-( base_object$ oracle_tools.t_named_object
+( base_object_id$ varchar2(500 byte)
+  -- other methods
+, member function base_object_id return varchar2 deterministic
 , overriding member function base_object_schema return varchar2 deterministic
 , overriding member function base_object_type return varchar2 deterministic
 , overriding member function base_object_name return varchar2 deterministic

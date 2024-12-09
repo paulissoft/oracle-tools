@@ -19,7 +19,14 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   -- default constructor
-  self := oracle_tools.t_procobj_object(null, p_object_schema, p_object_name, null);
+  self := oracle_tools.t_procobj_object
+          ( null -- id
+          , null -- last_ddl_time$
+          , null
+          , p_object_schema
+          , p_object_name
+          , null
+          );
 
   select  obj.object_type
   into    self.dict_object_type$
@@ -27,6 +34,8 @@ $end
   where   obj.owner = p_object_schema
   and     obj.object_name = p_object_name
   ;
+
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;

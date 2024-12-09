@@ -5,7 +5,7 @@ return varchar2
 deterministic
 is
 begin
-  return base_object$.object_schema();
+  return oracle_tools.t_schema_object.split_id(self.base_object_id$)(1);
 end base_object_schema;
 
 overriding member function base_object_type
@@ -13,7 +13,7 @@ return varchar2
 deterministic
 is
 begin
-  return base_object$.object_type();
+  return oracle_tools.t_schema_object.split_id(self.base_object_id$)(2);
 end base_object_type;
 
 overriding member function base_dict_object_type
@@ -21,7 +21,7 @@ return varchar2
 deterministic
 is
 begin
-  return base_object$.dict_object_type();
+  return oracle_tools.t_schema_object.dict_object_type(self.base_object_type());
 end base_dict_object_type;
 
 overriding member function base_object_name
@@ -29,7 +29,7 @@ return varchar2
 deterministic
 is
 begin
-  return base_object$.object_name();
+  return oracle_tools.t_schema_object.split_id(self.base_object_id$)(3);
 end base_object_name;
 
 overriding final member procedure base_object_schema
@@ -37,8 +37,10 @@ overriding final member procedure base_object_schema
 , p_base_object_schema in varchar2
 )
 is
+  l_id_parts oracle_tools.t_text_tab := oracle_tools.t_schema_object.split_id(self.base_object_id$);
 begin
-  self.base_object$.object_schema(p_base_object_schema);
+  l_id_parts(1) := p_base_object_schema;
+  self.base_object_id$ := oracle_tools.t_schema_object.join_id(l_id_parts);
 end base_object_schema;
 
 overriding member procedure chk
@@ -57,6 +59,14 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.leave;
 $end
 end chk;
+
+member function base_object_id
+return varchar2
+deterministic
+is
+begin
+  return self.base_object_id$;
+end base_object_id;
 
 end;
 /

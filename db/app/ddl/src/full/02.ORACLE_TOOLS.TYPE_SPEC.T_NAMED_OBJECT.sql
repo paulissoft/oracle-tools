@@ -1,5 +1,6 @@
 CREATE TYPE "ORACLE_TOOLS"."T_NAMED_OBJECT" authid current_user under oracle_tools.t_schema_object
-( object_name$ varchar2(4000 char)
+( object_name$ varchar2(128 byte)
+  -- other methods
 , overriding final member function object_name return varchar2 deterministic
 , final static procedure create_named_object
   ( p_object_type in varchar2

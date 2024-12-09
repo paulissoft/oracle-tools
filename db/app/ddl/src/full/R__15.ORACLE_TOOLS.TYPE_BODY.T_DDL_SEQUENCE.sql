@@ -6,13 +6,13 @@ is
   l_repl_regexp constant varchar2(100) := '\1 1';
 begin
   -- a sequence should have just 1 entry
-  if cardinality(self.text) = 1
+  if self.text_tab is not null and self.text_tab.count = 1
   then
     null;
   else
     raise program_error;
   end if;
-  p_text_tab := oracle_tools.t_text_tab(regexp_replace(self.text(1), l_find_regexp, l_repl_regexp));
+  p_text_tab := oracle_tools.t_text_tab(regexp_replace(self.text_tab(1), l_find_regexp, l_repl_regexp));
 end text_to_compare;
 
 end;

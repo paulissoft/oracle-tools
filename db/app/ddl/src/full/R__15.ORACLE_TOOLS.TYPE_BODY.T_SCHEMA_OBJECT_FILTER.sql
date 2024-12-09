@@ -43,45 +43,61 @@ begin
   return self.grantor_is_schema$;
 end;
 
-member function match_perc
+member function nr_objects_to_exclude
+return integer
+deterministic
+is
+begin
+  return nr_objects_to_exclude$;
+end nr_objects_to_exclude;
+
+member function nr_objects
+return integer
+deterministic
+is
+begin
+  return nvl(cardinality(self.op_object_id_expr_tab$), 0);
+end nr_objects;
+
+member function op(p_idx in integer)
+return varchar2
+deterministic
+is
+begin
+  return substr(op_object_id_expr_tab$(p_idx), 1, 2);
+end op;  
+
+member function object_id_expr(p_idx in integer)
+return varchar2
+deterministic
+is
+begin
+  return substr(op_object_id_expr_tab$(p_idx), 4);
+end object_id_expr;
+
+static function ops
+return oracle_tools.t_text_tab
+deterministic
+is
+begin
+  return oracle_tools.t_text_tab('!~', '!=', ' ~', ' =');
+end ops;
+  
+member function op_order
+( p_idx in integer
+)
 return integer
 deterministic
 is
 begin
   return
-    case
-      when match_count$ > 0
-      then trunc((100 * match_count_ok$) / match_count$)
-      else null
+    case op(p_idx)
+      when '!~' then 1
+      when '!=' then 2
+      when ' ~' then 3
+      when ' =' then 4
     end;
-end;
-
-member function match_perc_threshold
-return integer
-deterministic
-is
-begin
-  return match_perc_threshold$;
-end match_perc_threshold;
-
-member procedure match_perc_threshold
-( self in out nocopy oracle_tools.t_schema_object_filter 
-, p_match_perc_threshold in integer
-)
-is
-begin
-  self.match_perc_threshold$ := p_match_perc_threshold;
-end match_perc_threshold;
-
-member procedure print
-( self in oracle_tools.t_schema_object_filter
-)
-is
-begin
-  oracle_tools.pkg_schema_object_filter.print
-  ( p_schema_object_filter => self
-  );
-end print;
+end op_order;  
 
 member function matches_schema_object
 ( self in oracle_tools.t_schema_object_filter
@@ -91,23 +107,28 @@ return integer
 deterministic
 is
 begin
-  return oracle_tools.pkg_schema_object_filter.matches_schema_object
-         ( p_schema_object_filter => self
-         , p_schema_object_id => p_schema_object_id
-         );
+  return oracle_tools.pkg_schema_object_filter.matches_schema_object(self, p_schema_object_id);
 end matches_schema_object;
 
-member procedure get_schema_objects
-( self in out nocopy oracle_tools.t_schema_object_filter 
-, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
+member procedure chk
+( self in oracle_tools.t_schema_object_filter
 )
 is
 begin
-  oracle_tools.pkg_schema_object_filter.get_schema_objects
+  oracle_tools.pkg_schema_object_filter.chk
   ( p_schema_object_filter => self
-  , p_schema_object_tab => p_schema_object_tab
   );
-end get_schema_objects;
+end chk;
+
+overriding
+member procedure serialize
+( self in oracle_tools.t_schema_object_filter
+, p_json_object in out nocopy json_object_t
+)
+is
+begin
+  oracle_tools.pkg_schema_object_filter.serialize(self, p_json_object);
+end serialize;
 
 end;
 /

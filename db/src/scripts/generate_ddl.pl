@@ -172,6 +172,15 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2024-12-07
+
+For interface version 4, files will also be reused and views can be named R__10.<seq>.[<schema>.]VIEW.<name>.sql.
+This way you do not need to create FORCE views: when view A depends on B you can just have:
+- R__10.00.VIEW.B.sql
+- R__10.01.VIEW.A.sql
+
+A DDL generate report in Markdown format is created at the end with output file name "ddl-generate-report.md" (when the database generates it).
+
 =item 2023-05-03
 
 The DDL for a view with an instead of trigger should be placed into the same
@@ -327,10 +336,14 @@ use constant PKG_DDL_UTIL_V4 => 'pkg_ddl_util v4';
 use constant PKG_DDL_UTIL_V5 => 'pkg_ddl_util v5';
 use constant OLD_INSTALL_SEQUENCE_TXT => 'install_sequence.txt';
 use constant NEW_INSTALL_SEQUENCE_TXT => '!README_BEFORE_ANY_CHANGE.txt';
+use constant FILE_UNKNOWN => 'FILE_UNKNOWN'; 
+use constant FILE_NOT_REUSED => 'FILE_NOT_REUSED'; 
+use constant FILE_NOT_MODIFIED => 'FILE_NOT_MODIFIED';
+use constant FILE_MODIFIED => 'FILE_MODIFIED';
 
 # VARIABLES
 
-my $VERSION = "2023-01-05";
+my $VERSION = "2024-12-07";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
@@ -425,12 +438,9 @@ my %object_type_info = (
     'PROCOBJ' => { expr => \@procobj_expr, seq => 30, repeatable => 0, plsql => 1 },
     );
 
-my %object_seq = ();
-my $object_seq_max = 0; # the maximum $object_seq{$object} 
-
-# A list of modified files in output directory so we can remove non-modified files in non single output mode.
-# Key is file name created by this run in output directory. Value is 0 if file is unchanged, 1 otherwise.
-my %file_modified = ();
+my %object_info = (); # a hash table with key (object: schema, type, name) and data (file basename, sequence)
+my %file_info = (); # a hash table with key file basename and data object ($object_info{$file_info{$file}}{file} eq $file)
+my $object_seq_max = undef;
 
 # Key: file handle; Value: base file name.
 my %fh_modified = ();
@@ -475,8 +485,11 @@ sub remove_trailing_empty_lines ($);
 sub beautify_line ($$$$$$);
 sub split_single_output_file($);
 sub get_object_seq ($);
-sub add_object_seq ($;$);
-sub read_object_seq ();
+sub get_object_file ($);
+sub add_object_info ($;$$);
+sub set_file_status ($$;$);
+sub get_files (@);
+sub read_object_info ();
 sub error (@);
 sub warning (@);
 sub info (@);
@@ -566,8 +579,6 @@ sub process () {
         $in = \*STDIN;
     }
 
-    read_object_seq();
-
     # These files are not needed anymore since the directory contents are used to determine the object sequence for interface V5
     unlink(File::Spec->catfile($output_directory, OLD_INSTALL_SEQUENCE_TXT),
            File::Spec->catfile($output_directory, NEW_INSTALL_SEQUENCE_TXT));
@@ -615,6 +626,7 @@ sub process () {
         # read interface (first line with '-- ')
         #
         my $interface_expr = '^-- (' . PKG_DDL_UTIL_V4 . '|' . PKG_DDL_UTIL_V5 . ')$';
+        my $ddl_generate_report_fh = undef;
 
       INTERFACE:
         while (defined(my $line = <$in>)) {
@@ -626,7 +638,12 @@ sub process () {
             debug("$.: $line");
 
             if ($line =~ m/$interface_expr/o) {
-                $interface = $1;
+                if (!defined($interface)) {
+                    $interface = $1;
+                    read_object_info();
+                } elsif ($interface ne $1) {
+                    error("Interface changes from $interface to $1")
+                }
                 last INTERFACE;
             }
         }
@@ -639,7 +656,7 @@ sub process () {
 
         # reset the line number back to 0 since the interface line may not be the first
         $. = 0; # $. = $. - 1;
-
+        
         while (defined(my $line = <$in>)) {
             print $fh $line
                 if (defined($fh) && !defined($single_output_file));
@@ -651,7 +668,13 @@ sub process () {
             # $. starts from 1
 
             if ($interface eq PKG_DDL_UTIL_V4 || $interface eq PKG_DDL_UTIL_V5) {
-                if ($line =~ m/^-- ddl info:\s*(?<ddl_info>\S.+)$/o) {
+                if (!defined($ddl_generate_report_fh) && $line =~ m/^# DDL generate report on \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/) {
+                    open($ddl_generate_report_fh, ">$encoding", 'ddl-generate-report.md'); # put it in the current directory (usually of the POM)
+                }
+
+                if (defined($ddl_generate_report_fh)) {
+                    print { $ddl_generate_report_fh } $line, qq(\n);
+                } elsif ($line =~ m/^-- ddl info:\s*(?<ddl_info>\S.+)$/o) {
                     # Since all the grantees for one object will be saved in one file, we must determine the ddl# ourselves.
                     $ddl_info = $+{ddl_info};
                     
@@ -685,6 +708,9 @@ sub process () {
                 }
             }
         }
+        if (defined($ddl_generate_report_fh)) {
+            close($ddl_generate_report_fh);
+        }
     };
     if ($@) {
         if ($@ !~ m/^EOF\b/) {
@@ -715,23 +741,22 @@ sub process () {
 
     # Remove obsolete SQL scripts matching the Flyway naming convention and not being modified.
     if (!defined($single_output_file)) {
-        # GJP 2021-08-21  Add SQL scripts that adhere to the naming convention
-        my @obsolete_files = grep { m/\b(R__)?(\d{2}|\d{4})\./ } glob(File::Spec->catfile($output_directory, '*.sql'));
+        my @obsolete_files;
+
+        # When those files have not been created/modified
+        @obsolete_files = get_files(FILE_NOT_REUSED);
 
         # GJP 2021-08-27  Add install files too
-        push(@obsolete_files,
-             File::Spec->catfile($output_directory, 'install.sql'));
-
-        # When those files have not been created
-        @obsolete_files = grep { -f $_ && !exists($file_modified{$_}) } @obsolete_files;
-
-        if (scalar(@obsolete_files) > 0) {
-            info('Obsolete files to delete:', @obsolete_files);
+        push(@obsolete_files, 'install.sql');
         
-            unlink(@obsolete_files) == scalar(@obsolete_files) or error("Can not remove obsolete files");
+        foreach my $file (@obsolete_files) {
+            my $output_file = File::Spec->rel2abs(File::Spec->catfile($output_directory, $file));
+
+            error("File $output_file can not be removed")
+                if (-f $output_file && unlink($output_file) != 1);
         }
     }
-    info(sprintf("The number of files generated is %d (%d new or changed).", scalar(keys %file_modified), scalar(grep(/1/, values %file_modified))));
+    info(sprintf("The number of files generated is %d (%d new or changed).", scalar(get_files(FILE_NOT_MODIFIED, FILE_MODIFIED)), scalar(get_files(FILE_MODIFIED))));
 } # process
 
 sub process_object_type ($$$$) {
@@ -934,23 +959,17 @@ sub object_file_name ($$$) {
     error("\$object_schema undefined") unless defined($object_schema);
     error("\$object_name undefined") unless defined($object_name);
 
-    my $object_seq_key = join($object_sep, $object_schema, $object_type, $object_name);
-    my $object_file_name;
-    my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
+    my $object_info_key = join($object_sep, $object_schema, $object_type, $object_name);
+    my $object_file_name = get_object_file($object_info_key);
 
-    if (!defined(get_object_seq($object_seq_key))) {
-        add_object_seq($object_seq_key);
+    if (!defined($object_file_name)) {
+        $object_file_name = add_object_info($object_info_key);
     }
-    $object_file_name = 
-        uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
-                   ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
-                   ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : get_object_seq($object_seq_key)),
-                   (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
-                   $object_type,
-                   $object_name)) . '.sql';
+
+    debug("object: $object_info_key; file: $object_file_name");
     
     return $object_file_name;
-}
+} # sub object_file_name
 
 sub open_file ($$$$$$) {
     debug((caller(0))[3], @_);
@@ -1048,13 +1067,11 @@ sub smart_close ($) {
     my ($tmpfile, $file) = (File::Spec->catfile($TMPDIR, $basename), File::Spec->catfile($output_directory, $basename));
 
     if (-f $file && compare($tmpfile, $file) == 0) {
-        debug("File $file has NOT been changed");        
-        $file_modified{$file} = 0;
+        set_file_status($file, FILE_NOT_MODIFIED);
     } else {
         # $file not existing yet or not equal to $tmpfile
-        info("File $file has been " . (-f $file ? "changed": "created"));
         copy($tmpfile, $file) or error("Copy from '$tmpfile' to '$file' failed: $!");
-        $file_modified{$file} = 1;
+        set_file_status($file, FILE_MODIFIED);
     }
     # GJP 2023-05-03
     # Never clean up temporary files here (since we may have instead of triggers!).
@@ -1074,9 +1091,11 @@ sub add_sql_statement ($$$$;$) {
     $r_sql_statements->{$object}->{seq} = scalar(keys %$r_sql_statements)
         unless exists($r_sql_statements->{$object}->{seq});
 
-    # ignore errors when $object does not conform to naming convention or already exists
-    eval {
-        add_object_seq($object);
+    if (!get_object_seq($object)) {
+        # ignore any error
+        eval {
+            add_object_info($object);
+        };
     };
 
     $r_sql_statements->{$object}->{ddls}->[$ddl_no] = { 'ddl_info' => $ddl_info, 'ddl' => [] }
@@ -1092,7 +1111,7 @@ sub add_sql_statement ($$$$;$) {
         unless $ddl_no + 1 == scalar(@{$r_sql_statements->{$object}->{ddls}});
     
     $$r_sql_line = '';
-}
+} # sub add_sql_statement
 
 sub sort_sql_statements ($$$) {
     trace((caller(0))[3]);
@@ -1119,7 +1138,7 @@ sub sort_sql_statements ($$$) {
         }
 
         eval {
-            my $dumper = Data::Dumper->new([\%object_seq], [qw(*object_seq)]);
+            my $dumper = Data::Dumper->new([\%object_info], [qw(*object_info)]);
 
             $dumper->Sortkeys(1);
             
@@ -1733,10 +1752,10 @@ sub get_object_seq ($) {
     error("Object '$object' must be in upper case")
         unless $object eq uc($object);
 
-    return exists($object_seq{$object}) ? $object_seq{$object} : undef;
+    return exists($object_info{$object}) ? $object_info{$object}{seq} : undef;
 }
-    
-sub add_object_seq ($;$) {
+
+sub get_object_file ($) {
     trace((caller(0))[3]);
 
     my ($object, $object_seq) = @_;
@@ -1746,50 +1765,148 @@ sub add_object_seq ($;$) {
     error("Object '$object' must be in upper case")
         unless $object eq uc($object);
 
+    return exists($object_info{$object}) && exists($object_info{$object}{file}) ? $object_info{$object}{file} : undef;
+}
+
+sub add_object_info ($;$$) {
+    trace((caller(0))[3]);
+
+    my ($object, $object_seq, $file) = @_;
+
+    $object = uc($object);
+
+    error("Object '$object' must be in upper case")
+        unless $object eq uc($object);
+
     error("Object '$object' should match 'SCHEMA:TYPE:NAME'")
         unless $object =~ m/^.+\..+\..+$/;
 
-    error("Object sequence for '$object' already exists.")
-        if defined(get_object_seq($object));
+    error("File ($file) must be a base name")
+        if (defined($file) && basename($file) ne $file);
 
-    if (defined($object_seq)) {
+    error("Object '$object' already exists.")
+        if defined(get_object_file($object));
+
+    debug(sprintf("Add object info for object '%s', object sequence '%s' and file '%s'.",
+                  (defined($object) ? $object : 'UNKNOWN'),
+                  (defined($object_seq) ? sprintf("%d", $object_seq) : 'UNKNOWN'),
+                  (defined($file) ? $file : 'UNKNOWN')));
+
+    my $status = (defined($file) ? FILE_NOT_REUSED : FILE_UNKNOWN);
+    
+    if (defined($object_seq) && defined($file)) {
         # strip leading zeros otherwise it will be treated as an octal number
         $object_seq =~ m/^0*(\d+)$/;
         $object_seq = int($1);
-        
-        if ($object_seq <= $object_seq_max) {
-            error("Object sequence ($object_seq) for object '$object' must be greater than the maximum thus far ($object_seq_max)");
-        }
-        $object_seq_max = $object_seq;
-        debug("Maximum object sequence is set to object sequence ($object_seq) for object '$object'.");
-    } else {
-        $object_seq = ++$object_seq_max;
-        info("Object sequence ($object_seq) for object '$object' is set to maximum object sequence.");
-    }
+        $object_seq_max = $object_seq
+            if ($interface ne PKG_DDL_UTIL_V4 && $object_seq > $object_seq_max);
+    } elsif (!(defined($object_seq) && defined($file))) {
+        my ($object_schema, $object_type, $object_name) = split($object_sep_rex, $object);
+        my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
 
-    $object_seq{$object} = $object_seq;
-    debug("\$object_seq{$object}:", $object_seq{$object});
+        # get the highest plus 1
+        $object_seq = ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : ++$object_seq_max);
+        $file = uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
+                           ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
+                           $object_seq,
+                           (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
+                           $object_type,
+                           $object_name)) . '.sql';
+    } else {
+        error("Programming error.");
+    }
+    
+    $object_info{$object}{seq} = $object_seq;
+    $object_info{$object}{file} = $file;
+
+    # set status, just once
+    set_file_status($file, $status, $object);
+
+    info("File '$file' is used for object '$object' and has sequence $object_seq");
+
+    return $file;
 }
 
-sub read_object_seq () {
+sub set_file_status ($$;$) {
     trace((caller(0))[3]);
 
-    my %objects;
+    my ($file, $status, $object) = ($_[0], $_[1], $_[2]);
+    my $base_file = basename($file);
+
+    info("File '$base_file' has been " . (-f $file ? "changed": "created"))
+        if ($status eq FILE_NOT_MODIFIED || $status eq FILE_MODIFIED);
+
+    $file = $base_file;
+
+    debug(sprintf("Set file status for file '%s', status '%s' and object '%s'.",
+                  (defined($file) ? $file : 'UNKNOWN'),
+                  (defined($status) ? $status : 'UNKNOWN'),
+                  (defined($object) ? $object : 'UNKNOWN')));
+
+    error("File status set twice for file $file, status $status and object $object")
+        if (defined($object) && exists($file_info{$file}));
+
+    if (defined($object)) {
+        $file_info{$file}{object} = $object;
+    }
+    $file_info{$file}{status} = $status;
+}
+
+sub get_files (@) {
+    trace((caller(0))[3]);
     
-    opendir my $dh, $output_directory or die "Could not open '$output_directory' for reading '$!'\n";
-    while (my $file = readdir $dh) {
-        if ($file =~ m/^(R__)?(\d{4})\.([^.]+)\.([^.]+)\.([^.]+)\.sql$/) {
-            $objects{$2} = join($object_sep, $3, $4, $5);
-        } elsif ($file =~ m/^(R__)?(\d{4})\.([^.]+)\.([^.]+)\.sql$/) {
-            $objects{$2} = join($object_sep, $source_schema, $3, $4);
+    my @status = @_;
+    my @file = ();
+
+    debug("Getting files for status(es) @status");
+
+    foreach my $file (keys %file_info) {
+        my $status = $file_info{$file}{status};
+
+        if (grep(/^$status$/, @status)) {
+            debug("Adding file $file with status $status");
+            push(@file, $file);
         }
     }
-    # add the files in order
-    foreach my $object_seq (sort keys %objects) {
-        add_object_seq($objects{$object_seq}, $object_seq);
+    return @file;
+}
+                          
+sub read_object_info () {
+    trace((caller(0))[3]);
+
+    error("Interface must be defined")
+        unless (defined($interface));
+
+    $object_seq_max = 0
+        if (!defined($object_seq_max) && $interface ne PKG_DDL_UTIL_V4 );
+        
+    my %objects;
+    my $dir = File::Spec->rel2abs($output_directory);
+
+    info(sprintf("checking output directory %s for files to reuse", $dir));
+
+    my ($seq, $schema, $type, $name);
+
+    opendir my $dh, $dir or die "Could not open '$dir' for reading '$!'\n";
+    while (my $file = readdir $dh) {
+        debug("Checking whether file $file can be reused");
+        if ($file =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<schema>[^.]+)\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
+            ($seq, $schema, $type, $name) = ($+{seq}, $+{schema}, $+{type}, $+{name});
+            $objects{$seq}{object} = join($object_sep, $schema, $type, $name);
+            $objects{$seq}{file} = $file;
+            add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{file});
+        } elsif ($file =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
+            ($seq, $schema, $type, $name) = ($+{seq}, $source_schema, $+{type}, $+{name});
+            $objects{$seq}{object} = join($object_sep, $schema, $type, $name);
+            $objects{$seq}{file} = $file;
+            add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{file});
+        } else {
+            warning("File $file does not match naming conventions for reuse")
+                unless ($file eq '.' || $file eq '..');
+        }
     }
     closedir $dh;
-}
+} # sub read_object_info
 
 sub error (@) {
     croak "ERROR: @_";

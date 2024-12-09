@@ -1,0 +1,69 @@
+{
+  "lockfile_version": "1",
+  "packages": {
+    "podman-compose@1.2.0": {
+      "last_modified": "2024-09-10T15:01:03Z",
+      "resolved": "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#podman-compose",
+      "source": "devbox-search",
+      "version": "1.2.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/3wijgavvg4gfaglg37x281aj2aw6573r-podman-compose-1.2.0",
+              "default": true
+            },
+            {
+              "name": "dist",
+              "path": "/nix/store/qn8d21c7v6g7g79sbd4n2vfaz6xzhd4k-podman-compose-1.2.0-dist"
+            }
+          ],
+          "store_path": "/nix/store/3wijgavvg4gfaglg37x281aj2aw6573r-podman-compose-1.2.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/3hqqzn66d1pp7gchc0p45ib8jd6kd9cp-podman-compose-1.2.0",
+              "default": true
+            },
+            {
+              "name": "dist",
+              "path": "/nix/store/q1azhr4psvx31nh3wnvfmd2mg3n6qz8p-podman-compose-1.2.0-dist"
+            }
+          ],
+          "store_path": "/nix/store/3hqqzn66d1pp7gchc0p45ib8jd6kd9cp-podman-compose-1.2.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/4xn5a440ybwlb9zkgwhcnwakw05wvrxc-podman-compose-1.2.0",
+              "default": true
+            },
+            {
+              "name": "dist",
+              "path": "/nix/store/cblv74g5zxxc5rdm5vzb2wldb3kgdqir-podman-compose-1.2.0-dist"
+            }
+          ],
+          "store_path": "/nix/store/4xn5a440ybwlb9zkgwhcnwakw05wvrxc-podman-compose-1.2.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/xalj5bp73hl3gfqp53h9lsxvz3piyr0m-podman-compose-1.2.0",
+              "default": true
+            },
+            {
+              "name": "dist",
+              "path": "/nix/store/8mw704sgry5vyp8cwh7lp5c6w57i7a9z-podman-compose-1.2.0-dist"
+            }
+          ],
+          "store_path": "/nix/store/xalj5bp73hl3gfqp53h9lsxvz3piyr0m-podman-compose-1.2.0"
+        }
+      }
+    }
+  }
+}

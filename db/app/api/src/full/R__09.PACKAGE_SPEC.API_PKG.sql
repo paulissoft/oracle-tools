@@ -158,6 +158,27 @@ execute immediate
 ```
 **/
 
+subtype t_object is varchar2(500 byte);
+
+type t_object_natural_tab is table of natural /* >= 0 */
+index by t_object;
+
+type t_object_dependency_tab is table of t_object_natural_tab index by t_object;
+
+subtype t_graph is t_object_dependency_tab;
+
+procedure dsort
+( p_graph in out nocopy t_graph
+, p_result out nocopy dbms_sql.varchar2_table /* I */
+);
+/**
+
+Sort the graph.
+
+See depth-first search algorithm in https://en.wikipedia.org/wiki/Topological_sorting
+
+**/
+
 $if cfg_pkg.c_testing $then
 
 --%suitepath(API)
@@ -180,6 +201,9 @@ procedure ut_teardown
 
 --%test
 procedure ut_excel_date_number2date;
+
+--%test
+procedure ut_dsort;
 
 $end
 

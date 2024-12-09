@@ -26,14 +26,19 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR');
   dbug.print
   ( dbug."input"
-  , 'p_base_object.id(): %s; p_member#: %s; p_member_name: %s'
-  , p_base_object.id()
+  , 'p_base_object.id: %s; p_member#: %s; p_member_name: %s'
+  , p_base_object.id
   , p_member#
   , p_member_name
   );
 $end
 
-  self.base_object$ := p_base_object;
+  if p_base_object is null
+  then
+    self.base_object_id$ := null;
+  else
+    self.base_object_id$ := p_base_object.id;
+  end if;
   self.member#$ := p_member#;
   self.member_name$ := p_member_name;
   self.data_type_name$ := p_data_type_name;
@@ -50,6 +55,8 @@ $end
   self.char_length$ := p_char_length;
   self.char_used$ := p_char_used;
 
+  oracle_tools.t_schema_object.normalize(self);
+  
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
 $end
@@ -113,6 +120,17 @@ is
 begin
   return char_used$;
 end char_used;
+
+overriding member function dict_last_ddl_time
+return date
+is
+begin
+  return oracle_tools.t_schema_object.dict_last_ddl_time
+  ( p_object_schema => self.base_object_schema()
+  , p_dict_object_type => self.base_dict_object_type()
+  , p_object_name => self.base_object_name()
+  );
+end dict_last_ddl_time;
 
 end;
 /

@@ -14,14 +14,23 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.print
   ( dbug."input"
   , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s'
-  , p_base_object.id()
+  , p_base_object.id
   , p_object_schema
   , p_object_name
   );
 $end
 
   -- default constructor
-  self := oracle_tools.t_index_object(null, p_object_schema, p_base_object, p_object_name, null, null);
+  self := oracle_tools.t_index_object
+          ( null -- id
+          , null -- last_ddl_time$
+          , null
+          , p_object_schema
+          , case when p_base_object is not null then p_base_object.id end
+          , p_object_name
+          , null
+          , null
+          );
 
   self.column_names$ := oracle_tools.t_index_object.get_column_names(p_object_schema => p_object_schema, p_object_name => p_object_name);
 
@@ -33,6 +42,8 @@ $end
     where   ind.owner = p_object_schema
     and     ind.index_name = p_object_name;
   end if;
+
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -56,19 +67,26 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.print
   ( dbug."input"
   , 'p_base_object.id: %s; p_object_schema: %s; p_object_name: %s; p_tablespace_name: %s'
-  , p_base_object.id()
+  , p_base_object.id
   , p_object_schema
   , p_object_name
   , p_tablespace_name
   );
 $end
 
-  self.base_object$ := p_base_object;
+  if p_base_object is null
+  then
+    self.base_object_id$ := null;
+  else
+    self.base_object_id$ := p_base_object.id;
+  end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
   self.column_names$ := oracle_tools.t_index_object.get_column_names(p_object_schema, p_object_name);
   self.tablespace_name$ := p_tablespace_name;
+
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;

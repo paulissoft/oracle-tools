@@ -39,6 +39,8 @@ $end
     end;
   end if;
 
+  oracle_tools.t_schema_object.normalize(self);
+
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.print(dbug."info", 'self.tablespace_name$: %s', self.tablespace_name$);
   dbug.leave;
@@ -65,6 +67,8 @@ $end
   self.object_schema$ := p_object_schema;
   self.object_name$ := p_object_name;
   self.tablespace_name$ := p_tablespace_name;
+
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;

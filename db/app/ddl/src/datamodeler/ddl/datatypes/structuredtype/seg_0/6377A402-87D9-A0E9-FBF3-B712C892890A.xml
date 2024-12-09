@@ -1,0 +1,186 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<StructuredType class="oracle.dbtools.crest.model.design.datatypes.StructuredType" name="T_SCHEMA_OBJECT_FILTER" directorySegmentName="seg_0" id="6377A402-87D9-A0E9-FBF3-B712C892890A">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>T_SCHEMA_OBJECT_FILTER</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:38 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<predefined>false</predefined>
+<final>true</final>
+<instantiable>true</instantiable>
+<attributes itemClass="oracle.dbtools.crest.model.design.datatypes.TypeElement">
+<Attribute name="SCHEMA$" id="FF82BE0C-A043-7576-85D0-C7A75AA78F10">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<size>30</size>
+<type>LOGDT024</type>
+</Attribute>
+<Attribute name="GRANTOR_IS_SCHEMA$" id="1704BB06-CAA6-6F1C-C750-DC51B8E2F825">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<type>LOGDT011</type>
+</Attribute>
+<Attribute name="OBJECT_TAB$" id="A05D24F2-1917-EA5F-6BC7-C0DA6B0FD308">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<type>65B8C0C7-3DB1-AFA3-046A-99384CC4A2DC</type>
+</Attribute>
+<Attribute name="OBJECT_CMP_TAB$" id="26D365B6-F82E-2B63-7D02-731B2FB8DBFA">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<type>65B8C0C7-3DB1-AFA3-046A-99384CC4A2DC</type>
+</Attribute>
+<Attribute name="NR_EXCLUDED_OBJECTS$" id="D33941C3-56FD-1A9C-80C0-9CC5A09CA5ED">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<mandatory>false</mandatory>
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<type>LOGDT011</type>
+</Attribute>
+</attributes>
+<methods itemClass="oracle.dbtools.crest.model.design.datatypes.Method">
+<Method name="T_SCHEMA_OBJECT_FILTER" id="736F91E9-596F-184A-CF4E-AB20C39BA09F">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<constructor>true</constructor>
+<number>1</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="T_SCHEMA_OBJECT_FILTER" id="AA54D609-8E31-3FD2-177F-77BB583C6969">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>6377A402-87D9-A0E9-FBF3-B712C892890A</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA" id="4ED6BC90-1BA4-CCC7-CDBE-784B4A831CBD">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_TYPE" id="1CD1BBD3-9192-6D36-21EE-401583DE58E0">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_NAMES" id="3F689E0A-AC24-E2F0-6523-8CF6BC391D63">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_OBJECT_NAMES_INCLUDE" id="035FABE3-425B-8D0E-E516-8222E9683720">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT011</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_GRANTOR_IS_SCHEMA" id="9C3CB1A4-488E-695A-D8B0-46CF5049240D">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT011</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_EXCLUDE_OBJECTS" id="CCBD5C00-5B33-DAD4-F7CC-0F3590AA4727">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT028</typeID>
+</Parameter>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_INCLUDE_OBJECTS" id="8B67CE2B-2C86-D49C-804E-0E8A5581ACAB">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT028</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="SCHEMA" id="96CBFD7E-8D33-6E1B-D35D-D719F8051A39">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>2</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="SCHEMA" id="BC661BF1-863A-A134-DA0E-E9E51454C646">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</returnValue>
+</Method>
+<Method name="GRANTOR_IS_SCHEMA" id="65610921-5BD0-2437-9491-EAFEA6066695">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>3</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="GRANTOR_IS_SCHEMA" id="F69E8233-461A-0154-AD66-83761381623D">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT011</typeID>
+</returnValue>
+</Method>
+<Method name="MATCHES_SCHEMA_OBJECT" id="43147AE5-044F-E125-1C6B-D93001B6D366">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>4</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="MATCHES_SCHEMA_OBJECT" id="1BB551B3-6121-49C5-41AD-F1017AC59B5C">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT011</typeID>
+</returnValue>
+<parameters>
+<Parameter class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="P_SCHEMA_OBJECT_ID" id="EAA3148A-0957-7E4F-3FBF-01E7BCB03BA8">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT024</typeID>
+</Parameter>
+</parameters>
+</Method>
+<Method name="SERIALIZE" id="7EE5995B-7647-573B-F412-B702C3782691">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>5</number>
+<returnValue class="oracle.dbtools.crest.model.design.datatypes.MethodParam" name="SERIALIZE" id="18C204DC-29D3-8E55-6F7C-75306B5DFE88">
+<precision>0</precision>
+<reference>false</reference>
+<scale>0</scale>
+<typeID>LOGDT028</typeID>
+</returnValue>
+</Method>
+<Method name="PRINT" id="2C116163-FC48-9655-3A34-50245C469264">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-25 09:19:44 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<number>6</number>
+</Method>
+</methods>
+</StructuredType>

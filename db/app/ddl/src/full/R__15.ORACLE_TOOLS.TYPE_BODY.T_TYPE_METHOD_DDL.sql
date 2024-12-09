@@ -16,7 +16,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
 
   self.obj := p_obj;
-  self.ddl_tab := t_ddl_tab();
+  self.ddl_tab := oracle_tools.t_ddl_tab();
 
   /* construct the ALTER TYPE ADD METHOD here */
   oracle_tools.pkg_str_util.append_text
@@ -94,7 +94,7 @@ $end
 
   self.ddl_tab := p_target.ddl_tab;
 
-  self.ddl_tab(1).text(1) := replace(self.ddl_tab(1).text(1), 'ADD ', 'DROP');
+  self.ddl_tab(1).text_tab(1) := replace(self.ddl_tab(1).text_tab(1), 'ADD ', 'DROP');
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
   dbug.leave;

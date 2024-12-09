@@ -1,7 +1,7 @@
 begin
   execute immediate q'[
 create type oracle_tools.t_comment_object authid current_user under oracle_tools.t_dependent_or_granted_object
-( column_name$ varchar2(128 char)
+( column_name$ varchar2(128 byte)
 , constructor function t_comment_object
   ( self in out nocopy oracle_tools.t_comment_object
   , p_base_object in oracle_tools.t_named_object
@@ -17,6 +17,7 @@ create type oracle_tools.t_comment_object authid current_user under oracle_tools
   ( self in oracle_tools.t_comment_object
   , p_schema in varchar2
   )
+, overriding member function dict_last_ddl_time return date
 )
 final]';
 end;

@@ -1,0 +1,16 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<CollectionType class="oracle.dbtools.crest.model.design.datatypes.CollectionType" name="T_DDL_TAB" directorySegmentName="seg_0" id="819CC9E5-1FD3-7D41-78D0-56F63C59F25A">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<generatorID>8FE9C38B-5BF0-370E-A74D-54480A2EE79D</generatorID>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>8FE9C38B-5BF0-370E-A74D-54480A2EE79D</importedID>
+<predefined>false</predefined>
+<dataTypeDescr class="oracle.dbtools.crest.model.design.datatypes.CollectionType$DataTypeWrapper">
+<size></size>
+<type>FFEBD343-757E-9204-6DC4-D6C21158697E</type>
+<isreference>false</isreference>
+</dataTypeDescr>
+<maxElement>1</maxElement>
+<type>COLLECTION</type>
+</CollectionType>

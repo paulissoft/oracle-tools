@@ -24,12 +24,19 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   );
 $end
 
-  self.base_object$ := p_base_object;
+  if p_base_object is null
+  then
+    self.base_object_id$ := null;
+  else
+    self.base_object_id$ := p_base_object.id;
+  end if;
   self.network_link$ := null;
   self.object_schema$ := p_object_schema;
   self.grantee$ := p_grantee;
   self.privilege$ := p_privilege;
   self.grantable$ := p_grantable;
+
+  oracle_tools.t_schema_object.normalize(self);
 
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
   dbug.leave;
@@ -162,6 +169,38 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   dbug.leave;
 $end
 end chk;
+
+overriding member function dict_last_ddl_time
+return date
+is
+  l_owner constant all_objects.owner%type := self.base_object_schema();
+  l_object_name constant all_objects.object_name%type := self.base_object_name();
+  l_last_ddl_time all_objects.last_ddl_time%type;
+begin
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'LAST_DDL_TIME');
+  dbug.print
+  ( dbug."input"
+  , 'l_owner: %s; l_object_name: %s'
+  , l_owner
+  , l_object_name
+  );
+$end
+
+  -- self.base_dict_object_type() is null, so check all objects matching base object schema/base object name
+  select  max(o.last_ddl_time)
+  into    l_last_ddl_time
+  from    all_objects o
+  where   o.owner = l_owner
+  and     o.object_name = l_object_name;
+
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+  dbug.print(dbug."output", 'return: %s', l_last_ddl_time);
+  dbug.leave;
+$end
+
+  return l_last_ddl_time;
+end dict_last_ddl_time;
 
 end;
 /
