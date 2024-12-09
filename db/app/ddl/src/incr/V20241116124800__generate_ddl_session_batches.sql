@@ -11,7 +11,6 @@ create table generate_ddl_session_batches
 , object_type varchar2(30 byte)
 -- select list from cursor c_params in body pkg_ddl_util
 , params clob
-  constraint generate_ddl_session_batches$nnc$params not null
   constraint generate_ddl_session_batches$ck$params check (params is json strict)
 -- some administration
 , start_time timestamp(6)
