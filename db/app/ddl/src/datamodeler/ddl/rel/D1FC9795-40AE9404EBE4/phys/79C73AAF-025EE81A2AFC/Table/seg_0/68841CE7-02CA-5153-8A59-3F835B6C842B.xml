@@ -10,14 +10,14 @@
 <accessDriverType>oracle_loader</accessDriverType>
 <rejectLimit></rejectLimit>
 <columnProxies itemClass="oracle.dbtools.crest.model.design.storage.oracle.v12c.ColumnProxyOraclev12c">
-<ColumnProxy name="BASE_OBJECT_SCHEMA" id="28343E80-9040-717E-D1EF-C844F996D841">
+<ColumnProxy name="END_TIME" id="1A0553DE-EF70-E580-566B-8FA56065C4E0">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<createdTime>2024-12-08 12:56:03 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
-<ColumnProxy name="OBJECT_NAME_TAB" id="2EC8299F-EA88-27DF-CA33-0C0893C7A94D">
+<ColumnProxy name="START_TIME" id="3DA2F6F8-B3B4-FF6E-6632-864AC39EF8CF">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<createdTime>2024-12-08 12:56:03 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
 <ColumnProxy name="CREATED" id="550738BE-7748-BAED-7B53-FF0DBA135D39">
@@ -36,29 +36,14 @@
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
-<ColumnProxy name="BASE_OBJECT_TYPE" id="7CEB0C09-335C-DC0B-1A0F-CCDBFE8D9EF2">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-</ColumnProxy>
 <ColumnProxy name="TRANSFORM_PARAM_LIST" id="9D8598D6-35B4-E807-E198-A39F7D8662FC">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
-<ColumnProxy name="NR_OBJECTS" id="A38E9A8D-99E3-4DB5-767A-1F1203855C0E">
+<ColumnProxy name="PARAMS" id="B973E6E2-10A5-7466-CCC7-B6C02AA067B4">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-</ColumnProxy>
-<ColumnProxy name="OBJECT_SCHEMA" id="ADE3F6A6-6291-E8FC-AEE0-D7EC5213B462">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-</ColumnProxy>
-<ColumnProxy name="BASE_OBJECT_NAME_TAB" id="C7D7303B-5390-A8DA-B02C-AF222C398533">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<createdTime>2024-12-09 11:40:35 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
 <ColumnProxy name="SESSION_ID" id="DF38470F-41E9-0D9D-06E5-1882ED4DD525">
@@ -71,8 +56,18 @@
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
+<ColumnProxy name="ERROR_MESSAGE" id="ED11F423-32B6-3CCC-0668-4CDFC5149D25">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-12-08 12:56:03 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+</ColumnProxy>
 </columnProxies>
 <indexProxies>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="GENERATE_DDL_SESSION_BATCHES$IDX$1" id="465ED803-A1F6-222B-3306-AED96E44686F">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-12-08 12:56:03 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+</IndexProxy>
 <IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="GENERATE_DDL_SESSION_BATCHES$PK" id="53E345B0-D075-F7A7-ED88-D812AC05696A">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>

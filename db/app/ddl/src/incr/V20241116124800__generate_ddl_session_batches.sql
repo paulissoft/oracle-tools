@@ -27,7 +27,7 @@ create table generate_ddl_session_batches
 
 alter table generate_ddl_session_batches nologging;
 
--- foreign key index generate_ddl_session_batches$fk$2 not necessary
+-- foreign key index generate_ddl_session_batches$fk$1 not necessary
 
 comment on table generate_ddl_session_batches is
     'DDL is generated in batches.';
