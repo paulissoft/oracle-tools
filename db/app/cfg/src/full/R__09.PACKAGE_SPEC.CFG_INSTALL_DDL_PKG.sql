@@ -43,7 +43,6 @@ c_primary_key_already_exists constant pls_integer := -2260;
 c_foreign_key_already_exists constant pls_integer := -2275;
 -- ORA-02443: Cannot drop constraint  - nonexistent constraint
 c_constraint_does_not_exist constant pls_integer := -2443;
-
 c_ignore_sqlcodes_constraint_ddl constant t_ignore_sqlcode_tab :=
   t_ignore_sqlcode_tab
   ( c_unique_key_already_exists
@@ -69,6 +68,13 @@ c_trigger_already_exists constant pls_integer := -4081;
 -- ORA-04080: trigger 'BC_CP_CHARGE_PROFILE_SCHED_BI' does not exist
 c_trigger_does_not_exist constant pls_integer := -4080;
 c_ignore_sqlcodes_trigger_ddl constant t_ignore_sqlcode_tab := t_ignore_sqlcode_tab(c_trigger_already_exists, c_trigger_does_not_exist);
+
+-- *** view_ddl **
+-- ORA-00955: name is already used by an existing object
+c_view_already_exists constant pls_integer := c_object_already_exists;
+-- ORA-00942: table or view does not exist
+c_view_does_not_exist constant pls_integer := -942;
+c_ignore_sqlcodes_view_ddl constant t_ignore_sqlcode_tab := t_ignore_sqlcode_tab(c_view_already_exists, c_view_does_not_exist);
 
 procedure set_ddl_execution_settings
 ( p_ddl_lock_timeout in natural default null -- alter session set ddl_lock_timeout = p_ddl_lock_timeout;
@@ -160,6 +166,17 @@ a. p_table_name is not null: p_operation || ' TRIGGER ' || p_trigger_name || ' '
 c. p_table_name is null: p_operation || ' TRIGGER ' || p_trigger_name || ' ' || p_trigger_extra
 **/
 
+procedure view_ddl
+( p_operation in varchar2 -- The operation: usually CREATE [OR REPLACE], ALTER or DROP
+, p_view_name in user_views.view_name%type -- The view name
+, p_extra in varchar2 default null -- To add after the view name
+, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_view_ddl -- SQL codes to ignore
+);
+/**
+Issues a p_operation || ' VIEW ' || p_view_name || ' ' || p_extra
+**/
+
+
 $if cfg_pkg.c_testing $then
 
 --%suitepath(CFG)
@@ -234,6 +251,17 @@ procedure ut_rename_constraint;
 
 --%test
 procedure ut_rename_index;
+
+--%test
+procedure ut_view_ddl;
+
+--%test
+--%throws(cfg_install_ddl_pkg.c_view_already_exists)
+procedure ut_view_already_exists;
+
+--%test
+--%throws(cfg_install_ddl_pkg.c_view_does_not_exist)
+procedure ut_view_does_not_exist;
 
 $end
 

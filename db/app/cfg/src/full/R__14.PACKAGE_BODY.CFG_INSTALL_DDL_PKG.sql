@@ -28,6 +28,7 @@ c_test_index_name_parent constant user_objects.object_name%type := c_test_base_n
 c_test_index_name_child constant user_objects.object_name%type := c_test_base_name_child || 'ind';
 c_test_trigger_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'trg';
 c_test_trigger_name_child constant user_objects.object_name%type := c_test_base_name_child || 'trg';
+c_test_view_name constant user_objects.object_name%type := c_test_base_name_parent || 'vw';
 
 $end
 
@@ -417,6 +418,26 @@ begin
   );
 end trigger_ddl;    
 
+procedure view_ddl
+( p_operation in varchar2 -- The operation: usually CREATE, ALTER or DROP
+, p_view_name in user_views.view_name%type -- The view name
+, p_extra in varchar2 default null -- To add after the view name
+, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_view_ddl -- SQL codes to ignore
+)
+is
+begin
+  if upper(p_operation) in ('CREATE', 'CREATE OR REPLACE', 'ALTER', 'DROP')
+  then
+    null;
+  else
+    raise value_error;
+  end if;
+  do
+  ( p_statement => p_operation || ' VIEW ' || p_view_name || ' ' || p_extra
+  , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
+  );
+end view_ddl;
+
 $if cfg_pkg.c_testing $then
 
 procedure ut_init
@@ -454,6 +475,13 @@ begin
     , c_test_table_name_parent
     )
   );
+  -- view
+  do
+  ( utl_lms.format_message
+    ( 'create view %s as select * from dual'
+    , c_test_view_name
+    )
+  );
 end ut_init;
 
 procedure ut_done
@@ -475,6 +503,14 @@ begin
     , c_test_table_name_parent
     )
   , t_ignore_sqlcode_tab(c_table_does_not_exist)
+  );
+  
+  -- view
+  do
+  ( utl_lms.format_message
+    ( 'drop view %s'
+    , c_test_view_name
+    )
   );
 end ut_done;
 
@@ -889,7 +925,89 @@ begin
   ut.expect(l_lines(l_lines.first)).to_be_like('ALTER INDEX SYS\_% RENAME TO XYZ', '\');
 end ut_rename_index;
 
-$end
+procedure ut_view_ddl
+is
+  l_lines dbms_output.chararr;
+  l_nr_lines integer := 1000;
+begin
+  set_ddl_execution_settings(p_dry_run => true);
+
+  -- check parameters
+  for i_idx in 1..8
+  loop
+    begin
+      view_ddl
+      ( p_operation => case i_idx
+                         -- OK
+                         when 1 then 'create'
+                         when 2 then 'create or replace'
+                         when 3 then 'ALTER'
+                         when 4 then 'Drop'
+                         -- FAIL
+                         when 5 then 'add'
+                         when 6 then 'modify'
+                         when 7 then 'rename'
+                         when 8 then null
+                       end
+      , p_view_name => 'TEST'
+      , p_extra => 'XYZ'
+      );
+    exception
+      when value_error
+      then if i_idx >= 5 then null; else raise; end if;
+    end;
+  end loop;
+
+  -- clear the output cache
+  dbms_output.get_lines
+  ( lines => l_lines
+  , numlines => l_nr_lines
+  );
+  view_ddl
+  ( p_operation => 'CREATE'
+  , p_view_name => 'TEST'
+  , p_extra => 'XYZ'
+  );
+  l_nr_lines := 1000;
+  dbms_output.get_lines
+  ( lines => l_lines
+  , numlines => l_nr_lines
+  );
+  ut.expect(l_nr_lines).to_equal(1);
+  ut.expect(l_lines(1)).to_equal('CREATE VIEW TEST XYZ');
+  reset_ddl_execution_settings;
+end ut_view_ddl;
+
+procedure ut_view_already_exists
+is
+begin
+  -- either one will fail
+  view_ddl
+  ( p_operation => 'CREATE'
+  , p_view_name => c_test_view_name
+  , p_extra => 'AS SELECT * FROM DUAL'
+  , p_ignore_sqlcode_tab => null
+  );
+  view_ddl
+  ( p_operation => 'CREATE'
+  , p_view_name => c_test_view_name
+  , p_extra => 'AS SELECT * FROM DUAL'
+  , p_ignore_sqlcode_tab => null
+  );
+end ut_view_already_exists;
+
+procedure ut_view_does_not_exist
+is
+begin
+  view_ddl
+  ( p_operation => 'DROP'
+  , p_view_name => c_test_view_name || 'XYZ'
+  , p_extra => null
+  , p_ignore_sqlcode_tab => null
+  );
+end ut_view_does_not_exist;
+
+$end -- $if cfg_pkg.c_testing $then
 
 end cfg_install_ddl_pkg;
 /

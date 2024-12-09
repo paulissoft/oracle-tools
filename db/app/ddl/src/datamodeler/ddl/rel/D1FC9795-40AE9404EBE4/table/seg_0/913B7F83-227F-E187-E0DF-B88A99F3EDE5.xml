@@ -63,7 +63,7 @@
 <use>1</use>
 <logicalDatatype>LOGDT024</logicalDatatype>
 <dataTypeSize>500 BYTE</dataTypeSize>
-<ownDataTypeParameters>500 BYTE,,</ownDataTypeParameters>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
@@ -109,7 +109,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <dataTypePrecision>*</dataTypePrecision>
 <dataTypeScale>0</dataTypeScale>
-<ownDataTypeParameters>,*,0</ownDataTypeParameters>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
@@ -222,12 +222,13 @@
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 15:15:13 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
+<deprecated>true</deprecated>
 <isSurrogateKey>false</isSurrogateKey>
 <indexColumnUsage>
 <colUsage columnID="AD410528-CDAA-D79B-975E-E48495FCF411"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="54F78397-31D7-8C2D-D3DE-BF0B35B0CB00" name="GENERATED_DDLS$FK$1">
+<ind_PK_UK id="54F78397-31D7-8C2D-D3DE-BF0B35B0CB00" name="GENERATED_DDLS$FK$2">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
@@ -237,7 +238,7 @@
 <colUsage columnID="AD410528-CDAA-D79B-975E-E48495FCF411"/>
 </indexColumnUsage>
 </ind_PK_UK>
-<ind_PK_UK id="97D2FC95-4BEE-6554-9510-099C36024E19" name="GENERATE_DDLS$FK$1">
+<ind_PK_UK id="97D2FC95-4BEE-6554-9510-099C36024E19" name="GENERATED_DDLS$FK$1">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
@@ -245,7 +246,6 @@
 <isSurrogateKey>false</isSurrogateKey>
 <indexColumnUsage>
 <colUsage columnID="8EF0A29E-6139-D3EF-834A-FE57BFC90397"/>
-<colUsage columnID="AD410528-CDAA-D79B-975E-E48495FCF411"/>
 </indexColumnUsage>
 </ind_PK_UK>
 </indexes>
