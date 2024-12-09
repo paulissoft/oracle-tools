@@ -16,27 +16,17 @@
 <ownerDesignName>ddl</ownerDesignName>
 <defaultValue>sys_extract_utc(systimestamp)</defaultValue>
 </ColumnProxy>
-<ColumnProxy name="OBJ.OBJECT_CMP_TAB$" id="15DE13E3-B1C2-56EE-6B79-D94DB566C17B">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-</ColumnProxy>
-<ColumnProxy name="OBJ.NR_EXCLUDED_OBJECTS$" id="191345EE-12AF-A9EF-2EE6-653D64477979">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-</ColumnProxy>
 <ColumnProxy name="LAST_MODIFICATION_TIME_SCHEMA" id="2BF7787D-55E4-48DA-D821-2784E0507677">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
-<ColumnProxy name="HASH_BUCKET" id="46A02F60-2F97-A4ED-ABCE-A2E6CA6E7806">
+<ColumnProxy name="OBJ_JSON" id="441AAB0A-9F0B-A2B9-9EE9-E7DE24DD4B74">
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
+<createdTime>2024-12-09 11:43:56 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
-<ColumnProxy name="OBJ" id="49FA27F4-8CAB-4A46-14FA-AD2051E43513">
+<ColumnProxy name="HASH_BUCKET" id="46A02F60-2F97-A4ED-ABCE-A2E6CA6E7806">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
@@ -57,21 +47,6 @@
 <createdTime>2024-11-30 11:26:43 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <autoIncrementDDL>IDENTITY_CLAUSE</autoIncrementDDL>
-</ColumnProxy>
-<ColumnProxy name="OBJ.GRANTOR_IS_SCHEMA$" id="8AD818D2-E5A4-539F-3F4B-79F864D857FB">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-</ColumnProxy>
-<ColumnProxy name="OBJ.OBJECT_TAB$" id="C78828E5-26AF-1A95-CCCB-EF56C3646D3E">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-</ColumnProxy>
-<ColumnProxy name="OBJ.SCHEMA$" id="C80E9EEE-9466-1B2F-7B38-C81B284C3003">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-30 11:26:43 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
 </ColumnProxy>
 </columnProxies>
 <indexProxies>

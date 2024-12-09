@@ -188,6 +188,7 @@
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-30 15:30:24 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
+<deprecated>true</deprecated>
 <isSurrogateKey>false</isSurrogateKey>
 <propertyMap>
 <property name="copyComments" value="1"/>

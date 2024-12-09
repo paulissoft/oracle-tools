@@ -35,10 +35,12 @@
 <useDomainConstraints>false</useDomainConstraints>
 <use>1</use>
 <logicalDatatype>LOGDT019</logicalDatatype>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
+<dataTypePrecision>*</dataTypePrecision>
+<ownDataTypeParameters>,*,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementColumn>true</autoIncrementColumn>
+<identityColumn>true</identityColumn>
 <autoIncrementCycle>false</autoIncrementCycle>
 <autoIncrementSequenceName>schema_object_filters$seq</autoIncrementSequenceName>
 <autoIncrementGenerateTrigger>false</autoIncrementGenerateTrigger>
@@ -117,26 +119,26 @@
 <property name="copyComments" value="1"/>
 </propertyMap>
 </Column>
-<Column name="OBJ" id="49FA27F4-8CAB-4A46-14FA-AD2051E43513">
+<Column name="OBJ_JSON" id="441AAB0A-9F0B-A2B9-9EE9-E7DE24DD4B74">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>SCHEMA_OBJECT_FILTERS</sourceObjSchema>
-<sourceObjName>OBJ</sourceObjName>
+<sourceObjName>OBJ_JSON</sourceObjName>
 <createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
+<createdTime>2024-12-09 11:43:56 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
-<importedID>965779D7-74F3-E104-3132-8EE3CDC5FD54</importedID>
-<nullsAllowed>true</nullsAllowed>
+<importedID>1AB329B4-5E43-2096-0FB0-8746D00AA1FB</importedID>
+<constraintName>SCHEMA_OBJECT_FILTERS$CK$OBJ_JSON</constraintName>
 <useDomainConstraints>false</useDomainConstraints>
-<allowSubtypeSubstitution>false</allowSubtypeSubstitution>
-<use>3</use>
-<structuredType>6377A402-87D9-A0E9-FBF3-B712C892890A</structuredType>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
-<containsPII>false</containsPII>
-<containsSensitiveInformation>false</containsSensitiveInformation>
+<use>1</use>
+<logicalDatatype>LOGDT028</logicalDatatype>
+<dataTypeSize>4000</dataTypeSize>
+<checkConstraint>
+<implementationDef dbType="Generic Constraint" definition="obj_json is json strict"/>
+<implementationDef dbType="Oracle Database 12cR2" definition="obj_json is json strict"/>
+</checkConstraint>
+<ownDataTypeParameters>4000,,</ownDataTypeParameters>
 <autoIncrementCycle>false</autoIncrementCycle>
-<propertyMap>
-<property name="copyComments" value="1"/>
-</propertyMap>
+<notNullConstraintName>SCHEMA_OBJECT_FILTERS$NNC$OBJ_JSON</notNullConstraintName>
 </Column>
 <Column name="HASH_BUCKET" id="46A02F60-2F97-A4ED-ABCE-A2E6CA6E7806">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -187,82 +189,6 @@
 </propertyMap>
 </Column>
 </columns>
-<nestedColumns itemClass="oracle.dbtools.crest.model.design.relational.Column">
-<nestedColumn name="OBJ.SCHEMA$" id="C80E9EEE-9466-1B2F-7B38-C81B284C3003">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<nullsAllowed>true</nullsAllowed>
-<parentObject>49FA27F4-8CAB-4A46-14FA-AD2051E43513</parentObject>
-<structAttributeID>FF82BE0C-A043-7576-85D0-C7A75AA78F10</structAttributeID>
-<useDomainConstraints>false</useDomainConstraints>
-<use>1</use>
-<logicalDatatype>LOGDT024</logicalDatatype>
-<dataTypePrecision>0</dataTypePrecision>
-<dataTypeScale>0</dataTypeScale>
-<dataTypeSize>30</dataTypeSize>
-<ownDataTypeParameters>30,0,0</ownDataTypeParameters>
-<autoIncrementCycle>false</autoIncrementCycle>
-</nestedColumn>
-<nestedColumn name="OBJ.GRANTOR_IS_SCHEMA$" id="8AD818D2-E5A4-539F-3F4B-79F864D857FB">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<nullsAllowed>true</nullsAllowed>
-<parentObject>49FA27F4-8CAB-4A46-14FA-AD2051E43513</parentObject>
-<structAttributeID>1704BB06-CAA6-6F1C-C750-DC51B8E2F825</structAttributeID>
-<useDomainConstraints>false</useDomainConstraints>
-<use>1</use>
-<logicalDatatype>LOGDT011</logicalDatatype>
-<dataTypePrecision>0</dataTypePrecision>
-<dataTypeScale>0</dataTypeScale>
-<ownDataTypeParameters>,0,0</ownDataTypeParameters>
-<autoIncrementCycle>false</autoIncrementCycle>
-</nestedColumn>
-<nestedColumn name="OBJ.OBJECT_TAB$" id="C78828E5-26AF-1A95-CCCB-EF56C3646D3E">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<nullsAllowed>true</nullsAllowed>
-<parentObject>49FA27F4-8CAB-4A46-14FA-AD2051E43513</parentObject>
-<structAttributeID>A05D24F2-1917-EA5F-6BC7-C0DA6B0FD308</structAttributeID>
-<useDomainConstraints>false</useDomainConstraints>
-<allowSubtypeSubstitution>false</allowSubtypeSubstitution>
-<use>4</use>
-<collectionType>65B8C0C7-3DB1-AFA3-046A-99384CC4A2DC</collectionType>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
-<autoIncrementCycle>false</autoIncrementCycle>
-</nestedColumn>
-<nestedColumn name="OBJ.OBJECT_CMP_TAB$" id="15DE13E3-B1C2-56EE-6B79-D94DB566C17B">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<nullsAllowed>true</nullsAllowed>
-<parentObject>49FA27F4-8CAB-4A46-14FA-AD2051E43513</parentObject>
-<structAttributeID>26D365B6-F82E-2B63-7D02-731B2FB8DBFA</structAttributeID>
-<useDomainConstraints>false</useDomainConstraints>
-<allowSubtypeSubstitution>false</allowSubtypeSubstitution>
-<use>4</use>
-<collectionType>65B8C0C7-3DB1-AFA3-046A-99384CC4A2DC</collectionType>
-<ownDataTypeParameters>,,</ownDataTypeParameters>
-<autoIncrementCycle>false</autoIncrementCycle>
-</nestedColumn>
-<nestedColumn name="OBJ.NR_EXCLUDED_OBJECTS$" id="191345EE-12AF-A9EF-2EE6-653D64477979">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2024-11-28 08:51:30 UTC</createdTime>
-<ownerDesignName>ddl</ownerDesignName>
-<nullsAllowed>true</nullsAllowed>
-<parentObject>49FA27F4-8CAB-4A46-14FA-AD2051E43513</parentObject>
-<structAttributeID>D33941C3-56FD-1A9C-80C0-9CC5A09CA5ED</structAttributeID>
-<useDomainConstraints>false</useDomainConstraints>
-<use>1</use>
-<logicalDatatype>LOGDT011</logicalDatatype>
-<dataTypePrecision>0</dataTypePrecision>
-<dataTypeScale>0</dataTypeScale>
-<ownDataTypeParameters>,0,0</ownDataTypeParameters>
-<autoIncrementCycle>false</autoIncrementCycle>
-</nestedColumn>
-</nestedColumns>
 <indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
 <ind_PK_UK id="4C178E85-B0FA-BCF0-0266-AE63FDE1EA0E" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECT_FILTERS$PK">
 <sourceConnName>oracle_tools@free</sourceConnName>
@@ -308,6 +234,7 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>99F25382-A29D-C25C-66EF-129F2E40E47F</importedID>
+<deprecated>true</deprecated>
 <indexState>Unique Plain Index</indexState>
 <isSurrogateKey>false</isSurrogateKey>
 <propertyMap>
