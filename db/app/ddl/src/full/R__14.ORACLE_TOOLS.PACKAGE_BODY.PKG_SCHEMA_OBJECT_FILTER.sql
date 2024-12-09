@@ -1516,7 +1516,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     l_schema_object_filter.print();
 $end
 
-    ut.expect(serialize(l_schema_object_filter), 'test serialize ' || i_try).to_equal(l_expected);
+    ut.expect(l_schema_object_filter.serialize(), 'test serialize ' || i_try).to_equal(l_expected);
   end loop;  
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
