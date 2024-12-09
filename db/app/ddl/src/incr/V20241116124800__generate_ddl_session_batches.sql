@@ -6,10 +6,9 @@ create table generate_ddl_session_batches
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   constraint generate_ddl_session_batches$nnc$created not null
-, schema varchar2(128 byte)
-  constraint generate_ddl_session_batches$nnc$schema not null
 , object_type varchar2(30 byte)
   constraint generate_ddl_session_batches$nnc$object_type not null
+, schema varchar2(128 byte)
 , transform_param_list varchar2(4000 byte) -- parameter from pkg_ddl_util.get_schema_ddl
 -- select list from cursor c_params in body pkg_ddl_util
 , params clob
