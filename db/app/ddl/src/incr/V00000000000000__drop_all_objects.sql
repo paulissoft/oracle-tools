@@ -17,7 +17,7 @@ declare
     , 'T_OBJECT_INFO_REC'
     , 'T_SCHEMA_OBJECT_FILTER'
     , 'T_SCHEMA_DDL_PARAMS'
-    , 'T_SCHEMA_OBJECT_PARAMS'
+    , 'T_SCHEMA_OBJECT_PARAMS' -- obsolete
     , 'T_OBJECT_JSON'
     , 'T_DISPLAY_DDL_SQL'
       -- must be last

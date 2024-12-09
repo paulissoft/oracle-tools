@@ -279,6 +279,7 @@ procedure add_schema_object
 )
 is
   l_schema_object_filter_id constant positive := get_schema_object_filter_id(p_session_id => p_session_id);
+  l_schema_object_filter constant oracle_tools.t_schema_object_filter := get_schema_object_filter(p_session_id => p_session_id);
   l_schema_object_id constant oracle_tools.schema_objects.id%type := p_schema_object.id;
   l_last_ddl_time date;
   l_found pls_integer;
@@ -314,17 +315,13 @@ $end
   into    oracle_tools.schema_object_filter_results dst
   using   ( select  l_schema_object_filter_id as schema_object_filter_id
             ,       l_schema_object_id as schema_object_id
-            ,       treat
-                    ( oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER', sof.obj_json) as oracle_tools.t_schema_object_filter
-                    ).matches_schema_object(l_schema_object_id) as generate_ddl
-            from    oracle_tools.schema_object_filters sof
-            where   sof.id = l_schema_object_filter_id
+            from    dual
           ) src
   on      ( src.schema_object_filter_id = dst.schema_object_filter_id and
             src.schema_object_id = src.schema_object_id )
   when    not matched
   then    insert ( schema_object_filter_id, schema_object_id, generate_ddl )
-          values ( src.schema_object_filter_id, src.schema_object_id, src.generate_ddl );
+          values ( src.schema_object_filter_id, src.schema_object_id, l_schema_object_filter.matches_schema_object(src.schema_object_id) );
 
   /*
   -- Now the following tables have data for these parameters:
@@ -604,6 +601,7 @@ is
 $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_SCHEMA_OBJECT_TAB';
 $end
+  l_schema_object_filter constant oracle_tools.t_schema_object_filter := get_schema_object_filter(p_schema_object_filter_id => p_schema_object_filter_id);
 begin
 $if oracle_tools.ddl_crud_api.c_tracing $then
   dbug.enter(l_module_name);
@@ -633,12 +631,7 @@ $end
   into    oracle_tools.schema_object_filter_results dst
   using   ( select  p_schema_object_filter_id as schema_object_filter_id
             ,       t.id as schema_object_id
-            ,       treat
-                    ( oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER', sof.obj_json) as oracle_tools.t_schema_object_filter
-                    ).matches_schema_object(t.id) as generate_ddl
             from    table(p_schema_object_tab) t
-                    cross join oracle_tools.schema_object_filters sof
-            where   sof.id = p_schema_object_filter_id
           ) src
   on      ( /* SCHEMA_OBJECT_FILTER_RESULTS$PK */
             src.schema_object_filter_id = dst.schema_object_filter_id and
@@ -646,7 +639,7 @@ $end
           )
   when    not matched
   then    insert ( schema_object_filter_id, schema_object_id, generate_ddl )
-          values ( src.schema_object_filter_id, src.schema_object_id, src.generate_ddl );
+          values ( src.schema_object_filter_id, src.schema_object_id, l_schema_object_filter.matches_schema_object(src.schema_object_id) );
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."info", '# rows inserted into schema_object_filter_results: %s', sql%rowcount);
@@ -1218,7 +1211,6 @@ begin
     select  gdc.transform_param_list
     ,       gdc.db_version
     ,       gdc.last_ddl_time_schema
-    ,       treat(oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER', sof.obj_json) as oracle_tools.t_schema_object_filter) as schema_object_filter
     ,       so.obj as schema_object
     ,       sofr.generate_ddl
     ,       case

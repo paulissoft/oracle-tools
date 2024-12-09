@@ -3557,6 +3557,15 @@ end display_ddl_schema;
     
     l_cursor oracle_tools.ddl_crud_api.t_display_ddl_sql_cur;
     l_display_ddl_sql_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_tab;
+
+    -- to restore session id at the end
+    l_session_id constant positiven := oracle_tools.ddl_crud_api.get_session_id;
+
+    procedure cleanup
+    is
+    begin
+      oracle_tools.ddl_crud_api.set_session_id(l_session_id);
+    end;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -3595,11 +3604,14 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
+    cleanup;
+
     return; -- essential
 
   exception
     when no_data_needed
     then
+      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
@@ -3607,6 +3619,7 @@ $end
 
     when no_data_found -- disappears otherwise (GJP 2022-12-29 as it should)
     then
+      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
@@ -3617,12 +3630,13 @@ $else
       null;
 $end      
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     when others
     then
+      cleanup;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
-      raise;
 $end
+      raise;
   end display_ddl_sql;
 
   function display_ddl_schema
@@ -3637,6 +3651,15 @@ $end
     l_display_ddl_sql_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_tab;
     l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
     l_schema_ddl oracle_tools.t_schema_ddl;
+    
+    -- to restore session id at the end
+    l_session_id constant positiven := oracle_tools.ddl_crud_api.get_session_id;
+
+    procedure cleanup
+    is
+    begin
+      oracle_tools.ddl_crud_api.set_session_id(l_session_id);
+    end;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -3687,11 +3710,14 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
+    cleanup;
+
     return; -- essential
 
   exception
     when no_data_needed
     then
+      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
@@ -3699,6 +3725,7 @@ $end
 
     when no_data_found -- disappears otherwise (GJP 2022-12-29 as it should)
     then
+      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
@@ -3709,12 +3736,13 @@ $else
       null;
 $end      
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     when others
     then
+      cleanup;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
-      raise;
 $end
+      raise;
   end display_ddl_schema;
 
   procedure ddl_generate_report
@@ -3724,8 +3752,19 @@ $end
   is
     l_cursor oracle_tools.ddl_crud_api.t_ddl_generate_report_cur;
     l_ddl_generate_report_tab oracle_tools.ddl_crud_api.t_ddl_generate_report_tab;
+    l_schema_object_filter oracle_tools.t_schema_object_filter := null;
+
     l_header_printed boolean := false;
     l_object_type_output_tab dbms_sql.clob_table;
+
+    -- to restore session id at the end
+    l_session_id constant positiven := oracle_tools.ddl_crud_api.get_session_id;
+
+    procedure cleanup
+    is
+    begin
+      oracle_tools.ddl_crud_api.set_session_id(l_session_id);
+    end;
 
     procedure write(p_output in out nocopy clob, p_buffer in varchar2, p_nl in naturaln default 1)
     is
@@ -3895,11 +3934,12 @@ $end
     then
       dbms_lob.createtemporary(p_output, true);
     end if;
-    
+        
     oracle_tools.ddl_crud_api.get_ddl_generate_report_cursor
     ( p_session_id => nvl(p_session_id, oracle_tools.ddl_crud_api.get_session_id)
     , p_cursor => l_cursor
-    );
+    );    
+    l_schema_object_filter := oracle_tools.ddl_crud_api.get_schema_object_filter;
     loop
       fetch l_cursor bulk collect into l_ddl_generate_report_tab limit c_fetch_limit;
 
@@ -3910,7 +3950,7 @@ $end
           if not l_header_printed
           then
             print_header
-            ( p_schema_object_filter => l_ddl_generate_report_tab(i_idx).schema_object_filter
+            ( p_schema_object_filter => l_schema_object_filter
             , p_transform_param_list => l_ddl_generate_report_tab(i_idx).transform_param_list
             , p_db_version => l_ddl_generate_report_tab(i_idx).db_version
             , p_last_ddl_time_schema => l_ddl_generate_report_tab(i_idx).last_ddl_time_schema
@@ -3918,7 +3958,7 @@ $end
             l_header_printed := true;
           end if;
           print_schema_object
-          ( p_schema_object_filter => l_ddl_generate_report_tab(i_idx).schema_object_filter
+          ( p_schema_object_filter => l_schema_object_filter
           , p_schema_object => l_ddl_generate_report_tab(i_idx).schema_object
           , p_generate_ddl => l_ddl_generate_report_tab(i_idx).generate_ddl
           , p_ddl_generated => l_ddl_generate_report_tab(i_idx).ddl_generated
@@ -3933,6 +3973,12 @@ $end
     then
       print_footer;
     end if;
+    cleanup;
+  exception
+    when others
+    then
+      cleanup;
+      raise;
   end ddl_generate_report;
 
   procedure create_schema_ddl
@@ -5961,6 +6007,15 @@ $end
     type t_gdssdb_tab is table of c_gdssdb%rowtype;
     
     l_gdssdb_tab t_gdssdb_tab;
+
+    -- to restore session id at the end
+    l_session_id constant positiven := oracle_tools.ddl_crud_api.get_session_id;
+
+    procedure cleanup
+    is
+    begin
+      oracle_tools.ddl_crud_api.set_session_id(l_session_id);
+    end;
   begin
     -- essential when in another process
     if oracle_tools.ddl_crud_api.get_session_id = p_session_id
@@ -6013,14 +6068,19 @@ $end
       end loop;
     end if;
 
+    cleanup;
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
+$end    
   exception
     when others
     then
+      cleanup;
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
-      raise;
 $end
+      raise;
   end ddl_batch_process;
 
   procedure get_schema_ddl

@@ -120,10 +120,8 @@ prompt @V20221124104600.01__t_object_json.sql
 @V20221124104600.01__t_object_json.sql
 prompt @V20221124104600.02__t_schema_object_filter.sql
 @V20221124104600.02__t_schema_object_filter.sql
-prompt @V20221124104600.03__t_schema_object_params.sql
-@V20221124104600.03__t_schema_object_params.sql
-prompt @V20221124104600.04__t_schema_ddl_params.sql
-@V20221124104600.04__t_schema_ddl_params.sql
+prompt @V20221124104600.03__t_schema_ddl_params.sql
+@V20221124104600.03__t_schema_ddl_params.sql
 prompt @V20241101115700__schema_object_filters.sql
 @V20241101115700__schema_object_filters.sql
 prompt @V20241101115701__schema_objects.sql

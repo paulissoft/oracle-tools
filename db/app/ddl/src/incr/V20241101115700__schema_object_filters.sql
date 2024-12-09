@@ -15,7 +15,7 @@ create table schema_object_filters
 -- in overflow
 , obj_json clob -- representation of t_schema_object_filter
   constraint schema_object_filters$nnc$obj_json not null
-  constraint schema_object_filters$ck$obj_json check (obj_json is json)
+  constraint schema_object_filters$ck$obj_json check (obj_json is json strict)
 , hash_bucket raw(2000) -- sys.dbms_crypto.hash(obj.serialize(), 3 /* HASH_SH1 */)
   constraint schema_object_filters$nnc$hash_bucket not null
 , hash_bucket_nr integer

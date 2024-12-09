@@ -9,12 +9,10 @@ create table generate_ddl_session_batches
 , schema varchar2(128 byte)
 , transform_param_list varchar2(4000 byte) -- parameter from pkg_ddl_util.get_schema_ddl
 , object_type varchar2(30 byte)
--- two purposes for params
--- 1. select list from cursor c_params in body pkg_ddl_util
--- 2. for schema_objects_api.ddl_batch_process
+-- select list from cursor c_params in body pkg_ddl_util
 , params clob
   constraint generate_ddl_session_batches$nnc$params not null
-  constraint generate_ddl_session_batches$ck$params check (params is json)
+  constraint generate_ddl_session_batches$ck$params check (params is json strict)
 -- some administration
 , start_time timestamp(6)
 , end_time timestamp(6)

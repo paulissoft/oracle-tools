@@ -407,8 +407,6 @@ type t_ddl_generate_report_rec is record
   transform_param_list varchar2(4000 byte)
 , db_version number
 , last_ddl_time_schema date
-  -- from SCHEMA_OBJECT_FILTERS
-, schema_object_filter oracle_tools.t_schema_object_filter
   -- from SCHEMA_OBJECTS
 , schema_object oracle_tools.t_schema_object
   -- from SCHEMA_OBJECT_FILTER_RESULTS

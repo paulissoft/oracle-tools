@@ -273,8 +273,7 @@ $end
                 -- several grantors may have executed the same grant statement
         ,       max(p.grantable) as grantable -- YES comes after NO
         from    all_tab_privs p
-                inner join oracle_tools.v_my_schema_object_filter sof
-                on sof.schema = p.table_schema and ( sof.grantor_is_schema = 0 or p.grantor = sof.schema )
+        where   l_schema = p.table_schema and ( l_grantor_is_schema = 0 or p.grantor = l_schema )
         group by
                 p.table_schema
         ,       p.table_name
@@ -1006,7 +1005,7 @@ is
   is
     select  gdsb.seq
     ,       gdsb.object_type
-    ,       treat(oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_PARAMS', gdsb.params) as oracle_tools.t_schema_object_params).schema_object_filter_id as schema_object_filter_id
+    ,       oracle_tools.ddl_crud_api.get_schema_object_filter_id() as schema_object_filter_id
     from    oracle_tools.v_my_generate_ddl_session_batches gdsb -- filter on session_id already part of view
             inner join oracle_tools.v_dependent_or_granted_object_types v
             on v.object_type = gdsb.object_type
@@ -1020,6 +1019,15 @@ is
   type t_gdssdb_tab is table of c_gdssdb%rowtype;
   
   l_gdssdb_tab t_gdssdb_tab;
+
+  -- to restore session id at the end
+  l_session_id constant positiven := oracle_tools.ddl_crud_api.get_session_id;
+
+  procedure cleanup
+  is
+  begin
+    oracle_tools.ddl_crud_api.set_session_id(l_session_id);
+  end;
 begin
   -- essential when in another process
   if oracle_tools.ddl_crud_api.get_session_id = p_session_id
@@ -1070,14 +1078,19 @@ $end
     end loop;
   end if;
 
+  cleanup;
+
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;
+$end
 exception
   when others
   then
+    cleanup;
+$if oracle_tools.schema_objects_api.c_tracing $then    
     dbug.leave_on_error;
-    raise;
 $end
+    raise;
 end ddl_batch_process;
 
 $if oracle_tools.cfg_pkg.c_testing $then
