@@ -840,31 +840,33 @@ begin
           , 'SCHEMA_OBJECTS_API'
           );
 
-  merge
-  into    oracle_tools.generate_ddl_configurations dst
-  using   ( select  l_transform_param_list as transform_param_list
-            ,       l_db_version as db_version
-            ,       l_last_ddl_time_schema as last_ddl_time_schema
-            from    dual
-          ) src
-  on      ( src.transform_param_list = dst.transform_param_list and
-            src.db_version = dst.db_version and
-            src.last_ddl_time_schema = dst.last_ddl_time_schema
-          )
-  when    not matched
-  then    insert ( transform_param_list, db_version, last_ddl_time_schema ) values ( src.transform_param_list, src.db_version, src.last_ddl_time_schema );
-
+  begin
+    insert
+    into    oracle_tools.generate_ddl_configurations dst
+    ( transform_param_list
+    , db_version
+    , last_ddl_time_schema
+    )
+    values
+    ( l_transform_param_list
+    , l_db_version
+    , l_last_ddl_time_schema
+    )
+    returning id into p_generate_ddl_configuration_id;
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."info", '# rows inserted into generate_ddl_configurations: %s', sql%rowcount);
 $end
-
-  -- should be there now: get the id (merge does not have returning)
-  select  gdc.id
-  into    p_generate_ddl_configuration_id
-  from    oracle_tools.generate_ddl_configurations gdc
-  where   gdc.transform_param_list = l_transform_param_list
-  and     gdc.db_version = l_db_version
-  and     gdc.last_ddl_time_schema = l_last_ddl_time_schema;
+  exception
+    when dup_val_on_index
+    then
+      -- should be there now: get the id (merge does not have returning)
+      select  gdc.id
+      into    p_generate_ddl_configuration_id
+      from    oracle_tools.generate_ddl_configurations gdc
+      where   gdc.transform_param_list = l_transform_param_list
+      and     gdc.db_version = l_db_version
+      and     gdc.last_ddl_time_schema = l_last_ddl_time_schema;
+  end;
 
   -- remove on the fly those configurations that will (probably) not be used anymore
   delete
