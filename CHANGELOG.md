@@ -15,12 +15,17 @@ Types of changes:
 
 ## [Unreleased]
 
-- [Create an Oracle admin package to recompile all invalid objects in the whole database.](https://github.com/paulissoft/oracle-tools/issues/180)
-- [Create a CFG package to better support DDL/DML in incremental Flyway scripts.](https://github.com/paulissoft/oracle-tools/issues/181)
+## [4.0.0] - 2024-12-09
 
 ### Added
 
+- [Create an Oracle admin package to recompile all invalid objects in the whole database.](https://github.com/paulissoft/oracle-tools/issues/180)
+- [Create a CFG package to better support DDL/DML in incremental Flyway scripts.](https://github.com/paulissoft/oracle-tools/issues/181)
+
+### Changed
+
 - [Use Podman instead of Docker inside Jenkins.](https://github.com/paulissoft/oracle-tools/issues/169)
+- [Improve DDL generation performance.](https://github.com/paulissoft/oracle-tools/issues/182)
 
 ## [3.4.0] - 2024-09-17
 
