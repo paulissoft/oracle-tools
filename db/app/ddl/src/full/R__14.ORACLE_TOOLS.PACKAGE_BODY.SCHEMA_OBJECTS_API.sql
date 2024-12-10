@@ -641,7 +641,7 @@ $end
     , table_name => 'V_DEPENDENT_OR_GRANTED_OBJECT_TYPES'
     , table_column => 'NR'
       -- V_DEPENDENT_OR_GRANTED_OBJECT_TYPES contains 6 rows
-    , chunk_size => case oracle_tools.pkg_ddl_util.c_default_parallel_level >= 1 then ceil(6 / oracle_tools.pkg_ddl_util.c_default_parallel_level) else 1 end
+    , chunk_size => case when oracle_tools.pkg_ddl_util.c_default_parallel_level >= 1 then ceil(6 / oracle_tools.pkg_ddl_util.c_default_parallel_level) else 1 end
     );
 
 $if oracle_tools.schema_objects_api.c_debugging $then
