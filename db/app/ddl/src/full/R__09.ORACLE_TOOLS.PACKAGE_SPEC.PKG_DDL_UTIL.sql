@@ -49,7 +49,7 @@ c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $e
 c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 
-c_default_parallel_level constant natural := 2; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
+c_default_parallel_level constant natural := 0; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
 
 -- Duplicate code see DDL_CRUD_API but we do notwant package spec A to invoke package spec B and vice versa.
 subtype t_session_id is integer;
