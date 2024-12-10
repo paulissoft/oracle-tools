@@ -1,5 +1,5 @@
 CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_NAMED_SCHEMA_OBJECTS" OF "ORACLE_TOOLS"."T_NAMED_OBJECT"
-  WITH OBJECT IDENTIFIER ("ID") BEQUEATH CURRENT_USER  AS
+  WITH OBJECT IDENTIFIER ("ID") BEQUEATH CURRENT_USER  AS 
   select  treat(so.obj as oracle_tools.t_named_object)
 from    oracle_tools.generate_ddl_sessions gds
         inner join oracle_tools.schema_object_filter_results sofr
