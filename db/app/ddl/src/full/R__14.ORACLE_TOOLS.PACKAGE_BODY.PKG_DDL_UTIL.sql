@@ -2068,7 +2068,7 @@ $end
     l_pos2 pls_integer;
     l_ddl_tab_last pls_integer; -- the collection may expand so just store the last entry
   begin
-$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'MD_FETCH_DDL');
 $end
 
@@ -2160,7 +2160,7 @@ $end
         g_ddl_tab := null;
     end;
 
-$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."output", 'g_ddl_tab.count: %s', case when g_ddl_tab is not null then g_ddl_tab.count end);
     dbug.leave;
   exception
@@ -2233,7 +2233,7 @@ $end
       end if;
     end cleanup;
   begin
-$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || 'PARSE_OBJECT');
 $end
 
@@ -2356,7 +2356,7 @@ $end
 
     cleanup;
 
-$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."output", 'p_object_key: %s', p_object_key);
     dbug.leave;
 $end
@@ -2372,7 +2372,7 @@ $end
     then
       p_object_key := null;
       cleanup;
-$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
 
@@ -2380,7 +2380,7 @@ $end
     then
       p_object_key := null;
       cleanup;
-$if oracle_tools.pkg_ddl_util.c_debugging_parse_ddl $then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
       raise;
