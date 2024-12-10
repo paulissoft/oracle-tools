@@ -332,6 +332,8 @@ $end
     from    oracle_tools.schema_object_filter_results sofr
     where   sofr.schema_object_filter_id = p_schema_object_filter_id
     and     sofr.schema_object_id = l_schema_object_id
+    	    -- ignore objects that never ever need to be generated
+	    -- necessary to add 0+1 and not only 1 to get them into GENERATE_DDL_SESSION_SCHEMA_OBJECTS and thus V_SCHEMA_OBJECTS and thus V_MY_NAMED_OBJECTS
     and     sofr.generate_ddl in (0, 1);
   exception
     when no_data_found
@@ -653,7 +655,9 @@ $end
                     inner join oracle_tools.schema_object_filter_results sofr
                     on sofr.schema_object_filter_id = gds.schema_object_filter_id and
                        sofr.schema_object_id = t.id and
-                       sofr.generate_ddl in (0, 1) -- ignore objects that never ever need to be generated                      
+		       -- ignore objects that never ever need to be generated
+		       -- necessary to add 0+1 and not only 1 to get them into GENERATE_DDL_SESSION_SCHEMA_OBJECTS and thus V_SCHEMA_OBJECTS and thus V_MY_NAMED_OBJECTS
+                       sofr.generate_ddl in (0, 1) 
                     left outer join oracle_tools.generated_ddls gd
                     on gd.schema_object_id = t.id and
                        gd.last_ddl_time = t.last_ddl_time() and

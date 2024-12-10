@@ -3368,6 +3368,10 @@ $end
 
     <<fetch_loop>>
     loop
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+      dbug.print(dbug."info", 'about to fetch at most %s rows from v_my_schema_ddls', c_fetch_limit);
+$end
+
       fetch l_cursor bulk collect into l_display_ddl_sql_curr_tab limit c_fetch_limit;    
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
