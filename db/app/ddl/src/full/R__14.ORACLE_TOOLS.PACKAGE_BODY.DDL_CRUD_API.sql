@@ -334,7 +334,7 @@ $end
     and     sofr.schema_object_id = l_schema_object_id
     	    -- ignore objects that never ever need to be generated
 	    -- necessary to add 0+1 and not only 1 to get them into GENERATE_DDL_SESSION_SCHEMA_OBJECTS and thus V_SCHEMA_OBJECTS and thus V_MY_NAMED_OBJECTS
-    and     sofr.generate_ddl in (0, 1);
+    and     sofr.generate_ddl in (/*0,*/ 1);
   exception
     when no_data_found
     then -- no match
@@ -657,7 +657,7 @@ $end
                        sofr.schema_object_id = t.id and
 		       -- ignore objects that never ever need to be generated
 		       -- necessary to add 0+1 and not only 1 to get them into GENERATE_DDL_SESSION_SCHEMA_OBJECTS and thus V_SCHEMA_OBJECTS and thus V_MY_NAMED_OBJECTS
-                       sofr.generate_ddl in (0, 1) 
+                       sofr.generate_ddl in (/*0,*/ 1) 
                     left outer join oracle_tools.generated_ddls gd
                     on gd.schema_object_id = t.id and
                        gd.last_ddl_time = t.last_ddl_time() and
