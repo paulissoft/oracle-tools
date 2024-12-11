@@ -17,18 +17,38 @@ g_min_timestamp_to_keep constant oracle_tools.generate_ddl_sessions.created%type
 function get_schema_object_filter_id
 ( p_session_id in t_session_id_nn
 )
-return positive
+return t_schema_object_filter_id
 is
-  l_schema_object_filter_id positive;
+  l_schema_object_filter_id t_schema_object_filter_id;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECT_FILTER_ID (1)';
+$end
 begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+$end
+
   select  gds.schema_object_filter_id
   into    l_schema_object_filter_id
   from    oracle_tools.generate_ddl_sessions gds
   where   gds.session_id = p_session_id;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.print(dbug."output", 'return: %s', l_schema_object_filter_id);
+  dbug.leave;
+$end
+
   return l_schema_object_filter_id;
 exception
   when no_data_found
-  then return null;
+  then
+$if oracle_tools.ddl_crud_api.c_tracing $then
+    dbug.print(dbug."output", 'return: %s', to_char(null));
+    dbug.leave_on_error;
+$end
+    return null;
 end get_schema_object_filter_id;
 
 function get_schema_object_filter
@@ -36,11 +56,30 @@ function get_schema_object_filter
 )
 return oracle_tools.t_schema_object_filter
 is
+  l_schema_object_filter oracle_tools.t_schema_object_filter;
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECT_FILTER (1)';
+$end
 begin
-  return get_schema_object_filter(p_schema_object_filter_id => get_schema_object_filter_id(p_session_id => p_session_id));
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+$end
+
+  l_schema_object_filter := get_schema_object_filter(p_schema_object_filter_id => get_schema_object_filter_id(p_session_id => p_session_id));
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.leave;
+$end
+
+  return l_schema_object_filter;
 exception
   when no_data_found
-  then return null;
+  then
+$if oracle_tools.ddl_crud_api.c_tracing $then
+    dbug.leave_on_error;
+$end
+     return null;
 end get_schema_object_filter;
 
 function find_schema_object
@@ -94,7 +133,7 @@ procedure add_schema_object_filter
 , p_schema_object_filter_id out nocopy integer
 )
 is
-  cursor c_sof(b_schema_object_filter_id in positive)
+  cursor c_sof(b_schema_object_filter_id in t_schema_object_filter_id)
   is
     select  sof.last_modification_time_schema
     from    oracle_tools.schema_object_filters sof
@@ -271,7 +310,7 @@ end add_schema_object_filter;
 procedure add_schema_object
 ( p_session_id in t_session_id_nn
 , p_schema_object in oracle_tools.t_schema_object
-, p_schema_object_filter_id in positiven
+, p_schema_object_filter_id in t_schema_object_filter_id_nn
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
@@ -584,7 +623,7 @@ end add_batch;
 procedure add_schema_object_tab
 ( p_session_id in t_session_id_nn
 , p_schema_object_tab in oracle_tools.t_schema_object_tab
-, p_schema_object_filter_id in positiven
+, p_schema_object_filter_id in t_schema_object_filter_id_nn
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
@@ -720,34 +759,81 @@ begin
 end get_session_id;
 
 function get_schema_object_filter_id
-return positive
+return t_schema_object_filter_id
 is
+  l_schema_object_filter_id t_schema_object_filter_id;
+  
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECT_FILTER_ID (2)';
+$end
 begin
-  return get_schema_object_filter_id(p_session_id => get_session_id);
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
+  l_schema_object_filter_id := get_schema_object_filter_id(p_session_id => get_session_id);
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.print(dbug."output", 'return: %s', l_schema_object_filter_id);
+  dbug.leave;
+$end
+
+  return l_schema_object_filter_id;
 end get_schema_object_filter_id;
 
 function get_schema_object_filter
 return oracle_tools.t_schema_object_filter
 is
+  l_schema_object_filter oracle_tools.t_schema_object_filter;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECT_FILTER (2)';
+$end
 begin
-  return get_schema_object_filter(p_session_id => get_session_id);
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
+  l_schema_object_filter := get_schema_object_filter(p_session_id => get_session_id);
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.leave;
+$end
+
+  return l_schema_object_filter;
 end get_schema_object_filter;
 
 function get_schema_object_filter
-( p_schema_object_filter_id in positiven
+( p_schema_object_filter_id in t_schema_object_filter_id_nn
 )
 return oracle_tools.t_schema_object_filter
 is
+  l_schema_object_filter oracle_tools.t_schema_object_filter := null;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECT_FILTER (3)';
+$end
 begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+  dbug.print(dbug."input", 'p_schema_object_filter_id: %s', p_schema_object_filter_id);
+$end
+
   for r in
   ( select  sof.obj_json 
     from    oracle_tools.schema_object_filters sof
     where   sof.id = p_schema_object_filter_id
   )
   loop
-    return treat(oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER', r.obj_json) as oracle_tools.t_schema_object_filter);
+    l_schema_object_filter := treat(oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER', r.obj_json) as oracle_tools.t_schema_object_filter);
+    exit;
   end loop;
-  return null;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.leave;
+$end
+
+  return l_schema_object_filter;
 end get_schema_object_filter;
 
 function find_schema_object
@@ -898,7 +984,7 @@ end add;
 
 procedure add
 ( p_schema_object in oracle_tools.t_schema_object
-, p_schema_object_filter_id in positiven
+, p_schema_object_filter_id in t_schema_object_filter_id_nn
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
@@ -999,7 +1085,7 @@ end add;
 
 procedure add
 ( p_schema_object_tab in oracle_tools.t_schema_object_tab
-, p_schema_object_filter_id in positiven
+, p_schema_object_filter_id in t_schema_object_filter_id_nn
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
