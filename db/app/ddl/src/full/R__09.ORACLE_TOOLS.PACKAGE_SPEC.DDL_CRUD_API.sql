@@ -51,6 +51,9 @@ c_min_timestamp_to_keep constant timestamp(6) :=
 subtype t_session_id is integer;
 subtype t_session_id_nn is t_session_id not null;  
 
+subtype t_schema_object_filter_id is integer;
+subtype t_schema_object_filter_id_nn is t_session_id not null;  
+
 procedure set_session_id
 ( p_session_id in t_session_id_nn -- The session id.
 );
@@ -69,7 +72,7 @@ return t_session_id_nn;
 /** Get the session id that will be used for the CRUD operations. **/
 
 function get_schema_object_filter_id
-return positive;
+return t_schema_object_filter_id;
 /**
 
 Return the current schema object filter id.
@@ -92,7 +95,7 @@ function get_schema_object_filter
 return oracle_tools.t_schema_object_filter;
 
 function get_schema_object_filter
-( p_schema_object_filter_id in positiven
+( p_schema_object_filter_id in t_schema_object_filter_id_nn
 )
 return oracle_tools.t_schema_object_filter;
 
@@ -199,7 +202,7 @@ updated in any case.
 
 procedure add
 ( p_schema_object in oracle_tools.t_schema_object -- The schema object to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS.
-, p_schema_object_filter_id in positiven
+, p_schema_object_filter_id in t_schema_object_filter_id_nn
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 );
 /**
@@ -298,7 +301,7 @@ Add a record to table GENERATE_DDL_SESSION_BATCHES.
 
 procedure add
 ( p_schema_object_tab in oracle_tools.t_schema_object_tab -- The schema object table.
-, p_schema_object_filter_id in positiven -- The schema object filter id.
+, p_schema_object_filter_id in t_schema_object_filter_id_nn -- The schema object filter id.
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 );
 /**
