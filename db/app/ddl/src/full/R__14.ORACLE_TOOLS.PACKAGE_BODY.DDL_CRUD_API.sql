@@ -2,6 +2,8 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."DDL_CRUD_API" IS /* -*-coding: ut
 
 -- PRIVATE
 
+c_fetch_limit constant positiven := 100;
+
 -- ORA-01400: cannot insert NULL into ("ORACLE_TOOLS"."GENERATED_DDLS"."LAST_DDL_TIME")
 e_can_not_insert_null exception;
 pragma exception_init(e_can_not_insert_null, -1400);
@@ -332,8 +334,8 @@ $end
     from    oracle_tools.schema_object_filter_results sofr
     where   sofr.schema_object_filter_id = p_schema_object_filter_id
     and     sofr.schema_object_id = l_schema_object_id
-    	    -- ignore objects that never ever need to be generated
-	    -- necessary to add 0+1 and not only 1 to get them into GENERATE_DDL_SESSION_SCHEMA_OBJECTS and thus V_SCHEMA_OBJECTS and thus V_MY_NAMED_OBJECTS
+          -- ignore objects that never ever need to be generated
+      -- necessary to add 0+1 and not only 1 to get them into GENERATE_DDL_SESSION_SCHEMA_OBJECTS and thus V_SCHEMA_OBJECTS and thus V_MY_NAMED_OBJECTS
     and     sofr.generate_ddl in (0, 1);
   exception
     when no_data_found
@@ -655,8 +657,8 @@ $end
                     inner join oracle_tools.schema_object_filter_results sofr
                     on sofr.schema_object_filter_id = gds.schema_object_filter_id and
                        sofr.schema_object_id = t.id and
-		       -- ignore objects that never ever need to be generated
-		       -- necessary to add 0+1 and not only 1 to get them into GENERATE_DDL_SESSION_SCHEMA_OBJECTS and thus V_SCHEMA_OBJECTS and thus V_MY_NAMED_OBJECTS
+           -- ignore objects that never ever need to be generated
+           -- necessary to add 0+1 and not only 1 to get them into GENERATE_DDL_SESSION_SCHEMA_OBJECTS and thus V_SCHEMA_OBJECTS and thus V_MY_NAMED_OBJECTS
                        sofr.generate_ddl in (0, 1) 
                     left outer join oracle_tools.generated_ddls gd
                     on gd.schema_object_id = t.id and
@@ -1091,79 +1093,137 @@ $if oracle_tools.ddl_crud_api.c_debugging $then
 $end
 end clear_all_ddl_tables;
 
-procedure get_schema_objects_cursor
+procedure fetch_schema_objects
 ( p_session_id in t_session_id_nn
-, p_cursor out nocopy sys_refcursor
+, p_cursor in out nocopy sys_refcursor
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
+  l_session_id t_session_id := null;
+
+  procedure cleanup
+  is
+  begin
+    if l_session_id is not null
+    then
+      set_session_id(l_session_id);
+    end if;
+  end cleanup;
 begin
-  set_session_id(p_session_id); -- just a check
+  if not p_cursor%isopen
+  then
+    l_session_id := get_session_id;
+    set_session_id(p_session_id); -- just a check
 
-  open p_cursor for
-    select  so.obj
-    from    oracle_tools.generate_ddl_sessions gds
-            inner join oracle_tools.generate_ddl_session_schema_objects gdsso
-            on gdsso.session_id = gds.session_id
-            inner join oracle_tools.schema_object_filter_results sofr
-            on sofr.schema_object_filter_id = gdsso.schema_object_filter_id and
-               sofr.schema_object_id = gdsso.schema_object_id
-            inner join oracle_tools.schema_objects so
-            on so.id = sofr.schema_object_id
-    where   gds.session_id = p_session_id
-    order by
-            so.id;
-end get_schema_objects_cursor;
-
-procedure get_display_ddl_sql_cursor
-( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor out nocopy t_display_ddl_sql_cur
-)
-is
-begin
-  set_session_id(p_session_id); -- just a check
-
-  open p_cursor for
-    with src as
-    ( select  gd.schema_object_id
-      ,       gds.ddl#
-      ,       gds.verb
-      ,       case
-                when gds.verb is not null and gds.ddl# is not null
-                then oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#)
-              end as ddl_info
-      ,       gdsc.chunk#
-      ,       gdsc.chunk
-      ,       so.obj as schema_object
-      ,       row_number() over (partition by gd.schema_object_id order by gds.ddl# desc, gdsc.chunk# desc) as seq_per_schema_object_desc
+    open p_cursor for
+      select  so.obj
       from    oracle_tools.generate_ddl_sessions gds
-              inner join oracle_tools.generate_ddl_configurations gdc
-              on gdc.id = gds.generate_ddl_configuration_id
-              inner join oracle_tools.generated_ddls gd
-              on gd.generate_ddl_configuration_id = gdc.id
+              inner join oracle_tools.generate_ddl_session_schema_objects gdsso
+              on gdsso.session_id = gds.session_id
+              inner join oracle_tools.schema_object_filter_results sofr
+              on sofr.schema_object_filter_id = gdsso.schema_object_filter_id and
+                 sofr.schema_object_id = gdsso.schema_object_id
               inner join oracle_tools.schema_objects so
-              on so.id = gd.schema_object_id
-              left outer join oracle_tools.generated_ddl_statements gds
-              on gds.generated_ddl_id = gd.id
-              left outer join oracle_tools.generated_ddl_statement_chunks gdsc
-              on gdsc.generated_ddl_id = gds.generated_ddl_id and
-                 gdsc.ddl# = gds.ddl#              
+              on so.id = sofr.schema_object_id
       where   gds.session_id = p_session_id
-    )
-    select  src.schema_object_id
-    ,       src.ddl#
-    ,       src.verb
-    ,       src.ddl_info
-    ,       src.chunk#
-    ,       src.chunk
-    ,       case when src.seq_per_schema_object_desc = 1 then 1 else null end as last_chunk
-    ,       src.schema_object
-    from    src
-    order by
-            src.schema_object_id
-    ,       src.ddl#
-    ,       src.verb
-    ,       src.chunk#;
-end get_display_ddl_sql_cursor;
+      order by
+              so.id;
+  end if;
+  
+  fetch p_cursor bulk collect into p_schema_object_tab limit c_fetch_limit;
+  
+  if p_schema_object_tab.count < c_fetch_limit
+  then
+    close p_cursor;
+  end if;
+  
+  cleanup;
+exception
+  when others
+  then
+    cleanup;
+    raise;
+end fetch_schema_objects;
+
+procedure fetch_display_ddl_sql
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_cursor in out nocopy t_display_ddl_sql_cur
+, p_display_ddl_sql_tab out t_display_ddl_sql_tab
+)
+is
+  l_session_id t_session_id := null;
+
+  procedure cleanup
+  is
+  begin
+    if l_session_id is not null
+    then
+      set_session_id(l_session_id);
+    end if;
+  end cleanup;
+begin
+  if not p_cursor%isopen
+  then
+    l_session_id := get_session_id;
+    set_session_id(p_session_id); -- just a check
+
+    open p_cursor for
+      with src as
+      ( select  gd.schema_object_id
+        ,       gds.ddl#
+        ,       gds.verb
+        ,       case
+                  when gds.verb is not null and gds.ddl# is not null
+                  then oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#)
+                end as ddl_info
+        ,       gdsc.chunk#
+        ,       gdsc.chunk
+        ,       so.obj as schema_object
+        ,       row_number() over (partition by gd.schema_object_id order by gds.ddl# desc, gdsc.chunk# desc) as seq_per_schema_object_desc
+        from    oracle_tools.generate_ddl_sessions gds
+                inner join oracle_tools.generate_ddl_configurations gdc
+                on gdc.id = gds.generate_ddl_configuration_id
+                inner join oracle_tools.generated_ddls gd
+                on gd.generate_ddl_configuration_id = gdc.id
+                inner join oracle_tools.schema_objects so
+                on so.id = gd.schema_object_id
+                left outer join oracle_tools.generated_ddl_statements gds
+                on gds.generated_ddl_id = gd.id
+                left outer join oracle_tools.generated_ddl_statement_chunks gdsc
+                on gdsc.generated_ddl_id = gds.generated_ddl_id and
+                   gdsc.ddl# = gds.ddl#              
+        where   gds.session_id = p_session_id
+      )
+      select  src.schema_object_id
+      ,       src.ddl#
+      ,       src.verb
+      ,       src.ddl_info
+      ,       src.chunk#
+      ,       src.chunk
+      ,       case when src.seq_per_schema_object_desc = 1 then 1 else null end as last_chunk
+      ,       src.schema_object
+      from    src
+      order by
+              src.schema_object_id
+      ,       src.ddl#
+      ,       src.verb
+      ,       src.chunk#;
+  end if;
+  
+  fetch p_cursor bulk collect into p_display_ddl_sql_tab limit c_fetch_limit;
+  
+  if p_display_ddl_sql_tab.count < c_fetch_limit
+  then
+    close p_cursor;
+  end if;
+  
+  cleanup;
+exception
+  when others
+  then
+    cleanup;
+    raise;
+end fetch_display_ddl_sql;    
 
 procedure set_ddl_output_written
 ( p_schema_object_id in varchar2
@@ -1192,45 +1252,70 @@ begin
   end case;
 end set_ddl_output_written;
 
-procedure get_ddl_generate_report_cursor
+procedure fetch_ddl_generate_report
 ( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor out nocopy t_ddl_generate_report_cur
+, p_cursor in out nocopy t_ddl_generate_report_cur
+, p_ddl_generate_report_tab out nocopy t_ddl_generate_report_tab
 )
 is
-  l_session_id t_session_id;
+  l_session_id t_session_id := null;
+
+  procedure cleanup
+  is
+  begin
+    if l_session_id is not null
+    then
+      set_session_id(l_session_id);
+    end if;
+  end cleanup;
 begin
-  set_session_id(p_session_id); -- just a check
+  if not p_cursor%isopen
+  then
+    set_session_id(p_session_id); -- just a check
 
-  l_session_id := get_session_id;
-
-  open p_cursor for
-    select  gdc.transform_param_list
-    ,       gdc.db_version
-    ,       gdc.last_ddl_time_schema
-    ,       so.obj as schema_object
-    ,       sofr.generate_ddl
-    ,       case
-              when gdsso.last_ddl_time is not null and gdsso.generate_ddl_configuration_id is not null
-              then 1
-              else 0
-            end as ddl_generated
-    ,       nvl(gdsso.ddl_output_written, 0) as ddl_output_written
-    from    oracle_tools.generate_ddl_sessions gds
-            inner join oracle_tools.generate_ddl_configurations gdc
-            on gdc.id = gds.generate_ddl_configuration_id
-            inner join oracle_tools.schema_object_filters sof
-            on sof.id = gds.schema_object_filter_id
-            inner join oracle_tools.schema_object_filter_results sofr
-            on sofr.schema_object_filter_id = sof.id
-            inner join oracle_tools.schema_objects so
-            on so.id = sofr.schema_object_id
-            left outer join oracle_tools.generate_ddl_session_schema_objects gdsso
-            on gdsso.session_id = gds.session_id and
-               gdsso.schema_object_id = sofr.schema_object_id
-    where   gds.session_id = l_session_id
-    order by
-            so.obj.id;
-end get_ddl_generate_report_cursor;
+    open p_cursor for
+      select  gdc.transform_param_list
+      ,       gdc.db_version
+      ,       gdc.last_ddl_time_schema
+      ,       so.obj as schema_object
+      ,       sofr.generate_ddl
+      ,       case
+                when gdsso.last_ddl_time is not null and gdsso.generate_ddl_configuration_id is not null
+                then 1
+                else 0
+              end as ddl_generated
+      ,       nvl(gdsso.ddl_output_written, 0) as ddl_output_written
+      from    oracle_tools.generate_ddl_sessions gds
+              inner join oracle_tools.generate_ddl_configurations gdc
+              on gdc.id = gds.generate_ddl_configuration_id
+              inner join oracle_tools.schema_object_filters sof
+              on sof.id = gds.schema_object_filter_id
+              inner join oracle_tools.schema_object_filter_results sofr
+              on sofr.schema_object_filter_id = sof.id
+              inner join oracle_tools.schema_objects so
+              on so.id = sofr.schema_object_id
+              left outer join oracle_tools.generate_ddl_session_schema_objects gdsso
+              on gdsso.session_id = gds.session_id and
+                 gdsso.schema_object_id = sofr.schema_object_id
+      where   gds.session_id = p_session_id
+      order by
+              so.obj.id;
+  end if;  
+  
+  fetch p_cursor bulk collect into p_ddl_generate_report_tab limit c_fetch_limit;
+  
+  if p_ddl_generate_report_tab.count < c_fetch_limit
+  then
+    close p_cursor;
+  end if;
+  
+  cleanup;
+exception
+  when others
+  then
+    cleanup;
+    raise;
+end fetch_ddl_generate_report;
 
 procedure delete_generate_ddl_sessions
 ( p_session_id in t_session_id 

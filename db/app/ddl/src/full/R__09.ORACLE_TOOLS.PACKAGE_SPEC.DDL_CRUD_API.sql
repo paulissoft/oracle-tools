@@ -376,9 +376,10 @@ And thus all related tables thanks to the cascading foreign keys.
 
 **/
 
-procedure get_schema_objects_cursor
+procedure fetch_schema_objects
 ( p_session_id in t_session_id_nn
-, p_cursor out nocopy sys_refcursor
+, p_cursor in out nocopy sys_refcursor
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 );
 
 type t_display_ddl_sql_rec is record
@@ -396,9 +397,10 @@ type t_display_ddl_sql_tab is table of t_display_ddl_sql_rec;
 
 type t_display_ddl_sql_cur is ref cursor return t_display_ddl_sql_rec;
 
-procedure get_display_ddl_sql_cursor
+procedure fetch_display_ddl_sql
 ( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor out nocopy t_display_ddl_sql_cur
+, p_cursor in out nocopy t_display_ddl_sql_cur
+, p_display_ddl_sql_tab out nocopy t_display_ddl_sql_tab
 );
 
 procedure set_ddl_output_written
@@ -425,9 +427,10 @@ type t_ddl_generate_report_tab is table of t_ddl_generate_report_rec;
 
 type t_ddl_generate_report_cur is ref cursor return t_ddl_generate_report_rec;
 
-procedure get_ddl_generate_report_cursor
+procedure fetch_ddl_generate_report
 ( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor out nocopy t_ddl_generate_report_cur
+, p_cursor in out nocopy t_ddl_generate_report_cur
+, p_ddl_generate_report_tab out nocopy t_ddl_generate_report_tab
 );
 
 procedure delete_generate_ddl_sessions

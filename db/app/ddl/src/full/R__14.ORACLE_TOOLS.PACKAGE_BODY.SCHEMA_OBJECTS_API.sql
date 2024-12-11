@@ -323,7 +323,7 @@ $end
                                         , 'TYPE_BODY'
                                         , 'MATERIALIZED_VIEW' -- grants are on underlying tables
                                         ); 
-      
+
     when "comments"
     then
       with v_my_comments_dict as
@@ -630,7 +630,7 @@ $if oracle_tools.schema_objects_api.c_tracing $then
 $end
 
   -- No need to check whether V_DEPENDENT_OR_GRANTED_OBJECT_TYPES contains rows: it always does.
-  
+
   -- Create the TASK for all but SCHEMA_EXPORT
   dbms_parallel_execute.create_task(l_task_name);
 
@@ -793,11 +793,11 @@ $else
     ( p_object_type => r.object_type
     );
   end loop;
-  
+
   commit; -- may need to make this an autonomous session
 
   ddl_batch_process;
-  
+
 $end -- $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
 
 $if oracle_tools.schema_objects_api.c_tracing $then
@@ -875,7 +875,7 @@ $end
   , p_generate_ddl_configuration_id => p_generate_ddl_configuration_id
   , p_add_schema_objects => true
   );
-  
+
   select  value(t) as obj
   bulk collect
   into    p_schema_object_tab
@@ -905,7 +905,7 @@ return oracle_tools.t_schema_object_tab
 pipelined
 is
   pragma autonomous_transaction;
-  
+
   l_schema_object_filter oracle_tools.t_schema_object_filter := null;
   l_generate_ddl_configuration_id integer := null;
   l_program constant t_module := 'function ' || 'GET_SCHEMA_OBJECTS'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
@@ -999,12 +999,9 @@ pipelined
 is
   l_cursor sys_refcursor;
   l_schema_object_tab oracle_tools.t_schema_object_tab;
-  c_fetch_limit constant positiven := 100;
 begin
-  oracle_tools.ddl_crud_api.get_schema_objects_cursor(p_session_id, l_cursor);
-
   loop
-    fetch l_cursor bulk collect into l_schema_object_tab limit c_fetch_limit;
+    oracle_tools.ddl_crud_api.fetch_schema_objects(p_session_id, l_cursor, l_schema_object_tab);
 
     if l_schema_object_tab.count > 0
     then
@@ -1014,9 +1011,9 @@ begin
       end loop;
     end if;
 
-    exit when l_schema_object_tab.count < c_fetch_limit; -- next fetch will return 0 rows
+    exit when not l_cursor%isopen;
   end loop;
-  close l_cursor;
+
   return; -- essential
 end get_schema_objects;
 
@@ -1040,9 +1037,9 @@ is
     order by
             gdsb.session_id
     ,       gdsb.seq;
-    
+
   type t_gdssdb_tab is table of c_gdssdb%rowtype;
-  
+
   l_gdssdb_tab t_gdssdb_tab;
 
   -- to restore session id at the end
@@ -1089,7 +1086,7 @@ $end
         , p_schema_object_filter_id => l_gdssdb_tab(i_idx).schema_object_filter_id
         , p_step => l_gdssdb_tab(i_idx).object_type
         );
-      
+
         oracle_tools.ddl_crud_api.set_batch_end_time(l_gdssdb_tab(i_idx).seq);
         commit;
       exception
