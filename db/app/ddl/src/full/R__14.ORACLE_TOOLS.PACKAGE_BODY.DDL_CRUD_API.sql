@@ -1258,6 +1258,10 @@ procedure fetch_ddl_generate_report
 , p_ddl_generate_report_tab out nocopy t_ddl_generate_report_tab
 )
 is
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FETCH_DDL_GENERATE_REPORT';
+$end
+
   l_session_id t_session_id := null;
 
   procedure cleanup
@@ -1269,6 +1273,12 @@ is
     end if;
   end cleanup;
 begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+  dbug.print(dbug."input", 'p_cursor: %s', dbms_sql.to_cursor_number(p_cursor));  
+$end
+  
   if not p_cursor%isopen
   then
     set_session_id(p_session_id); -- just a check
@@ -1310,10 +1320,19 @@ begin
   end if;
   
   cleanup;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.print(dbug."output", 'p_cursor: %s', dbms_sql.to_cursor_number(p_cursor));
+  dbug.print(dbug."output", 'cardinality(p_ddl_generate_report_tab): %s', cardinality(p_ddl_generate_report_tab));
+  dbug.leave;
+$end
 exception
   when others
   then
     cleanup;
+$if oracle_tools.ddl_crud_api.c_tracing $then
+    dbug.leave_on_error;
+$end
     raise;
 end fetch_ddl_generate_report;
 
