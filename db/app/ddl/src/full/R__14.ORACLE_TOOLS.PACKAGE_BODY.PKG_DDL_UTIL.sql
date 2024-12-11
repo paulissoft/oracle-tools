@@ -3969,7 +3969,8 @@ $end
           );
         end loop;
       end if;
-      exit when l_ddl_generate_report_tab.count < c_fetch_limit; -- next fetch will return 0 rows
+      
+      exit when not l_cursor%isopen;
     end loop;
     close l_cursor;
     if l_header_printed
