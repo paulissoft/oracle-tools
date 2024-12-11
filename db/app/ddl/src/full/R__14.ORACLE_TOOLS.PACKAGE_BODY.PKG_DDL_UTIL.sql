@@ -3576,10 +3576,8 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
 $end
     
-    oracle_tools.ddl_crud_api.get_display_ddl_sql_cursor(p_session_id, l_cursor);
-
     loop
-      fetch l_cursor bulk collect into l_display_ddl_sql_tab limit c_fetch_limit;
+      oracle_tools.ddl_crud_api.fetch_display_ddl_sql(p_session_id, l_cursor, l_display_ddl_sql_tab);
 
       if l_display_ddl_sql_tab.count > 0
       then
@@ -3600,7 +3598,7 @@ $end
         end loop;
       end if;
 
-      exit when l_display_ddl_sql_tab.count < c_fetch_limit; -- next fetch will return 0 rows
+      exit when not l_cursor%isopen;
     end loop;
     close l_cursor;
 
@@ -3670,11 +3668,9 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
 $end
 
-    -- use display_ddl_sql
-    oracle_tools.ddl_crud_api.get_display_ddl_sql_cursor(p_session_id, l_cursor);
-
     loop
-      fetch l_cursor bulk collect into l_display_ddl_sql_tab limit c_fetch_limit;
+      -- use display_ddl_sql
+      oracle_tools.ddl_crud_api.fetch_display_ddl_sql(p_session_id, l_cursor, l_display_ddl_sql_tab);
 
       if l_display_ddl_sql_tab.count > 0
       then
@@ -3706,7 +3702,7 @@ $end
         end loop;
       end if;
 
-      exit when l_display_ddl_sql_tab.count < c_fetch_limit; -- next fetch will return 0 rows
+      exit when not l_cursor%isopen;
     end loop;
     close l_cursor;
 
@@ -3933,19 +3929,22 @@ $end
         l_object_type_order := l_object_type_output_tab.next(l_object_type_order);
       end loop;      
     end print_footer;
+    
   begin
     if p_output is null
     then
       dbms_lob.createtemporary(p_output, true);
     end if;
-        
-    oracle_tools.ddl_crud_api.get_ddl_generate_report_cursor
-    ( p_session_id => nvl(p_session_id, oracle_tools.ddl_crud_api.get_session_id)
-    , p_cursor => l_cursor
-    );    
+
+    oracle_tools.ddl_crud_api.set_session_id(nvl(p_session_id, oracle_tools.ddl_crud_api.get_session_id));
     l_schema_object_filter := oracle_tools.ddl_crud_api.get_schema_object_filter;
+
     loop
-      fetch l_cursor bulk collect into l_ddl_generate_report_tab limit c_fetch_limit;
+      oracle_tools.ddl_crud_api.fetch_ddl_generate_report
+      ( p_session_id => oracle_tools.ddl_crud_api.get_session_id
+      , p_cursor => l_cursor
+      , p_ddl_generate_report_tab => l_ddl_generate_report_tab
+      );    
 
       if l_ddl_generate_report_tab.count > 0
       then
