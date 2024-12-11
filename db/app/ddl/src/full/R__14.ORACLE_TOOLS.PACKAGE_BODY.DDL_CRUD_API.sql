@@ -1181,10 +1181,11 @@ end clear_all_ddl_tables;
 
 procedure fetch_schema_objects
 ( p_session_id in t_session_id_nn
-, p_cursor in out nocopy sys_refcursor
+, p_cursor in out nocopy integer
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
+  l_cursor sys_refcursor := case when p_cursor is not null then dbms_sql.to_refcursor(p_cursor) end;
   l_session_id t_session_id := null;
 
   procedure cleanup
@@ -1196,12 +1197,12 @@ is
     end if;
   end cleanup;
 begin
-  if not p_cursor%isopen
+  if p_cursor is null
   then
     l_session_id := get_session_id;
     set_session_id(p_session_id); -- just a check
 
-    open p_cursor for
+    open l_cursor for
       select  so.obj
       from    oracle_tools.generate_ddl_sessions gds
               inner join oracle_tools.generate_ddl_session_schema_objects gdsso
@@ -1216,11 +1217,14 @@ begin
               so.id;
   end if;
   
-  fetch p_cursor bulk collect into p_schema_object_tab limit c_fetch_limit;
+  fetch l_cursor bulk collect into p_schema_object_tab limit c_fetch_limit;
   
   if p_schema_object_tab.count < c_fetch_limit
   then
-    close p_cursor;
+    close l_cursor;
+    p_cursor := 0;
+  else              
+    p_cursor := dbms_sql.to_cursor_number(l_cursor);
   end if;
   
   cleanup;
@@ -1233,10 +1237,11 @@ end fetch_schema_objects;
 
 procedure fetch_display_ddl_sql
 ( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor in out nocopy t_display_ddl_sql_cur
+, p_cursor in out nocopy integer
 , p_display_ddl_sql_tab out t_display_ddl_sql_tab
 )
 is
+  l_cursor sys_refcursor := case when p_cursor is not null then dbms_sql.to_refcursor(p_cursor) end;
   l_session_id t_session_id := null;
 
   procedure cleanup
@@ -1248,12 +1253,12 @@ is
     end if;
   end cleanup;
 begin
-  if not p_cursor%isopen
+  if p_cursor is null
   then
     l_session_id := get_session_id;
     set_session_id(p_session_id); -- just a check
 
-    open p_cursor for
+    open l_cursor for
       with src as
       ( select  gd.schema_object_id
         ,       gds.ddl#
@@ -1296,11 +1301,14 @@ begin
       ,       src.chunk#;
   end if;
   
-  fetch p_cursor bulk collect into p_display_ddl_sql_tab limit c_fetch_limit;
+  fetch l_cursor bulk collect into p_display_ddl_sql_tab limit c_fetch_limit;
   
   if p_display_ddl_sql_tab.count < c_fetch_limit
   then
-    close p_cursor;
+    close l_cursor;
+    p_cursor := 0;
+  else
+    p_cursor := dbms_sql.to_cursor_number(l_cursor);
   end if;
   
   cleanup;
@@ -1340,7 +1348,7 @@ end set_ddl_output_written;
 
 procedure fetch_ddl_generate_report
 ( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor in out nocopy t_ddl_generate_report_cur
+, p_cursor in out nocopy integer
 , p_ddl_generate_report_tab out nocopy t_ddl_generate_report_tab
 )
 is
@@ -1348,6 +1356,7 @@ $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FETCH_DDL_GENERATE_REPORT';
 $end
 
+  l_cursor sys_refcursor := case when p_cursor is not null then dbms_sql.to_refcursor(p_cursor) end;
   l_session_id t_session_id := null;
 
   procedure cleanup
@@ -1362,14 +1371,14 @@ begin
 $if oracle_tools.ddl_crud_api.c_tracing $then
   dbug.enter(l_module_name);
   dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
-  dbug.print(dbug."input", 'p_cursor: %s', dbms_sql.to_cursor_number(p_cursor));  
+  dbug.print(dbug."input", 'p_cursor: %s', p_cursor);  
 $end
-  
-  if not p_cursor%isopen
+
+  if p_cursor is null
   then
     set_session_id(p_session_id); -- just a check
 
-    open p_cursor for
+    open l_cursor for
       select  gdc.transform_param_list
       ,       gdc.db_version
       ,       gdc.last_ddl_time_schema
@@ -1397,18 +1406,21 @@ $end
       order by
               so.obj.id;
   end if;  
-  
-  fetch p_cursor bulk collect into p_ddl_generate_report_tab limit c_fetch_limit;
+
+  fetch l_cursor bulk collect into p_ddl_generate_report_tab limit c_fetch_limit;
   
   if p_ddl_generate_report_tab.count < c_fetch_limit
   then
-    close p_cursor;
+    close l_cursor;
+    p_cursor := 0;
+  else
+    p_cursor := dbms_sql.to_cursor_number(l_cursor);
   end if;
   
   cleanup;
 
 $if oracle_tools.ddl_crud_api.c_tracing $then
-  dbug.print(dbug."output", 'p_cursor: %s', dbms_sql.to_cursor_number(p_cursor));
+  dbug.print(dbug."output", 'p_cursor: %s', p_cursor);
   dbug.print(dbug."output", 'cardinality(p_ddl_generate_report_tab): %s', cardinality(p_ddl_generate_report_tab));
   dbug.leave;
 $end

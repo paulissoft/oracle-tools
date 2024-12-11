@@ -997,7 +997,7 @@ function get_schema_objects
 return oracle_tools.t_schema_object_tab
 pipelined
 is
-  l_cursor sys_refcursor;
+  l_cursor integer := null;
   l_schema_object_tab oracle_tools.t_schema_object_tab;
 begin
   loop
@@ -1011,7 +1011,7 @@ begin
       end loop;
     end if;
 
-    exit when not l_cursor%isopen;
+    exit when l_cursor is null;
   end loop;
 
   return; -- essential

@@ -3559,7 +3559,7 @@ end display_ddl_schema;
   is
     l_program constant t_module := 'DISPLAY_DDL_SQL (2)';
     
-    l_cursor oracle_tools.ddl_crud_api.t_display_ddl_sql_cur;
+    l_cursor integer := null;
     l_display_ddl_sql_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_tab;
 
     -- to restore session id at the end
@@ -3598,9 +3598,8 @@ $end
         end loop;
       end if;
 
-      exit when not l_cursor%isopen;
+      exit when l_cursor is null;
     end loop;
-    close l_cursor;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -3649,7 +3648,7 @@ $end
   is
     l_program constant t_module := 'DISPLAY_DDL_SCHEMA (2)';
     
-    l_cursor oracle_tools.ddl_crud_api.t_display_ddl_sql_cur;
+    l_cursor integer := 0;
     l_display_ddl_sql_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_tab;
     l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
     l_schema_ddl oracle_tools.t_schema_ddl;
@@ -3702,9 +3701,8 @@ $end
         end loop;
       end if;
 
-      exit when not l_cursor%isopen;
+      exit when l_cursor is null;
     end loop;
-    close l_cursor;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
@@ -3750,7 +3748,7 @@ $end
   , p_output in out nocopy clob -- the CLOB to append the report to
   )
   is
-    l_cursor oracle_tools.ddl_crud_api.t_ddl_generate_report_cur;
+    l_cursor integer := null;
     l_ddl_generate_report_tab oracle_tools.ddl_crud_api.t_ddl_generate_report_tab;
     l_schema_object_filter oracle_tools.t_schema_object_filter := null;
 
@@ -3970,9 +3968,8 @@ $end
         end loop;
       end if;
       
-      exit when not l_cursor%isopen;
+      exit when l_cursor is null;
     end loop;
-    close l_cursor;
     if l_header_printed
     then
       print_footer;
