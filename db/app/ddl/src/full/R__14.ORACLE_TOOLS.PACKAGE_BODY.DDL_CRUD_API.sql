@@ -1246,9 +1246,11 @@ $end
       ,       src.last_chunk
       ,       src.schema_object
       from    src
+              left outer join deps d
+              on d.owner = src.object_schema and d.type = src.dict_object_type and d.name = src.object_name
       order by
               src.object_type_order
-      ,       ( select d.nr_deps from deps d where d.owner = src.object_schema and d.type = src.dict_object_type and d.name = src.object_name ) desc nulls last
+      ,       d.nr_deps desc nulls last
       ,       src.schema_object_id
       ,       src.ddl#
       ,       src.chunk#;
