@@ -3151,7 +3151,7 @@ $end
         , p_handle => l_handle
         );
 
-        if g_ddl_tab.count > 0
+        if g_ddl_tab is not null and g_ddl_tab.count > 0
         then
           for i_ku$ddls_idx in g_ddl_tab.first .. g_ddl_tab.last
           loop
