@@ -3637,15 +3637,6 @@ $end
     
     l_cursor integer := null;
     l_display_ddl_sql_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_tab;
-
-    -- to restore session id at the end
-    l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
-
-    procedure cleanup
-    is
-    begin
-      oracle_tools.ddl_crud_api.set_session_id(l_session_id);
-    end;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -3686,14 +3677,11 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
-    cleanup;
-
     return; -- essential
 
   exception
     when no_data_needed
     then
-      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
@@ -3701,7 +3689,6 @@ $end
 
     when no_data_found -- disappears otherwise (GJP 2022-12-29 as it should)
     then
-      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
@@ -3714,7 +3701,6 @@ $end
 
     when others
     then
-      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
@@ -3733,15 +3719,6 @@ $end
     l_display_ddl_sql_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_tab;
     l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
     l_schema_ddl oracle_tools.t_schema_ddl;
-    
-    -- to restore session id at the end
-    l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
-
-    procedure cleanup
-    is
-    begin
-      oracle_tools.ddl_crud_api.set_session_id(l_session_id);
-    end;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -3794,14 +3771,11 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
 $end
 
-    cleanup;
-
     return; -- essential
 
   exception
     when no_data_needed
     then
-      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave;
 $end
@@ -3809,7 +3783,6 @@ $end
 
     when no_data_found -- disappears otherwise (GJP 2022-12-29 as it should)
     then
-      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
@@ -3822,7 +3795,6 @@ $end
 
     when others
     then
-      cleanup;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
 $end
@@ -3840,15 +3812,6 @@ $end
 
     l_header_printed boolean := false;
     l_object_type_output_tab dbms_sql.clob_table;
-
-    -- to restore session id at the end
-    l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
-
-    procedure cleanup
-    is
-    begin
-      oracle_tools.ddl_crud_api.set_session_id(l_session_id);
-    end;
 
     procedure write(p_output in out nocopy clob, p_buffer in varchar2, p_nl in naturaln default 1)
     is
@@ -4060,12 +4023,6 @@ $end
     then
       print_footer;
     end if;
-    cleanup;
-  exception
-    when others
-    then
-      cleanup;
-      raise;
   end ddl_generate_report;
 
   procedure create_schema_ddl
