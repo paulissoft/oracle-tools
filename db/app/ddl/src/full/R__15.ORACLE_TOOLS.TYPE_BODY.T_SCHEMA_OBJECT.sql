@@ -1047,16 +1047,13 @@ return date
 is
   l_last_ddl_time all_objects.last_ddl_time%type;
 begin
-  select  o.last_ddl_time
+  select  max(o.last_ddl_time)
   into    l_last_ddl_time
   from    all_objects o
   where   o.owner = p_object_schema
   and     o.object_type = p_dict_object_type
   and     o.object_name = p_object_name;
   return l_last_ddl_time;
-exception
-  when no_data_found
-  then return null;
 end dict_last_ddl_time;
 
 member function dict_last_ddl_time
