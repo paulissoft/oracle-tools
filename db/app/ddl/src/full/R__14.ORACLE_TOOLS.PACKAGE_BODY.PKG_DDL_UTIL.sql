@@ -2068,7 +2068,7 @@ $end
     l_pos2 pls_integer;
     l_ddl_tab_last pls_integer; -- the collection may expand so just store the last entry
   begin
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
     dbug.enter(g_package_prefix || 'MD_FETCH_DDL');
 $end
 
@@ -2160,7 +2160,7 @@ $end
         g_ddl_tab := null;
     end;
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
     dbug.print(dbug."output", 'g_ddl_tab.count: %s', case when g_ddl_tab is not null then g_ddl_tab.count end);
     dbug.leave;
   exception
@@ -2196,7 +2196,6 @@ $end
       dbms_metadata.close(p_handle);
       p_handle := null;
     end if;
-    g_ddl_tab := null;
   end md_close;
 
   procedure parse_object
@@ -2233,7 +2232,7 @@ $end
       end if;
     end cleanup;
   begin
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
     dbug.enter(g_package_prefix || 'PARSE_OBJECT');
 $end
 
@@ -2356,7 +2355,7 @@ $end
 
     cleanup;
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
     dbug.print(dbug."output", 'p_object_key: %s', p_object_key);
     dbug.leave;
 $end
@@ -2372,7 +2371,7 @@ $end
     then
       p_object_key := null;
       cleanup;
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
       dbug.leave_on_error;
 $end
 
@@ -2380,7 +2379,7 @@ $end
     then
       p_object_key := null;
       cleanup;
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
       dbug.leave_on_error;
 $end
       raise;
@@ -2919,6 +2918,91 @@ $end
       raise;
   end get_schema_ddl_init;
 
+  /*
+  -- Help procedure to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
+  */
+  procedure fetch_ddl
+  ( p_object_type in varchar2
+  , p_object_schema in varchar2
+  , p_object_name_tab in oracle_tools.t_text_tab
+  , p_base_object_schema in varchar2
+  , p_base_object_name_tab in oracle_tools.t_text_tab
+  , p_transform_param_list in varchar2
+  , p_handle in out nocopy number
+  )
+  is
+    -- ORA-31642: the following SQL statement fails:
+    -- BEGIN "SYS"."DBMS_SCHED_EXPORT_CALLOUTS".SCHEMA_CALLOUT(:1,1,1,'11.02.00.00.00'); END;
+    -- ORA-06512: at "SYS.DBMS_SYS_ERROR", line 86
+    -- ORA-06512: at "SYS.DBMS_METADATA", line 1225
+    -- ORA-04092: cannot COMMIT in a trigger
+    l_transform_param_tab t_transform_param_tab;
+
+    procedure cleanup(p_close in boolean)
+    is
+    begin
+      if p_close and p_handle is not null
+      then
+        md_close(p_handle);
+        p_handle := null;
+      end if;
+    end cleanup;
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+    dbug.enter(g_package_prefix || 'FETCH_DDL');
+$end    
+
+    if p_handle is null
+    then
+      get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
+
+      g_ddl_tab := null;
+      md_open
+      ( p_object_type => p_object_type
+      , p_object_schema => p_object_schema
+      , p_object_name_tab => p_object_name_tab
+      , p_base_object_schema => p_base_object_schema
+      , p_base_object_name_tab => p_base_object_name_tab
+      , p_transform_param_tab => l_transform_param_tab
+      , p_handle => p_handle
+      );
+    end if;
+
+    md_fetch_ddl(p_handle, true); -- uses global variable g_ddl_tab
+
+    if g_ddl_tab is null -- dbms_metadata.fetch_ddl returned null
+    then
+      cleanup(true);
+    end if;
+
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+    dbug.leave;
+$end    
+  exception
+    when no_data_needed
+    then
+      cleanup(true);
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+      dbug.leave;
+$end    
+
+    when others
+    then
+      cleanup(true);
+      if p_object_type = "SCHEMA_EXPORT"
+      then
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+        dbug.leave;
+$end    
+        null;
+      else
+$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
+        dbug.leave_on_error;
+$end    
+        raise;
+      end if;
+  end fetch_ddl;
+
   procedure get_schema_ddl
   ( p_schema in varchar2
   , p_transform_param_list in varchar2
@@ -2936,12 +3020,88 @@ $end
   is
     l_program constant t_module := 'GET_SCHEMA_DDL (1)'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
 
+    l_handle number := null;
     l_object_key t_object;
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     l_start_time pls_integer;
 $end    
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec;
+
+    function process(p_ku$_ddl in out nocopy sys.ku$_ddl)
+    return boolean
+    is
+      l_stop boolean := false;
+    begin
+      parse_object
+      ( p_schema => p_schema
+      , p_constraint_lookup_tab => p_constraint_lookup_tab
+      , p_object_lookup_tab => p_object_lookup_tab
+      , p_ku$_ddl => p_ku$_ddl
+      , p_object_key => l_object_key
+      );
+
+      if l_object_key is not null
+      then
+        -- some checks
+        if not(p_object_lookup_tab.exists(l_object_key))
+        then
+          raise_application_error
+          ( oracle_tools.pkg_ddl_error.c_object_not_found
+          , 'Can not find object with key "' || l_object_key || '"'
+          );
+        end if;
+
+        if not(p_object_lookup_tab(l_object_key).ready)
+        then
+          oracle_tools.ddl_crud_api.add(p_schema_ddl => p_object_lookup_tab(l_object_key).schema_ddl);
+          p_object_lookup_tab(l_object_key).ready := true;
+          p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+          dbug.print
+          ( dbug."info"
+          , '# objects to go: %s (after %s milliseconds for object %s)'
+          , p_nr_objects_countdown-1
+          , lpad(to_char((dbms_utility.get_time - l_start_time) * 10, 'fm9999990'), 7) -- right aligned
+          , l_object_key
+          );
+          l_start_time := dbms_utility.get_time;
+$end         
+          begin
+            p_nr_objects_countdown := p_nr_objects_countdown - 1;
+          exception
+            when value_error -- tried to set it to 0 (it is positiven i.e. always > 0): we are ready
+            then
+            -- every object in p_object_lookup_tab is ready
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+              dbug.print(dbug."info", 'all schema DDL fetched');
+$end
+              l_stop := true;
+          end;
+        end if;
+      end if;
+
+      oracle_tools.api_longops_pkg.longops_show(l_longops_rec, 0);
+
+      return l_stop;
+    exception
+      when oracle_tools.pkg_ddl_error.e_object_not_found
+      then
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+        l_object_key := p_object_lookup_tab.first;
+        <<object_loop>>
+        while l_object_key is not null
+        loop
+          dbug.print
+          ( dbug."debug"
+          , 'Object key: %s'
+          , l_object_key
+          );
+          l_object_key := p_object_lookup_tab.next(l_object_key);
+        end loop object_loop;
+$end        
+        raise;
+    end;
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
@@ -2979,90 +3139,28 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       l_start_time := dbms_utility.get_time;
 $end    
 
-      <<fetch_loop>>
-      for r in
-      ( select  value(t) as obj
-        from    table
-                ( oracle_tools.pkg_ddl_util.fetch_ddl
-                  ( p_object_type => p_object_type
-                  , p_object_schema => p_object_schema
-                  , p_object_name_tab => p_object_name_tab
-                  , p_base_object_schema => p_base_object_schema
-                  , p_base_object_name_tab => p_base_object_name_tab
-                  , p_transform_param_list => p_transform_param_list
-                  )
-                ) t
-      )
+      <<fetch_ddl_loop>>
       loop
-        begin
-          parse_object
-          ( p_schema => p_schema
-          , p_constraint_lookup_tab => p_constraint_lookup_tab
-          , p_object_lookup_tab => p_object_lookup_tab
-          , p_ku$_ddl => r.obj
-          , p_object_key => l_object_key
-          );
+        fetch_ddl
+        ( p_object_type => p_object_type
+        , p_object_schema => p_object_schema
+        , p_object_name_tab => p_object_name_tab
+        , p_base_object_schema => p_base_object_schema
+        , p_base_object_name_tab => p_base_object_name_tab
+        , p_transform_param_list => p_transform_param_list
+        , p_handle => l_handle
+        );
 
-          if l_object_key is not null
-          then
-            -- some checks
-            if not(p_object_lookup_tab.exists(l_object_key))
-            then
-              raise_application_error
-              ( oracle_tools.pkg_ddl_error.c_object_not_found
-              , 'Can not find object with key "' || l_object_key || '"'
-              );
-            end if;
+        if g_ddl_tab.count > 0
+        then
+          for i_ku$ddls_idx in g_ddl_tab.first .. g_ddl_tab.last
+          loop
+            exit fetch_ddl_loop when process(g_ddl_tab(i_ku$ddls_idx));
+          end loop;
+        end if;
 
-            if not(p_object_lookup_tab(l_object_key).ready)
-            then
-              oracle_tools.ddl_crud_api.add(p_schema_ddl => p_object_lookup_tab(l_object_key).schema_ddl);
-              p_object_lookup_tab(l_object_key).ready := true;
-              p_object_lookup_tab(l_object_key).schema_ddl := null; -- free memory
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-              dbug.print
-              ( dbug."info"
-              , '# objects to go: %s (after %s milliseconds for object %s)'
-              , p_nr_objects_countdown-1
-              , lpad(to_char((dbms_utility.get_time - l_start_time) * 10, 'fm9999990'), 7) -- right aligned
-              , l_object_key
-              );
-              l_start_time := dbms_utility.get_time;
-$end         
-              begin
-                p_nr_objects_countdown := p_nr_objects_countdown - 1;
-              exception
-                when value_error -- tried to set it to 0 (it is positiven i.e. always > 0): we are ready
-                then
-                -- every object in p_object_lookup_tab is ready
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-                  dbug.print(dbug."info", 'all schema DDL fetched');
-$end
-                  exit fetch_loop;
-              end;
-            end if;
-          end if;
-
-          oracle_tools.api_longops_pkg.longops_show(l_longops_rec, 0);
-        exception
-          when oracle_tools.pkg_ddl_error.e_object_not_found
-          then
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-            l_object_key := p_object_lookup_tab.first;
-            <<object_loop>>
-            while l_object_key is not null
-            loop
-              dbug.print
-              ( dbug."debug"
-              , 'Object key: %s'
-              , l_object_key
-              );
-              l_object_key := p_object_lookup_tab.next(l_object_key);
-            end loop object_loop;
-$end        
-            raise;
-        end;
-      end loop fetch_loop;
+        exit fetch_ddl_loop when l_handle is null;
+      end loop fetch_ddl_loop;
 
       if p_add_no_ddl_retrieved
       then
@@ -3126,6 +3224,91 @@ $end
 
   /* PUBLIC ROUTINES */
 
+  procedure determine_schema_ddl
+  ( p_schema in t_schema_nn default user -- The schema name.
+  , p_new_schema in t_schema default null -- The new schema name.
+  , p_object_type in t_metadata_object_type default null -- Filter for object type.
+  , p_object_names in t_object_names default null -- A comma separated list of (base) object names.
+  , p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+  , p_network_link in t_network_link default null -- The network link.
+  , p_grantor_is_schema in t_numeric_boolean_nn default 0 -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
+  , p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+  , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
+  , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
+  )
+  is
+    l_schema_object_filter oracle_tools.t_schema_object_filter;
+    l_generate_ddl_configuration_id pls_integer;
+
+    l_program constant t_module := 'DETERMINE_SCHEMA_DDL'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+  begin
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.enter(g_package_prefix || l_program);
+    dbug.print(dbug."input"
+               ,'p_schema: %s; p_new_schema: %s; p_object_type: %s; p_object_names: %s'
+               ,p_schema
+               ,p_new_schema
+               ,p_object_type
+               ,p_object_names);
+    dbug.print(dbug."input"
+               ,'p_object_names_include: %s; p_network_link: %s; p_grantor_is_schema: %s; p_transform_param_list: %s'
+               ,p_object_names_include
+               ,p_network_link
+               ,p_grantor_is_schema
+               ,p_transform_param_list
+               );
+    dbug.print(dbug."input"
+               ,'p_exclude_objects length: %s; p_include_objects length: %s'
+               ,dbms_lob.getlength(p_exclude_objects)
+               ,dbms_lob.getlength(p_include_objects)
+               );
+$end
+
+    -- input checks
+    check_schema(p_schema => p_schema, p_network_link => p_network_link);
+    -- no checks for new schema: it may be null or any name
+    check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'object names include'); -- duplicate but for unit testing
+    check_network_link(p_network_link => p_network_link);
+    check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'grantor is schema'); -- duplicate but for unit testing
+
+    if p_network_link is null
+    then
+      oracle_tools.ddl_crud_api.add
+      ( p_schema => p_schema
+      , p_object_type => p_object_type
+      , p_object_names => p_object_names
+      , p_object_names_include => p_object_names_include
+      , p_grantor_is_schema => 0
+      , p_exclude_objects => p_exclude_objects
+      , p_include_objects => p_include_objects
+      , p_transform_param_list => p_transform_param_list
+      , p_schema_object_filter => l_schema_object_filter
+      , p_generate_ddl_configuration_id => l_generate_ddl_configuration_id
+      );
+      oracle_tools.schema_objects_api.add
+      ( p_schema_object_filter => l_schema_object_filter
+      , p_generate_ddl_configuration_id => l_generate_ddl_configuration_id
+      , p_add_schema_objects => true
+      );
+      get_schema_ddl
+      ( p_schema_object_filter => l_schema_object_filter
+      , p_transform_param_list => p_transform_param_list
+      );
+      commit;
+      ddl_batch_process;
+      commit;
+    end if;
+
+$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+    dbug.leave;
+  exception
+    when others
+    then
+      dbug.leave_on_error;
+      raise;
+$end      
+  end determine_schema_ddl;
+
   function display_ddl_sql
   ( p_schema in t_schema_nn
   , p_new_schema in t_schema
@@ -3144,22 +3327,13 @@ $end
   is
     pragma autonomous_transaction;
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-    l_count pls_integer;
-$end
-
-    l_schema_object_filter oracle_tools.t_schema_object_filter;
-    l_generate_ddl_configuration_id pls_integer;
-    l_network_link all_db_links.db_link%type := null;
-    l_cursor sys_refcursor;
-
-    l_display_ddl_sql_curr_tab oracle_tools.t_display_ddl_sql_tab;
-    l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
-
-    -- GJP 2022-12-31 Not used
-    -- l_transform_param_tab t_transform_param_tab;
-    l_line_tab dbms_sql.varchar2a;
     l_program constant t_module := 'DISPLAY_DDL_SQL (1)'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
+
+    l_cursor sys_refcursor; -- oracle_tools.ddl_crud_api.t_display_ddl_sql_cur;
+    l_network_link all_db_links.db_link%type := null;
+
+    l_display_ddl_sql_curr_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_tab;
+    l_display_ddl_sql_prev_tab oracle_tools.t_display_ddl_sql_tab := oracle_tools.t_display_ddl_sql_tab(); -- for pipe row
 
     -- dbms_application_info stuff
     l_longops_rec t_longops_rec :=
@@ -3202,37 +3376,7 @@ $end
   begin
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.enter(g_package_prefix || l_program);
-    dbug.print(dbug."input"
-               ,'p_schema: %s; p_new_schema: %s; p_sort_objects_by_deps: %s; p_object_type: %s; p_object_names: %s'
-               ,p_schema
-               ,p_new_schema
-               ,p_sort_objects_by_deps
-               ,p_object_type
-               ,p_object_names);
-    dbug.print(dbug."input"
-               ,'p_object_names_include: %s; p_network_link: %s; p_grantor_is_schema: %s; p_transform_param_list: %s'
-               ,p_object_names_include
-               ,p_network_link
-               ,p_grantor_is_schema
-               ,p_transform_param_list
-               );
-    dbug.print(dbug."input"
-               ,'p_exclude_objects length: %s; p_include_objects length: %s'
-               ,dbms_lob.getlength(p_exclude_objects)
-               ,dbms_lob.getlength(p_include_objects)
-               );
 $end
-
-    -- input checks
-    check_schema(p_schema => p_schema, p_network_link => p_network_link);
-    -- no checks for new schema: it may be null or any name
-    check_numeric_boolean(p_numeric_boolean => p_sort_objects_by_deps, p_description => 'sort objects by deps');
-    check_numeric_boolean(p_numeric_boolean => p_object_names_include, p_description => 'object names include'); -- duplicate but for unit testing
-    check_network_link(p_network_link => p_network_link);
-    check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'grantor is schema'); -- duplicate but for unit testing
-
-    -- GJP 2022-12-31 Not used
-    -- get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
 
     if p_network_link is not null
     then
@@ -3258,112 +3402,34 @@ $end
       );
 
       open l_cursor for '
-select  oracle_tools.t_display_ddl_sql
-        ( t.schema_object_id
-        , t.ddl#
-        , t.verb
-        , t.ddl_info
-        , t.chunk#
-        , t.chunk
-        )
+select  t.schema_object_id
+,       t.ddl#
+,       t.verb
+,       t.ddl_info
+,       t.chunk#
+,       t.chunk
+,       t.last_chunk
+,       t.schema_object
 from    oracle_tools.v_display_ddl_sql@' || l_network_link || ' t';
-    else -- local
-      oracle_tools.ddl_crud_api.add
+
+    else
+      determine_schema_ddl
       ( p_schema => p_schema
+      , p_new_schema => p_new_schema
       , p_object_type => p_object_type
       , p_object_names => p_object_names
       , p_object_names_include => p_object_names_include
-      , p_grantor_is_schema => 0
+      , p_network_link => p_network_link
+      , p_grantor_is_schema => p_grantor_is_schema
+      , p_transform_param_list => p_transform_param_list
       , p_exclude_objects => p_exclude_objects
       , p_include_objects => p_include_objects
-      , p_transform_param_list => p_transform_param_list
-      , p_schema_object_filter => l_schema_object_filter
-      , p_generate_ddl_configuration_id => l_generate_ddl_configuration_id
-      );
-      oracle_tools.schema_objects_api.add
-      ( p_schema_object_filter => l_schema_object_filter
-      , p_generate_ddl_configuration_id => l_generate_ddl_configuration_id
-      , p_add_schema_objects => true
       );
 
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      select count(*) into l_count from oracle_tools.v_my_schema_objects;
-      dbug.print
-      ( dbug."info"
-      , 'oracle_tools.ddl_crud_api.get_session_id: %s; # schema objects: %s'
-      , oracle_tools.ddl_crud_api.get_session_id
-      , l_count
-      );
-$end
-
-      get_schema_ddl
-      ( p_schema_object_filter => l_schema_object_filter
-      , p_transform_param_list => p_transform_param_list
-      );
-      commit;
-      ddl_batch_process;
-      commit;
-
-$if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
-      select count(*) into l_count from oracle_tools.v_my_schema_ddls;
-      dbug.print
-      ( dbug."info"
-      , 'oracle_tools.ddl_crud_api.get_session_id: %s; # schema object ddls: %s'
-      , oracle_tools.ddl_crud_api.get_session_id
-      , l_count
-      );
-$end      
-
-      if nvl(p_sort_objects_by_deps, 0) != 0
-      then
-        open l_cursor for
-          select  oracle_tools.t_display_ddl_sql
-                  ( s.obj.id
-                  , s.ddl#
-                  , s.verb
-                  , s.ddl_info
-                  , s.chunk#
-                  , s.chunk
-                  , s.last_chunk
-                  , s.obj
-                  )
-          from    oracle_tools.v_my_schema_ddls s
-                  -- GPA 27-10-2016 We should not forget objects so use left outer join
-                  inner join
-                  ( select  d.id as schema_object_id
-                    ,       rownum as nr
-                    from    table
-                            ( oracle_tools.pkg_ddl_util.sort_objects_by_deps
-                              ( p_schema
-                              )
-                            ) d
-                  ) d
-                  on d.schema_object_id = s.obj.id
-          order by
-                  d.nr
-          ,       s.ddl#
-          ,       s.chunk#
-          ;
-      else
-        -- normal stuff: no network link, no dependency sorting
-        open l_cursor for
-          select  oracle_tools.t_display_ddl_sql
-                  ( s.obj.id
-                  , s.ddl#
-                  , s.verb
-                  , s.ddl_info
-                  , s.chunk#
-                  , s.chunk
-                  , s.last_chunk
-                  , s.obj
-                  )
-          from    oracle_tools.v_my_schema_ddls s
-          order by
-                  s.obj.id
-          ,       s.ddl#
-          ,       s.chunk#
-        ;
-      end if;
+      l_cursor := oracle_tools.ddl_crud_api.get_display_ddl_sql_cursor
+                  ( p_session_id => oracle_tools.ddl_crud_api.get_session_id
+                  , p_sort_objects_by_deps => p_sort_objects_by_deps
+                  );
     end if;
 
     <<fetch_loop>>
@@ -3384,7 +3450,17 @@ $end
         loop
           -- save current values 
           l_display_ddl_sql_prev_tab.extend(1);
-          l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) := l_display_ddl_sql_curr_tab(i_idx);
+          l_display_ddl_sql_prev_tab(l_display_ddl_sql_prev_tab.last) :=
+            oracle_tools.t_display_ddl_sql
+            ( schema_object_id => l_display_ddl_sql_curr_tab(i_idx).schema_object_id
+            , ddl# => l_display_ddl_sql_curr_tab(i_idx).ddl#
+            , verb => l_display_ddl_sql_curr_tab(i_idx).verb
+            , ddl_info => l_display_ddl_sql_curr_tab(i_idx).ddl_info
+            , chunk# => l_display_ddl_sql_curr_tab(i_idx).chunk#
+            , chunk => l_display_ddl_sql_curr_tab(i_idx).chunk
+            , last_chunk => l_display_ddl_sql_curr_tab(i_idx).last_chunk
+            , schema_object => l_display_ddl_sql_curr_tab(i_idx).schema_object
+            );
           
           if l_display_ddl_sql_curr_tab(i_idx).last_chunk = 1
           then
@@ -3549,7 +3625,7 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
       dbug.leave_on_error;
       raise;
 $end
-end display_ddl_schema;
+  end display_ddl_schema;
 
   function display_ddl_sql
   ( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
@@ -3577,7 +3653,12 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
     
     loop
-      oracle_tools.ddl_crud_api.fetch_display_ddl_sql(p_session_id, l_cursor, l_display_ddl_sql_tab);
+      oracle_tools.ddl_crud_api.fetch_display_ddl_sql
+      ( p_session_id => p_session_id
+      , p_sort_objects_by_deps => 0
+      , p_cursor => l_cursor
+      , p_display_ddl_sql_tab => l_display_ddl_sql_tab
+      );
 
       if l_display_ddl_sql_tab.count > 0
       then
@@ -3669,8 +3750,13 @@ $end
 
     loop
       -- use display_ddl_sql
-      oracle_tools.ddl_crud_api.fetch_display_ddl_sql(p_session_id, l_cursor, l_display_ddl_sql_tab);
-
+      oracle_tools.ddl_crud_api.fetch_display_ddl_sql
+      ( p_session_id => p_session_id
+      , p_sort_objects_by_deps => 0
+      , p_cursor => l_cursor
+      , p_display_ddl_sql_tab => l_display_ddl_sql_tab
+      );
+      
       if l_display_ddl_sql_tab.count > 0
       then
         for i_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
@@ -5729,99 +5815,6 @@ $end
 
     return l_result;
   end is_exclude_name_expr;
-
-  /*
-  -- Help function to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
-  */
-  function fetch_ddl
-  ( p_object_type in varchar2
-  , p_object_schema in varchar2
-  , p_object_name_tab in oracle_tools.t_text_tab
-  , p_base_object_schema in varchar2
-  , p_base_object_name_tab in oracle_tools.t_text_tab
-  , p_transform_param_list in varchar2
-  )
-  return sys.ku$_ddls
-  pipelined
-  is
-    -- ORA-31642: the following SQL statement fails:
-    -- BEGIN "SYS"."DBMS_SCHED_EXPORT_CALLOUTS".SCHEMA_CALLOUT(:1,1,1,'11.02.00.00.00'); END;
-    -- ORA-06512: at "SYS.DBMS_SYS_ERROR", line 86
-    -- ORA-06512: at "SYS.DBMS_METADATA", line 1225
-    -- ORA-04092: cannot COMMIT in a trigger
-    pragma autonomous_transaction;
-
-    l_handle number := null;
-
-    l_transform_param_tab t_transform_param_tab;
-  begin
-$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
-    dbug.enter(g_package_prefix || 'FETCH_DDL');
-$end    
-
-    get_transform_param_tab(p_transform_param_list, l_transform_param_tab);
-
-    md_open
-    ( p_object_type => p_object_type
-    , p_object_schema => p_object_schema
-    , p_object_name_tab => p_object_name_tab
-    , p_base_object_schema => p_base_object_schema
-    , p_base_object_name_tab => p_base_object_name_tab
-    , p_transform_param_tab => l_transform_param_tab
-    , p_handle => l_handle
-    );
-
-    -- objects fetched for this param
-    <<fetch_loop>>
-    loop
-      md_fetch_ddl(l_handle, true);
-
-      exit fetch_loop when g_ddl_tab is null;
-
-      if g_ddl_tab.count > 0
-      then
-        for i_ku$ddls_idx in g_ddl_tab.first .. g_ddl_tab.last
-        loop
-          pipe row (g_ddl_tab(i_ku$ddls_idx));
-        end loop;
-      end if;
-    end loop fetch_loop;
-
-    md_close(l_handle);
-
-$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
-    dbug.leave;
-$end    
-  exception
-    when no_data_needed
-    then
-      if l_handle is not null
-      then
-        md_close(l_handle);
-      end if;
-$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
-      dbug.leave;
-$end    
-
-    when others
-    then
-      if l_handle is not null
-      then
-        md_close(l_handle);
-      end if;
-      if p_object_type = "SCHEMA_EXPORT"
-      then
-$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
-        dbug.leave;
-$end    
-        null;
-      else
-$if oracle_tools.pkg_ddl_util.c_debugging_dbms_metadata $then
-        dbug.leave_on_error;
-$end    
-        raise;
-      end if;
-  end fetch_ddl;
 
   procedure get_schema_ddl
   ( p_schema in varchar2

@@ -54,6 +54,8 @@ subtype t_session_id_nn is t_session_id not null;
 subtype t_schema_object_filter_id is integer;
 subtype t_schema_object_filter_id_nn is t_session_id not null;  
 
+subtype t_numeric_boolean_nn is oracle_tools.pkg_ddl_util.t_numeric_boolean_nn;
+
 procedure set_session_id
 ( p_session_id in t_session_id_nn -- The session id.
 );
@@ -398,8 +400,17 @@ type t_display_ddl_sql_rec is record
 
 type t_display_ddl_sql_tab is table of t_display_ddl_sql_rec;
 
+type t_display_ddl_sql_cur is ref cursor return t_display_ddl_sql_rec;
+
+function get_display_ddl_sql_cursor
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- Sort objects in dependency order to reduce the number of installation errors/warnings.
+)
+return t_display_ddl_sql_cur;
+
 procedure fetch_display_ddl_sql
 ( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- Sort objects in dependency order to reduce the number of installation errors/warnings.
 , p_cursor in out nocopy integer -- null the first input, null on output when closed/finished, i.e. nothing more to fetch
 , p_display_ddl_sql_tab out nocopy t_display_ddl_sql_tab
 );

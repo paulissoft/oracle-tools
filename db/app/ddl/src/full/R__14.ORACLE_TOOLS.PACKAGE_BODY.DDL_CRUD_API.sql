@@ -1179,6 +1179,130 @@ $end
     raise;
 end fetch_schema_objects;
 
+function get_display_ddl_sql_cursor
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- Sort objects in dependency order to reduce the number of installation errors/warnings.
+)
+return t_display_ddl_sql_cur
+is
+  l_cursor t_display_ddl_sql_cur;
+begin
+  if nvl(p_sort_objects_by_deps, 0) != 0
+  then
+    open l_cursor for
+      with gdc as
+      ( select  /*+ MATERIALIZE */ gd.id as generated_ddl_id
+        ,       gds.generate_ddl_configuration_id
+        ,       gd.schema_object_id
+        ,       so.obj as schema_object
+        ,       so.obj.object_type_order() as object_type_order
+        ,       so.obj.object_schema() as object_schema
+        ,       so.obj.base_object_type() as base_object_type
+        ,       so.obj.object_name() as object_name
+        from    oracle_tools.generate_ddl_sessions gds
+                inner join oracle_tools.generate_ddl_configurations gdc
+                on gdc.id = gds.generate_ddl_configuration_id
+                inner join oracle_tools.generated_ddls gd
+                on gd.generate_ddl_configuration_id = gdc.id
+                inner join oracle_tools.schema_objects so
+                on so.id = gd.schema_object_id
+        where   gds.session_id = p_session_id
+      ), deps as
+      ( select  d.owner
+        ,       d.type
+        ,       d.name
+        ,       d.referenced_owner
+        ,       d.referenced_type
+        ,       d.referenced_name
+        from    all_dependencies d
+                inner join gdc
+                on gdc.object_schema = d.referenced_owner and
+                   gdc.base_object_type = d.referenced_type and
+                   gdc.object_name = d.referenced_name
+        where   -- don't count specifications their bodies
+                d.owner <> d.referenced_owner
+        or      d.name <> d.referenced_name
+      ), src as
+      ( select  gdc.*
+        ,       gds.ddl#
+        ,       gds.verb
+        ,       case
+                  when gds.verb is not null and gds.ddl# is not null
+                  then oracle_tools.t_ddl.ddl_info(p_schema_object => gdc.schema_object, p_verb => gds.verb, p_ddl# => gds.ddl#)
+                end as ddl_info
+        ,       gdsc.chunk#
+        ,       gdsc.chunk
+        ,       row_number() over (partition by gdc.schema_object_id order by gds.ddl# desc, gdsc.chunk# desc) as seq_per_schema_object_desc
+        ,       ( select count(*) from deps d where d.owner = gdc.object_schema and d.type = gdc.base_object_type and d.name = gdc.object_name ) as nr_deps
+        from    gdc
+                left outer join oracle_tools.generated_ddl_statements gds
+                on gds.generated_ddl_id = gdc.generated_ddl_id
+                left outer join oracle_tools.generated_ddl_statement_chunks gdsc
+                on gdsc.generated_ddl_id = gds.generated_ddl_id and
+                   gdsc.ddl# = gds.ddl#              
+      )
+      select  src.schema_object_id
+      ,       src.ddl#
+      ,       src.verb
+      ,       src.ddl_info
+      ,       src.chunk#
+      ,       src.chunk
+      ,       case when src.seq_per_schema_object_desc = 1 then 1 else null end as last_chunk
+      ,       src.schema_object
+      from    src
+      order by
+              src.object_type_order
+      ,       src.nr_deps desc        
+      ,       src.schema_object_id
+      ,       src.ddl#
+      ,       src.verb
+      ,       src.chunk#;
+  else
+    open l_cursor for
+      with src as
+      ( select  gd.schema_object_id
+        ,       gds.ddl#
+        ,       gds.verb
+        ,       case
+                  when gds.verb is not null and gds.ddl# is not null
+                  then oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#)
+                end as ddl_info
+        ,       gdsc.chunk#
+        ,       gdsc.chunk
+        ,       so.obj as schema_object
+        ,       row_number() over (partition by gd.schema_object_id order by gds.ddl# desc, gdsc.chunk# desc) as seq_per_schema_object_desc
+        from    oracle_tools.generate_ddl_sessions gds
+                inner join oracle_tools.generate_ddl_configurations gdc
+                on gdc.id = gds.generate_ddl_configuration_id
+                inner join oracle_tools.generated_ddls gd
+                on gd.generate_ddl_configuration_id = gdc.id
+                inner join oracle_tools.schema_objects so
+                on so.id = gd.schema_object_id
+                left outer join oracle_tools.generated_ddl_statements gds
+                on gds.generated_ddl_id = gd.id
+                left outer join oracle_tools.generated_ddl_statement_chunks gdsc
+                on gdsc.generated_ddl_id = gds.generated_ddl_id and
+                   gdsc.ddl# = gds.ddl#              
+        where   gds.session_id = p_session_id
+      )
+      select  src.schema_object_id
+      ,       src.ddl#
+      ,       src.verb
+      ,       src.ddl_info
+      ,       src.chunk#
+      ,       src.chunk
+      ,       case when src.seq_per_schema_object_desc = 1 then 1 else null end as last_chunk
+      ,       src.schema_object
+      from    src
+      order by
+              src.schema_object_id
+      ,       src.ddl#
+      ,       src.verb
+      ,       src.chunk#;
+  end if;
+  return l_cursor;
+end get_display_ddl_sql_cursor;
+
 procedure fetch_display_ddl_sql
 ( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
 , p_sort_objects_by_deps in t_numeric_boolean_nn -- Sort objects in dependency order to reduce the number of installation errors/warnings.
@@ -1190,7 +1314,7 @@ $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FETCH_DISPLAY_DDL_SQL';
 $end
 
-  l_cursor sys_refcursor;
+  l_cursor t_display_ddl_sql_cur;
   l_session_id t_session_id := null;
 
   procedure cleanup(p_close in boolean)
@@ -1220,119 +1344,10 @@ $end
     l_session_id := get_session_id;
     set_session_id(p_session_id); -- just a check
 
-    if p_sort_objects_by_deps != 0
-    then
-      open l_cursor for
-        with gdc as
-        ( select  /*+ MATERIALIZE */ gd.id as generated_ddl_id
-          ,       gds.generate_ddl_configuration_id
-          ,       gd.schema_object_id
-          ,       so.obj as schema_object
-          ,       so.obj.object_type_order() as object_type_order
-          ,       so.obj.object_schema() as object_schema
-          ,       so.obj.base_object_type() as base_object_type
-          ,       so.obj.object_name() as object_name
-          from    oracle_tools.generate_ddl_sessions gds
-                  inner join oracle_tools.generate_ddl_configurations gdc
-                  on gdc.id = gds.generate_ddl_configuration_id
-                  inner join oracle_tools.generated_ddls gd
-                  on gd.generate_ddl_configuration_id = gdc.id
-                  inner join oracle_tools.schema_objects so
-                  on so.id = gd.schema_object_id
-          where   gds.session_id = p_session_id
-        ), deps as
-        ( select  d.owner
-          ,       d.type
-          ,       d.name
-          ,       d.referenced_owner
-          ,       d.referenced_type
-          ,       d.referenced_name
-          from    all_dependencies d
-                  inner join gdc
-                  on gdc.object_schema = d.referenced_owner and
-                     gdc.base_object_type = d.referenced_type and
-                     gdc.object_name = d.referenced_name
-          where   -- don't count specifications their bodies
-                  d.owner <> d.referenced_owner
-          or      d.name <> d.referenced_name
-        ), src as
-        ( select  gdc.*
-          ,       gds.ddl#
-          ,       gds.verb
-          ,       case
-                    when gds.verb is not null and gds.ddl# is not null
-                    then oracle_tools.t_ddl.ddl_info(p_schema_object => gdc.schema_object, p_verb => gds.verb, p_ddl# => gds.ddl#)
-                  end as ddl_info
-          ,       gdsc.chunk#
-          ,       gdsc.chunk
-          ,       row_number() over (partition by gdc.schema_object_id order by gds.ddl# desc, gdsc.chunk# desc) as seq_per_schema_object_desc
-          ,       ( select count(*) from deps d where d.owner = gdc.object_schema and d.type = gdc.base_object_type and d.name = gdc.object_name ) as nr_deps
-          from    gdc
-                  left outer join oracle_tools.generated_ddl_statements gds
-                  on gds.generated_ddl_id = gdc.generated_ddl_id
-                  left outer join oracle_tools.generated_ddl_statement_chunks gdsc
-                  on gdsc.generated_ddl_id = gds.generated_ddl_id and
-                     gdsc.ddl# = gds.ddl#              
-        )
-        select  src.schema_object_id
-        ,       src.ddl#
-        ,       src.verb
-        ,       src.ddl_info
-        ,       src.chunk#
-        ,       src.chunk
-        ,       case when src.seq_per_schema_object_desc = 1 then 1 else null end as last_chunk
-        ,       src.schema_object
-        from    src
-        order by
-                src.object_type_order
-        ,       src.nr_deps desc        
-        ,       src.schema_object_id
-        ,       src.ddl#
-        ,       src.verb
-        ,       src.chunk#;
-    else
-      open l_cursor for
-        with src as
-        ( select  gd.schema_object_id
-          ,       gds.ddl#
-          ,       gds.verb
-          ,       case
-                    when gds.verb is not null and gds.ddl# is not null
-                    then oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#)
-                  end as ddl_info
-          ,       gdsc.chunk#
-          ,       gdsc.chunk
-          ,       so.obj as schema_object
-          ,       row_number() over (partition by gd.schema_object_id order by gds.ddl# desc, gdsc.chunk# desc) as seq_per_schema_object_desc
-          from    oracle_tools.generate_ddl_sessions gds
-                  inner join oracle_tools.generate_ddl_configurations gdc
-                  on gdc.id = gds.generate_ddl_configuration_id
-                  inner join oracle_tools.generated_ddls gd
-                  on gd.generate_ddl_configuration_id = gdc.id
-                  inner join oracle_tools.schema_objects so
-                  on so.id = gd.schema_object_id
-                  left outer join oracle_tools.generated_ddl_statements gds
-                  on gds.generated_ddl_id = gd.id
-                  left outer join oracle_tools.generated_ddl_statement_chunks gdsc
-                  on gdsc.generated_ddl_id = gds.generated_ddl_id and
-                     gdsc.ddl# = gds.ddl#              
-          where   gds.session_id = p_session_id
-        )
-        select  src.schema_object_id
-        ,       src.ddl#
-        ,       src.verb
-        ,       src.ddl_info
-        ,       src.chunk#
-        ,       src.chunk
-        ,       case when src.seq_per_schema_object_desc = 1 then 1 else null end as last_chunk
-        ,       src.schema_object
-        from    src
-        order by
-                src.schema_object_id
-        ,       src.ddl#
-        ,       src.verb
-        ,       src.chunk#;
-    end if;
+    l_cursor := get_display_ddl_sql_cursor
+                ( p_session_id => p_session_id
+                , p_sort_objects_by_deps => p_sort_objects_by_deps
+                );
   else
     l_cursor := dbms_sql.to_refcursor(p_cursor);
   end if;

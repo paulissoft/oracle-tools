@@ -49,7 +49,7 @@ c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $e
 c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
 
-c_default_parallel_level constant natural := 4; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
+c_default_parallel_level constant natural := 2; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
 
 -- Duplicate code see DDL_CRUD_API but we do notwant package spec A to invoke package spec B and vice versa.
 subtype t_session_id is integer;
@@ -183,6 +183,19 @@ procedure md_fetch_ddl
 
 procedure md_close
 ( p_handle in out number
+);
+
+procedure determine_schema_ddl
+( p_schema in t_schema_nn default user -- The schema name.
+, p_new_schema in t_schema default null -- The new schema name.
+, p_object_type in t_metadata_object_type default null -- Filter for object type.
+, p_object_names in t_object_names default null -- A comma separated list of (base) object names.
+, p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_network_link in t_network_link default null -- The network link.
+, p_grantor_is_schema in t_numeric_boolean_nn default 0 -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
+, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
+, p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 );
 
 function display_ddl_sql
@@ -420,17 +433,6 @@ function is_exclude_name_expr
 return integer
 deterministic;
 
-function fetch_ddl
-( p_object_type in varchar2
-, p_object_schema in varchar2
-, p_object_name_tab in oracle_tools.t_text_tab
-, p_base_object_schema in varchar2
-, p_base_object_name_tab in oracle_tools.t_text_tab
-, p_transform_param_list in varchar2
-)
-return sys.ku$_ddls
-pipelined;
-
 procedure get_schema_ddl
 ( p_schema in varchar2
 , p_transform_param_list in varchar2
@@ -527,16 +529,6 @@ Help procedure to retrieve the results of display_ddl_schema on a remote databas
 Remark 1: Uses view v_display_ddl_sql because pipelined functions and a database link are not allowed.
 Remark 2: A call to display_ddl_schema() with a database linke will invoke set_display_ddl_schema() at the remote database.
 
-**/
-
-function sort_objects_by_deps
-( p_schema in t_schema_nn default user
-)
-return oracle_tools.t_schema_object_tab
-pipelined;
-
-/**
-Sort objects on dependency order, i.e. T_SCHEMA_OBJECT.OBJECT_TYPE_ORDER().
 **/
 
 procedure migrate_schema_ddl
