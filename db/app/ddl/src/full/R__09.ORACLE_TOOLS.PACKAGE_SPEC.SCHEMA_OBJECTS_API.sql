@@ -6,7 +6,7 @@ This package is used to get objects from the dictionary with current user authen
 [This documentation is in PLOC format](https://github.com/ogobrecht/ploc)
 **/
 
-c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
+c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 2;
 c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
 c_use_ddl_batch_process constant boolean := true;
 
