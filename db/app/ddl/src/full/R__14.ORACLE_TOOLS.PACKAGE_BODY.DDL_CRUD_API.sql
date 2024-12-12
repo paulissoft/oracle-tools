@@ -1185,8 +1185,20 @@ function get_display_ddl_sql_cursor
 )
 return t_display_ddl_sql_cur
 is
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_DISPLAY_DDL_SQL_CURSOR';
+$end
+
   l_cursor t_display_ddl_sql_cur;
 begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+  dbug.print(dbug."input", 'p_sort_objects_by_deps: %s', p_sort_objects_by_deps);
+$end
+$end
+
   -- must be like oracle_tools.v_my_schema_ddls
   if nvl(p_sort_objects_by_deps, 0) <> 0 
   then
@@ -1206,7 +1218,8 @@ begin
         ,       case when src.obj is not null then src.obj.object_name() end as object_name
         from    oracle_tools.v_my_schema_ddls src
       ), deps as
-      ( select  d.owner
+      ( select  /*+ MATERIALIZE */
+                d.owner
         ,       d.type
         ,       d.name
         ,       d.referenced_owner
@@ -1253,7 +1266,19 @@ begin
       ,       src.ddl#
       ,       src.chunk#;
   end if;
+  
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.leave;
+$end
+
   return l_cursor;
+exception
+  when others
+  then
+$if oracle_tools.ddl_crud_api.c_tracing $then
+    dbug.leave_on_error;
+$end
+    raise;
 end get_display_ddl_sql_cursor;
 
 procedure fetch_display_ddl_sql
@@ -1288,7 +1313,8 @@ $if oracle_tools.ddl_crud_api.c_tracing $then
   dbug.enter(l_module_name);
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
-  dbug.print(dbug."input", 'p_cursor: %s', p_cursor);  
+  dbug.print(dbug."input", 'p_sort_objects_by_deps: %s', p_sort_objects_by_deps);
+  dbug.print(dbug."input", 'p_cursor: %s', p_cursor);
 $end
 $end
 
