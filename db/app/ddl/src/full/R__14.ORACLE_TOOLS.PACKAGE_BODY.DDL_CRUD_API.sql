@@ -20,34 +20,15 @@ function get_schema_object_filter_id
 return t_schema_object_filter_id
 is
   l_schema_object_filter_id t_schema_object_filter_id;
-
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECT_FILTER_ID (1)';
-$end
 begin
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  dbug.enter(l_module_name);
-  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
-$end
-
   select  gds.schema_object_filter_id
   into    l_schema_object_filter_id
   from    oracle_tools.generate_ddl_sessions gds
   where   gds.session_id = p_session_id;
-
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  dbug.print(dbug."output", 'return: %s', l_schema_object_filter_id);
-  dbug.leave;
-$end
-
   return l_schema_object_filter_id;
 exception
   when no_data_found
   then
-$if oracle_tools.ddl_crud_api.c_tracing $then
-    dbug.print(dbug."output", 'return: %s', to_char(null));
-    dbug.leave_on_error;
-$end
     return null;
 end get_schema_object_filter_id;
 
@@ -56,29 +37,11 @@ function get_schema_object_filter
 )
 return oracle_tools.t_schema_object_filter
 is
-  l_schema_object_filter oracle_tools.t_schema_object_filter;
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECT_FILTER (1)';
-$end
 begin
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  dbug.enter(l_module_name);
-  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
-$end
-
-  l_schema_object_filter := get_schema_object_filter(p_schema_object_filter_id => get_schema_object_filter_id(p_session_id => p_session_id));
-
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  dbug.leave;
-$end
-
-  return l_schema_object_filter;
+  return get_schema_object_filter(p_schema_object_filter_id => get_schema_object_filter_id(p_session_id => p_session_id));
 exception
   when no_data_found
   then
-$if oracle_tools.ddl_crud_api.c_tracing $then
-    dbug.leave_on_error;
-$end
      return null;
 end get_schema_object_filter;
 
@@ -761,46 +724,15 @@ end get_session_id;
 function get_schema_object_filter_id
 return t_schema_object_filter_id
 is
-  l_schema_object_filter_id t_schema_object_filter_id;
-  
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECT_FILTER_ID (2)';
-$end
 begin
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  dbug.enter(l_module_name);
-$end
-
-  l_schema_object_filter_id := get_schema_object_filter_id(p_session_id => get_session_id);
-
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  dbug.print(dbug."output", 'return: %s', l_schema_object_filter_id);
-  dbug.leave;
-$end
-
-  return l_schema_object_filter_id;
+  return get_schema_object_filter_id(p_session_id => get_session_id);
 end get_schema_object_filter_id;
 
 function get_schema_object_filter
 return oracle_tools.t_schema_object_filter
 is
-  l_schema_object_filter oracle_tools.t_schema_object_filter;
-
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECT_FILTER (2)';
-$end
 begin
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  dbug.enter(l_module_name);
-$end
-
-  l_schema_object_filter := get_schema_object_filter(p_session_id => get_session_id);
-
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  dbug.leave;
-$end
-
-  return l_schema_object_filter;
+  return get_schema_object_filter(p_session_id => get_session_id);
 end get_schema_object_filter;
 
 function get_schema_object_filter
@@ -808,32 +740,16 @@ function get_schema_object_filter
 )
 return oracle_tools.t_schema_object_filter
 is
-  l_schema_object_filter oracle_tools.t_schema_object_filter := null;
-
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECT_FILTER (3)';
-$end
 begin
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  dbug.enter(l_module_name);
-  dbug.print(dbug."input", 'p_schema_object_filter_id: %s', p_schema_object_filter_id);
-$end
-
   for r in
   ( select  sof.obj_json 
     from    oracle_tools.schema_object_filters sof
     where   sof.id = p_schema_object_filter_id
   )
   loop
-    l_schema_object_filter := treat(oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER', r.obj_json) as oracle_tools.t_schema_object_filter);
-    exit;
+    return treat(oracle_tools.t_object_json.deserialize('ORACLE_TOOLS.T_SCHEMA_OBJECT_FILTER', r.obj_json) as oracle_tools.t_schema_object_filter);
   end loop;
-
-$if oracle_tools.ddl_crud_api.c_tracing $then
-  dbug.leave;
-$end
-
-  return l_schema_object_filter;
+  return null;
 end get_schema_object_filter;
 
 function find_schema_object
@@ -1185,19 +1101,36 @@ procedure fetch_schema_objects
 , p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
-  l_cursor sys_refcursor := case when p_cursor is not null then dbms_sql.to_refcursor(p_cursor) end;
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FETCH_SCHEMA_OBJECTS';
+$end
+
+  l_cursor sys_refcursor;
   l_session_id t_session_id := null;
 
-  procedure cleanup
+  procedure cleanup(p_close in boolean)
   is
   begin
     if l_session_id is not null
     then
       set_session_id(l_session_id);
     end if;
+    if p_close and l_cursor%isopen
+    then
+      close l_cursor;
+      p_cursor := null;
+    end if;
   end cleanup;
 begin
-  if p_cursor is null
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+  dbug.print(dbug."input", 'p_cursor: %s', p_cursor);  
+$end
+$end
+
+  if not dbms_sql.is_open(p_cursor)
   then
     l_session_id := get_session_id;
     set_session_id(p_session_id); -- just a check
@@ -1215,107 +1148,219 @@ begin
       where   gds.session_id = p_session_id
       order by
               so.id;
+  else
+    l_cursor := dbms_sql.to_refcursor(p_cursor);
   end if;
   
   fetch l_cursor bulk collect into p_schema_object_tab limit c_fetch_limit;
   
   if p_schema_object_tab.count < c_fetch_limit
   then
-    close l_cursor;
-    p_cursor := 0;
+    cleanup(true);
   else              
     p_cursor := dbms_sql.to_cursor_number(l_cursor);
+    cleanup(false);
   end if;
-  
-  cleanup;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."output", 'p_cursor: %s', p_cursor);  
+  dbug.print(dbug."output", 'cardinality(p_schema_object_tab): %s', cardinality(p_schema_object_tab));  
+$end
+  dbug.leave;
+$end
 exception
   when others
   then
-    cleanup;
+    cleanup(true);
+$if oracle_tools.ddl_crud_api.c_tracing $then
+    dbug.leave_on_error;
+$end
     raise;
 end fetch_schema_objects;
 
 procedure fetch_display_ddl_sql
 ( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_sort_objects_by_deps in t_numeric_boolean_nn -- Sort objects in dependency order to reduce the number of installation errors/warnings.
 , p_cursor in out nocopy integer
 , p_display_ddl_sql_tab out t_display_ddl_sql_tab
 )
 is
-  l_cursor sys_refcursor := case when p_cursor is not null then dbms_sql.to_refcursor(p_cursor) end;
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FETCH_DISPLAY_DDL_SQL';
+$end
+
+  l_cursor sys_refcursor;
   l_session_id t_session_id := null;
 
-  procedure cleanup
+  procedure cleanup(p_close in boolean)
   is
   begin
     if l_session_id is not null
     then
       set_session_id(l_session_id);
     end if;
+    if p_close and l_cursor%isopen
+    then
+      close l_cursor;
+      p_cursor := null;
+    end if;
   end cleanup;
 begin
-  if p_cursor is null
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+  dbug.print(dbug."input", 'p_cursor: %s', p_cursor);  
+$end
+$end
+
+  if not dbms_sql.is_open(p_cursor)
   then
     l_session_id := get_session_id;
     set_session_id(p_session_id); -- just a check
 
-    open l_cursor for
-      with src as
-      ( select  gd.schema_object_id
-        ,       gds.ddl#
-        ,       gds.verb
-        ,       case
-                  when gds.verb is not null and gds.ddl# is not null
-                  then oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#)
-                end as ddl_info
-        ,       gdsc.chunk#
-        ,       gdsc.chunk
-        ,       so.obj as schema_object
-        ,       row_number() over (partition by gd.schema_object_id order by gds.ddl# desc, gdsc.chunk# desc) as seq_per_schema_object_desc
-        from    oracle_tools.generate_ddl_sessions gds
-                inner join oracle_tools.generate_ddl_configurations gdc
-                on gdc.id = gds.generate_ddl_configuration_id
-                inner join oracle_tools.generated_ddls gd
-                on gd.generate_ddl_configuration_id = gdc.id
-                inner join oracle_tools.schema_objects so
-                on so.id = gd.schema_object_id
-                left outer join oracle_tools.generated_ddl_statements gds
-                on gds.generated_ddl_id = gd.id
-                left outer join oracle_tools.generated_ddl_statement_chunks gdsc
-                on gdsc.generated_ddl_id = gds.generated_ddl_id and
-                   gdsc.ddl# = gds.ddl#              
-        where   gds.session_id = p_session_id
-      )
-      select  src.schema_object_id
-      ,       src.ddl#
-      ,       src.verb
-      ,       src.ddl_info
-      ,       src.chunk#
-      ,       src.chunk
-      ,       case when src.seq_per_schema_object_desc = 1 then 1 else null end as last_chunk
-      ,       src.schema_object
-      from    src
-      order by
-              src.schema_object_id
-      ,       src.ddl#
-      ,       src.verb
-      ,       src.chunk#;
+    if p_sort_objects_by_deps != 0
+    then
+      open l_cursor for
+        with gdc as
+        ( select  /*+ MATERIALIZE */ gd.id as generated_ddl_id
+          ,       gds.generate_ddl_configuration_id
+          ,       gd.schema_object_id
+          ,       so.obj as schema_object
+          ,       so.obj.object_type_order() as object_type_order
+          ,       so.obj.object_schema() as object_schema
+          ,       so.obj.base_object_type() as base_object_type
+          ,       so.obj.object_name() as object_name
+          from    oracle_tools.generate_ddl_sessions gds
+                  inner join oracle_tools.generate_ddl_configurations gdc
+                  on gdc.id = gds.generate_ddl_configuration_id
+                  inner join oracle_tools.generated_ddls gd
+                  on gd.generate_ddl_configuration_id = gdc.id
+                  inner join oracle_tools.schema_objects so
+                  on so.id = gd.schema_object_id
+          where   gds.session_id = p_session_id
+        ), deps as
+        ( select  d.owner
+          ,       d.type
+          ,       d.name
+          ,       d.referenced_owner
+          ,       d.referenced_type
+          ,       d.referenced_name
+          from    all_dependencies d
+                  inner join gdc
+                  on gdc.object_schema = d.referenced_owner and
+                     gdc.base_object_type = d.referenced_type and
+                     gdc.object_name = d.referenced_name
+          where   -- don't count specifications their bodies
+                  d.owner <> d.referenced_owner
+          or      d.name <> d.referenced_name
+        ), src as
+        ( select  gdc.*
+          ,       gds.ddl#
+          ,       gds.verb
+          ,       case
+                    when gds.verb is not null and gds.ddl# is not null
+                    then oracle_tools.t_ddl.ddl_info(p_schema_object => gdc.schema_object, p_verb => gds.verb, p_ddl# => gds.ddl#)
+                  end as ddl_info
+          ,       gdsc.chunk#
+          ,       gdsc.chunk
+          ,       row_number() over (partition by gdc.schema_object_id order by gds.ddl# desc, gdsc.chunk# desc) as seq_per_schema_object_desc
+          ,       ( select count(*) from deps d where d.owner = gdc.object_schema and d.type = gdc.base_object_type and d.name = gdc.object_name ) as nr_deps
+          from    gdc
+                  left outer join oracle_tools.generated_ddl_statements gds
+                  on gds.generated_ddl_id = gdc.generated_ddl_id
+                  left outer join oracle_tools.generated_ddl_statement_chunks gdsc
+                  on gdsc.generated_ddl_id = gds.generated_ddl_id and
+                     gdsc.ddl# = gds.ddl#              
+        )
+        select  src.schema_object_id
+        ,       src.ddl#
+        ,       src.verb
+        ,       src.ddl_info
+        ,       src.chunk#
+        ,       src.chunk
+        ,       case when src.seq_per_schema_object_desc = 1 then 1 else null end as last_chunk
+        ,       src.schema_object
+        from    src
+        order by
+                src.object_type_order
+        ,       src.nr_deps desc        
+        ,       src.schema_object_id
+        ,       src.ddl#
+        ,       src.verb
+        ,       src.chunk#;
+    else
+      open l_cursor for
+        with src as
+        ( select  gd.schema_object_id
+          ,       gds.ddl#
+          ,       gds.verb
+          ,       case
+                    when gds.verb is not null and gds.ddl# is not null
+                    then oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#)
+                  end as ddl_info
+          ,       gdsc.chunk#
+          ,       gdsc.chunk
+          ,       so.obj as schema_object
+          ,       row_number() over (partition by gd.schema_object_id order by gds.ddl# desc, gdsc.chunk# desc) as seq_per_schema_object_desc
+          from    oracle_tools.generate_ddl_sessions gds
+                  inner join oracle_tools.generate_ddl_configurations gdc
+                  on gdc.id = gds.generate_ddl_configuration_id
+                  inner join oracle_tools.generated_ddls gd
+                  on gd.generate_ddl_configuration_id = gdc.id
+                  inner join oracle_tools.schema_objects so
+                  on so.id = gd.schema_object_id
+                  left outer join oracle_tools.generated_ddl_statements gds
+                  on gds.generated_ddl_id = gd.id
+                  left outer join oracle_tools.generated_ddl_statement_chunks gdsc
+                  on gdsc.generated_ddl_id = gds.generated_ddl_id and
+                     gdsc.ddl# = gds.ddl#              
+          where   gds.session_id = p_session_id
+        )
+        select  src.schema_object_id
+        ,       src.ddl#
+        ,       src.verb
+        ,       src.ddl_info
+        ,       src.chunk#
+        ,       src.chunk
+        ,       case when src.seq_per_schema_object_desc = 1 then 1 else null end as last_chunk
+        ,       src.schema_object
+        from    src
+        order by
+                src.schema_object_id
+        ,       src.ddl#
+        ,       src.verb
+        ,       src.chunk#;
+    end if;
+  else
+    l_cursor := dbms_sql.to_refcursor(p_cursor);
   end if;
   
   fetch l_cursor bulk collect into p_display_ddl_sql_tab limit c_fetch_limit;
   
   if p_display_ddl_sql_tab.count < c_fetch_limit
   then
-    close l_cursor;
-    p_cursor := 0;
+    cleanup(true);
   else
     p_cursor := dbms_sql.to_cursor_number(l_cursor);
+    cleanup(false);
   end if;
-  
-  cleanup;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."output", 'p_cursor: %s', p_cursor);  
+  dbug.print(dbug."output", 'cardinality(p_display_ddl_sql_tab): %s', cardinality(p_display_ddl_sql_tab));  
+$end
+  dbug.leave;
+$end
 exception
   when others
   then
-    cleanup;
+    cleanup(true);
+$if oracle_tools.ddl_crud_api.c_tracing $then
+    dbug.leave_on_error;
+$end
     raise;
 end fetch_display_ddl_sql;    
 
@@ -1356,25 +1401,32 @@ $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FETCH_DDL_GENERATE_REPORT';
 $end
 
-  l_cursor sys_refcursor := case when p_cursor is not null then dbms_sql.to_refcursor(p_cursor) end;
+  l_cursor sys_refcursor;
   l_session_id t_session_id := null;
 
-  procedure cleanup
+  procedure cleanup(p_close in boolean)
   is
   begin
     if l_session_id is not null
     then
       set_session_id(l_session_id);
     end if;
+    if p_close and l_cursor%isopen
+    then
+      close l_cursor;
+      p_cursor := null;
+    end if;
   end cleanup;
 begin
 $if oracle_tools.ddl_crud_api.c_tracing $then
   dbug.enter(l_module_name);
+$if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
   dbug.print(dbug."input", 'p_cursor: %s', p_cursor);  
 $end
+$end
 
-  if p_cursor is null
+  if not dbms_sql.is_open(p_cursor)
   then
     set_session_id(p_session_id); -- just a check
 
@@ -1405,29 +1457,31 @@ $end
       where   gds.session_id = p_session_id
       order by
               so.obj.id;
+  else
+    l_cursor := dbms_sql.to_refcursor(p_cursor);  
   end if;  
 
   fetch l_cursor bulk collect into p_ddl_generate_report_tab limit c_fetch_limit;
   
   if p_ddl_generate_report_tab.count < c_fetch_limit
   then
-    close l_cursor;
-    p_cursor := 0;
+    cleanup(true);
   else
     p_cursor := dbms_sql.to_cursor_number(l_cursor);
+    cleanup(false);
   end if;
-  
-  cleanup;
 
 $if oracle_tools.ddl_crud_api.c_tracing $then
-  dbug.print(dbug."output", 'p_cursor: %s', p_cursor);
-  dbug.print(dbug."output", 'cardinality(p_ddl_generate_report_tab): %s', cardinality(p_ddl_generate_report_tab));
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."output", 'p_cursor: %s', p_cursor);  
+  dbug.print(dbug."output", 'cardinality(p_ddl_generate_report_tab): %s', cardinality(p_ddl_generate_report_tab));  
+$end
   dbug.leave;
 $end
 exception
   when others
   then
-    cleanup;
+    cleanup(true);
 $if oracle_tools.ddl_crud_api.c_tracing $then
     dbug.leave_on_error;
 $end
