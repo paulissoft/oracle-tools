@@ -1222,9 +1222,7 @@ $end
                 d.owner
         ,       d.type
         ,       d.name
-        ,       d.referenced_owner
-        ,       d.referenced_type
-        ,       d.referenced_name
+        ,       count(*) as nr_deps
         from    all_dependencies d
                 inner join src so
                 on so.schema_object is not null and
@@ -1234,6 +1232,10 @@ $end
         where   -- don't count dependencies between specifications and their bodies
                 d.owner <> d.referenced_owner
         or      d.name <> d.referenced_name
+        group by
+                d.owner
+        ,       d.type
+        ,       d.name
       )
       select  src.schema_object_id
       ,       src.ddl#
@@ -1246,7 +1248,7 @@ $end
       from    src
       order by
               src.object_type_order
-      ,       ( select count(*) from deps d where d.owner = src.object_schema and d.type = src.dict_object_type and d.name = src.object_name ) desc nulls last
+      ,       ( select d.nr_deps from deps d where d.owner = src.object_schema and d.type = src.dict_object_type and d.name = src.object_name ) desc nulls last
       ,       src.schema_object_id
       ,       src.ddl#
       ,       src.chunk#;
