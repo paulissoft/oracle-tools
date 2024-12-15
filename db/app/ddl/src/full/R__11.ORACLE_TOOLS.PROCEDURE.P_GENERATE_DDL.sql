@@ -115,7 +115,7 @@ $end
           , pi_source_database_link
           );
 
-          oracle_tools.pkg_ddl_util.display_ddl_sql
+          oracle_tools.pkg_ddl_util.determine_schema_ddl
           ( p_schema => pi_source_schema
           , p_new_schema => null
           , p_object_type => pi_object_type
