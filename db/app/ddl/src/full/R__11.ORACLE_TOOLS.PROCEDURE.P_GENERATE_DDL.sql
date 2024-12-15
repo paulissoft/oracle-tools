@@ -204,10 +204,10 @@ $end
 
           exit when l_display_ddl_sql_tab.count < c_fetch_limit; -- next fetch will get 0 records
         end loop;
-
---        oracle_tools.pkg_ddl_util.ddl_generate_report(p_output => po_clob);
-
         close l_cursor;
+
+        oracle_tools.pkg_ddl_util.ddl_generate_report(p_output => po_clob);
+
         -- 100%
         oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
       else
