@@ -8,7 +8,7 @@ create table schema_object_filter_results
   constraint schema_object_filter_results$nnc$created not null
 , generate_ddl_details varchar2(4000 byte) invisible -- must be schema_objects.obj.matches_schema_object_details(schema_object_id)
   constraint schema_object_filter_results$nnc$generate_ddl_details not null
-  constraint schema_object_filter_results$ck$generate_ddl_details check (generate_ddl_details = '1|' or generate_ddl_details like '0|_%' or generate_ddl_details like ' |_%')
+  constraint schema_object_filter_results$ck$generate_ddl_details check (substr(generate_ddl_details, 1, 2) in (' |', '0|', '1|'))
 , generate_ddl number(1, 0) generated always as (to_number(ltrim(substr(generate_ddl_details, 1, 1)))) -- null, 0 or 1
 , generate_ddl_info varchar2(4000 byte) generated always as (substr(generate_ddl_details, 3))
 , constraint schema_object_filter_results$pk

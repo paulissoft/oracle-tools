@@ -1145,7 +1145,7 @@ begin
   
   l_details := case l_result when 0 then '0' when 1 then '1' else ' ' end ||
                '|' ||
-               case l_result when 1 then null else l_info end;
+               l_info;
 
   if not(l_details = '1|' or l_details like '0|_%' or l_details like ' |_%')
   then
