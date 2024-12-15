@@ -206,7 +206,7 @@ $end
         end loop;
         close l_cursor;
 
-        oracle_tools.pkg_ddl_util.ddl_generate_report(p_output => po_clob);
+--        oracle_tools.pkg_ddl_util.ddl_generate_report(p_output => po_clob);
 
         -- 100%
         oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
