@@ -1116,7 +1116,6 @@ deterministic
 is
   l_result integer;
   l_info varchar2(1000 char);
-  l_details varchar2(4000 byte);
   l_part_tab dbms_sql.varchar2a;
 begin
   oracle_tools.pkg_str_util.split(p_str => p_schema_object_id, p_delimiter => ':', p_str_tab => l_part_tab);
@@ -1143,11 +1142,7 @@ begin
   , p_info => l_info
   );
   
-  l_details := case l_result when 0 then '0' when 1 then '1' else ' ' end ||
-               '|' ||
-               l_info;
-
-  return l_details;
+  return case l_result when 0 then '0' when 1 then '1' else ' ' end || '|' || l_info;
 end matches_schema_object_details;
 
 procedure serialize
