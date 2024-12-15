@@ -62,6 +62,7 @@ as
   procedure cleanup
   is
   begin
+    commit; -- ORA-12841: Cannot alter the session parallel DML state within a transaction
     oracle_tools.ddl_crud_api.set_parallel_status
     ( p_pdml_status => l_pdml_status
     , p_pddl_status => l_pddl_status
