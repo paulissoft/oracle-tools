@@ -6,8 +6,11 @@ create table schema_object_filter_results
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   constraint schema_object_filter_results$nnc$created not null
-, generate_ddl number(1, 0) -- must be schema_objects.obj.matches_schema_object(schema_object_id)
-  constraint schema_object_filter_results$ck$generate_ddl check (generate_ddl in (0, 1)) -- or null when to always ignore
+, generate_ddl_details varchar2(4000 byte) invisible -- must be schema_objects.obj.matches_schema_object_details(schema_object_id)
+  constraint schema_object_filter_results$nnc$generate_ddl_details not null
+  constraint schema_object_filter_results$ck$generate_ddl_details check (generate_ddl_details = '1|' or generate_ddl_details like '0|_%' or generate_ddl_details like ' |_%')
+, generate_ddl number(1, 0) generated always as (to_number(ltrim(substr(generate_ddl_details, 1, 1)))) -- null, 0 or 1
+, generate_ddl_info varchar2(4000 byte) generated always as (substr(generate_ddl_details, 3))
 , constraint schema_object_filter_results$pk
   primary key (schema_object_filter_id, schema_object_id)
 , constraint schema_object_filter_results$fk$1
@@ -17,8 +20,6 @@ create table schema_object_filter_results
   foreign key (schema_object_filter_id)
   references schema_object_filters(id) on delete cascade
 )
-organization index
-tablespace users
 ;
 
 alter table schema_object_filter_results nologging;
@@ -31,4 +32,4 @@ on schema_object_filter_results(schema_object_id);
 -- since schema_object_filter_id is first part of primary key index.
 
 comment on table schema_object_filter_results is
-    'The schema object filter results, needed because the function matches_schema_object is too expensive.';
+    'The schema object filter results, needed because the function matches_schema_object_details is too expensive.';

@@ -188,7 +188,7 @@ Otherwise (there is a record in SCHEMA_OBJECT_FILTERS) when the
 previous last modification time is not the same as the value calculated in
 step 4, all entries in SCHEMA_OBJECT_FILTER_RESULTS for this
 schema object filter id will be removed. That is necessary since we must
-recalculate p_schema_object_filter.matches_schema_object() for every object
+recalculate p_schema_object_filter.matches_schema_object_details() for every object
 since the schema is not the same anymore hence the results not reliable
 anymore. The LAST_MODIFICATION_TIME_SCHEMA and UPDATED columns will be
 updated in any case.
@@ -429,7 +429,8 @@ type t_ddl_generate_report_rec is record
   -- from SCHEMA_OBJECTS
 , schema_object oracle_tools.t_schema_object
   -- from SCHEMA_OBJECT_FILTER_RESULTS
-, generate_ddl number(1, 0) -- result of procedure PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT()
+, generate_ddl number(1, 0) -- result part 1 of procedure PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT_DETAILS()
+, generate_ddl_info varchar2(4000 byte) -- result part 2 of procedure PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT_DETAILS()
   -- from GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 , ddl_generated number(1, 0) -- see v_schema_objects.ddl_generated
 , ddl_output_written number(1, 0)
@@ -447,6 +448,20 @@ procedure delete_generate_ddl_sessions
 ( p_session_id in t_session_id default null -- The session id to delete (or sessions longer than 2 days ago).
 );
 /** Delete rows from GENERATE_DDL_SESSIONS. **/
+
+subtype t_parallel_status is varchar2(10 byte); -- ENABLE(D)/DISABLE(D)
+
+procedure get_parallel_status
+( p_pdml_status out nocopy t_parallel_status -- Parallel DML ENABLED/DISABLED?
+, p_pddl_status out nocopy t_parallel_status -- Parallel DDL ENABLED/DISABLED?
+, p_pq_status out nocopy t_parallel_status -- Parallel Query ENABLED/DISABLED?
+);
+
+procedure set_parallel_status
+( p_pdml_status in t_parallel_status -- Parallel DML ENABLED/DISABLED?
+, p_pddl_status in t_parallel_status -- Parallel DDL ENABLED/DISABLED?
+, p_pq_status in t_parallel_status -- Parallel Query ENABLED/DISABLED?
+);
 
 END DDL_CRUD_API;
 /

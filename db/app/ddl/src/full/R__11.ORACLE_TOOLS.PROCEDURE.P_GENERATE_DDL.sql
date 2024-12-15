@@ -54,6 +54,20 @@ as
     , p_units => 'rows'
     , p_target_desc => l_program
     );
+
+  l_pdml_status oracle_tools.ddl_crud_api.t_parallel_status;
+  l_pddl_status oracle_tools.ddl_crud_api.t_parallel_status;
+  l_pq_status oracle_tools.ddl_crud_api.t_parallel_status;
+
+  procedure cleanup
+  is
+  begin
+    oracle_tools.ddl_crud_api.set_parallel_status
+    ( p_pdml_status => l_pdml_status
+    , p_pddl_status => l_pddl_status
+    , p_pq_status => l_pq_status
+    );
+  end cleanup;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
@@ -84,6 +98,17 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   dbms_lob.createtemporary(po_clob, true);
+
+  oracle_tools.ddl_crud_api.get_parallel_status
+  ( p_pdml_status => l_pdml_status
+  , p_pddl_status => l_pddl_status
+  , p_pq_status => l_pq_status
+  );
+  oracle_tools.ddl_crud_api.set_parallel_status
+  ( p_pdml_status => 'DISABLED'
+  , p_pddl_status => 'DISABLED'
+  , p_pq_status => 'DISABLED'
+  );
 
   <<interface_loop>>
   for i_interface_idx in l_interface_tab.first .. l_interface_tab.last
@@ -226,12 +251,14 @@ $end
     raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_process_interface, 'Could not process interface ' || pi_interface);
   end if;
 
+  cleanup;
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
 exception
   when others
   then
+    cleanup;
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave_on_error;
 $end

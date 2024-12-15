@@ -46,20 +46,13 @@ The constructor for an oracle_tools.t_schema_object_filter object.
 
 **/
 
-procedure matches_schema_object
-( p_schema_object_filter in oracle_tools.t_schema_object_filter -- The schema object filter
-, p_schema_object_id in varchar2 -- The schema object id
-, p_result out nocopy integer -- The result (null = ignore object, 0 = false, 1 = true)
-, p_details out nocopy varchar2 -- A varchar2(1000 char) should be enough
-);
-
-function matches_schema_object
+function matches_schema_object_details
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter -- The schema object filter
 , p_schema_object_id in varchar2 -- The schema object id
 )
-return integer -- The result (null = ignore object, 0 = false, 1 = true)
+return varchar2 -- The result (' |_%' = ignore object, '0|_%' = false, '1|_%' = true)
 deterministic;
-/** Does the schema object id match the schema object filter? **/
+/** Does the schema object id match the schema object filter (with info)? **/
 
 procedure serialize
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
@@ -91,7 +84,7 @@ $if oracle_tools.cfg_pkg.c_testing $then
 procedure ut_construct;
 
 --%test;
-procedure ut_matches_schema_object;
+procedure ut_matches_schema_object_details;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 

@@ -3905,13 +3905,12 @@ $end
     ( p_schema_object_filter in oracle_tools.t_schema_object_filter
     , p_schema_object in oracle_tools.t_schema_object
     , p_generate_ddl in integer
+    , p_generate_ddl_info in varchar2
     , p_ddl_generated in integer
     , p_ddl_output_written in integer
     )
     is
       l_object_type_order constant positiven := p_schema_object.object_type_order();
-      l_result natural;
-      l_details varchar2(1000 byte);
     begin
       if not l_object_type_output_tab.exists(l_object_type_order)
       then
@@ -3920,31 +3919,6 @@ $end
         write(l_object_type_output_tab(l_object_type_order), '## ' || p_schema_object.object_type());
         write(l_object_type_output_tab(l_object_type_order), '| schema object | last DDL time | DDL output written | DDL generated | generate DDL | details |');
         write(l_object_type_output_tab(l_object_type_order), '| :------------ | :------------ | :----------------- | :------------ | :----------- | :------ |');
-      end if;
-
-      oracle_tools.pkg_schema_object_filter.matches_schema_object
-      ( p_schema_object_filter => p_schema_object_filter
-      , p_schema_object_id => p_schema_object.id
-      , p_result => l_result
-      , p_details => l_details
-      );
-
-      if to_char(p_generate_ddl) || 'X' = to_char(l_result) || 'X' -- result can be null
-      then
-        null; -- ok
-      else
-        oracle_tools.pkg_ddl_error.raise_error
-        ( p_error_number => oracle_tools.pkg_ddl_error.c_matches_schema_object_exp_ne_act
-        , p_error_message =>
-            utl_lms.format_message
-            ( 'expected result %s (from table SCHEMA_OBJECT_FILTER_RESULTS) not equal to actual result %s (%s)'
-            , bool2str(p_generate_ddl)
-            , bool2str(l_result)
-            , l_details
-            )
-        , p_context_info => p_schema_object.id
-        , p_context_label => 'object schema'
-        );
       end if;
 
       write
@@ -3956,7 +3930,7 @@ $end
         , bool2str(p_ddl_output_written)
         , bool2str(p_ddl_generated)
         , bool2str(p_generate_ddl)
-        , l_details
+        , p_generate_ddl_info
         )
       );
     end print_schema_object;
@@ -4011,6 +3985,7 @@ $end
           ( p_schema_object_filter => l_schema_object_filter
           , p_schema_object => l_ddl_generate_report_tab(i_idx).schema_object
           , p_generate_ddl => l_ddl_generate_report_tab(i_idx).generate_ddl
+          , p_generate_ddl_info => l_ddl_generate_report_tab(i_idx).generate_ddl_info
           , p_ddl_generated => l_ddl_generate_report_tab(i_idx).ddl_generated
           , p_ddl_output_written => l_ddl_generate_report_tab(i_idx).ddl_output_written
           );

@@ -196,7 +196,7 @@ $end
     end if;
     if l_last_modification_time_schema_old <> l_last_modification_time_schema_new
     then
-      -- we must recalculate p_schema_object_filter.matches_schema_object() for every object
+      -- we must recalculate p_schema_object_filter.matches_schema_object_details() for every object
       delete
       from    oracle_tools.schema_object_filter_results sofr
       where   sofr.schema_object_filter_id = p_schema_object_filter_id;
@@ -318,8 +318,8 @@ $end
   on      ( src.schema_object_filter_id = dst.schema_object_filter_id and
             src.schema_object_id = src.schema_object_id )
   when    not matched
-  then    insert ( schema_object_filter_id, schema_object_id, generate_ddl )
-          values ( src.schema_object_filter_id, src.schema_object_id, p_schema_object_filter.matches_schema_object(src.schema_object_id) );
+  then    insert ( schema_object_filter_id, schema_object_id, generate_ddl_details )
+          values ( src.schema_object_filter_id, src.schema_object_id, p_schema_object_filter.matches_schema_object_details(src.schema_object_id) );
 
   /*
   -- Now the following tables have data for these parameters:
@@ -329,7 +329,7 @@ $end
   -- * SCHEMA_OBJECT_FILTER_RESULTS
   */
 
-  -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns null
+  -- Ignore this entry when MATCHES_SCHEMA_OBJECT_DETAILS returns ' |_%'
   begin
     select  1
     into    l_found
@@ -630,8 +630,8 @@ $end
             src.schema_object_id = dst.schema_object_id
           )
   when    not matched
-  then    insert ( schema_object_filter_id, schema_object_id, generate_ddl )
-          values ( src.schema_object_filter_id, src.schema_object_id, p_schema_object_filter.matches_schema_object(src.schema_object_id) );
+  then    insert ( schema_object_filter_id, schema_object_id, generate_ddl_details )
+          values ( src.schema_object_filter_id, src.schema_object_id, p_schema_object_filter.matches_schema_object_details(src.schema_object_id) );
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."info", '# rows inserted into schema_object_filter_results: %s', sql%rowcount);
@@ -645,7 +645,7 @@ $end
   -- * SCHEMA_OBJECT_FILTER_RESULTS
   */
 
-  -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns null
+  -- Ignore this entry when MATCHES_SCHEMA_OBJECT_DETAILS returns ' |_%'
   merge
   into    oracle_tools.generate_ddl_session_schema_objects dst
   using   ( select  p_session_id as session_id
@@ -1508,6 +1508,44 @@ $if oracle_tools.ddl_crud_api.c_debugging $then
 $end
 
 end delete_generate_ddl_sessions;  
+
+procedure get_parallel_status
+( p_pdml_status out nocopy t_parallel_status -- Parallel DML ENABLED/DISABLED?
+, p_pddl_status out nocopy t_parallel_status -- Parallel DDL ENABLED/DISABLED?
+, p_pq_status out nocopy t_parallel_status -- Parallel Query ENABLED/DISABLED?
+)
+is
+begin
+  select  pdml_status
+  ,       pddl_status
+  ,       pq_status
+  into    p_pdml_status
+  ,       p_pddl_status
+  ,       p_pq_status
+  from    v$session
+  where   sid = (select sid from v$mystat where rownum = 1);
+end get_parallel_status;
+
+procedure set_parallel_status
+( p_pdml_status in t_parallel_status -- Parallel DML ENABLED/DISABLED?
+, p_pddl_status in t_parallel_status -- Parallel DDL ENABLED/DISABLED?
+, p_pq_status in t_parallel_status -- Parallel Query ENABLED/DISABLED?
+)
+is
+begin
+  case 
+    when upper(p_pdml_status) in ('ENABLE', 'ENABLED') then execute immediate 'alter session enable parallel dml';
+    when upper(p_pdml_status) in ('DISABLE', 'DISABLED') then execute immediate 'alter session disable parallel dml';
+  end case;
+  case 
+    when upper(p_pddl_status) in ('ENABLE', 'ENABLED') then execute immediate 'alter session enable parallel ddl';
+    when upper(p_pddl_status) in ('DISABLE', 'DISABLED') then execute immediate 'alter session disable parallel ddl';
+  end case;
+  case 
+    when upper(p_pq_status) in ('ENABLE', 'ENABLED') then execute immediate 'alter session enable parallel query';
+    when upper(p_pq_status) in ('DISABLE', 'DISABLED') then execute immediate 'alter session disable parallel query';
+  end case;
+end set_parallel_status;
 
 END DDL_CRUD_API;
 /

@@ -99,16 +99,16 @@ begin
     end;
 end op_order;  
 
-member function matches_schema_object
+member function matches_schema_object_details
 ( self in oracle_tools.t_schema_object_filter
 , p_schema_object_id in varchar2
 )
-return integer
+return varchar2
 deterministic
 is
 begin
-  return oracle_tools.pkg_schema_object_filter.matches_schema_object(self, p_schema_object_id);
-end matches_schema_object;
+  return oracle_tools.pkg_schema_object_filter.matches_schema_object_details(self, p_schema_object_id);
+end matches_schema_object_details;
 
 member procedure chk
 ( self in oracle_tools.t_schema_object_filter
