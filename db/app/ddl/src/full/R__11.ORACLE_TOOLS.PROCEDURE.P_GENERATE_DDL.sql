@@ -30,21 +30,11 @@ as
 
   l_processed boolean := false;
   l_bfile bfile := null;
-  l_cursor sys_refcursor := null;
-
-  l_ddl#_tab dbms_sql.number_table;
-  l_ddl_info_tab dbms_sql.varchar2_table;
-  l_chunk#_tab dbms_sql.number_table;
-  l_chunk_tab oracle_tools.t_text_tab;
-  l_text_tab oracle_tools.t_text_tab;
-  l_last_chunk_tab dbms_sql.number_table;
-  l_schema_object_id_tab dbms_sql.varchar2_table;
+  l_cursor oracle_tools.ddl_crud_api.t_display_ddl_sql_cur := null;
+  l_display_ddl_sql_tab oracle_tools.ddl_crud_api.t_display_ddl_sql_tab;
   l_first_row boolean := true;
 
   c_fetch_limit constant pls_integer := 100;
-
-  l_buffer varchar2(32767 char) := null;
-
   l_program constant varchar2(61 char) := $$PLSQL_UNIT; -- no schema because l_program is used in dbms_application_info
 
   -- dbms_application_info stuff
@@ -125,39 +115,34 @@ $end
           , pi_source_database_link
           );
 
-          -- full DDL because target schema (and database link) is empty
-          open l_cursor for
-            select  t.ddl#
-            ,       t.ddl_info -- output
-            ,       t.chunk#
-            ,       t.chunk -- output
-            ,       t.last_chunk
-            ,       t.schema_object_id
-            from    table
-                    ( oracle_tools.pkg_ddl_util.display_ddl_sql
-                      ( p_schema => pi_source_schema
-                      , p_new_schema => null
-                      , p_sort_objects_by_deps => 1 -- case when l_interface_tab(i_interface_idx) = "pkg_ddl_util v4" then 0 else 1 end
-                      , p_object_type => pi_object_type
-                      , p_object_names => pi_object_names
-                      , p_object_names_include => pi_object_names_include
-                      , p_network_link => pi_source_database_link
-                      , p_grantor_is_schema => 0
-                      , p_transform_param_list => nvl(pi_transform_param_list, oracle_tools.pkg_ddl_util.c_transform_param_list)
-                      , p_exclude_objects => pi_exclude_objects
-                      , p_include_objects => pi_include_objects
-                      )
-                    ) t
-          ;
+          oracle_tools.pkg_ddl_util.display_ddl_sql
+          ( p_schema => pi_source_schema
+          , p_new_schema => null
+          , p_object_type => pi_object_type
+          , p_object_names => pi_object_names
+          , p_object_names_include => pi_object_names_include
+          , p_network_link => pi_source_database_link
+          , p_grantor_is_schema => 0
+          , p_transform_param_list => nvl(pi_transform_param_list, oracle_tools.pkg_ddl_util.c_transform_param_list)
+          , p_exclude_objects => pi_exclude_objects
+          , p_include_objects => pi_include_objects
+          );
+
+          l_cursor := oracle_tools.ddl_crud_api.get_display_ddl_sql_cursor
+                      ( p_session_id => oracle_tools.ddl_crud_api.get_session_id
+                      , p_sort_objects_by_deps => 1
+                      );
         else
           -- incremental DDL because target schema is not empty
           open l_cursor for
-            select  t.ddl#
+            select  t.schema_object_id
+            ,       t.ddl#
+            ,       t.verb
             ,       t.ddl_info -- output
             ,       t.chunk#
             ,       t.chunk -- output
             ,       t.last_chunk
-            ,       t.schema_object_id
+            ,       t.schema_object
             from    table
                     ( oracle_tools.pkg_ddl_util.display_ddl_sql_diff
                       ( p_object_type => pi_object_type
@@ -180,12 +165,9 @@ $end
         oracle_tools.pkg_str_util.append_text('-- '||l_interface_tab(i_interface_idx), po_clob); -- So Perl script generate_ddl.pl knows how to read the output
 
         loop
-          fetch l_cursor
-          bulk collect
-          into l_ddl#_tab, l_ddl_info_tab, l_chunk#_tab, l_chunk_tab, l_last_chunk_tab, l_schema_object_id_tab
-          limit c_fetch_limit;
+          fetch l_cursor bulk collect into l_display_ddl_sql_tab limit c_fetch_limit;
 
-          if l_ddl_info_tab.count > 0
+          if l_display_ddl_sql_tab.count > 0
           then
             if l_first_row
             then
@@ -194,32 +176,33 @@ $end
               l_first_row := false;
             end if;
 
-            if l_chunk_tab.count > 0
-            then
-              for i_idx in l_chunk_tab.first .. l_chunk_tab.last
-              loop
-                if l_chunk#_tab(i_idx) = 1 -- first of a new ddl?
-                then
+            for i_idx in l_display_ddl_sql_tab.first .. l_display_ddl_sql_tab.last
+            loop
+              if l_display_ddl_sql_tab(i_idx).chunk# = 1 -- first of a new ddl?
+              then
 $if oracle_tools.cfg_pkg.c_debugging $then
-                  dbug.print(dbug."info", 'ddl_info: %s', l_ddl_info_tab(i_idx));
+                dbug.print(dbug."info", 'ddl_info: %s', l_display_ddl_sql_tab(i_idx).ddl_info);
 $end
-                  -- the text column does not end with an empty newline so we do it here
-                  oracle_tools.pkg_str_util.append_text(chr(10)||l_ddl_info_tab(i_idx), po_clob);
-                end if;
-                dbms_lob.writeappend(lob_loc => po_clob, amount => length(l_chunk_tab(i_idx)), buffer => l_chunk_tab(i_idx));
-                if l_last_chunk_tab(i_idx) = 1
-                then
-                  oracle_tools.ddl_crud_api.set_ddl_output_written
-                  ( p_schema_object_id => l_schema_object_id_tab(i_idx)
-                  , p_ddl_output_written => 1
-                  ); -- set ddl_output_written for this schema object
-                end if;
-              end loop;
-              oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
-            end if;
+                -- the text column does not end with an empty newline so we do it here
+                oracle_tools.pkg_str_util.append_text(chr(10)||l_display_ddl_sql_tab(i_idx).ddl_info, po_clob);
+              end if;
+              dbms_lob.writeappend
+              ( lob_loc => po_clob
+              , amount => length(l_display_ddl_sql_tab(i_idx).chunk)
+              , buffer => l_display_ddl_sql_tab(i_idx).chunk
+              );
+              if l_display_ddl_sql_tab(i_idx).last_chunk = 1
+              then
+                oracle_tools.ddl_crud_api.set_ddl_output_written
+                ( p_schema_object_id => l_display_ddl_sql_tab(i_idx).schema_object_id
+                , p_ddl_output_written => 1
+                ); -- set ddl_output_written for this schema object
+              end if;
+            end loop;
+            oracle_tools.api_longops_pkg.longops_show(l_longops_rec);
           end if;
 
-          exit when l_ddl_info_tab.count < c_fetch_limit; -- next fetch will get 0 records
+          exit when l_display_ddl_sql_tab.count < c_fetch_limit; -- next fetch will get 0 records
         end loop;
 
 --        oracle_tools.pkg_ddl_util.ddl_generate_report(p_output => po_clob);
