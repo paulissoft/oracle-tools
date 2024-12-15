@@ -34,8 +34,6 @@ procedure matches_schema_object_details
 , p_details out nocopy varchar2
 )
 is
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-
   function is_nested_table
   ( p_object_schema in varchar2
   , p_object_name in varchar2
@@ -245,8 +243,6 @@ $end
     p_result := case when p_result >= 1 then null else 1 end;
   end ignore_object;
 
-$end -- $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-
   procedure search
   ( p_lwb in naturaln
   , p_upb in naturaln
@@ -358,14 +354,7 @@ $end
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then  
       dbug.print(dbug."info", 'case 1');
 $end
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-      if oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_base_object_type, p_base_object_name) = 1
-      then
-        p_result := 0;
-      end if;
-$else         
       ignore_object(p_base_object_type, p_base_object_name, p_result, p_details);
-$end
       exit result_loop when p_result is null;
     end if;
 
@@ -376,14 +365,7 @@ $end
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then  
       dbug.print(dbug."info", 'case 2');
 $end
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-      if oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_object_type, p_object_name) = 1
-      then
-        p_result := 0;
-      end if;
-$else         
       ignore_object(p_object_type, p_object_name, p_result, p_details);
-$end
       exit result_loop when p_result is null;
     end if;
 
@@ -431,6 +413,11 @@ $end
     
     exit result_loop;
   end loop result_loop;
+
+  if p_result = 1 and p_details is not null
+  then
+    p_details := null;
+  end if;
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then  
   dbug.print(dbug."output", 'p_result: %sl p_details: %s', p_result, p_details);
