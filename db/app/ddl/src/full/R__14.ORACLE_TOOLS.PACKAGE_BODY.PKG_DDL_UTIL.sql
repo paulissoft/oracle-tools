@@ -3958,7 +3958,19 @@ $end
     end if;
 
     oracle_tools.ddl_crud_api.set_session_id(nvl(p_session_id, oracle_tools.ddl_crud_api.get_session_id));
-    l_schema_object_filter := oracle_tools.ddl_crud_api.get_schema_object_filter;
+    
+    begin
+      l_schema_object_filter := oracle_tools.ddl_crud_api.get_schema_object_filter;
+    exception
+      when value_error
+      then
+        oracle_tools.pkg_ddl_error.raise_error
+        ( p_error_number => oracle_tools.pkg_ddl_error.c_session_without_ddl
+        , p_error_message => 'This session has not been used to generate DDL for'
+        , p_context_info => oracle_tools.ddl_crud_api.get_session_id
+        , p_context_label => 'session id'
+        );
+    end;
 
     loop
       oracle_tools.ddl_crud_api.fetch_ddl_generate_report
