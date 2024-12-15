@@ -1435,6 +1435,7 @@ $end
       ,       gdc.last_ddl_time_schema
       ,       so.obj as schema_object
       ,       sofr.generate_ddl
+      ,       sofr.generate_ddl_info
       ,       case
                 when gdsso.last_ddl_time is not null and gdsso.generate_ddl_configuration_id is not null
                 then 1
