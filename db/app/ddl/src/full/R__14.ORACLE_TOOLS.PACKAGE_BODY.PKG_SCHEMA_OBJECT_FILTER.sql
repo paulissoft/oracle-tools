@@ -1147,10 +1147,6 @@ begin
                '|' ||
                l_info;
 
-  if not(l_details = '1|' or l_details like '0|_%' or l_details like ' |_%')
-  then
-    raise program_error;
-  end if;
   return l_details;
 end matches_schema_object_details;
 
