@@ -30,13 +30,13 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" AUTHID CURRENT_USER UNDER T_
   /** Returns oracle_tools.t_text_tab('!~', '!=', ' ~', ' ='). **/
 , member function op_order(p_idx in integer) return integer deterministic
   /** Returns case op(p_idx) when '!~' then 1 when '!=' then 2 when ' ~' then 3 when ' =' then 4 end. **/
-, member function matches_schema_object
+, member function matches_schema_object_details
   ( self in oracle_tools.t_schema_object_filter
   , p_schema_object_id in varchar2
   )
-  return integer
+  return varchar2
   deterministic
-  /** Returns null when schema object must always be ignored (BIN, system generated, etcetera), 0 when it does NOT match (now) due to the filter and 1 when it matches. **/
+  /** Returns ' |<info>' when schema object must always be ignored (BIN, system generated, etcetera), '0|<info>' when it does NOT match (now) due to the filter and '1|' when it matches. **/
 , member procedure chk
   ( self in oracle_tools.t_schema_object_filter
   )
