@@ -3844,9 +3844,9 @@ $end
     begin
       return
         case p_value
-          when true then 'Y'
-          when false then 'N'
-          else '?'
+          when true then 'YES'
+          when false then 'NO'
+          else 'UNKNOWN'
         end;
     end bool2str;
     
