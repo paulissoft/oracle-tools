@@ -1181,25 +1181,30 @@ procedure chk
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
+  l_error varchar2(4000 byte) := null;
   l_prev_idx positive := null;
   l_prev_id varchar2(500 byte) := null;
   l_prev_cmp varchar2(2 byte) := null;
 begin
-  case
-    when p_schema_object_filter.schema$ is null
-    then raise program_error;
-    when p_schema_object_filter.grantor_is_schema$ is null
-    then raise program_error;
-    when p_schema_object_filter.grantor_is_schema$ not in (0, 1)
-    then raise program_error;
-    when p_schema_object_filter.nr_objects_to_exclude$ is null
-    then raise program_error;
-    when not(p_schema_object_filter.nr_objects_to_exclude$ between 0 and nvl(cardinality(p_schema_object_filter.op_object_id_expr_tab$), 0))
-    then raise program_error;
-    when p_schema_object_filter.last_modification_time_schema is null
-    then raise program_error;
-    else null;
-  end case;
+  l_error :=
+    case
+      when p_schema_object_filter.schema$ is null
+      then 'schema$ is null'
+      when p_schema_object_filter.grantor_is_schema$ is null
+      then 'grantor_is_schema$ is null'
+      when p_schema_object_filter.grantor_is_schema$ not in (0, 1)
+      then 'grantor_is_schema$ not in (0, 1)'
+      when p_schema_object_filter.nr_objects_to_exclude$ is null
+      then 'nr_objects_to_exclude$ is null'
+      when not(p_schema_object_filter.nr_objects_to_exclude$ between 0 and nvl(cardinality(p_schema_object_filter.op_object_id_expr_tab$), 0))
+      then 'not(nr_objects_to_exclude$ between 0 and nvl(cardinality(op_object_id_expr_tab$), 0))'
+      when p_schema_object_filter.last_modification_time_schema is null
+      then 'last_modification_time_schema is null'
+    end;
+  if l_error is not null
+  then
+    raise_application_error(-20000, l_error);
+  end if;
   for i_idx in 1 .. nvl(cardinality(p_schema_object_filter.op_object_id_expr_tab$), 0)
   loop
     -- compare: !~, !=, ~, =
