@@ -50,7 +50,7 @@ function matches_schema_object_details
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter -- The schema object filter
 , p_schema_object_id in varchar2 -- The schema object id
 )
-return varchar2 -- The result (' |_%' = ignore object, '0|_%' = false, '1|_%' = true)
+return varchar2 -- The result (like ' |%' = ignore object, like '0|%' = false, like '1|%' = true)
 deterministic;
 /** Does the schema object id match the schema object filter (with info)? **/
 
