@@ -1097,7 +1097,7 @@ $end
   select  max(o.last_ddl_time)
   into    p_schema_object_filter.last_modification_time_schema$
   from    all_objects o
-  where   o.owner = p_schema_object_filter.schema$;
+  where   o.owner = p_schema;
 
   chk(p_schema_object_filter);
 
@@ -1198,8 +1198,6 @@ begin
       then 'nr_objects_to_exclude$ is null'
       when not(p_schema_object_filter.nr_objects_to_exclude$ between 0 and nvl(cardinality(p_schema_object_filter.op_object_id_expr_tab$), 0))
       then 'not(nr_objects_to_exclude$ between 0 and nvl(cardinality(op_object_id_expr_tab$), 0))'
-      when p_schema_object_filter.last_modification_time_schema is null
-      then 'last_modification_time_schema is null'
     end;
   if l_error is not null
   then
