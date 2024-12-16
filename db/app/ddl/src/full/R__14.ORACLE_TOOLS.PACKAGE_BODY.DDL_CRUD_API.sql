@@ -172,10 +172,7 @@ $end
   ** PACKAGE BODY 07/12/23 15:58:43 13/11/24 09:12:39 2023-12-08:11:50:02 LAST_DDL_TIME changed (1 sec later)
   */
 
-  select  max(o.last_ddl_time)
-  into    l_last_modification_time_schema_new
-  from    all_objects o
-  where   o.owner = p_schema_object_filter.schema;
+  l_last_modification_time_schema_new := p_schema_object_filter.last_modification_time_schema();
 
   -- when not found add it
   if p_schema_object_filter_id is null

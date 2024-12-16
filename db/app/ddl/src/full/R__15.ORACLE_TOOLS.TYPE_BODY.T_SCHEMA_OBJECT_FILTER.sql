@@ -51,6 +51,14 @@ begin
   return nr_objects_to_exclude$;
 end nr_objects_to_exclude;
 
+member function last_modification_time_schema
+return date
+deterministic
+is
+begin
+  return last_modification_time_schema$;
+end last_modification_time_schema;
+
 member function nr_objects
 return integer
 deterministic
