@@ -5851,12 +5851,27 @@ $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
 $end
 
         -- Execute the DML in parallel
-        dbms_parallel_execute.run_task
-        ( l_task_name
-        , l_sql_stmt
-        , dbms_sql.native
-        , parallel_level => g_parallel_level
-        );
+        declare
+          -- ORA-27486: insufficient privileges
+          e_insufficient_privileges exception;
+          pragma exception_init(e_insufficient_privileges, -27486);
+        begin
+          dbms_parallel_execute.run_task
+          ( l_task_name
+          , l_sql_stmt
+          , dbms_sql.native
+          , parallel_level => g_parallel_level
+          );
+        exception
+          when e_insufficient_privileges
+          then
+            dbms_parallel_execute.run_task
+            ( l_task_name
+            , l_sql_stmt
+            , dbms_sql.native
+            , parallel_level => 0
+            );
+        end;
 
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
         dbug.print(dbug."info", 'stopped dbms_parallel_execute.run_task');
