@@ -1253,6 +1253,11 @@ begin
     l_prev_id := p_schema_object_filter.object_id_expr(i_idx);
     l_prev_cmp := p_schema_object_filter.op(i_idx);
   end loop;
+exception
+  when others
+  then
+    print(p_schema_object_filter);
+    raise;
 end chk;
 
 procedure print
