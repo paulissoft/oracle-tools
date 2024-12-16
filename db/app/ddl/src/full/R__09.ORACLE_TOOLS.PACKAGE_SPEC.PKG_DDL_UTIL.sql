@@ -466,7 +466,7 @@ procedure ddl_batch_process
 /** Processes GENERATE_DDL_SESSION_BATCHES for this session within this range. **/
 
 /**
-Help functions to get the DDL belonging to a list of allowed objects returned by get_schema_objects().
+Help functions to get the DDL belonging to a list of allowed objects returned by schema_objects_api.get_schema_objects().
 **/
 
 procedure get_schema_ddl

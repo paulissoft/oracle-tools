@@ -10,9 +10,15 @@ pragma exception_init(e_can_not_insert_null, -1400);
 
 g_default_match_perc_threshold integer := 50;
 
-g_session_id t_session_id_nn := to_number(sys_context('USERENV', 'SESSIONID'));
+c_session_id constant t_session_id_nn := to_number(sys_context('USERENV', 'SESSIONID'));
+
+g_session_id t_session_id_nn := c_session_id;
 
 g_min_timestamp_to_keep constant oracle_tools.generate_ddl_sessions.created%type := c_min_timestamp_to_keep;
+
+subtype t_parallel_status_tab is dbms_sql.varchar2s;
+
+g_parallel_status_tab t_parallel_status_tab;
 
 function get_schema_object_filter_id
 ( p_session_id in t_session_id_nn
@@ -691,6 +697,45 @@ exception
 $end
 end add_schema_object_tab;
 
+procedure get_parallel_status
+( p_parallel_status_tab out nocopy t_parallel_status_tab
+)
+is
+begin
+  select  s.pdml_status
+  ,       s.pddl_status
+  ,       s.pq_status
+  into    p_parallel_status_tab(1)
+  ,       p_parallel_status_tab(2)
+  ,       p_parallel_status_tab(3)
+  from    v$session s
+  where   s.audsid = c_session_id;
+end get_parallel_status;
+
+procedure set_parallel_status
+( p_parallel_status_tab in out nocopy t_parallel_status_tab
+)
+is
+  l_type varchar2(10 byte) := null;
+  l_status varchar2(10 byte) := null;
+begin
+  for i_idx in 1..3
+  loop    
+    case 
+      when upper(p_parallel_status_tab(i_idx)) in ('ENABLE' , 'ENABLED' ) then l_status := 'enable';
+      when upper(p_parallel_status_tab(i_idx)) in ('DISABLE', 'DISABLED') then l_status := 'disable';
+    end case;
+    l_type :=
+      case i_idx
+        when 1 then 'dml'
+        when 2 then 'ddl'
+        when 3 then 'query'
+      end;
+    execute immediate 'alter session ' || l_status || ' parallel ' || l_type;  
+  end loop;
+  p_parallel_status_tab.delete; -- so we don't call reset again without a disable first
+end set_parallel_status;
+
 -- PUBLIC
 
 procedure set_session_id
@@ -701,7 +746,7 @@ begin
   /*if p_session_id is null
   then
     raise value_error;
-  els*/if p_session_id = to_number(sys_context('USERENV', 'SESSIONID'))
+  els*/if p_session_id = c_session_id
   then
     g_session_id := p_session_id;
   else
@@ -1510,43 +1555,25 @@ $end
 
 end delete_generate_ddl_sessions;  
 
-procedure get_parallel_status
-( p_pdml_status out nocopy t_parallel_status -- Parallel DML ENABLED/DISABLED?
-, p_pddl_status out nocopy t_parallel_status -- Parallel DDL ENABLED/DISABLED?
-, p_pq_status out nocopy t_parallel_status -- Parallel Query ENABLED/DISABLED?
-)
+procedure disable_parallel_status
 is
+  l_parallel_status_tab t_parallel_status_tab;
 begin
-  select  pdml_status
-  ,       pddl_status
-  ,       pq_status
-  into    p_pdml_status
-  ,       p_pddl_status
-  ,       p_pq_status
-  from    v$session
-  where   sid = (select sid from v$mystat where rownum = 1);
-end get_parallel_status;
+  commit;
+  get_parallel_status(g_parallel_status_tab);
+  for i_idx in 1..3
+  loop
+    l_parallel_status_tab(i_idx) := 'DISABLED';
+  end loop;
+  set_parallel_status(l_parallel_status_tab);
+end disable_parallel_status;
 
-procedure set_parallel_status
-( p_pdml_status in t_parallel_status -- Parallel DML ENABLED/DISABLED?
-, p_pddl_status in t_parallel_status -- Parallel DDL ENABLED/DISABLED?
-, p_pq_status in t_parallel_status -- Parallel Query ENABLED/DISABLED?
-)
+procedure reset_parallel_status
 is
 begin
-  case 
-    when upper(p_pdml_status) in ('ENABLE', 'ENABLED') then execute immediate 'alter session enable parallel dml';
-    when upper(p_pdml_status) in ('DISABLE', 'DISABLED') then execute immediate 'alter session disable parallel dml';
-  end case;
-  case 
-    when upper(p_pddl_status) in ('ENABLE', 'ENABLED') then execute immediate 'alter session enable parallel ddl';
-    when upper(p_pddl_status) in ('DISABLE', 'DISABLED') then execute immediate 'alter session disable parallel ddl';
-  end case;
-  case 
-    when upper(p_pq_status) in ('ENABLE', 'ENABLED') then execute immediate 'alter session enable parallel query';
-    when upper(p_pq_status) in ('DISABLE', 'DISABLED') then execute immediate 'alter session disable parallel query';
-  end case;
-end set_parallel_status;
+  commit;
+  set_parallel_status(g_parallel_status_tab);
+end reset_parallel_status;
 
 END DDL_CRUD_API;
 /

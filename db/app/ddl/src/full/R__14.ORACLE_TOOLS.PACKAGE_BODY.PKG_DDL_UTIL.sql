@@ -2919,7 +2919,7 @@ $end
   end get_schema_ddl_init;
 
   /*
-  -- Help procedure to get the DDL belonging to a list of allowed objects returned by get_schema_objects()
+  -- Help procedure to get the DDL belonging to a list of allowed objects returned by schema_objects_api.get_schema_objects()
   */
   procedure fetch_ddl
   ( p_object_type in varchar2
@@ -3271,6 +3271,8 @@ $end
     check_network_link(p_network_link => p_network_link);
     check_numeric_boolean(p_numeric_boolean => p_grantor_is_schema, p_description => 'grantor is schema'); -- duplicate but for unit testing
 
+    oracle_tools.ddl_crud_api.disable_parallel_status;
+
     if p_network_link is null
     then
       oracle_tools.ddl_crud_api.add
@@ -3299,11 +3301,14 @@ $end
       commit;
     end if;
 
+    oracle_tools.ddl_crud_api.reset_parallel_status;
+
 $if oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
     dbug.leave;
   exception
     when others
     then
+      oracle_tools.ddl_crud_api.reset_parallel_status;
       dbug.leave_on_error;
       raise;
 $end      
@@ -7012,7 +7017,7 @@ $end
     , p_network_link_target => l_network_link_target
     );
 
-    -- drop (user created) objects which are excluded in get_schema_objects()
+    -- drop (user created) objects which are excluded in schema_objects_api.get_schema_objects()
     l_drop_schema_ddl_tab := oracle_tools.t_schema_ddl_tab();
     for r in
     ( select  oracle_tools.t_schema_ddl.create_schema_ddl

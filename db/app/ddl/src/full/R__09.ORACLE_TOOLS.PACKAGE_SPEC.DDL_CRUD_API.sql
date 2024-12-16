@@ -449,19 +449,11 @@ procedure delete_generate_ddl_sessions
 );
 /** Delete rows from GENERATE_DDL_SESSIONS. **/
 
-subtype t_parallel_status is varchar2(10 byte); -- ENABLE(D)/DISABLE(D)
+procedure disable_parallel_status;
+/** Disable parallel DML, DDL and Query. Will commit first. **/
 
-procedure get_parallel_status
-( p_pdml_status out nocopy t_parallel_status -- Parallel DML ENABLED/DISABLED?
-, p_pddl_status out nocopy t_parallel_status -- Parallel DDL ENABLED/DISABLED?
-, p_pq_status out nocopy t_parallel_status -- Parallel Query ENABLED/DISABLED?
-);
-
-procedure set_parallel_status
-( p_pdml_status in t_parallel_status -- Parallel DML ENABLED/DISABLED?
-, p_pddl_status in t_parallel_status -- Parallel DDL ENABLED/DISABLED?
-, p_pq_status in t_parallel_status -- Parallel Query ENABLED/DISABLED?
-);
+procedure reset_parallel_status;
+/** Restore parallel DML, DDL and Query to the situation just before disable_parallel_status was called. Will commit first. **/
 
 END DDL_CRUD_API;
 /

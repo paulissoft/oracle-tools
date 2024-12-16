@@ -870,6 +870,8 @@ $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $end
 
+  oracle_tools.ddl_crud_api.disable_parallel_status;
+  
   add
   ( p_schema_object_filter => p_schema_object_filter
   , p_generate_ddl_configuration_id => p_generate_ddl_configuration_id
@@ -881,11 +883,14 @@ $end
   into    p_schema_object_tab
   from    oracle_tools.v_my_schema_objects t;
 
+  oracle_tools.ddl_crud_api.reset_parallel_status;
+
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;
 exception
   when others
   then
+    oracle_tools.ddl_crud_api.reset_parallel_status;
     dbug.leave_on_error;
     raise;
 $end
@@ -921,13 +926,17 @@ is
   procedure cleanup
   is
   begin
+    oracle_tools.ddl_crud_api.reset_parallel_status;
     -- on error save so we can verify else rollback because we do not need the data
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
+    commit;
   end cleanup;
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECTS');
 $end
+
+  oracle_tools.ddl_crud_api.disable_parallel_status;
 
   oracle_tools.ddl_crud_api.add
   ( p_schema => p_schema
@@ -974,7 +983,6 @@ $end
   when no_data_found
   then
     cleanup;
-    commit;
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave_on_error;
 $end
@@ -984,7 +992,6 @@ $end
   when others
   then
     cleanup;
-    commit;
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave_on_error;
 $end
