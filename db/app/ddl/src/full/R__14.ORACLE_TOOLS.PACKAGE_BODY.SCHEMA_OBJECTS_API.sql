@@ -954,16 +954,19 @@ $end
 
   oracle_tools.ddl_crud_api.disable_parallel_status;
 
+  l_schema_object_filter :=
+    oracle_tools.t_schema_object_filter
+    ( p_schema => p_schema
+    , p_object_type => p_object_type
+    , p_object_names => p_object_names
+    , p_object_names_include => p_object_names_include
+    , p_grantor_is_schema => 0
+    , p_exclude_objects => p_exclude_objects
+    , p_include_objects => p_include_objects
+    );
   oracle_tools.ddl_crud_api.add
-  ( p_schema => p_schema
-  , p_object_type => p_object_type
-  , p_object_names => p_object_names
-  , p_object_names_include => p_object_names_include
-  , p_grantor_is_schema => p_grantor_is_schema
-  , p_exclude_objects => p_exclude_objects
-  , p_include_objects => p_include_objects
+  ( p_schema_object_filter => l_schema_object_filter
   , p_transform_param_list => p_transform_param_list
-  , p_schema_object_filter => l_schema_object_filter
   , p_generate_ddl_configuration_id => l_generate_ddl_configuration_id
   );
   add

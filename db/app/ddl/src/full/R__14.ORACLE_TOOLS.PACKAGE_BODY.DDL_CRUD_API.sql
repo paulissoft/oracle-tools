@@ -830,15 +830,8 @@ begin
 end;
 
 procedure add
-( p_schema in varchar2 -- The schema name.
-, p_object_type in varchar2 -- Filter for object type.
-, p_object_names in varchar2 -- A comma separated list of (base) object names.
-, p_object_names_include in integer -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
-, p_grantor_is_schema in integer -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
-, p_exclude_objects in clob -- A newline separated list of objects to exclude (their schema object id actually).
-, p_include_objects in clob -- A newline separated list of objects to include (their schema object id actually).
+( p_schema_object_filter in oracle_tools.t_schema_object_filter -- the schema object filter
 , p_transform_param_list in varchar2 -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
-, p_schema_object_filter out nocopy oracle_tools.t_schema_object_filter -- the schema object filter
 , p_generate_ddl_configuration_id out nocopy integer
 )
 is
@@ -848,17 +841,6 @@ is
   l_db_version constant number := dbms_db_version.version + dbms_db_version.release / 10;
   l_last_ddl_time_schema date;
 begin
-  p_schema_object_filter :=
-    oracle_tools.t_schema_object_filter
-    ( p_schema => p_schema
-    , p_object_type => p_object_type
-    , p_object_names => p_object_names
-    , p_object_names_include => p_object_names_include
-    , p_grantor_is_schema => p_grantor_is_schema
-    , p_exclude_objects => p_exclude_objects
-    , p_include_objects => p_include_objects
-    );
-
   l_param_tab1 := oracle_tools.api_pkg.list2collection(p_value_list => p_transform_param_list, p_sep => ',');
 
   select  distinct upper(t.column_value) as param

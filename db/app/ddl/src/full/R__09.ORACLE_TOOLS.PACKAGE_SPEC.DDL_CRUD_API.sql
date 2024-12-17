@@ -137,15 +137,8 @@ deterministic;
 /** Return the match percentage threshold as set by default_match_perc_threshold(). **/
 
 procedure add
-( p_schema in varchar2 -- The schema name.
-, p_object_type in varchar2 -- Filter for object type.
-, p_object_names in varchar2 -- A comma separated list of (base) object names.
-, p_object_names_include in integer -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
-, p_grantor_is_schema in integer -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
-, p_exclude_objects in clob -- A newline separated list of objects to exclude (their schema object id actually).
-, p_include_objects in clob -- A newline separated list of objects to include (their schema object id actually).
+( p_schema_object_filter in oracle_tools.t_schema_object_filter -- The schema object filter.
 , p_transform_param_list in varchar2 -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
-, p_schema_object_filter out nocopy oracle_tools.t_schema_object_filter -- The schema object filter.
 , p_generate_ddl_configuration_id out nocopy integer -- The GENERATE_DDL_CONFIGURATIONS.ID.
 );
 /**
