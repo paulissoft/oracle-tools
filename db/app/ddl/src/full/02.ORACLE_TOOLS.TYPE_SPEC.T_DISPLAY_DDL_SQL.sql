@@ -1,4 +1,4 @@
-CREATE TYPE "ORACLE_TOOLS"."T_DISPLAY_DDL_SQL" authid definer as object
+CREATE TYPE "ORACLE_TOOLS"."T_DISPLAY_DDL_SQL" authid current_user as object
 ( schema_object_id varchar2(500 byte)
 , ddl# integer
 , verb varchar2(128 byte)
