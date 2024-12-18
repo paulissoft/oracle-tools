@@ -698,7 +698,14 @@ procedure get_parallel_status
 ( p_parallel_status_tab out nocopy t_parallel_status_tab
 )
 is
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_PARALLEL_STATUS';
+$end
 begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
   select  s.pdml_status
   ,       s.pddl_status
   ,       s.pq_status
@@ -707,6 +714,24 @@ begin
   ,       p_parallel_status_tab(3)
   from    v$session s
   where   s.audsid = c_session_id;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print
+  ( dbug."output"
+  , 'Parallel DML: %s; parallel DDL: %s; parallel query: %s'
+  , p_parallel_status_tab(1)
+  , p_parallel_status_tab(2)
+  , p_parallel_status_tab(3)
+  );
+$end  
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end get_parallel_status;
 
 procedure set_parallel_status
@@ -715,7 +740,24 @@ procedure set_parallel_status
 is
   l_type varchar2(10 byte) := null;
   l_status varchar2(10 byte) := null;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SET_PARALLEL_STATUS';
+$end
 begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print
+  ( dbug."input"
+  , 'Parallel DML: %s; parallel DDL: %s; parallel query: %s'
+  , p_parallel_status_tab(1)
+  , p_parallel_status_tab(2)
+  , p_parallel_status_tab(3)
+  );
+$end  
+$end
+
   for i_idx in 1..3
   loop    
     case 
@@ -731,6 +773,15 @@ begin
     execute immediate 'alter session ' || l_status || ' parallel ' || l_type;  
   end loop;
   p_parallel_status_tab.delete; -- so we don't call reset again without a disable first
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end set_parallel_status;
 
 -- PUBLIC
@@ -1537,7 +1588,15 @@ end delete_generate_ddl_sessions;
 procedure disable_parallel_status
 is
   l_parallel_status_tab t_parallel_status_tab;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'DISABLE_PARALLEL_STATUS';
+$end
 begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
   commit;
   get_parallel_status(g_parallel_status_tab);
   for i_idx in 1..3
@@ -1545,13 +1604,38 @@ begin
     l_parallel_status_tab(i_idx) := 'DISABLED';
   end loop;
   set_parallel_status(l_parallel_status_tab);
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end disable_parallel_status;
 
 procedure reset_parallel_status
 is
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'RESET_PARALLEL_STATUS';
+$end
 begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
   commit;
   set_parallel_status(g_parallel_status_tab);
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end reset_parallel_status;
 
 END DDL_CRUD_API;
