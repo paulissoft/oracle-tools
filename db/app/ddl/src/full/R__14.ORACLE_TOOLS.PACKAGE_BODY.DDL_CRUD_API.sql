@@ -1449,19 +1449,18 @@ begin
   where   gdsso.session_id = l_session_id
   and     ( p_schema_object_id is null or gdsso.schema_object_id = p_schema_object_id );
 
-  case sql%rowcount
-    when 0
-    then oracle_tools.pkg_ddl_error.raise_error
-         ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
-         , utl_lms.format_message
-           ( 'Could not set ORACLE_TOOLS.GENERATE_DDL_SESSION_SCHEMA_OBJECTS.DDL_OUTPUT_WRITTEN to %s'
-           , nvl(to_char(p_ddl_output_written), 'NULL')
-           )
-         , utl_lms.format_message('%s, "%s"', to_char(l_session_id), nvl(p_schema_object_id, '%'))
-         , 'session id, schema object id'
-         );
-    else null; -- ok
-  end case;
+  if sql%rowcount = 0 and p_schema_object_id is not null
+  then
+    oracle_tools.pkg_ddl_error.raise_error
+    ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
+    , utl_lms.format_message
+      ( 'Could not set ORACLE_TOOLS.GENERATE_DDL_SESSION_SCHEMA_OBJECTS.DDL_OUTPUT_WRITTEN to %s'
+      , nvl(to_char(p_ddl_output_written), 'NULL')
+      )
+    , utl_lms.format_message('%s, "%s"', to_char(l_session_id), nvl(p_schema_object_id, '%'))
+    , 'session id, schema object id'
+    );
+  end if;
 end set_ddl_output_written;
 
 procedure fetch_ddl_generate_report
