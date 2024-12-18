@@ -10,7 +10,7 @@ create table schema_object_filter_results
   constraint schema_object_filter_results$nnc$generate_ddl_details not null
   constraint schema_object_filter_results$ck$generate_ddl_details check (substr(generate_ddl_details, 1, 2) in (' |', '0|', '1|'))
 , generate_ddl number(1, 0) generated always as (to_number(ltrim(substr(generate_ddl_details, 1, 1)))) -- null, 0 or 1
-, generate_ddl_info varchar2(4000 byte) generated always as (substr(generate_ddl_details, 3))
+, generate_ddl_info varchar2(4000 byte) generated always as (substrb(generate_ddl_details, 3, 4000))
 , constraint schema_object_filter_results$pk
   primary key (schema_object_filter_id, schema_object_id)
 , constraint schema_object_filter_results$fk$1
