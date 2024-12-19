@@ -418,6 +418,8 @@ $end
                           inner join v_my_constraints_dict c /* this is where we are interested in */
                           on c.base_object_schema = mnso.object_schema() and c.base_object_name = mnso.object_name()
                   where   mnso.object_type() in ('TABLE', 'VIEW')
+                  order by
+                          c.constraint_type desc -- (R)eference first
                 ) t
       )
       loop
