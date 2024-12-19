@@ -7,9 +7,6 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" AUTHID CURRENT_USER UNDER T_
   /** Each entry a combination of a compare operator (first two characters) and an object id expression (from position 4 onwards). **/
 , nr_objects_to_exclude$ integer
   /** The first N entries in op_object_id_expr_tab$ are exclude operators. **/
-, last_modification_time_schema$ date
-  /** The last modification time of any object in this schema. **/
-
 , constructor function t_schema_object_filter
   ( self in out nocopy oracle_tools.t_schema_object_filter
   , p_schema in varchar2 default user
@@ -25,7 +22,6 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" AUTHID CURRENT_USER UNDER T_
 , member function schema return varchar2 deterministic
 , member function grantor_is_schema return integer deterministic
 , member function nr_objects_to_exclude return integer deterministic
-, member function last_modification_time_schema return date deterministic
   -- end of getters/setters
 , member function nr_objects return integer deterministic
 , member function op(p_idx in integer) return varchar2 deterministic

@@ -1094,11 +1094,6 @@ $end
     p_schema_object_filter.op_object_id_expr_tab$ := null;
   end if;
 
-  select  max(o.last_ddl_time)
-  into    p_schema_object_filter.last_modification_time_schema$
-  from    all_objects o
-  where   o.owner = p_schema;
-
   chk(p_schema_object_filter);
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
@@ -1174,7 +1169,6 @@ begin
   p_json_object.put('GRANTOR_IS_SCHEMA$', p_schema_object_filter.grantor_is_schema$);
   to_json_array('OP_OBJECT_ID_EXPR_TAB$', p_schema_object_filter.op_object_id_expr_tab$);
   p_json_object.put('NR_OBJECTS_TO_EXCLUDE$', p_schema_object_filter.nr_objects_to_exclude$);
-  -- do not store last_modification_time_schema$ since that field is part of SCHEMA_OBJECT_FILTERS
 end serialize;
 
 procedure chk

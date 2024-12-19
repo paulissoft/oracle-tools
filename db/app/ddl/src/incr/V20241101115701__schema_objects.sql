@@ -5,6 +5,7 @@ create table schema_objects
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   constraint schema_objects$nnc$created not null
+, updated timestamp(6)
 , constraint schema_objects$pk primary key (id)
 , constraint schema_objects$ck$obj check (obj is not null and obj.id = id)
 , constraint schema_objects$ck$obj$last_ddl_time$ check (obj.last_ddl_time$ is not null) deferrable initially deferred

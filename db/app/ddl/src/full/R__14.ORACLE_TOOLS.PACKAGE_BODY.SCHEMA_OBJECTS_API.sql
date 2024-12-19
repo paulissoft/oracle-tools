@@ -737,7 +737,9 @@ $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
     );
 $end -- $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
 
+  l_schema constant t_schema_nn := p_schema_object_filter.schema();
   l_schema_object_tab oracle_tools.t_schema_object_tab := null;
+  l_start_time constant oracle_tools.schema_objects := sys_extract_utc(systimestamp);
 $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then  
   l_all_schema_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
 $end  
@@ -815,6 +817,16 @@ $else
   ddl_batch_process;
 
 $end -- $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
+
+  delete
+  from    oracle_tools.schema_objects so
+  where   l_schema in (so.obj.object_schema(), so.obj.base_object_schema()) -- should use SCHEMA_OBJECTS$IDX$1 or SCHEMA_OBJECTS$IDX$2
+  and     so.updated < l_start_time
+  and     so.obj.dict_last_ddl_time() is null;
+
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print(dbug."info", '# rows deleted from SCHEMA_OBJECTS: %s', sql%rowcount);  
+$end
 
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;

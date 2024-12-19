@@ -102,17 +102,6 @@ procedure add_schema_object_filter
 , p_schema_object_filter_id out nocopy integer
 )
 is
-  cursor c_sof(b_schema_object_filter_id in t_schema_object_filter_id)
-  is
-    select  sof.last_modification_time_schema
-    from    oracle_tools.schema_object_filters sof
-    where   sof.id = b_schema_object_filter_id
-    for update of
-            sof.updated
-    ,       sof.last_modification_time_schema;
-
-  l_last_modification_time_schema_old oracle_tools.schema_object_filters.last_modification_time_schema%type;
-  l_last_modification_time_schema_new oracle_tools.schema_object_filters.last_modification_time_schema%type;
   l_clob constant clob := p_schema_object_filter.repr();
   l_hash_bucket constant oracle_tools.schema_object_filters.hash_bucket%type :=
     sys.dbms_crypto.hash(l_clob, sys.dbms_crypto.hash_sh1);
@@ -172,8 +161,6 @@ $end
   ** PACKAGE BODY 07/12/23 15:58:43 13/11/24 09:12:39 2023-12-08:11:50:02 LAST_DDL_TIME changed (1 sec later)
   */
 
-  l_last_modification_time_schema_new := p_schema_object_filter.last_modification_time_schema();
-
   -- when not found add it
   if p_schema_object_filter_id is null
   then
@@ -182,36 +169,21 @@ $end
     ( hash_bucket
     , hash_bucket_nr
     , obj_json
-    , last_modification_time_schema
     )
     values
     ( l_hash_bucket
     , l_hash_bucket_nr
     , p_schema_object_filter.repr()
-    , l_last_modification_time_schema_new
     )
     returning id into p_schema_object_filter_id;
   else
-    open c_sof(p_schema_object_filter_id);
-    fetch c_sof into l_last_modification_time_schema_old;
-    if c_sof%notfound
+    update  oracle_tools.schema_object_filters sof
+    set     sof.updated = sys_extract_utc(systimestamp)
+    where   sof.id = p_schema_object_filter_id;
+
+    if sql%rowcount = 0
     then raise program_error; -- should not happen
     end if;
-    if l_last_modification_time_schema_old <> l_last_modification_time_schema_new
-    then
-      -- we must recalculate p_schema_object_filter.matches_schema_object_details() for every object
-      delete
-      from    oracle_tools.schema_object_filter_results sofr
-      where   sofr.schema_object_filter_id = p_schema_object_filter_id;
-$if oracle_tools.ddl_crud_api.c_debugging $then
-      dbug.print(dbug."info", '# rows deleted from schema_object_filter_results: %s', sql%rowcount);
-$end
-    end if;
-    update  oracle_tools.schema_object_filters sof
-    set     sof.last_modification_time_schema = l_last_modification_time_schema_new
-    ,       sof.updated = sys_extract_utc(systimestamp)
-    where   current of c_sof;
-    close c_sof;
   end if;
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
@@ -308,7 +280,7 @@ $end
   when    not matched
   then    insert ( id, obj ) values ( src.id, src.obj )
   when    matched 
-  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$
+  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$, dst.updated = sys_extract_utc(systimestamp)
           delete where src.obj.last_ddl_time$ is null /* check constraint SCHEMA_OBJECTS$CK$OBJ$LAST_DDL_TIME$ */;
 
   -- merge into SCHEMA_OBJECT_FILTER_RESULTS (but only when not matched)
@@ -339,8 +311,7 @@ $end
     from    oracle_tools.schema_object_filter_results sofr
     where   sofr.schema_object_filter_id = p_schema_object_filter_id
     and     sofr.schema_object_id = l_schema_object_id
-          -- ignore objects that never ever need to be generated
-      -- necessary to add 0+1 and not only 1 to get them into GENERATE_DDL_SESSION_SCHEMA_OBJECTS and thus V_SCHEMA_OBJECTS and thus V_MY_NAMED_OBJECTS
+    -- ignore objects that never ever need to be generated
     and     sofr.generate_ddl in (/*0,*/ 1);
   exception
     when no_data_found
@@ -614,7 +585,7 @@ $end
   when    not matched
   then    insert ( id, obj ) values ( src.id, src.obj )
   when    matched 
-  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$
+  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$, dst.updated = sys_extract_utc(systimestamp)
           delete where src.obj.last_ddl_time$ is null /* check constraint SCHEMA_OBJECTS$CK$OBJ$LAST_DDL_TIME$ */;
 
 $if oracle_tools.ddl_crud_api.c_debugging $then

@@ -183,8 +183,7 @@ step 4, all entries in SCHEMA_OBJECT_FILTER_RESULTS for this
 schema object filter id will be removed. That is necessary since we must
 recalculate p_schema_object_filter.matches_schema_object_details() for every object
 since the schema is not the same anymore hence the results not reliable
-anymore. The LAST_MODIFICATION_TIME_SCHEMA and UPDATED columns will be
-updated in any case.
+anymore. The UPDATED column will be updated in any case.
 
 | Table                               | CRUD |
 |:------------------------------------|:-----|
