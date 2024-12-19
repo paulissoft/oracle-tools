@@ -15,6 +15,11 @@ Types of changes:
 
 ## [Unreleased]
 
+- [The DDL generator need not add grants to ADMIN for a Cloude database.](https://github.com/paulissoft/oracle-tools/issues/187)
+- [When a DBMS_PARALLEL_EXECUTE task fails it should NOT be dropped for further investigation.](https://github.com/paulissoft/oracle-tools/issues/186)
+- [While generating DDL grants to tables/packages (without DDL for the table/package) are ignored.](https://github.com/paulissoft/oracle-tools/issues/185)
+- [When generating DDL foreign keys to other schemas are not found anymore.](https://github.com/paulissoft/oracle-tools/issues/184)
+
 ## [4.0.0] - 2024-12-09
 
 ### Added
