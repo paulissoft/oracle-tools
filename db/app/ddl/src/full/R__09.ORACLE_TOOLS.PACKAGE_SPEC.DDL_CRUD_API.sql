@@ -447,6 +447,12 @@ procedure disable_parallel_status;
 procedure reset_parallel_status;
 /** Restore parallel DML, DDL and Query to the situation just before disable_parallel_status was called. Will commit first. **/
 
+procedure purge_schema_objects
+( p_schema in varchar2 -- The schema to inspect.
+, p_reference_time in timestamp -- The reference timestamp.
+);
+/** Purge schema objects belonging to this schema with an updated value before the reference timestamp. **/
+
 END DDL_CRUD_API;
 /
 

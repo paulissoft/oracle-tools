@@ -1608,6 +1608,23 @@ exception
 $end
 end reset_parallel_status;
 
+procedure purge_schema_objects
+( p_schema in varchar2 -- The schema to inspect.
+, p_reference_time in timestamp -- The reference timestamp.
+)
+is
+begin
+  delete
+  from    oracle_tools.schema_objects so
+  where   p_schema in (so.obj.object_schema(), so.obj.base_object_schema()) -- should use SCHEMA_OBJECTS$IDX$1 or SCHEMA_OBJECTS$IDX$2
+  and     so.updated < p_reference_time
+  and     so.obj.dict_last_ddl_time() is null;
+
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print(dbug."info", '# rows deleted from SCHEMA_OBJECTS: %s', sql%rowcount);  
+$end
+end purge_schema_objects;
+
 END DDL_CRUD_API;
 /
 
