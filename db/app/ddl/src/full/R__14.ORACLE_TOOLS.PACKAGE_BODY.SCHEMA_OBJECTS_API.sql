@@ -739,7 +739,7 @@ $end -- $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
 
   l_schema constant t_schema_nn := p_schema_object_filter.schema();
   l_schema_object_tab oracle_tools.t_schema_object_tab := null;
-  l_start_time constant oracle_tools.schema_objects := sys_extract_utc(systimestamp);
+  l_start_time constant oracle_tools.schema_objects.updated%type := sys_extract_utc(systimestamp);
 $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then  
   l_all_schema_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
 $end  
