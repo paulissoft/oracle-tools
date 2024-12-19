@@ -162,31 +162,26 @@ $end
             ,       obj.object_type
             ,       obj.object_name
             ,       obj.status
-            ,       obj.generated
-            ,       obj.temporary
-            ,       obj.subobject_name
                     -- use scalar subqueries for a (possible) better performance
             ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual ) as md_object_type
---            ,       ( select oracle_tools.t_schema_object.is_a_repeatable(obj.object_type) from dual ) as is_a_repeatable
---            ,       ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), obj.object_name) from dual ) as is_exclude_name_expr
             ,       ( select oracle_tools.pkg_ddl_util.is_dependent_object_type(obj.object_type) from dual ) as is_dependent_object_type
             from    all_objects obj
+            where   obj.owner = p_schema
+            and     obj.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
+            and     not( obj.object_type = 'SEQUENCE' and substr(obj.object_name, 1, 5) = 'ISEQ$' )
+$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
+            and     obj.generated = 'N' -- GPA 2016-12-19 #136334705
+$end                
+                    -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
+                    -- =====         ===========                      ==============
+                    -- ORACLE_TOOLS  oracle_tools.t_table_column_ddl  $VSN_1
+            and     obj.subobject_name is null
           )
           select  o.owner as object_schema
           ,       o.md_object_type as object_type
           ,       o.object_name
           from    obj o
-          where   o.owner = p_schema
-          and     o.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
-          and     not( o.object_type = 'SEQUENCE' and substr(o.object_name, 1, 5) = 'ISEQ$' )
-          and     o.md_object_type member of l_schema_md_object_type_tab
-$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
-          and     o.generated = 'N' -- GPA 2016-12-19 #136334705
-$end                
-                  -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
-                  -- =====         ===========                      ==============
-                  -- ORACLE_TOOLS  oracle_tools.t_table_column_ddl  $VSN_1
-          and     o.subobject_name is null
+          where   o.md_object_type member of l_schema_md_object_type_tab
                   -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
           and     o.is_dependent_object_type = 0
         )
