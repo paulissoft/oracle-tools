@@ -380,32 +380,24 @@ $end
       for r in
       ( -- constraints for objects in the same schema
         with v_my_constraints_dict as
-        ( select  t.object_schema
-          ,       t.object_type
-          ,       t.object_name
-          ,       t.base_object_schema
-          ,       t.base_object_name
-          ,       t.constraint_type
-          ,       t.search_condition
-          from    ( select  c.owner as object_schema
-                    ,       case when c.constraint_type = 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
-                    ,       c.constraint_name as object_name
-                    ,       nvl(c.r_owner, c.owner) as base_object_schema -- referential constraint can be in another schema
-                    ,       c.table_name as base_object_name
-                    ,       c.constraint_type
-                    ,       c.search_condition
-                    from    all_constraints c
-                    where   l_schema in (c.r_owner, c.owner)
-                    and     /* Type of constraint definition:
-                               C (check constraint on a table)
-                               P (primary key)
-                               U (unique key)
-                               R (referential integrity)
-                               V (with check option, on a view)
-                               O (with read only, on a view)
-                            */
-                            c.constraint_type in ('C', 'P', 'U', 'R')
-                  ) t
+        ( select  c.owner as object_schema
+          ,       case when c.constraint_type = 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
+          ,       c.constraint_name as object_name
+          ,       nvl(c.r_owner, c.owner) as base_object_schema -- referential constraint can be in another schema
+          ,       c.table_name as base_object_name
+          ,       c.constraint_type
+          ,       c.search_condition
+          from    all_constraints c
+          where   l_schema in (c.r_owner, c.owner)
+          and     /* Type of constraint definition:
+                     C (check constraint on a table)
+                     P (primary key)
+                     U (unique key)
+                     R (referential integrity)
+                     V (with check option, on a view)
+                     O (with read only, on a view)
+                  */
+                  c.constraint_type in ('C', 'P', 'U', 'R')
         )
         select  t.*
         from    ( select  value(mnso) as base_object
@@ -435,6 +427,7 @@ $end
               , p_object_name => r.object_name
               , p_constraint_type => r.constraint_type
               , p_column_names => null
+              , p_ref_object => null
               );
 
           when 'CONSTRAINT'
