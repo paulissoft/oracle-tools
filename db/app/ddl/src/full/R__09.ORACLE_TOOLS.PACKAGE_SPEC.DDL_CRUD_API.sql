@@ -422,7 +422,7 @@ type t_ddl_generate_report_rec is record
 , schema_object oracle_tools.t_schema_object
   -- from SCHEMA_OBJECT_FILTER_RESULTS
 , generate_ddl number(1, 0) -- result part 1 of procedure PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT_DETAILS()
-, generate_ddl_info varchar2(4000 byte) -- result part 2 of procedure PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT_DETAILS()
+, generate_ddl_info varchar2(1000 byte) -- result part 2 of procedure PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT_DETAILS()
   -- from GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 , ddl_generated number(1, 0) -- see v_schema_objects.ddl_generated
 , ddl_output_written number(1, 0)
