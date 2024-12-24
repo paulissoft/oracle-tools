@@ -671,6 +671,7 @@ procedure ddl_batch_process
 is
   l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
   l_task_name constant varchar2(100 byte) := $$PLSQL_UNIT || '.DDL_BATCH-' || to_char(l_session_id);
+  l_count pls_integer;
 
   -- Here we substitute the session id into the statement since it may be executed by another session.
   l_sql_stmt constant varchar2(1000 byte) :=
@@ -692,6 +693,14 @@ $if oracle_tools.schema_objects_api.c_tracing $then
 $end
 
   -- No need to check whether V_DEPENDENT_OR_GRANTED_OBJECT_TYPES contains rows: it always does.
+  select  count(*)
+  into    l_count
+  from    oracle_tools.v_dependent_or_granted_object_types;
+
+  if l_count <> c_steps.count - 1 -- skip first item
+  then
+    raise program_error;
+  end if;
 
   -- Create the TASK for all but SCHEMA_EXPORT
   dbms_parallel_execute.create_task(l_task_name);
@@ -702,8 +711,7 @@ $end
     , table_owner => 'ORACLE_TOOLS'
     , table_name => 'V_DEPENDENT_OR_GRANTED_OBJECT_TYPES'
     , table_column => 'NR'
-      -- V_DEPENDENT_OR_GRANTED_OBJECT_TYPES contains 6 rows
-    , chunk_size => case when oracle_tools.pkg_ddl_util.c_default_parallel_level >= 1 then ceil(6 / oracle_tools.pkg_ddl_util.c_default_parallel_level) else 1 end
+    , chunk_size => case when oracle_tools.pkg_ddl_util.c_default_parallel_level >= 1 then ceil(l_count / oracle_tools.pkg_ddl_util.c_default_parallel_level) else 1 end
     );
 
 $if oracle_tools.schema_objects_api.c_debugging $then
