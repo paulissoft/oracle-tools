@@ -7,7 +7,9 @@ select 4, 'COMMENT' from dual
 union all
 select 5, 'CONSTRAINT' from dual
 union all
-select 6, 'TRIGGER' from dual
+select 6, 'REF_CONSTRAINT' from dual
 union all
-select 7, 'INDEX' from dual;
+select 7, 'TRIGGER' from dual
+union all
+select 8, 'INDEX' from dual;
 
