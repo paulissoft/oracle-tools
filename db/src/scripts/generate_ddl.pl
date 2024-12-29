@@ -172,6 +172,10 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2024-12-29
+
+Small bug while scanning the object sequence number for a view (e.g. R__10.02.ORACLE_TOOLS.VIEW.V_MY_NAMED_SCHEMA_OBJECTS.sql).
+
 =item 2024-12-07
 
 For interface version 4, files will also be reused and views can be named R__10.<seq>.[<schema>.]VIEW.<name>.sql.
@@ -1796,7 +1800,9 @@ sub add_object_info ($;$$) {
     
     if (defined($object_seq) && defined($file)) {
         # strip leading zeros otherwise it will be treated as an octal number
-        $object_seq =~ m/^0*(\d+)(\.\d+)?$/;
+        # GJP 2024-12-29
+        # A view can be named R__10.02.ORACLE_TOOLS.VIEW.V_MY_NAMED_SCHEMA_OBJECTS.sql and not just R__10.ORACLE_TOOLS.VIEW.V_MY_NAMED_SCHEMA_OBJECTS.sql
+        $object_seq =~ m/^0*(\d+)(\.\d+)?$/;  
         my $nr = $1;
         error(sprintf("Object sequence '%s' does not match '%s'", $object_seq, '^0*(\d+)(\.\d+)?$'))
             unless defined($nr);
