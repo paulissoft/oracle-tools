@@ -880,6 +880,7 @@ begin
   where   o.owner = $$PLSQL_UNIT_OWNER
   and     o.object_name in
           ( 'DDL_CRUD_API'
+          , 'PKG_DDL_DEFS'
           , 'PKG_DDL_ERROR'
           , 'PKG_DDL_UTIL'
           , 'PKG_SCHEMA_OBJECT_FILTER'
