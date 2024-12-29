@@ -1601,11 +1601,11 @@ $end
                  ')'
       );
     else
-      if nvl(is_dependent_object_type(p_object_type => p_object_type), 1) = 1
+      if nvl(oracle_tools.pkg_ddl_defs.is_dependent_object_type(p_object_type => p_object_type), 1) = 1
       then
         if p_object_type in ('INDEX', 'TRIGGER')
         then
-          if is_dependent_object_type(p_object_type => p_object_type) is null
+          if oracle_tools.pkg_ddl_defs.is_dependent_object_type(p_object_type => p_object_type) is null
           then
             null; -- OK
           else
@@ -1641,7 +1641,7 @@ $end
           , value => in_list_expr(c_object_to_ignore_tab)
           );
         else
-          if is_dependent_object_type(p_object_type => p_object_type) = 1
+          if oracle_tools.pkg_ddl_defs.is_dependent_object_type(p_object_type => p_object_type) = 1
           then
             null; -- OK
           else
@@ -1788,7 +1788,7 @@ $end
     6. If the result of this operation is NULL, then call the DBMS_METADATA.CLOSE() procedure.
 
     */
-    case is_dependent_object_type(p_object_type => p_object_type)
+    case oracle_tools.pkg_ddl_defs.is_dependent_object_type(p_object_type => p_object_type)
       when 1
       then
         if p_base_object_schema is not null and p_object_schema is null
@@ -5615,23 +5615,6 @@ $if oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
 $end
   end chk_schema_object;
 
-  function is_dependent_object_type
-  ( p_object_type in t_metadata_object_type
-  )
-  return t_numeric_boolean
-  deterministic
-  is
-  begin
-    return
-      case
-        when p_object_type in ('INDEX', 'TRIGGER')
-        then null /* zowel standaard als dependent object */
-        when p_object_type in ('OBJECT_GRANT', 'COMMENT', 'CONSTRAINT', 'REF_CONSTRAINT')
-        then 1 /* alleen op te vragen via base object */
-        else 0
-      end;
-  end is_dependent_object_type;
-
   procedure get_exclude_name_expr_tab
   ( p_object_type in varchar2
   , p_object_name in varchar2 default null
@@ -6965,7 +6948,7 @@ $end
                 ,       o.object_name
                         -- use scalar subqueries for a (possible) better performance
                 ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(o.object_type), 1, 23) from dual ) as object_type
-                ,       ( select oracle_tools.pkg_ddl_util.is_dependent_object_type(o.object_type) from dual ) as is_dependent_object_type
+                ,       ( select oracle_tools.pkg_ddl_defs.is_dependent_object_type(o.object_type) from dual ) as is_dependent_object_type
 
                 from    all_objects o
                 where   o.owner = g_empty

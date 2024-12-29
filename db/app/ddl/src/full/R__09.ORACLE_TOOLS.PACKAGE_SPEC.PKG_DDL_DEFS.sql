@@ -138,6 +138,12 @@ Return a list of DBMS_METADATA object types.
 
 **/
 
+function is_dependent_object_type
+( p_object_type in t_metadata_object_type
+)
+return t_numeric_boolean
+deterministic;
+
 end pkg_ddl_defs;
 /
 

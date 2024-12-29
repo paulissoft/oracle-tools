@@ -883,7 +883,7 @@ static function dict_object_type
 return varchar2
 deterministic /*result_cache*/
 is
-  l_dict_object_type oracle_tools.pkg_ddl_util.t_dict_object_type;
+  l_dict_object_type oracle_tools.pkg_ddl_defs.t_dict_object_type;
   l_metadata_object_type oracle_tools.pkg_ddl_defs.t_metadata_object_type;
 begin
 $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then

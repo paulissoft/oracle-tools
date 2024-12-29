@@ -1,1 +1,0 @@
-s/\bpkg_ddl_util\.(c_transform_param_list|c_debugging.*|c_exclude.*|t_object(_name)?|c_set_start_with_to_minvalue|t_metadata_object_type|t_md_object_type_tab|get_md_object_type_tab|c_#.*|t_numeric_boolean_nn|t_numeric_boolean|c_use_sqlterminator|c_get_.+)\b/'pkg_ddl_defs.' . $1/eg;

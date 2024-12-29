@@ -104,6 +104,23 @@ $end
            end;
   end get_md_object_type_tab;
 
+  function is_dependent_object_type
+  ( p_object_type in t_metadata_object_type
+  )
+  return t_numeric_boolean
+  deterministic
+  is
+  begin
+    return
+      case
+        when p_object_type in ('INDEX', 'TRIGGER')
+        then null /* zowel standaard als dependent object */
+        when p_object_type in ('OBJECT_GRANT', 'COMMENT', 'CONSTRAINT', 'REF_CONSTRAINT')
+        then 1 /* alleen op te vragen via base object */
+        else 0
+      end;
+  end is_dependent_object_type;
+
 end pkg_ddl_defs;
 /
 

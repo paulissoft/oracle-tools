@@ -177,7 +177,7 @@ $end
             ,       obj.status
                     -- use scalar subqueries for a (possible) better performance
             ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual ) as md_object_type
-            ,       ( select oracle_tools.pkg_ddl_util.is_dependent_object_type(obj.object_type) from dual ) as is_dependent_object_type
+            ,       ( select oracle_tools.pkg_ddl_defs.is_dependent_object_type(obj.object_type) from dual ) as is_dependent_object_type
             from    all_objects obj
             where   obj.owner = p_schema
             and     obj.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')

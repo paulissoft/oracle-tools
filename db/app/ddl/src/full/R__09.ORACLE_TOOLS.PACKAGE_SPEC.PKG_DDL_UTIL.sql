@@ -319,12 +319,6 @@ So we invoke package procedure from the type bodies.
 
 **/
 
-function is_dependent_object_type
-( p_object_type in t_metadata_object_type
-)
-return t_numeric_boolean
-deterministic;
-
 procedure get_exclude_name_expr_tab
 ( p_object_type in varchar2
 , p_object_name in varchar2 default null
