@@ -2,9 +2,9 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."SCHEMA_OBJECTS_API" IS /* -*-codi
 
 -- PRIVATE
 subtype t_module is varchar2(100);
-subtype t_numeric_boolean is oracle_tools.pkg_ddl_util.t_numeric_boolean;
-subtype t_schema is oracle_tools.pkg_ddl_util.t_schema;
-subtype t_schema_nn is oracle_tools.pkg_ddl_util.t_schema_nn;
+subtype t_numeric_boolean is oracle_tools.pkg_ddl_defs.t_numeric_boolean;
+subtype t_schema is oracle_tools.pkg_ddl_defs.t_schema;
+subtype t_schema_nn is oracle_tools.pkg_ddl_defs.t_schema_nn;
 
 -- steps in get_schema_objects
 "named objects" constant varchar2(30 char) := 'base objects';
@@ -37,8 +37,8 @@ is
 
   l_excluded_tables_tab t_excluded_tables_tab;
 
-  l_schema_md_object_type_tab constant oracle_tools.pkg_ddl_util.t_md_object_type_tab :=
-    oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
+  l_schema_md_object_type_tab constant oracle_tools.pkg_ddl_defs.t_md_object_type_tab :=
+    oracle_tools.pkg_ddl_defs.get_md_object_type_tab('SCHEMA');
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_NAMED_OBJECTS');
@@ -73,7 +73,7 @@ $if oracle_tools.schema_objects_api.c_debugging $then
           dbug.print(dbug."info", 'excluding queue table: %s', r.object_name);
 $end
 
-$if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
+$if oracle_tools.pkg_ddl_defs.c_get_queue_ddl $then
 
           p_schema_object_tab.extend(1);
           p_schema_object_tab(p_schema_object_tab.last) :=          
@@ -139,7 +139,7 @@ $end
           where   t.owner = p_schema
           and     t.object_type = 'TABLE'
           and     t.temporary = 'Y'
-$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
+$if oracle_tools.pkg_ddl_defs.c_exclude_system_objects $then
           and     t.generated = 'N' -- GPA 2016-12-19 #136334705
 $end      
                   -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
@@ -177,12 +177,12 @@ $end
             ,       obj.status
                     -- use scalar subqueries for a (possible) better performance
             ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual ) as md_object_type
-            ,       ( select oracle_tools.pkg_ddl_util.is_dependent_object_type(obj.object_type) from dual ) as is_dependent_object_type
+            ,       ( select oracle_tools.pkg_ddl_defs.is_dependent_object_type(obj.object_type) from dual ) as is_dependent_object_type
             from    all_objects obj
             where   obj.owner = p_schema
             and     obj.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
             and     not( obj.object_type = 'SEQUENCE' and substr(obj.object_name, 1, 5) = 'ISEQ$' )
-$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
+$if oracle_tools.pkg_ddl_defs.c_exclude_system_objects $then
             and     obj.generated = 'N' -- GPA 2016-12-19 #136334705
 $end                
                     -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
@@ -615,7 +615,7 @@ $end
               -- When constraint_index = 'YES' the index is created as part of the constraint DDL,
               -- so it will not be listed as a separate DDL statement.
       and     not(i.constraint_index = 'YES')
-$if oracle_tools.pkg_ddl_util.c_exclude_system_indexes $then
+$if oracle_tools.pkg_ddl_defs.c_exclude_system_indexes $then
       and     i.generated = 'N'
 $end
       ;
@@ -729,7 +729,7 @@ $end
     , table_owner => 'ORACLE_TOOLS'
     , table_name => 'V_DEPENDENT_OR_GRANTED_OBJECT_TYPES'
     , table_column => 'NR'
-    , chunk_size => case when oracle_tools.pkg_ddl_util.c_default_parallel_level >= 1 then ceil(l_count / oracle_tools.pkg_ddl_util.c_default_parallel_level) else 1 end
+    , chunk_size => case when oracle_tools.pkg_ddl_defs.c_default_parallel_level >= 1 then ceil(l_count / oracle_tools.pkg_ddl_defs.c_default_parallel_level) else 1 end
     );
 
 $if oracle_tools.schema_objects_api.c_debugging $then
@@ -746,7 +746,7 @@ $end
       ( l_task_name
       , l_sql_stmt
       , dbms_sql.native
-      , parallel_level => oracle_tools.pkg_ddl_util.c_default_parallel_level
+      , parallel_level => oracle_tools.pkg_ddl_defs.c_default_parallel_level
       );
     exception
       when e_insufficient_privileges
@@ -1237,7 +1237,7 @@ $if oracle_tools.schema_objects_api.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || l_program);
 $end
 
-$if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
+$if oracle_tools.pkg_ddl_defs.c_get_queue_ddl $then
 
   -- check queue tables
   for r in
@@ -1338,7 +1338,7 @@ $end
     where   i.owner <> i.table_owner
     and     i.owner = user
     and     i.table_name is not null
-$if oracle_tools.pkg_ddl_util.c_exclude_system_indexes $then
+$if oracle_tools.pkg_ddl_defs.c_exclude_system_indexes $then
     and     i.generated = 'N'
 $end      
   )
