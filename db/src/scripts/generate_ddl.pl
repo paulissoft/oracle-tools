@@ -1796,8 +1796,11 @@ sub add_object_info ($;$$) {
     
     if (defined($object_seq) && defined($file)) {
         # strip leading zeros otherwise it will be treated as an octal number
-        $object_seq =~ m/^0*(\d+)$/;
-        $object_seq = int($1);
+        $object_seq =~ m/^0*(\d+)(\.\d+)?$/;
+        my $nr = $1;
+        error(sprintf("Object sequence '%s' does not match '%s'", $object_seq, '^0*(\d+)(\.\d+)?$'))
+            unless defined($nr);
+        $object_seq = int($nr);
         $object_seq_max = $object_seq
             if ($interface ne PKG_DDL_UTIL_V4 && $object_seq > $object_seq_max);
     } elsif (!(defined($object_seq) && defined($file))) {
