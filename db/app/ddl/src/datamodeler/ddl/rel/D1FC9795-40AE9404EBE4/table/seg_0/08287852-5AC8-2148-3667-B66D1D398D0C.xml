@@ -6,7 +6,7 @@
 <createdBy>gpaulissen</createdBy>
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <comment><![CDATA[The schema object filter results, needed because the function matches_schema_object is too expensive.]]></comment>
-<commentInRDBMS><![CDATA[The schema object filter results, needed because the function matches_schema_object is too expensive.]]></commentInRDBMS>
+<commentInRDBMS><![CDATA[The schema object filter results, needed because the function matches_schema_object_details is too expensive.]]></commentInRDBMS>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>9CE36F36-7A6D-3814-F10D-576ACF862095</importedID>
 <abbreviation>SOFR</abbreviation>
@@ -35,7 +35,7 @@
 <logicalDatatype>LOGDT019</logicalDatatype>
 <dataTypePrecision>*</dataTypePrecision>
 <dataTypeSize>500 BYTE</dataTypeSize>
-<ownDataTypeParameters>500 BYTE,,</ownDataTypeParameters>
+<ownDataTypeParameters>500 BYTE,*,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
@@ -45,7 +45,7 @@
 </propertyMap>
 <associations>
 <colAssociation fkAssociation="6A758CAF-0130-57DE-9E5E-E5A670B23B5C" referredColumn="897C19BD-7515-AD12-9A34-320E5B62A40B"/>
-<colAssociation fkAssociation="6A538357-1D78-2FDC-662B-4E9D66B80E9B" referredColumn="F9235B75-7E72-8805-F33D-16F641E2E8D2"/>
+<colAssociation fkAssociation="6A538357-1D78-2FDC-662B-4E9D66B80E9B" referredColumn="897C19BD-7515-AD12-9A34-320E5B62A40B"/>
 </associations>
 </Column>
 <Column name="SCHEMA_OBJECT_ID" id="8805373F-984F-892B-883F-389AFFB05768">
@@ -96,6 +96,27 @@
 <property name="copyComments" value="1"/>
 </propertyMap>
 </Column>
+<Column name="GENERATE_DDL_DETAILS" id="7BD83C61-33B2-4631-C1A2-1FA805731DC0">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECT_FILTER_RESULTS</sourceObjSchema>
+<sourceObjName>GENERATE_DDL_DETAILS</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-12-29 16:31:55 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>B2E90E2F-8E39-6FAD-0EC7-4A6B8144E95C</importedID>
+<constraintName>SCHEMA_OBJECT_FILTER_RESULTS$CK$GENERATE_DDL_DETAILS</constraintName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>1002 BYTE</dataTypeSize>
+<checkConstraint>
+<implementationDef dbType="Generic Constraint" definition="substr(generate_ddl_details, 1, 2) in (&apos; |&apos;, &apos;0|&apos;, &apos;1|&apos;)"/>
+<implementationDef dbType="Oracle Database 12cR2" definition="substr(generate_ddl_details, 1, 2) in (&apos; |&apos;, &apos;0|&apos;, &apos;1|&apos;)"/>
+</checkConstraint>
+<ownDataTypeParameters>1002 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>SCHEMA_OBJECT_FILTER_RESULTS$NNC$GENERATE_DDL_DETAILS</notNullConstraintName>
+</Column>
 <Column name="GENERATE_DDL" id="12282FF0-C0B9-27F0-3E42-F0D759FE8FC0">
 <sourceConnName>oracle_tools@free</sourceConnName>
 <sourceObjSchema>SCHEMA_OBJECT_FILTER_RESULTS</sourceObjSchema>
@@ -104,23 +125,39 @@
 <createdTime>2024-11-28 08:51:30 UTC</createdTime>
 <ownerDesignName>ddl</ownerDesignName>
 <importedID>BBC209D7-0176-2D97-096B-CB24DA054641</importedID>
-<constraintName>SCHEMA_OBJECT_FILTER_RESULTS$CK$GENERATE_DDL</constraintName>
+<formulaDesc>TO_NUMBER(LTRIM(SUBSTR(&quot;GENERATE_DDL_DETAILS&quot;,1,1)))</formulaDesc>
 <nullsAllowed>true</nullsAllowed>
 <useDomainConstraints>false</useDomainConstraints>
 <use>1</use>
 <logicalDatatype>LOGDT019</logicalDatatype>
 <dataTypePrecision>1</dataTypePrecision>
-<listOfValues>
-<valueDef value="0" description=""/>
-<valueDef value="1" description=""/>
-</listOfValues>
 <ownDataTypeParameters>,1,</ownDataTypeParameters>
+<computed>true</computed>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
 <propertyMap>
 <property name="copyComments" value="1"/>
 </propertyMap>
+</Column>
+<Column name="GENERATE_DDL_INFO" id="3E7E29F8-5B4F-2498-A2EB-3919EBF8D228">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>SCHEMA_OBJECT_FILTER_RESULTS</sourceObjSchema>
+<sourceObjName>GENERATE_DDL_INFO</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-12-29 16:31:55 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>F2E0EDEB-E3A4-4CC0-205D-7568EA3C96F8</importedID>
+<formulaDesc>SUBSTRB(&quot;GENERATE_DDL_DETAILS&quot;,3,1000)</formulaDesc>
+<nullsAllowed>true</nullsAllowed>
+<sourceType>Derived</sourceType>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>1000 BYTE</dataTypeSize>
+<ownDataTypeParameters>1000 BYTE,,</ownDataTypeParameters>
+<computed>true</computed>
+<autoIncrementCycle>false</autoIncrementCycle>
 </Column>
 </columns>
 <indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
@@ -167,6 +204,21 @@
 <isSurrogateKey>false</isSurrogateKey>
 <indexColumnUsage>
 <colUsage columnID="ACC9B02B-6E23-9062-4A3D-3E13B01F3D45"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="5BBC5F2A-E7FB-2A27-530F-E0C101BC8E5B" schemaObject="86E07972-0E39-656A-F568-00AE638CFEA4" name="SCHEMA_OBJECT_FILTER_RESULTS$PK">
+<sourceConnName>oracle_tools@free</sourceConnName>
+<sourceObjSchema>ORACLE_TOOLS</sourceObjSchema>
+<sourceObjName>SCHEMA_OBJECT_FILTER_RESULTS$PK</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2024-12-29 16:31:55 UTC</createdTime>
+<ownerDesignName>ddl</ownerDesignName>
+<importedID>70DAD2F4-29E1-09A7-CAC7-B0923C2575A1</importedID>
+<indexState>Unique Plain Index</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="ACC9B02B-6E23-9062-4A3D-3E13B01F3D45"/>
+<colUsage columnID="8805373F-984F-892B-883F-389AFFB05768"/>
 </indexColumnUsage>
 </ind_PK_UK>
 <ind_PK_UK id="3CDCC119-D8AB-B555-01F8-213E542A7983" name="SCHEMA_OBJECT_FILTER_RESULTS$FK$1">

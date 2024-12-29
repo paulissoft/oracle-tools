@@ -17,6 +17,10 @@ Types of changes:
 
 ## [4.1.0] - 2024-12-29
 
+### Added
+
+- [Reduce the number of circular dependencies for DDL generation code.](https://github.com/paulissoft/oracle-tools/issues/90)
+
 ### Changed
 
 - [The DDL generator need not add grants to ADMIN for a Cloud database.](https://github.com/paulissoft/oracle-tools/issues/187)

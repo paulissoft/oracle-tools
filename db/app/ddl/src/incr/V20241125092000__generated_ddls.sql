@@ -14,7 +14,7 @@ create table generated_ddls
   primary key (id)
 , constraint generated_ddls$uk$1
   unique (schema_object_id, last_ddl_time, generate_ddl_configuration_id)
-, constraint generate_ddls$fk$1
+, constraint generated_ddls$fk$1
   foreign key (generate_ddl_configuration_id)
   references oracle_tools.generate_ddl_configurations(id) on delete cascade
 , constraint generated_ddls$fk$2
