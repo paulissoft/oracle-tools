@@ -308,7 +308,9 @@ $end
                 -- several grantors may have executed the same grant statement
         ,       max(p.grantable) as grantable -- YES comes after NO
         from    all_tab_privs p
-        where   l_schema = p.table_schema and ( l_grantor_is_schema = 0 or p.grantor = l_schema )
+        where   l_schema = p.table_schema
+        and     ( l_grantor_is_schema = 0 or p.grantor = l_schema )
+        and     p.grantee <> 'ADMIN' -- https://github.com/paulissoft/oracle-tools/issues/187
         group by
                 p.table_schema
         ,       p.table_name
