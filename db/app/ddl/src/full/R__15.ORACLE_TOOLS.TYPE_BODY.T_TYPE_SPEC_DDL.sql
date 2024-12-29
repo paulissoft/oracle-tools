@@ -12,7 +12,7 @@ is
   l_target_member_ddl_tab oracle_tools.t_schema_ddl_tab;
   l_type_attribute_ddl oracle_tools.t_schema_ddl;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
   dbug.print(dbug."input", 'p_source.obj.id: %s; p_target.obj.id: %s', p_source.obj.id, p_target.obj.id);
 $end
@@ -46,7 +46,7 @@ $end
     l_type_attribute_ddl := null;
     if r.source_schema_ddl is null
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** target column ***');
       r.target_schema_ddl.print();
 $end
@@ -58,7 +58,7 @@ $end
       l_type_attribute_ddl.uninstall(r.target_schema_ddl);
     elsif r.target_schema_ddl is null
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** source column ***');
       r.source_schema_ddl.print();
 $end
@@ -70,7 +70,7 @@ $end
       l_type_attribute_ddl.install(r.source_schema_ddl);
     elsif r.source_schema_ddl <> r.target_schema_ddl
     then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
       dbug.print(dbug."info", '*** source column ***');
       r.source_schema_ddl.print();
       dbug.print(dbug."info", '*** target column ***');
@@ -97,7 +97,7 @@ $end
         );
       end loop;
     end if;
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
     if l_type_attribute_ddl is not null
     then
       dbug.print(dbug."info", '*** result column ***');
@@ -106,7 +106,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
 $end
   end loop;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 end migrate;
@@ -117,17 +117,17 @@ overriding member procedure uninstall
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UNINSTALL');
 $end
 
   self.add_ddl
   ( p_verb => 'DROP'
   , p_text => 'DROP ' || p_target.obj.dict_object_type() || ' ' || p_target.obj.fq_object_name() || ' FORCE'
-  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_defs.c_use_sqlterminator then 1 else 0 end
   );
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 end uninstall;

@@ -1,9 +1,9 @@
 CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_SCHEMA_OBJECT_FILTER" IS
 
-subtype t_object is oracle_tools.pkg_ddl_util.t_object;
-subtype t_numeric_boolean is oracle_tools.pkg_ddl_util.t_numeric_boolean;
-subtype t_metadata_object_type is oracle_tools.pkg_ddl_util.t_metadata_object_type;
-subtype t_md_object_type_tab is oracle_tools.pkg_ddl_util.t_md_object_type_tab;
+subtype t_object is oracle_tools.pkg_ddl_defs.t_object;
+subtype t_numeric_boolean is oracle_tools.pkg_ddl_defs.t_numeric_boolean;
+subtype t_metadata_object_type is oracle_tools.pkg_ddl_defs.t_metadata_object_type;
+subtype t_md_object_type_tab is oracle_tools.pkg_ddl_defs.t_md_object_type_tab;
 
 "OBJECT SCHEMA" constant simple_integer := 1;
 "OBJECT TYPE" constant simple_integer := 2;
@@ -452,7 +452,7 @@ procedure construct
 )
 is
   l_dependent_md_object_type_tab constant t_md_object_type_tab :=
-    oracle_tools.pkg_ddl_util.get_md_object_type_tab('DEPENDENT');
+    oracle_tools.pkg_ddl_defs.get_md_object_type_tab('DEPENDENT');
 
   l_exclude_object_tab dbms_sql.varchar2a;
   l_include_object_tab dbms_sql.varchar2a;
@@ -503,11 +503,11 @@ is
   begin
     if p_object_type is null or
        p_object_type = 'SCHEMA_EXPORT' or
-$if not(oracle_tools.pkg_ddl_util.c_get_queue_ddl) $then
+$if not(oracle_tools.pkg_ddl_defs.c_get_queue_ddl) $then
        p_object_type in ('AQ_QUEUE', 'AQ_QUEUE_TABLE') or
 $end
        p_object_type in ('CONSTRAINT', 'REF_CONSTRAINT') or
-       p_object_type member of oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA')
+       p_object_type member of oracle_tools.pkg_ddl_defs.get_md_object_type_tab('SCHEMA')
     then
       null; -- ok
     else

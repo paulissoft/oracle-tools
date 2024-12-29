@@ -46,11 +46,23 @@ c_test_empty constant boolean := false;
 
 c_err_pipelined_no_data_found constant boolean := true; -- false: no exception for no_data_found in  pipelined functions
 
-/*
--- End of bugs/features
-*/
+/* (SUB)TYPES */
 
 subtype t_transform_param_tab is oracle_tools.pkg_ddl_defs.t_transform_param_tab;
+subtype t_metadata_object_type is oracle_tools.pkg_ddl_defs.t_metadata_object_type;
+subtype t_schema_nn is oracle_tools.pkg_ddl_defs.t_schema_nn;
+subtype t_schema is oracle_tools.pkg_ddl_defs.t_schema;
+subtype t_object_names is oracle_tools.pkg_ddl_defs.t_object_names;
+subtype t_numeric_boolean is oracle_tools.pkg_ddl_defs.t_numeric_boolean;
+subtype t_numeric_boolean_nn is oracle_tools.pkg_ddl_defs.t_numeric_boolean_nn;
+subtype t_network_link is oracle_tools.pkg_ddl_defs.t_network_link;
+subtype t_network_link_nn is oracle_tools.pkg_ddl_defs.t_network_link_nn;
+subtype t_objects is oracle_tools.pkg_ddl_defs.t_objects;
+subtype t_session_id is oracle_tools.pkg_ddl_defs.t_session_id;
+subtype t_session_id_nn is oracle_tools.pkg_ddl_defs.t_session_id_nn;
+subtype t_object_name is oracle_tools.pkg_ddl_defs.t_object_name;
+
+/* ROUTINES */
 
 procedure get_transform_param_tab
 ( p_transform_param_list in varchar2
@@ -86,7 +98,7 @@ procedure determine_schema_ddl
 , p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
 , p_network_link in t_network_link default null -- The network link.
 , p_grantor_is_schema in t_numeric_boolean_nn default 0 -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
-, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_transform_param_list in varchar2 default oracle_tools.pkg_ddl_defs.c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 );
@@ -100,7 +112,7 @@ function display_ddl_sql
 , p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
 , p_network_link in t_network_link default null -- The network link.
 , p_grantor_is_schema in t_numeric_boolean_nn default 0 -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
-, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_transform_param_list in varchar2 default oracle_tools.pkg_ddl_defs.c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 )
@@ -116,7 +128,7 @@ function display_ddl_schema
 , p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
 , p_network_link in t_network_link default null -- The network link.
 , p_grantor_is_schema in t_numeric_boolean_nn default 0 -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
-, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_transform_param_list in varchar2 default oracle_tools.pkg_ddl_defs.c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 )
@@ -187,7 +199,7 @@ function display_ddl_sql_diff
 , p_network_link_source in t_network_link default null -- Source network link.
 , p_network_link_target in t_network_link default null -- Target network link.
 , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Skip repeatables objects (1) or check all objects (0) with 1 the default for Flyway with repeatable migrations
-, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_transform_param_list in varchar2 default oracle_tools.pkg_ddl_defs.c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 )
@@ -203,7 +215,7 @@ function display_ddl_schema_diff
 , p_network_link_source in t_network_link default null -- Source network link.
 , p_network_link_target in t_network_link default null -- Target network link.
 , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Skip repeatables objects (1) or check all objects (0) with 1 the default for Flyway with repeatable migrations
-, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_transform_param_list in varchar2 default oracle_tools.pkg_ddl_defs.c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 )
@@ -364,7 +376,7 @@ Help functions to get the DDL belonging to a list of allowed objects returned by
 
 procedure get_schema_ddl
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_transform_param_list in varchar2 default c_transform_param_list
+, p_transform_param_list in varchar2 default oracle_tools.pkg_ddl_defs.c_transform_param_list
 );
 
 procedure set_display_ddl_sql_args

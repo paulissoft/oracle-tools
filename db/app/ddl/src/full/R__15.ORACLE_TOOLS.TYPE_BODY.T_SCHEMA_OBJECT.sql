@@ -199,7 +199,7 @@ deterministic /*result_cache*/
 is
   l_id varchar2(500 byte) := null;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_ID');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_type: %s; p_object_name: %s', p_object_schema, p_object_type, p_object_name);
   if not(p_base_object_schema is null and p_base_object_type is null and p_base_object_name is null)
@@ -323,7 +323,7 @@ $end
   elsif p_object_type is not null and
         ( p_object_type in ( 'CONSTRAINT', 'REF_CONSTRAINT' ) -- NOT part of g_schema_md_object_type_tab
           or
-          p_object_type member of oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA')
+          p_object_type member of oracle_tools.pkg_ddl_defs.get_md_object_type_tab('SCHEMA')
         )
   then
     l_id :=
@@ -365,7 +365,7 @@ $end
       ;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_id);
   dbug.leave;
 $end
@@ -408,9 +408,9 @@ static function dict2metadata_object_type
 return varchar2
 deterministic /*result_cache*/
 is
-  l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
+  l_metadata_object_type oracle_tools.pkg_ddl_defs.t_metadata_object_type;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'DICT2METADATA_OBJECT_TYPE');
 $end
 
@@ -427,7 +427,7 @@ $end
                               else replace(p_dict_object_type, ' ', '_')
                             end;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -445,7 +445,7 @@ end dict2metadata_object_type;
 member procedure print(self in oracle_tools.t_schema_object)
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 1 $then
   dbug.print
   ( dbug."info"
   , 'network link: %s; id: %s; last_ddl_time: %s'
@@ -518,7 +518,7 @@ is
       );
   end create_base_object;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_SCHEMA_OBJECT (1)');
   dbug.print
   ( dbug."input"
@@ -729,7 +729,7 @@ $end
       );
   end case;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others
@@ -755,7 +755,7 @@ return oracle_tools.t_schema_object
 is
    l_schema_object oracle_tools.t_schema_object;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CREATE_SCHEMA_OBJECT (2)');
 $end
 
@@ -773,13 +773,13 @@ $end
   , p_schema_object => l_schema_object
   );
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 
   return l_schema_object;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 exception
   when others
@@ -850,7 +850,7 @@ final member function fq_object_name
 return varchar2
 deterministic
 is
-  l_object_name oracle_tools.pkg_ddl_util.t_object_name;
+  l_object_name oracle_tools.pkg_ddl_defs.t_object_name;
 
   function get_object_part(p_object_part in varchar2)
   return varchar2
@@ -859,7 +859,7 @@ is
     return case when upper(p_object_part) != p_object_part then '"' || p_object_part || '"' else p_object_part end;
   end get_object_part;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FQ_OBJECT_NAME');
 $end
 
@@ -869,7 +869,7 @@ $end
     || get_object_part(object_name())
     ;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_object_name);
   dbug.leave;
 $end
@@ -884,15 +884,15 @@ return varchar2
 deterministic /*result_cache*/
 is
   l_dict_object_type oracle_tools.pkg_ddl_util.t_dict_object_type;
-  l_metadata_object_type oracle_tools.pkg_ddl_util.t_metadata_object_type;
+  l_metadata_object_type oracle_tools.pkg_ddl_defs.t_metadata_object_type;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'DICT_OBJECT_TYPE');
 $end
 
   l_metadata_object_type := p_object_type;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.print(dbug."info", 'l_metadata_object_type: %s', l_metadata_object_type);
 $end
 
@@ -905,7 +905,7 @@ $end
       else replace(l_metadata_object_type, '_', ' ')
     end;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_dict_object_type);
   dbug.leave;
 $end
@@ -927,13 +927,13 @@ member procedure chk
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
   oracle_tools.pkg_ddl_util.chk_schema_object(p_schema_object => self, p_schema => p_schema);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.leave;
 $end
 end chk;
@@ -963,7 +963,7 @@ deterministic
 is
   l_id_parts dbms_sql.varchar2a;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SPLIT_ID');
   dbug.print(dbug."input", 'p_id: %s', p_id);
 $end
@@ -978,7 +978,7 @@ $end
     raise program_error;
   end if;
   
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.print(dbug."output", '1-5: %s:%s:%s:%s:%s', l_id_parts(1), l_id_parts(2), l_id_parts(3), l_id_parts(4), l_id_parts(5));
   dbug.print(dbug."output", '6-10: %s:%s:%s:%s:%s', l_id_parts(6), l_id_parts(7), l_id_parts(8), l_id_parts(9), l_id_parts(10));
   dbug.leave;
@@ -1013,7 +1013,7 @@ begin
     raise program_error;
   end if;
   
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SPLIT_ID');
   dbug.print(dbug."input", '1-5: %s:%s:%s:%s:%s', p_id_parts(1), p_id_parts(2), p_id_parts(3), p_id_parts(4), p_id_parts(5));
   dbug.print(dbug."input", '6-10: %s:%s:%s:%s:%s', p_id_parts(6), p_id_parts(7), p_id_parts(8), p_id_parts(9), p_id_parts(10));
@@ -1030,7 +1030,7 @@ $end
           p_id_parts( 9) || ':' ||
           p_id_parts(10);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_id);
   dbug.leave;
 $end

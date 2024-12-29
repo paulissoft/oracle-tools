@@ -39,7 +39,7 @@ exception
   when e_constraint_name_already_used
   then null;
 end;]'
-    , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+    , p_add_sqlterminator => case when oracle_tools.pkg_ddl_defs.c_use_sqlterminator then 1 else 0 end
     );
   end if;
 end migrate;
@@ -49,7 +49,7 @@ overriding member procedure uninstall
 , p_target in oracle_tools.t_schema_ddl
 )
 is
-$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
+$if oracle_tools.pkg_ddl_defs.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
   l_constraint_object oracle_tools.t_constraint_object := treat(p_target.obj as oracle_tools.t_constraint_object);
 $end
 begin
@@ -63,7 +63,7 @@ begin
               '"."' ||
               p_target.obj.base_object_name() ||
               '"' ||
-$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
+$if oracle_tools.pkg_ddl_defs.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
               -- When a primary/unique constraint is dropped, the associated index may be dropped too.
               -- In that case the DROP INDEX may fail.
               --
@@ -80,7 +80,7 @@ $if oracle_tools.pkg_ddl_util.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
 $else
               ' DROP CONSTRAINT ' || p_target.obj.object_name()
 $end
-  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_defs.c_use_sqlterminator then 1 else 0 end
   );
 end uninstall;
 
@@ -91,18 +91,18 @@ overriding member procedure add_ddl
 , p_add_sqlterminator in integer
 )
 is
-$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
+$if oracle_tools.pkg_ddl_defs.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
   l_ddl_text clob;
 $end
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
   dbug.print(dbug."input", 'p_verb: %s; p_add_sqlterminator: %s', p_verb, p_add_sqlterminator);
 $end
 
-$if oracle_tools.pkg_ddl_util.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
+$if oracle_tools.pkg_ddl_defs.c_#138707615_2 $then -- GJP 2022-07-16 TRUE
 
   -- Primary/unique constraints with USING INDEX syntax may fail.
   --
@@ -150,7 +150,7 @@ $else
 $end
 
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 end add_ddl;
@@ -160,7 +160,7 @@ overriding member procedure execute_ddl
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
@@ -168,7 +168,7 @@ $end
 
   oracle_tools.t_schema_ddl.execute_ddl(p_schema_ddl => self);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 end execute_ddl;

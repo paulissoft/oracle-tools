@@ -57,7 +57,7 @@ $end
   , pi_object_names => pi_object_names
   , pi_skip_repeatables => pi_skip_repeatables
   , pi_interface => pi_interface
-  , pi_transform_param_list => nvl(pi_transform_param_list, oracle_tools.pkg_ddl_util.c_transform_param_list)
+  , pi_transform_param_list => nvl(pi_transform_param_list, oracle_tools.pkg_ddl_defs.c_transform_param_list)
   , pi_exclude_objects => pi_exclude_objects
   , pi_include_objects => pi_include_objects
   , po_clob => l_clob

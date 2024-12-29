@@ -42,8 +42,8 @@ b. for the current session id (to_number(sys_context('USERENV', 'SESSIONID')))
 [This documentation is in PLOC format](https://github.com/ogobrecht/ploc)
 **/
 
-c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 2;
-c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
+c_tracing constant boolean := oracle_tools.pkg_ddl_defs.c_debugging >= 2;
+c_debugging constant boolean := oracle_tools.pkg_ddl_defs.c_debugging >= 3;
 
 c_min_timestamp_to_keep constant timestamp(6) :=
   (sys_extract_utc(current_timestamp) - interval '2' day);
@@ -54,7 +54,7 @@ subtype t_session_id_nn is t_session_id not null;
 subtype t_schema_object_filter_id is integer;
 subtype t_schema_object_filter_id_nn is t_session_id not null;  
 
-subtype t_numeric_boolean_nn is oracle_tools.pkg_ddl_util.t_numeric_boolean_nn;
+subtype t_numeric_boolean_nn is oracle_tools.pkg_ddl_defs.t_numeric_boolean_nn;
 
 procedure set_session_id
 ( p_session_id in t_session_id_nn -- The session id.

@@ -9,7 +9,7 @@ begin
   self.add_ddl
   ( p_verb => 'DBMS_REFRESH.DESTROY'
   , p_text => 'BEGIN DBMS_REFRESH.DESTROY(''' || p_target.obj.object_name() || '''); END;'
-  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_defs.c_use_sqlterminator then 1 else 0 end
   );
 end uninstall;
 

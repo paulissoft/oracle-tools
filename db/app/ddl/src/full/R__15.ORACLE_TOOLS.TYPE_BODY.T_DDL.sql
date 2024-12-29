@@ -9,7 +9,7 @@ constructor function t_ddl
 return self as result
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR');
 $end
 
@@ -17,7 +17,7 @@ $end
   self.verb$ := p_verb;
   set_text_tab(p_text_tab);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -44,12 +44,12 @@ member procedure print
 ( self in oracle_tools.t_ddl
 )
 is
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 1 $then
   l_clob clob := null;
   l_lines_tab dbms_sql.varchar2a;
 $end
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 1 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 1 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'PRINT');
   dbug.print
   ( dbug."info"
@@ -58,7 +58,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   , self.verb()
   , case when self.text_tab is not null then self.text_tab.count end
   );
---$if oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+--$if oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   if self.text_tab is not null and self.text_tab.count > 0
   then
     oracle_tools.pkg_str_util.text2clob
@@ -116,7 +116,7 @@ is
       end;
   end cmp;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   function pos_not_equal(p_text1 in varchar2, p_text2 in varchar2)
   return pls_integer
   is
@@ -144,7 +144,7 @@ $if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >
   end pos_not_equal;
 $end
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'COMPARE');
   dbug.print(dbug."input", 'self:');
   self.print();
@@ -195,7 +195,7 @@ $end
           l_result := +1;
         end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
         if l_result != 0
         then
           dbug.print
@@ -213,7 +213,7 @@ $end
     end if;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.print(dbug."output", 'result: %s', l_result);
   dbug.leave;
 $end

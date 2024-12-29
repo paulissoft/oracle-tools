@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_SCHEMA_OBJECT_FILTER" AUTHID CURRENT_USER IS
 
-c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
+c_debugging constant boolean := oracle_tools.pkg_ddl_defs.c_debugging >= 3;
 
 -- subtype t_schema_object_filter is oracle_tools.t_schema_object_filter;
 
