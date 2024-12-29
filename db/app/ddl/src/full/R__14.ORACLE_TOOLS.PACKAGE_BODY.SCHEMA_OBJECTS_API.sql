@@ -672,7 +672,8 @@ end add_schema_objects;
 procedure ddl_batch_process
 is
   l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
-  l_task_name constant varchar2(100 byte) := $$PLSQL_UNIT || '.DDL_BATCH-' || to_char(l_session_id);
+  l_task_name_fmt constant varchar2(100 byte) := $$PLSQL_UNIT || '.DDL_BATCH-';
+  l_task_name constant varchar2(100 byte) := l_task_name_fmt || to_char(l_session_id);
   l_count pls_integer;
 
   -- Here we substitute the session id into the statement since it may be executed by another session.
@@ -703,6 +704,21 @@ $end
   then
     raise program_error;
   end if;
+
+  -- Remove old USER_PARALLEL_EXECUTE_TASKS / USER_PARALLEL_EXECUTE_CHUNKS
+  for r in
+  ( select  distinct
+            c.task_name
+    from    user_parallel_execute_chunks c
+            inner join user_parallel_execute_tasks t
+            on t.task_name = c.task_name
+    where   c.task_name like l_task_name_fmt || '%'
+    and     c.start_ts < oracle_tools.ddl_crud_api.c_min_timestamp_to_keep
+    and     t.status in ('FINISHED', 'FINISHED_WITH_ERROR', 'CRASHED')
+  )
+  loop
+    dbms_parallel_execute.drop_task(r.task_name);
+  end loop;
 
   -- Create the TASK for all but SCHEMA_EXPORT
   dbms_parallel_execute.create_task(l_task_name);

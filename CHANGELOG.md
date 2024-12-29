@@ -15,10 +15,18 @@ Types of changes:
 
 ## [Unreleased]
 
-- [The DDL generator need not add grants to ADMIN for a Cloude database.](https://github.com/paulissoft/oracle-tools/issues/187)
+## [4.1.0] - 2024-12-29
+
+### Changed
+
+- [The DDL generator need not add grants to ADMIN for a Cloud database.](https://github.com/paulissoft/oracle-tools/issues/187)
 - [When a DBMS_PARALLEL_EXECUTE task fails it should NOT be dropped for further investigation.](https://github.com/paulissoft/oracle-tools/issues/186)
+
+### Fixed
+
 - [While generating DDL grants to tables/packages (without DDL for the table/package) are ignored.](https://github.com/paulissoft/oracle-tools/issues/185)
 - [When generating DDL foreign keys to other schemas are not found anymore.](https://github.com/paulissoft/oracle-tools/issues/184)
+- [The instead of trigger UI_APEX_MESSAGES_TRG for view UI_APEX_MESSAGES_V is not added to file db/app/ui/src/full/R__10.VIEW.UI_APEX_MESSAGES_V.sql.](https://github.com/paulissoft/oracle-tools/issues/154)
 
 ## [4.0.0] - 2024-12-09
 
