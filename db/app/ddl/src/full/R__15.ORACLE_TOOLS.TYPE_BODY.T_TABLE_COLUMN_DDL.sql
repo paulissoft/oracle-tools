@@ -12,7 +12,7 @@ is
   "ADD" constant varchar2(5) := ' ADD ';
   l_data_default oracle_tools.t_text_tab;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR');
 $end
 
@@ -72,12 +72,12 @@ $end
   self.add_ddl
   ( p_verb => 'ALTER'
   , p_text => l_clob
-  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_defs.c_use_sqlterminator then 1 else 0 end
   );
 
   dbms_lob.freetemporary(l_clob);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -107,7 +107,7 @@ is
     return p_source_tab = p_target_tab;
   end eq;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
   dbug.print(dbug."input", 'p_source: %s; p_target: %s', p_source.obj.signature(), p_target.obj.signature());
 $end
@@ -201,7 +201,7 @@ $end
       self.add_ddl
       ( p_verb => 'ALTER'
       , p_text => l_clob
-      , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+      , p_add_sqlterminator => case when oracle_tools.pkg_ddl_defs.c_use_sqlterminator then 1 else 0 end
       );
     end if;
   end loop;
@@ -211,7 +211,7 @@ $end
     dbms_lob.freetemporary(l_clob);
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 end migrate;
@@ -222,7 +222,7 @@ overriding member procedure uninstall
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UNINSTALL');
 $end
 
@@ -239,10 +239,10 @@ $end
               ' DROP COLUMN "' ||
               treat(p_target.obj as oracle_tools.t_table_column_object).member_name() ||
               '"'
-  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_util.c_use_sqlterminator then 1 else 0 end
+  , p_add_sqlterminator => case when oracle_tools.pkg_ddl_defs.c_use_sqlterminator then 1 else 0 end
   );
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 end uninstall;

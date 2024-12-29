@@ -41,119 +41,28 @@ That parameter often defaults to constant `c_transform_param_list` which include
 **/
 
 /* CONSTANTS */
--- see 11g / 12c licensing
-c_use_sqlterminator constant boolean := false; -- pkg_dd_util v4/v5
-
--- 0: none, 1: standard, 2: verbose, 3: even more verbose
-c_debugging constant naturaln := $if oracle_tools.cfg_pkg.c_debugging $then 1 $else 0 $end; -- never change the last value
-c_debugging_parse_ddl constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
-c_debugging_dbms_metadata constant boolean := $if oracle_tools.cfg_pkg.c_debugging $then c_debugging >= 2 $else false $end; -- idem
-
-c_default_parallel_level constant natural := 2; -- Number of parallel jobs; zero if run in serial; NULL uses the default parallelism.
 
 c_test_empty constant boolean := false;
 
-/*
--- Start of bugs/features (oldest first)
-*/
-
--- GPA 2016-12-19 #136334705 Only user created items from ALL_OBJECTS
-c_#136334705 constant boolean := true;
-
--- GPA 2017-02-01 #138707615 named not null constraints are recreated
-c_#138707615_1 constant boolean := true;
-
--- GPA 2017-01-31 #138707615 The diff DDL for XBIKE contained errors.
---
--- Constraints with different indexes fail because the index is already there:
---
--- ALTER TABLE "<owner>"."WORKORDERTYPE" ADD CONSTRAINT "WORKORDERTYPE_PK" PRIMARY KEY ("SEQ")
--- USING INDEX (CREATE UNIQUE INDEX "<owner>"."WORKORDERTYPE1_PK" ON "<owner>"."WORKORDERTYPE" ("SEQ")
--- PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS
--- TABLESPACE "YSSINDEX" )  ENABLE;
---
-c_#138707615_2 constant boolean := true;
-
--- GPA 2017-02-01 #138550763 As a developer I want to migrate types correctly.
-c_#138550763 constant boolean := true;
-
--- GPA 2017-02-01 As a developer I want to migrate function based indexes correctly.
-c_#138550749 constant boolean := true;
-
--- GPA 2017-03-06 Capture invalid objects before releasing to next enviroment.
-c_#140920801 constant boolean := true; -- values: false - check nothing, true - allow checks
-
--- GJP 2022-09-25
--- DDL generation changes due to sequence start with should be ignored.
--- https://github.com/paulissoft/oracle-tools/issues/58
-c_set_start_with_to_minvalue constant boolean := true;
-
--- GJP 2022-12-14 The DDL generator does not create a correct constraint script.
---
--- ALL_OBJECTS, ALL_INDEXES and ALL_CONSTRAINTS have a GENERATED column to separate system generated and user generated items.
--- The distinct values for the first two are 'N' and 'Y', for the latter these are 'GENERATED NAME' and 'USER NAME'.
--- This filtering must be applied to all usages.
---
--- This supersedes bug #136334705 (see above) since that is only for ALL_OBJECTS.
---
--- See also https://github.com/paulissoft/oracle-tools/issues/92.
-c_exclude_system_objects constant boolean := true;
-c_exclude_system_indexes constant boolean := true;
-c_exclude_system_constraints constant boolean := false; -- true: only 'USER NAME'
-
--- If exclude not null constraints is false code with c_#138707615_1 (true/false irrelevant) will be inactive.
-c_exclude_not_null_constraints constant boolean := false;
-
 c_err_pipelined_no_data_found constant boolean := true; -- false: no exception for no_data_found in  pipelined functions
 
-/*
--- End of bugs/features
-*/
+/* (SUB)TYPES */
 
--- see also generate_ddl.pl
-c_get_queue_ddl constant boolean := false;
-c_get_db_link_ddl constant boolean := false;
-c_get_dimension_ddl constant boolean := false;
-c_get_indextype_ddl constant boolean := false;
-c_get_library_ddl constant boolean := false;
-c_get_operator_ddl constant boolean := false;
-c_get_xmlschema_ddl constant boolean := false;
+subtype t_transform_param_tab is oracle_tools.pkg_ddl_defs.t_transform_param_tab;
+subtype t_metadata_object_type is oracle_tools.pkg_ddl_defs.t_metadata_object_type;
+subtype t_schema_nn is oracle_tools.pkg_ddl_defs.t_schema_nn;
+subtype t_schema is oracle_tools.pkg_ddl_defs.t_schema;
+subtype t_object_names is oracle_tools.pkg_ddl_defs.t_object_names;
+subtype t_numeric_boolean is oracle_tools.pkg_ddl_defs.t_numeric_boolean;
+subtype t_numeric_boolean_nn is oracle_tools.pkg_ddl_defs.t_numeric_boolean_nn;
+subtype t_network_link is oracle_tools.pkg_ddl_defs.t_network_link;
+subtype t_network_link_nn is oracle_tools.pkg_ddl_defs.t_network_link_nn;
+subtype t_objects is oracle_tools.pkg_ddl_defs.t_objects;
+subtype t_session_id is oracle_tools.pkg_ddl_defs.t_session_id;
+subtype t_session_id_nn is oracle_tools.pkg_ddl_defs.t_session_id_nn;
+subtype t_object_name is oracle_tools.pkg_ddl_defs.t_object_name;
 
-c_transform_param_list constant varchar2(4000 byte) :=
-  'CONSTRAINTS,CONSTRAINTS_AS_ALTER,FORCE,PRETTY,REF_CONSTRAINTS,SEGMENT_ATTRIBUTES,TABLESPACE';
-
-/* A list of dbms_metadata transformation parameters that will be set to TRUE. */
-
-/* TYPES */
-subtype t_dict_object_type is all_objects.object_type%type;
-subtype t_dict_object_type_nn is t_dict_object_type not null;
-
-subtype t_metadata_object_type is varchar2(30 byte);
-subtype t_metadata_object_type_nn is t_metadata_object_type not null;
-
-subtype t_object_name is varchar2(128 byte);
-subtype t_object_name_nn is t_object_name not null;
-
--- key: owner.object_type.object_name[.grantee]
-subtype t_object is varchar2(500 byte);
-subtype t_object_nn is t_object not null;
-
-subtype t_numeric_boolean is natural; -- must be null, 0 or 1
-subtype t_numeric_boolean_nn is naturaln; -- must be 0 or 1
-
-subtype t_schema is varchar2(30 byte);
-subtype t_schema_nn is t_schema not null;
-
-subtype t_object_names is varchar2(4000 byte);
-subtype t_object_names_nn is t_object_names not null;
-
-subtype t_objects is clob;
-
-subtype t_network_link is all_db_links.db_link%type;
-subtype t_network_link_nn is t_network_link not null;
-
-
-type t_transform_param_tab is table of boolean index by varchar2(4000 char);
+/* ROUTINES */
 
 procedure get_transform_param_tab
 ( p_transform_param_list in varchar2
@@ -181,6 +90,19 @@ procedure md_close
 ( p_handle in out number
 );
 
+procedure determine_schema_ddl
+( p_schema in t_schema_nn default user -- The schema name.
+, p_new_schema in t_schema default null -- The new schema name.
+, p_object_type in t_metadata_object_type default null -- Filter for object type.
+, p_object_names in t_object_names default null -- A comma separated list of (base) object names.
+, p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
+, p_network_link in t_network_link default null -- The network link.
+, p_grantor_is_schema in t_numeric_boolean_nn default 0 -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
+, p_transform_param_list in varchar2 default oracle_tools.pkg_ddl_defs.c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
+, p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
+);
+
 function display_ddl_sql
 ( p_schema in t_schema_nn default user -- The schema name.
 , p_new_schema in t_schema default null -- The new schema name.
@@ -190,7 +112,7 @@ function display_ddl_sql
 , p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
 , p_network_link in t_network_link default null -- The network link.
 , p_grantor_is_schema in t_numeric_boolean_nn default 0 -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
-, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_transform_param_list in varchar2 default oracle_tools.pkg_ddl_defs.c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 )
@@ -206,7 +128,7 @@ function display_ddl_schema
 , p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
 , p_network_link in t_network_link default null -- The network link.
 , p_grantor_is_schema in t_numeric_boolean_nn default 0 -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
-, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_transform_param_list in varchar2 default oracle_tools.pkg_ddl_defs.c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 )
@@ -228,21 +150,21 @@ This function will return a list of DDL text plus information about the object.
 **/
 
 function display_ddl_sql
-( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
 )
 return oracle_tools.t_display_ddl_sql_tab
 pipelined;
 /** Returns information about generated DDL for this session. Will **NOT** generate, just read from cache. **/
 
 function display_ddl_schema
-( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
 )
 return oracle_tools.t_schema_ddl_tab
 pipelined;
 /** Returns information about generated DDL for this session. Will **NOT** generate, just read from cache. **/
 
 procedure ddl_generate_report
-( p_session_id in positive default null -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+( p_session_id in t_session_id default null -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
 , p_output in out nocopy clob -- the CLOB to append the report to
 );
 /**
@@ -277,7 +199,7 @@ function display_ddl_sql_diff
 , p_network_link_source in t_network_link default null -- Source network link.
 , p_network_link_target in t_network_link default null -- Target network link.
 , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Skip repeatables objects (1) or check all objects (0) with 1 the default for Flyway with repeatable migrations
-, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_transform_param_list in varchar2 default oracle_tools.pkg_ddl_defs.c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 )
@@ -293,7 +215,7 @@ function display_ddl_schema_diff
 , p_network_link_source in t_network_link default null -- Source network link.
 , p_network_link_target in t_network_link default null -- Target network link.
 , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Skip repeatables objects (1) or check all objects (0) with 1 the default for Flyway with repeatable migrations
-, p_transform_param_list in varchar2 default c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
+, p_transform_param_list in varchar2 default oracle_tools.pkg_ddl_defs.c_transform_param_list -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).
 )
@@ -397,12 +319,6 @@ So we invoke package procedure from the type bodies.
 
 **/
 
-function is_dependent_object_type
-( p_object_type in t_metadata_object_type
-)
-return t_numeric_boolean
-deterministic;
-
 procedure get_exclude_name_expr_tab
 ( p_object_type in varchar2
 , p_object_name in varchar2 default null
@@ -415,17 +331,6 @@ function is_exclude_name_expr
 )
 return integer
 deterministic;
-
-function fetch_ddl
-( p_object_type in varchar2
-, p_object_schema in varchar2
-, p_object_name_tab in oracle_tools.t_text_tab
-, p_base_object_schema in varchar2
-, p_base_object_name_tab in oracle_tools.t_text_tab
-, p_transform_param_list in varchar2
-)
-return sys.ku$_ddls
-pipelined;
 
 procedure get_schema_ddl
 ( p_schema in varchar2
@@ -453,19 +358,19 @@ procedure ddl_batch_process;
 /** Invokes DBMS_PARALLEL_EXECUTE to process GENERATE_DDL_SESSION_BATCHES for the current session. **/
 
 procedure ddl_batch_process
-( p_session_id in integer
+( p_session_id in t_session_id_nn
 , p_start_id in number
 , p_end_id in number
 );
 /** Processes GENERATE_DDL_SESSION_BATCHES for this session within this range. **/
 
 /**
-Help functions to get the DDL belonging to a list of allowed objects returned by get_schema_objects().
+Help functions to get the DDL belonging to a list of allowed objects returned by schema_objects_api.get_schema_objects().
 **/
 
 procedure get_schema_ddl
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_transform_param_list in varchar2 default c_transform_param_list
+, p_transform_param_list in varchar2 default oracle_tools.pkg_ddl_defs.c_transform_param_list
 );
 
 procedure set_display_ddl_sql_args
@@ -525,16 +430,6 @@ Remark 2: A call to display_ddl_schema() with a database linke will invoke set_d
 
 **/
 
-function sort_objects_by_deps
-( p_schema in t_schema_nn default user
-)
-return oracle_tools.t_schema_object_tab
-pipelined;
-
-/**
-Sort objects on dependency order, i.e. T_SCHEMA_OBJECT.OBJECT_TYPE_ORDER().
-**/
-
 procedure migrate_schema_ddl
 ( p_source in oracle_tools.t_schema_ddl
 , p_target in oracle_tools.t_schema_ddl
@@ -542,12 +437,6 @@ procedure migrate_schema_ddl
 );
 
 subtype t_md_object_type_tab is oracle_tools.t_text_tab;
-
-function get_md_object_type_tab
-( p_what in varchar2 -- Either DBA, PUBLIC, SCHEMA or DEPENDENT
-)
-return t_md_object_type_tab
-deterministic;
 
 /**
 

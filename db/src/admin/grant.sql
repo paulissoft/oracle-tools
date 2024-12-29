@@ -12,6 +12,7 @@ grant execute on sys.dbms_aqadm to &&oracle_tools_username;
 grant execute on sys.dbms_aq to &&oracle_tools_username;
 grant execute on sys.dbms_pipe to &&oracle_tools_username;
 grant execute on sys.dbms_crypto to &&oracle_tools_username;
+grant select on sys.v_$session to &&oracle_tools_username;
 
 declare
   l_found pls_integer;

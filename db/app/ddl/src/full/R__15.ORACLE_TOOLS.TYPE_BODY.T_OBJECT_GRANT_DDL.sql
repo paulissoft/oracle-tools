@@ -6,7 +6,7 @@ overriding member procedure uninstall
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UNINSTALL');
   dbug.print(dbug."input", 'self:');
   self.print();
@@ -31,7 +31,7 @@ $end
   , p_add_sqlterminator => 0 -- the target text should already contain a sqlterminator (or not)
   );
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 end uninstall;
@@ -46,7 +46,7 @@ is
   l_pos1 pls_integer;
   l_pos2 pls_integer;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
@@ -87,7 +87,7 @@ end;]'*/
   , p_add_sqlterminator => p_add_sqlterminator
   );
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 end add_ddl;
@@ -109,7 +109,7 @@ is
   e_ora_02224 exception;
   pragma exception_init(e_ora_02224, -2224);
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'EXECUTE_DDL');
   dbug.print(dbug."input", 'self:');
   self.print();
@@ -117,18 +117,18 @@ $end
 
   oracle_tools.t_schema_ddl.execute_ddl(p_schema_ddl => self);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 exception
   when e_ora_01917 or e_ora_01927 or e_ora_02204 or e_ora_02224
   then
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
     dbug.leave;
 $end
     null;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   when others
   then
     dbug.leave_on_error;

@@ -1,9 +1,9 @@
 CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."PKG_SCHEMA_OBJECT_FILTER" IS
 
-subtype t_object is oracle_tools.pkg_ddl_util.t_object;
-subtype t_numeric_boolean is oracle_tools.pkg_ddl_util.t_numeric_boolean;
-subtype t_metadata_object_type is oracle_tools.pkg_ddl_util.t_metadata_object_type;
-subtype t_md_object_type_tab is oracle_tools.pkg_ddl_util.t_md_object_type_tab;
+subtype t_object is oracle_tools.pkg_ddl_defs.t_object;
+subtype t_numeric_boolean is oracle_tools.pkg_ddl_defs.t_numeric_boolean;
+subtype t_metadata_object_type is oracle_tools.pkg_ddl_defs.t_metadata_object_type;
+subtype t_md_object_type_tab is oracle_tools.pkg_ddl_defs.t_md_object_type_tab;
 
 "OBJECT SCHEMA" constant simple_integer := 1;
 "OBJECT TYPE" constant simple_integer := 2;
@@ -23,7 +23,7 @@ begin
   p_object := trim(replace(replace(replace(p_object, chr(9)), chr(13)), chr(10)));
 end cleanup_object;  
 
-procedure matches_schema_object
+procedure matches_schema_object_details
 ( p_object_type in varchar2
 , p_object_name in varchar2
 , p_base_object_type in varchar2 default null
@@ -31,11 +31,9 @@ procedure matches_schema_object
 , p_schema_object_filter in oracle_tools.t_schema_object_filter default null
 , p_schema_object_id in varchar2 default null
 , p_result out nocopy integer
-, p_details out nocopy varchar2
+, p_info out nocopy varchar2
 )
 is
-$if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-
   function is_nested_table
   ( p_object_schema in varchar2
   , p_object_name in varchar2
@@ -65,7 +63,7 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
   ( p_object_type in varchar2
   , p_object_name in varchar2
   , p_result out nocopy integer
-  , p_details out nocopy varchar2
+  , p_info out nocopy varchar2
   )
   is
   begin
@@ -80,7 +78,7 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
     PRAGMA INLINE (is_nested_table, 'YES');
     p_result := 0;
-    p_details := null;
+    p_info := null;
     
     for i_case in 1 .. 18
     loop
@@ -89,77 +87,77 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
         when 1
         then if p_object_type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and p_object_name like 'BIN$%' -- escape '\'
              then
-               p_details := q'[p_object_type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and p_object_name like 'BIN$%']';
+               p_info := q'[object type in ('TABLE', 'INDEX', 'TRIGGER', 'OBJECT_GRANT') and object name like 'BIN$%']';
              end if;
         
         -- JAVA$CLASS$MD5$TABLE
         when 2
         then if p_object_type in ('TABLE') and p_object_name like 'JAVA$CLASS$MD5$TABLE' -- escape '\'
              then
-               p_details := q'[p_object_type in ('TABLE') and p_object_name like 'JAVA$CLASS$MD5$TABLE']';
+               p_info := q'[object type in ('TABLE') and object name like 'JAVA$CLASS$MD5$TABLE']';
              end if;
         
         -- no AQ indexes/views
         when 3
         then if p_object_type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and p_object_name like 'AQ$%' -- escape '\'
              then
-               p_details := q'[p_object_type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and p_object_name like 'AQ$%']';
+               p_info := q'[object type in ('INDEX', 'VIEW', 'OBJECT_GRANT') and object name like 'AQ$%']';
              end if;
         
         -- no Flashback archive tables/indexes
         when 4
         then if p_object_type in ('TABLE', 'INDEX') and p_object_name like 'SYS\_FBA\_%' escape '\'
              then
-               p_details := q'[p_object_type in ('TABLE', 'INDEX') and p_object_name like 'SYS\_FBA\_%' escape '\']';
+               p_info := q'[object type in ('TABLE', 'INDEX') and object name like 'SYS\_FBA\_%' escape '\']';
              end if;
         
         -- no system generated indexes
         when 5
         then if p_object_type in ('INDEX') and p_object_name like 'SYS\_C%' escape '\'
              then
-               p_details := q'[p_object_type in ('INDEX') and p_object_name like 'SYS\_C%' escape '\']';
+               p_info := q'[object type in ('INDEX') and object name like 'SYS\_C%' escape '\']';
              end if;
         
         -- no generated types by declaring pl/sql table types in package specifications
         when 6
         then if p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYS\_PLSQL\_%' escape '\'
              then
-               p_details := q'[p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYS\_PLSQL\_%' escape '\']';
+               p_info := q'[object type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and object name like 'SYS\_PLSQL\_%' escape '\']';
              end if;        
         
         -- see http://orasql.org/2012/04/28/a-funny-fact-about-collect/
         when 7
         then if p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and p_object_name like 'SYSTP%' -- escape '\'
              then
-               p_details := q'[p_object_type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and object_name like 'SYSTP%']';
+               p_info := q'[object type in ('SYNONYM', 'TYPE_SPEC', 'TYPE_BODY', 'OBJECT_GRANT') and object name like 'SYSTP%']';
              end if;        
         
         -- no datapump tables
         when 8
         then if p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_SQL\_FILE\_SCHEMA%' escape '\'
              then
-               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_SQL\_FILE\_SCHEMA%' escape '\']';
+               p_info := q'[object type in ('TABLE', 'OBJECT_GRANT') and object name like 'SYS\_SQL\_FILE\_SCHEMA%' escape '\']';
              end if;        
         
         -- no datapump tables
         when 9
         then if p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DDL' escape '\'
              then
-               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DDL' escape '\']';
+               p_info := q'[object type in ('TABLE', 'OBJECT_GRANT') and object name like user || '\_DDL' escape '\']';
              end if;
         
         -- no datapump tables
         when 10
         then if p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DML' escape '\'
              then
-               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DML' escape '\']';
+               p_info := q'[object type in ('TABLE', 'OBJECT_GRANT') and object name like user || '\_DML' escape '\']';
              end if;
         
         -- no Oracle generated datapump tables
         when 11
         then if p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_EXPORT\_FULL\_%' escape '\'
              then
-               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like 'SYS\_EXPORT\_FULL\_%' escape '\']';
+               p_info := q'[object type in ('TABLE', 'OBJECT_GRANT') and object name like 'SYS\_EXPORT\_FULL\_%' escape '\']';
              end if;
         
         -- no Flyway stuff and other Oracle things
@@ -167,28 +165,28 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
         then if p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and
                 p_object_name like 'schema\_version%' escape '\'
              then
-               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and p_object_name like 'schema\_version%' escape '\']';
+               p_info := q'[object type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and object name like 'schema\_version%' escape '\']';
              end if;
 
         when 13
         then if p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and
                 p_object_name like 'flyway\_schema\_history%' escape '\'
              then
-               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and p_object_name like 'flyway\_schema\_history%' escape '\']';
+               p_info := q'[object type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and object name like 'flyway\_schema\_history%' escape '\']';
              end if;
 
         when 14
         then if p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and
                 p_object_name like 'CREATE$JAVA$LOB$TABLE%' /*escape '\'*/
              then
-               p_details := q'[p_object_type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and p_object_name like 'CREATE$JAVA$LOB$TABLE%' /*escape '\'*/]';
+               p_info := q'[object type in ('TABLE', 'OBJECT_GRANT', 'INDEX', 'CONSTRAINT', 'REF_CONSTRAINT') and object name like 'CREATE$JAVA$LOB$TABLE%' /*escape '\'*/]';
              end if;
 
         -- no identity column sequences
         when 15
         then if p_object_type in ('SEQUENCE', 'OBJECT_GRANT') and p_object_name like 'ISEQ$$%' -- escape '\'
              then
-               p_details := q'[p_object_type in ('SEQUENCE', 'OBJECT_GRANT') and p_object_name like 'ISEQ$$%']';
+               p_info := q'[object type in ('SEQUENCE', 'OBJECT_GRANT') and object name like 'ISEQ$$%']';
              end if;        
         
         -- nested tables
@@ -200,7 +198,7 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
                 , p_object_name
                 )
              then
-               p_details := q'[p_object_type in ('TABLE') and is_nested_table( p_schema_object_filter.schema, p_object_name)]';
+               p_info := q'[object type in ('TABLE') and is_nested_table(schema, object name)]';
              end if;
         
         -- no special type specs
@@ -208,7 +206,7 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
         when 17
         then if p_object_type in ('TYPE_SPEC') and p_object_name like 'SYS\_YOID%' escape '\'
              then
-               p_details := q'[p_object_type in ('TYPE_SPEC') and p_object_name like 'SYS\_YOID%' escape '\']';
+               p_info := q'[object type in ('TYPE_SPEC') and object name like 'SYS\_YOID%' escape '\']';
              end if;        
         
         -- no nested table constraints
@@ -217,7 +215,7 @@ $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
         when 18
         then if p_object_type in ('CONSTRAINT', 'REF_CONSTRAINT') and p_object_name like 'SYS\_NC%' escape '\'
              then
-               p_details := q'[p_object_type in ('CONSTRAINT', 'REF_CONSTRAINT') and p_object_name like 'SYS\_NC%' escape '\']';
+               p_info := q'[object type in ('CONSTRAINT', 'REF_CONSTRAINT') and object name like 'SYS\_NC%' escape '\']';
              end if;
       end case;
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
@@ -228,36 +226,34 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
       , i_case
       );
 $end
-      if p_details is not null
+      if p_info is not null
       then
-        p_details := 'IGNORE_OBJECT' || ' - case ' || to_char(i_case, 'FM00') || ': ' || p_details;
+        p_info := 'IGNORE_OBJECT' || ' - case ' || to_char(i_case, 'FM00') || ': ' || p_info;
         p_result := i_case;
         exit;
       end if;
     end loop;
-    -- just a check whether we correctly assigned p_details
-    if (p_details is null) = (p_result = 0)
+    -- just a check whether we correctly assigned p_info
+    if (p_info is null) = (p_result = 0)
     then
       null; -- ok
     else
       raise program_error;
     end if;
-    p_result := case when p_result >= 1 then 0 else 1 end;
+    p_result := case when p_result >= 1 then null else 1 end;
   end ignore_object;
-
-$end -- $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
 
   procedure search
   ( p_lwb in naturaln
   , p_upb in naturaln
   , p_result out nocopy integer
-  , p_details out nocopy varchar2
+  , p_info out nocopy varchar2
   )
   is
     l_cmp simple_integer := -1;
   begin
     p_result := null;
-    p_details := null;
+    p_info := null;
     for i_idx in p_lwb .. p_upb
     loop      
       l_cmp := 
@@ -281,7 +277,7 @@ $end -- $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $th
             end
         end;
 
-      p_details :=
+      p_info :=
         utl_lms.format_message
         ( '[%s] compare "%s" "%s" "%s": %s'
         , to_char(i_idx, 'FM0000') -- see also pkg_ddl_util.ddl_generate_report
@@ -292,7 +288,7 @@ $end -- $if oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $th
         );
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-      dbug.print(dbug."info", p_details);
+      dbug.print(dbug."info", p_info);
 $end
 
       case l_cmp
@@ -302,22 +298,9 @@ $end
       end case;
     end loop search_loop;
 
-    if p_result is null
+    if p_info is not null
     then
-      p_details := null;
-    end if;
-    
-    -- just a check whether we correctly assigned p_details
-    if (p_details is null) = (p_result is null)
-    then
-      null; -- ok
-    else
-      raise program_error;
-    end if;
-
-    if p_details is not null
-    then
-      p_details := 'SEARCH' || ' - ' || p_details;
+      p_info := 'SEARCH' || ' - ' || p_info;
     end if;
     
     if p_result is null
@@ -327,7 +310,7 @@ $end
   end search;
 begin
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCHES_SCHEMA_OBJECT');
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MATCHES_SCHEMA_OBJECT_DETAILS');
   dbug.print
   ( dbug."input"
   , 'object: "%s"; base object: "%s"; p_schema_object_id: %s'
@@ -338,8 +321,8 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
   dbug.print
   ( dbug."input"
   , 'cardinality(p_schema_object_filter.object_id_expr): %s; p_schema_object_filter.nr_objects_to_exclude$: %s'
-  , case when p_schema_object_filter is not null and p_schema_object_filter.object_id_expr is not null then p_schema_object_filter.object_id_expr.count end
-  , case when p_schema_object_filter is not null then p_schema_object_filter.nr_objects_to_exclude$ end
+  , case when p_schema_object_filter is not null then p_schema_object_filter.nr_objects() end
+  , case when p_schema_object_filter is not null then p_schema_object_filter.nr_objects_to_exclude() end
   );
 $end
 
@@ -358,16 +341,8 @@ $end
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then  
       dbug.print(dbug."info", 'case 1');
 $end
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-      if oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_base_object_type, p_base_object_name) = 1
-      then
-        p_result := 0;
-      end if;
-$else         
-      ignore_object(p_base_object_type, p_base_object_name, p_result, p_details);
-$end
-       
-      exit result_loop when p_result = 0;
+      ignore_object(p_base_object_type, p_base_object_name, p_result, p_info);
+      exit result_loop when p_result is null;
     end if;
 
     -- exclude certain named objects
@@ -377,16 +352,8 @@ $end
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then  
       dbug.print(dbug."info", 'case 2');
 $end
-$if not oracle_tools.cfg_202410_pkg.c_improve_ddl_generation_performance $then
-      if oracle_tools.pkg_ddl_util.is_exclude_name_expr(p_object_type, p_object_name) = 1
-      then
-        p_result := 0;
-      end if;
-$else         
-      ignore_object(p_object_type, p_object_name, p_result, p_details);
-$end
-
-      exit result_loop when p_result = 0;
+      ignore_object(p_object_type, p_object_name, p_result, p_info);
+      exit result_loop when p_result is null;
     end if;
 
     if p_schema_object_filter is null or
@@ -400,7 +367,7 @@ $end
       exit result_loop;
     end if;
 
-    search(1, p_schema_object_filter.nr_objects_to_exclude$, p_result, p_details);    
+    search(1, p_schema_object_filter.nr_objects_to_exclude$, p_result, p_info);    
     if p_result = 1
     then
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then  
@@ -423,7 +390,7 @@ $end
         else p_schema_object_filter.nr_objects()
       end
     , p_result
-    , p_details
+    , p_info
     );
     -- check for inclusion match
     p_result := nvl
@@ -435,7 +402,7 @@ $end
   end loop result_loop;
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then  
-  dbug.print(dbug."output", 'p_result: %sl p_details: %s', p_result, p_details);
+  dbug.print(dbug."output", 'p_result: %sl p_info: %s', p_result, p_info);
   dbug.leave;
 exception
   when others
@@ -443,7 +410,7 @@ exception
     dbug.leave_on_error;
     raise;
 $end
-end matches_schema_object;
+end matches_schema_object_details;
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
 
@@ -485,7 +452,7 @@ procedure construct
 )
 is
   l_dependent_md_object_type_tab constant t_md_object_type_tab :=
-    oracle_tools.pkg_ddl_util.get_md_object_type_tab('DEPENDENT');
+    oracle_tools.pkg_ddl_defs.get_md_object_type_tab('DEPENDENT');
 
   l_exclude_object_tab dbms_sql.varchar2a;
   l_include_object_tab dbms_sql.varchar2a;
@@ -536,11 +503,11 @@ is
   begin
     if p_object_type is null or
        p_object_type = 'SCHEMA_EXPORT' or
-$if not(oracle_tools.pkg_ddl_util.c_get_queue_ddl) $then
+$if not(oracle_tools.pkg_ddl_defs.c_get_queue_ddl) $then
        p_object_type in ('AQ_QUEUE', 'AQ_QUEUE_TABLE') or
 $end
        p_object_type in ('CONSTRAINT', 'REF_CONSTRAINT') or
-       p_object_type member of oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA')
+       p_object_type member of oracle_tools.pkg_ddl_defs.get_md_object_type_tab('SCHEMA')
     then
       null; -- ok
     else
@@ -641,8 +608,8 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCT.ADD_ITEM (2)');
     dbug.print
     ( dbug."input"
-    , 'p_schema_object_filter.object_id_expr.count: %s; p_id : %s; p_cmp: %s'
-    , p_schema_object_filter.object_id_expr.count
+    , 'p_schema_object_filter.nr_objects(): %s; p_id : %s; p_cmp: %s'
+    , p_schema_object_filter.nr_objects()
     , p_id
     , p_cmp
     );
@@ -664,8 +631,8 @@ $end
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     dbug.print
     ( dbug."output"
-    , 'p_schema_object_filter.object_id_expr.count: %s'
-    , p_schema_object_filter.object_id_expr.count
+    , 'p_schema_object_filter.nr_objects(): %s'
+    , p_schema_object_filter.nr_objects()
     );
     dbug.leave;
 $end
@@ -1122,7 +1089,7 @@ $end
   add_items(l_include_object_tab);
 
   -- make the table null when empty
-  if p_schema_object_filter.op_object_id_expr_tab$.count = 0
+  if p_schema_object_filter.nr_objects() = 0
   then
     p_schema_object_filter.op_object_id_expr_tab$ := null;
   end if;
@@ -1140,13 +1107,15 @@ exception
 $end  
 end construct;
 
-procedure matches_schema_object
+function matches_schema_object_details
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
 , p_schema_object_id in varchar2
-, p_result out nocopy integer 
-, p_details out nocopy varchar2
 )
+return varchar2
+deterministic
 is
+  l_result integer;
+  l_info varchar2(1000 char);
   l_part_tab dbms_sql.varchar2a;
 begin
   oracle_tools.pkg_str_util.split(p_str => p_schema_object_id, p_delimiter => ':', p_str_tab => l_part_tab);
@@ -1161,39 +1130,20 @@ begin
     );            
   end if;
 
-  PRAGMA INLINE (matches_schema_object, 'YES');
-  matches_schema_object
+  PRAGMA INLINE (matches_schema_object_details, 'YES');
+  matches_schema_object_details
   ( p_object_type => l_part_tab("OBJECT TYPE")
   , p_object_name => l_part_tab("OBJECT NAME")
   , p_base_object_type => l_part_tab("BASE OBJECT TYPE")
   , p_base_object_name => l_part_tab("BASE OBJECT NAME")
   , p_schema_object_filter => p_schema_object_filter
   , p_schema_object_id => p_schema_object_id
-  , p_result => p_result
-  , p_details => p_details
-  );
-end matches_schema_object;
-
-function matches_schema_object
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_schema_object_id in varchar2
-)
-return integer
-deterministic
-is
-  l_result integer;
-  l_details varchar2(1000 char);
-begin
-  PRAGMA INLINE (matches_schema_object, 'YES');
-  matches_schema_object
-  ( p_schema_object_filter => p_schema_object_filter
-  , p_schema_object_id => p_schema_object_id
   , p_result => l_result
-  , p_details => l_details
+  , p_info => l_info
   );
   
-  return l_result;
-end matches_schema_object;
+  return case l_result when 0 then '0' when 1 then '1' else ' ' end || '|' || l_info;
+end matches_schema_object_details;
 
 procedure serialize
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
@@ -1225,23 +1175,28 @@ procedure chk
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
+  l_error varchar2(4000 byte) := null;
   l_prev_idx positive := null;
   l_prev_id varchar2(500 byte) := null;
   l_prev_cmp varchar2(2 byte) := null;
 begin
-  case
-    when p_schema_object_filter.schema$ is null
-    then raise program_error;
-    when p_schema_object_filter.grantor_is_schema$ is null
-    then raise program_error;
-    when p_schema_object_filter.grantor_is_schema$ not in (0, 1)
-    then raise program_error;
-    when p_schema_object_filter.nr_objects_to_exclude$ is null
-    then raise program_error;
-    when not(p_schema_object_filter.nr_objects_to_exclude$ between 0 and nvl(cardinality(p_schema_object_filter.op_object_id_expr_tab$), 0))
-    then raise program_error;
-    else null;
-  end case;
+  l_error :=
+    case
+      when p_schema_object_filter.schema$ is null
+      then 'schema$ is null'
+      when p_schema_object_filter.grantor_is_schema$ is null
+      then 'grantor_is_schema$ is null'
+      when p_schema_object_filter.grantor_is_schema$ not in (0, 1)
+      then 'grantor_is_schema$ not in (0, 1)'
+      when p_schema_object_filter.nr_objects_to_exclude$ is null
+      then 'nr_objects_to_exclude$ is null'
+      when not(p_schema_object_filter.nr_objects_to_exclude$ between 0 and nvl(cardinality(p_schema_object_filter.op_object_id_expr_tab$), 0))
+      then 'not(nr_objects_to_exclude$ between 0 and nvl(cardinality(op_object_id_expr_tab$), 0))'
+    end;
+  if l_error is not null
+  then
+    raise_application_error(-20000, l_error);
+  end if;
   for i_idx in 1 .. nvl(cardinality(p_schema_object_filter.op_object_id_expr_tab$), 0)
   loop
     -- compare: !~, !=, ~, =
@@ -1295,6 +1250,11 @@ begin
     l_prev_id := p_schema_object_filter.object_id_expr(i_idx);
     l_prev_cmp := p_schema_object_filter.op(i_idx);
   end loop;
+exception
+  when others
+  then
+    print(p_schema_object_filter);
+    raise;
 end chk;
 
 procedure print
@@ -1516,7 +1476,7 @@ $if oracle_tools.pkg_schema_object_filter.c_debugging $then
     l_schema_object_filter.print();
 $end
 
-    ut.expect(serialize(l_schema_object_filter), 'test serialize ' || i_try).to_equal(l_expected);
+    ut.expect(l_schema_object_filter.serialize(), 'test serialize ' || i_try).to_equal(l_expected);
   end loop;  
 
 $if oracle_tools.pkg_schema_object_filter.c_debugging $then
@@ -1529,7 +1489,7 @@ exception
 $end
 end ut_construct;
 
-procedure ut_matches_schema_object
+procedure ut_matches_schema_object_details
 is
   l_id t_object;
   l_cnt pls_integer;
@@ -1594,7 +1554,7 @@ begin
         if i_try = 1
         then
           ut.expect
-          ( l_schema_object_filter.matches_schema_object(l_object_tab(i_idx))
+          ( to_number(ltrim(substr(l_schema_object_filter.matches_schema_object_details(l_object_tab(i_idx)), 1, 1)))
           , utl_lms.format_message
             ( 'try: %s; object index: %s; complete match for object "%s"'
             , to_char(i_try)
@@ -1606,7 +1566,7 @@ begin
       end if;
     end loop;
   end loop try_loop;
-end ut_matches_schema_object;
+end ut_matches_schema_object_details;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 

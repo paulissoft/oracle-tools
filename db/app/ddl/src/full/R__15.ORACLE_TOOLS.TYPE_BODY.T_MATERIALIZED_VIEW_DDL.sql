@@ -9,7 +9,7 @@ is
   l_tgt_materialized_view_object oracle_tools.t_materialized_view_object := treat(p_target.obj as oracle_tools.t_materialized_view_object);
   l_schema_ddl_tab oracle_tools.t_schema_ddl_tab;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
   dbug.print(dbug."input", 'p_source.obj.id: %s; p_target.obj.id: %s', p_source.obj.id, p_target.obj.id);
 $end
@@ -64,7 +64,7 @@ $end
     end loop;
   end if;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 end migrate;

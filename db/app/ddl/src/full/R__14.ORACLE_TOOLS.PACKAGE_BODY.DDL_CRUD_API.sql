@@ -2,23 +2,30 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."DDL_CRUD_API" IS /* -*-coding: ut
 
 -- PRIVATE
 
+c_fetch_limit constant positiven := 100;
+
 -- ORA-01400: cannot insert NULL into ("ORACLE_TOOLS"."GENERATED_DDLS"."LAST_DDL_TIME")
 e_can_not_insert_null exception;
 pragma exception_init(e_can_not_insert_null, -1400);
 
 g_default_match_perc_threshold integer := 50;
 
-g_session_id t_session_id := to_number(sys_context('USERENV', 'SESSIONID'));
+c_session_id constant t_session_id_nn := to_number(sys_context('USERENV', 'SESSIONID'));
 
-g_min_timestamp_to_keep constant oracle_tools.generate_ddl_sessions.created%type :=
-  (sys_extract_utc(current_timestamp) - interval '2' day);
+g_session_id t_session_id_nn := c_session_id;
+
+g_min_timestamp_to_keep constant oracle_tools.generate_ddl_sessions.created%type := c_min_timestamp_to_keep;
+
+subtype t_parallel_status_tab is dbms_sql.varchar2s;
+
+g_parallel_status_tab t_parallel_status_tab;
 
 function get_schema_object_filter_id
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 )
-return positive
+return t_schema_object_filter_id
 is
-  l_schema_object_filter_id positive;
+  l_schema_object_filter_id t_schema_object_filter_id;
 begin
   select  gds.schema_object_filter_id
   into    l_schema_object_filter_id
@@ -27,11 +34,12 @@ begin
   return l_schema_object_filter_id;
 exception
   when no_data_found
-  then return null;
+  then
+    return null;
 end get_schema_object_filter_id;
 
 function get_schema_object_filter
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 )
 return oracle_tools.t_schema_object_filter
 is
@@ -39,11 +47,12 @@ begin
   return get_schema_object_filter(p_schema_object_filter_id => get_schema_object_filter_id(p_session_id => p_session_id));
 exception
   when no_data_found
-  then return null;
+  then
+     return null;
 end get_schema_object_filter;
 
 function find_schema_object
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 , p_schema_object_id in varchar2
 )
 return oracle_tools.t_schema_object
@@ -68,7 +77,7 @@ exception
 end find_schema_object;
 
 function match_perc
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 )
 return integer
 deterministic
@@ -87,23 +96,12 @@ begin
 end match_perc;
 
 procedure add_schema_object_filter
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 , p_generate_ddl_configuration_id in integer -- the GENERATE_DDL_CONFIGURATIONS.ID
 , p_schema_object_filter_id out nocopy integer
 )
 is
-  cursor c_sof(b_schema_object_filter_id in positive)
-  is
-    select  sof.last_modification_time_schema
-    from    oracle_tools.schema_object_filters sof
-    where   sof.id = b_schema_object_filter_id
-    for update of
-            sof.updated
-    ,       sof.last_modification_time_schema;
-
-  l_last_modification_time_schema_old oracle_tools.schema_object_filters.last_modification_time_schema%type;
-  l_last_modification_time_schema_new oracle_tools.schema_object_filters.last_modification_time_schema%type;
   l_clob constant clob := p_schema_object_filter.repr();
   l_hash_bucket constant oracle_tools.schema_object_filters.hash_bucket%type :=
     sys.dbms_crypto.hash(l_clob, sys.dbms_crypto.hash_sh1);
@@ -163,11 +161,6 @@ $end
   ** PACKAGE BODY 07/12/23 15:58:43 13/11/24 09:12:39 2023-12-08:11:50:02 LAST_DDL_TIME changed (1 sec later)
   */
 
-  select  max(o.last_ddl_time)
-  into    l_last_modification_time_schema_new
-  from    all_objects o
-  where   o.owner = p_schema_object_filter.schema;
-
   -- when not found add it
   if p_schema_object_filter_id is null
   then
@@ -176,36 +169,21 @@ $end
     ( hash_bucket
     , hash_bucket_nr
     , obj_json
-    , last_modification_time_schema
     )
     values
     ( l_hash_bucket
     , l_hash_bucket_nr
     , p_schema_object_filter.repr()
-    , l_last_modification_time_schema_new
     )
     returning id into p_schema_object_filter_id;
   else
-    open c_sof(p_schema_object_filter_id);
-    fetch c_sof into l_last_modification_time_schema_old;
-    if c_sof%notfound
+    update  oracle_tools.schema_object_filters sof
+    set     sof.updated = sys_extract_utc(systimestamp)
+    where   sof.id = p_schema_object_filter_id;
+
+    if sql%rowcount = 0
     then raise program_error; -- should not happen
     end if;
-    if l_last_modification_time_schema_old <> l_last_modification_time_schema_new
-    then
-      -- we must recalculate p_schema_object_filter.matches_schema_object() for every object
-      delete
-      from    oracle_tools.schema_object_filter_results sofr
-      where   sofr.schema_object_filter_id = p_schema_object_filter_id;
-$if oracle_tools.ddl_crud_api.c_debugging $then
-      dbug.print(dbug."info", '# rows deleted from schema_object_filter_results: %s', sql%rowcount);
-$end
-    end if;
-    update  oracle_tools.schema_object_filters sof
-    set     sof.last_modification_time_schema = l_last_modification_time_schema_new
-    ,       sof.updated = sys_extract_utc(systimestamp)
-    where   current of c_sof;
-    close c_sof;
   end if;
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
@@ -213,13 +191,7 @@ $if oracle_tools.ddl_crud_api.c_debugging $then
 $end
 
   -- cleanup on the fly
-  delete
-  from    oracle_tools.generate_ddl_sessions gds
-  where   gds.created <= g_min_timestamp_to_keep;
-
-$if oracle_tools.ddl_crud_api.c_debugging $then
-  dbug.print(dbug."info", '# rows deleted from generate_ddl_sessions: %s', sql%rowcount);
-$end
+  delete_generate_ddl_sessions;
 
   -- either insert or update GENERATE_DDL_SESSIONS
   if get_schema_object_filter_id(p_session_id => p_session_id) is null
@@ -274,9 +246,9 @@ $end
 end add_schema_object_filter;
 
 procedure add_schema_object
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 , p_schema_object in oracle_tools.t_schema_object
-, p_schema_object_filter_id in positiven
+, p_schema_object_filter_id in t_schema_object_filter_id_nn
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
@@ -308,7 +280,7 @@ $end
   when    not matched
   then    insert ( id, obj ) values ( src.id, src.obj )
   when    matched 
-  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$
+  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$, dst.updated = sys_extract_utc(systimestamp)
           delete where src.obj.last_ddl_time$ is null /* check constraint SCHEMA_OBJECTS$CK$OBJ$LAST_DDL_TIME$ */;
 
   -- merge into SCHEMA_OBJECT_FILTER_RESULTS (but only when not matched)
@@ -321,8 +293,8 @@ $end
   on      ( src.schema_object_filter_id = dst.schema_object_filter_id and
             src.schema_object_id = src.schema_object_id )
   when    not matched
-  then    insert ( schema_object_filter_id, schema_object_id, generate_ddl )
-          values ( src.schema_object_filter_id, src.schema_object_id, p_schema_object_filter.matches_schema_object(src.schema_object_id) );
+  then    insert ( schema_object_filter_id, schema_object_id, generate_ddl_details )
+          values ( src.schema_object_filter_id, src.schema_object_id, p_schema_object_filter.matches_schema_object_details(src.schema_object_id) );
 
   /*
   -- Now the following tables have data for these parameters:
@@ -332,14 +304,15 @@ $end
   -- * SCHEMA_OBJECT_FILTER_RESULTS
   */
 
-  -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns 0
+  -- Ignore this entry when MATCHES_SCHEMA_OBJECT_DETAILS returns ' |_%'
   begin
     select  1
     into    l_found
     from    oracle_tools.schema_object_filter_results sofr
     where   sofr.schema_object_filter_id = p_schema_object_filter_id
     and     sofr.schema_object_id = l_schema_object_id
-    and     sofr.generate_ddl = 1;
+    -- ignore objects that never ever need to be generated
+    and     sofr.generate_ddl in (/*0,*/ 1);
   exception
     when no_data_found
     then -- no match
@@ -390,7 +363,7 @@ $end
 end add_schema_object;
 
 procedure add_schema_ddl
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 , p_schema_ddl in oracle_tools.t_schema_ddl
 )
 is
@@ -545,7 +518,7 @@ $end
 end add_schema_ddl;
 
 procedure add_batch
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 , p_schema in varchar2 default null
 , p_transform_param_list in varchar2 default null
 , p_object_schema in varchar2 default null
@@ -585,9 +558,9 @@ begin
 end add_batch;
 
 procedure add_schema_object_tab
-( p_session_id in integer
+( p_session_id in t_session_id_nn
 , p_schema_object_tab in oracle_tools.t_schema_object_tab
-, p_schema_object_filter_id in positiven
+, p_schema_object_filter_id in t_schema_object_filter_id_nn
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
@@ -612,7 +585,7 @@ $end
   when    not matched
   then    insert ( id, obj ) values ( src.id, src.obj )
   when    matched 
-  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$
+  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$, dst.updated = sys_extract_utc(systimestamp)
           delete where src.obj.last_ddl_time$ is null /* check constraint SCHEMA_OBJECTS$CK$OBJ$LAST_DDL_TIME$ */;
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
@@ -631,8 +604,8 @@ $end
             src.schema_object_id = dst.schema_object_id
           )
   when    not matched
-  then    insert ( schema_object_filter_id, schema_object_id, generate_ddl )
-          values ( src.schema_object_filter_id, src.schema_object_id, p_schema_object_filter.matches_schema_object(src.schema_object_id) );
+  then    insert ( schema_object_filter_id, schema_object_id, generate_ddl_details )
+          values ( src.schema_object_filter_id, src.schema_object_id, p_schema_object_filter.matches_schema_object_details(src.schema_object_id) );
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."info", '# rows inserted into schema_object_filter_results: %s', sql%rowcount);
@@ -646,7 +619,7 @@ $end
   -- * SCHEMA_OBJECT_FILTER_RESULTS
   */
 
-  -- Ignore this entry when MATCHES_SCHEMA_OBJECT returns 0
+  -- Ignore this entry when MATCHES_SCHEMA_OBJECT_DETAILS returns ' |_%'
   merge
   into    oracle_tools.generate_ddl_session_schema_objects dst
   using   ( select  p_session_id as session_id
@@ -660,7 +633,9 @@ $end
                     inner join oracle_tools.schema_object_filter_results sofr
                     on sofr.schema_object_filter_id = gds.schema_object_filter_id and
                        sofr.schema_object_id = t.id and
-                       sofr.generate_ddl = 1 -- ignore objects that do not need to be generated                      
+           -- ignore objects that never ever need to be generated
+           -- necessary to add 0+1 and not only 1 to get them into GENERATE_DDL_SESSION_SCHEMA_OBJECTS and thus V_SCHEMA_OBJECTS and thus V_MY_NAMED_OBJECTS
+                       sofr.generate_ddl in (/*0,*/ 1) 
                     left outer join oracle_tools.generated_ddls gd
                     on gd.schema_object_id = t.id and
                        gd.last_ddl_time = t.last_ddl_time() and
@@ -690,17 +665,107 @@ exception
 $end
 end add_schema_object_tab;
 
+procedure get_parallel_status
+( p_parallel_status_tab out nocopy t_parallel_status_tab
+)
+is
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_PARALLEL_STATUS';
+$end
+begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
+  select  s.pdml_status
+  ,       s.pddl_status
+  ,       s.pq_status
+  into    p_parallel_status_tab(1)
+  ,       p_parallel_status_tab(2)
+  ,       p_parallel_status_tab(3)
+  from    v$session s
+  where   s.audsid = c_session_id;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print
+  ( dbug."output"
+  , 'Parallel DML: %s; parallel DDL: %s; parallel query: %s'
+  , p_parallel_status_tab(1)
+  , p_parallel_status_tab(2)
+  , p_parallel_status_tab(3)
+  );
+$end  
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end get_parallel_status;
+
+procedure set_parallel_status
+( p_parallel_status_tab in out nocopy t_parallel_status_tab
+)
+is
+  l_type varchar2(10 byte) := null;
+  l_status varchar2(10 byte) := null;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SET_PARALLEL_STATUS';
+$end
+begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print
+  ( dbug."input"
+  , 'Parallel DML: %s; parallel DDL: %s; parallel query: %s'
+  , p_parallel_status_tab(1)
+  , p_parallel_status_tab(2)
+  , p_parallel_status_tab(3)
+  );
+$end  
+$end
+
+  for i_idx in 1..3
+  loop    
+    case 
+      when upper(p_parallel_status_tab(i_idx)) in ('ENABLE' , 'ENABLED' ) then l_status := 'enable';
+      when upper(p_parallel_status_tab(i_idx)) in ('DISABLE', 'DISABLED') then l_status := 'disable';
+    end case;
+    l_type :=
+      case i_idx
+        when 1 then 'dml'
+        when 2 then 'ddl'
+        when 3 then 'query'
+      end;
+    execute immediate 'alter session ' || l_status || ' parallel ' || l_type;  
+  end loop;
+  p_parallel_status_tab.delete; -- so we don't call reset again without a disable first
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end set_parallel_status;
+
 -- PUBLIC
 
 procedure set_session_id
-( p_session_id in t_session_id
+( p_session_id in t_session_id_nn
 )
 is
 begin
-  if p_session_id is null
+  /*if p_session_id is null
   then
     raise value_error;
-  elsif p_session_id = to_number(sys_context('USERENV', 'SESSIONID'))
+  els*/if p_session_id = c_session_id
   then
     g_session_id := p_session_id;
   else
@@ -714,14 +779,14 @@ begin
 end set_session_id;
 
 function get_session_id
-return t_session_id
+return t_session_id_nn
 is
 begin
   return g_session_id;
 end get_session_id;
 
 function get_schema_object_filter_id
-return positive
+return t_schema_object_filter_id
 is
 begin
   return get_schema_object_filter_id(p_session_id => get_session_id);
@@ -735,7 +800,7 @@ begin
 end get_schema_object_filter;
 
 function get_schema_object_filter
-( p_schema_object_filter_id in positiven
+( p_schema_object_filter_id in t_schema_object_filter_id_nn
 )
 return oracle_tools.t_schema_object_filter
 is
@@ -787,15 +852,8 @@ begin
 end;
 
 procedure add
-( p_schema in varchar2 -- The schema name.
-, p_object_type in varchar2 -- Filter for object type.
-, p_object_names in varchar2 -- A comma separated list of (base) object names.
-, p_object_names_include in integer -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
-, p_grantor_is_schema in integer -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
-, p_exclude_objects in clob -- A newline separated list of objects to exclude (their schema object id actually).
-, p_include_objects in clob -- A newline separated list of objects to include (their schema object id actually).
+( p_schema_object_filter in oracle_tools.t_schema_object_filter -- the schema object filter
 , p_transform_param_list in varchar2 -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
-, p_schema_object_filter out nocopy oracle_tools.t_schema_object_filter -- the schema object filter
 , p_generate_ddl_configuration_id out nocopy integer
 )
 is
@@ -805,17 +863,6 @@ is
   l_db_version constant number := dbms_db_version.version + dbms_db_version.release / 10;
   l_last_ddl_time_schema date;
 begin
-  p_schema_object_filter :=
-    oracle_tools.t_schema_object_filter
-    ( p_schema => p_schema
-    , p_object_type => p_object_type
-    , p_object_names => p_object_names
-    , p_object_names_include => p_object_names_include
-    , p_grantor_is_schema => p_grantor_is_schema
-    , p_exclude_objects => p_exclude_objects
-    , p_include_objects => p_include_objects
-    );
-
   l_param_tab1 := oracle_tools.api_pkg.list2collection(p_value_list => p_transform_param_list, p_sep => ',');
 
   select  distinct upper(t.column_value) as param
@@ -833,6 +880,7 @@ begin
   where   o.owner = $$PLSQL_UNIT_OWNER
   and     o.object_name in
           ( 'DDL_CRUD_API'
+          , 'PKG_DDL_DEFS'
           , 'PKG_DDL_ERROR'
           , 'PKG_DDL_UTIL'
           , 'PKG_SCHEMA_OBJECT_FILTER'
@@ -899,7 +947,7 @@ end add;
 
 procedure add
 ( p_schema_object in oracle_tools.t_schema_object
-, p_schema_object_filter_id in positiven
+, p_schema_object_filter_id in t_schema_object_filter_id_nn
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
@@ -1000,7 +1048,7 @@ end add;
 
 procedure add
 ( p_schema_object_tab in oracle_tools.t_schema_object_tab
-, p_schema_object_filter_id in positiven
+, p_schema_object_filter_id in t_schema_object_filter_id_nn
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
@@ -1016,7 +1064,7 @@ end add;
 
 procedure clear_batch
 is
-  l_session_id constant t_session_id := get_session_id;
+  l_session_id constant t_session_id_nn := get_session_id;
 begin
   delete
   from    oracle_tools.generate_ddl_session_batches gdsb
@@ -1031,7 +1079,7 @@ procedure set_batch_start_time
 ( p_seq in integer
 )
 is
-  l_session_id constant t_session_id := get_session_id;
+  l_session_id constant t_session_id_nn := get_session_id;
 begin
   update  oracle_tools.generate_ddl_session_batches gdsb
   set     gdsb.start_time = sys_extract_utc(systimestamp)
@@ -1052,7 +1100,7 @@ procedure set_batch_end_time
 , p_error_message in varchar2
 )
 is
-  l_session_id constant t_session_id := get_session_id;
+  l_session_id constant t_session_id_nn := get_session_id;
 begin
   update  oracle_tools.generate_ddl_session_batches gdsb
   set     gdsb.end_time = sys_extract_utc(systimestamp)
@@ -1094,79 +1142,272 @@ $if oracle_tools.ddl_crud_api.c_debugging $then
 $end
 end clear_all_ddl_tables;
 
-procedure get_schema_objects_cursor
-( p_session_id in positiven
-, p_cursor out nocopy sys_refcursor
+procedure fetch_schema_objects
+( p_session_id in t_session_id_nn
+, p_cursor in out nocopy integer
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 )
 is
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FETCH_SCHEMA_OBJECTS';
+$end
+
+  l_cursor sys_refcursor;
+  l_session_id t_session_id := null;
+
+  procedure cleanup(p_close in boolean)
+  is
+  begin
+    if l_session_id is not null
+    then
+      set_session_id(l_session_id);
+    end if;
+    if p_close and l_cursor%isopen
+    then
+      close l_cursor;
+      p_cursor := null;
+    end if;
+  end cleanup;
 begin
-  set_session_id(p_session_id); -- just a check
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+  dbug.print(dbug."input", 'p_cursor: %s', p_cursor);  
+$end
+$end
 
-  open p_cursor for
-    select  so.obj
-    from    oracle_tools.generate_ddl_sessions gds
-            inner join oracle_tools.generate_ddl_session_schema_objects gdsso
-            on gdsso.session_id = gds.session_id
-            inner join oracle_tools.schema_object_filter_results sofr
-            on sofr.schema_object_filter_id = gdsso.schema_object_filter_id and
-               sofr.schema_object_id = gdsso.schema_object_id
-            inner join oracle_tools.schema_objects so
-            on so.id = sofr.schema_object_id
-    where   gds.session_id = p_session_id
-    order by
-            so.id;
-end get_schema_objects_cursor;
+  if not dbms_sql.is_open(p_cursor)
+  then
+    l_session_id := get_session_id;
+    set_session_id(p_session_id); -- just a check
 
-procedure get_display_ddl_sql_cursor
-( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor out nocopy t_display_ddl_sql_cur
-)
-is
-begin
-  set_session_id(p_session_id); -- just a check
-
-  open p_cursor for
-    with src as
-    ( select  gd.schema_object_id
-      ,       gds.ddl#
-      ,       gds.verb
-      ,       case
-                when gds.verb is not null and gds.ddl# is not null
-                then oracle_tools.t_ddl.ddl_info(p_schema_object => so.obj, p_verb => gds.verb, p_ddl# => gds.ddl#)
-              end as ddl_info
-      ,       gdsc.chunk#
-      ,       gdsc.chunk
-      ,       so.obj as schema_object
-      ,       row_number() over (partition by gd.schema_object_id order by gds.ddl# desc, gdsc.chunk# desc) as seq_per_schema_object_desc
+    open l_cursor for
+      select  so.obj
       from    oracle_tools.generate_ddl_sessions gds
-              inner join oracle_tools.generate_ddl_configurations gdc
-              on gdc.id = gds.generate_ddl_configuration_id
-              inner join oracle_tools.generated_ddls gd
-              on gd.generate_ddl_configuration_id = gdc.id
+              inner join oracle_tools.generate_ddl_session_schema_objects gdsso
+              on gdsso.session_id = gds.session_id
+              inner join oracle_tools.schema_object_filter_results sofr
+              on sofr.schema_object_filter_id = gdsso.schema_object_filter_id and
+                 sofr.schema_object_id = gdsso.schema_object_id
               inner join oracle_tools.schema_objects so
-              on so.id = gd.schema_object_id
-              left outer join oracle_tools.generated_ddl_statements gds
-              on gds.generated_ddl_id = gd.id
-              left outer join oracle_tools.generated_ddl_statement_chunks gdsc
-              on gdsc.generated_ddl_id = gds.generated_ddl_id and
-                 gdsc.ddl# = gds.ddl#              
+              on so.id = sofr.schema_object_id
       where   gds.session_id = p_session_id
-    )
-    select  src.schema_object_id
-    ,       src.ddl#
-    ,       src.verb
-    ,       src.ddl_info
-    ,       src.chunk#
-    ,       src.chunk
-    ,       case when src.seq_per_schema_object_desc = 1 then 1 else null end as last_chunk
-    ,       src.schema_object
-    from    src
-    order by
-            src.schema_object_id
-    ,       src.ddl#
-    ,       src.verb
-    ,       src.chunk#;
+      order by
+              so.id;
+  else
+    l_cursor := dbms_sql.to_refcursor(p_cursor);
+  end if;
+  
+  fetch l_cursor bulk collect into p_schema_object_tab limit c_fetch_limit;
+  
+  if p_schema_object_tab.count < c_fetch_limit
+  then
+    cleanup(true);
+  else              
+    p_cursor := dbms_sql.to_cursor_number(l_cursor);
+    cleanup(false);
+  end if;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."output", 'p_cursor: %s', p_cursor);  
+  dbug.print(dbug."output", 'cardinality(p_schema_object_tab): %s', cardinality(p_schema_object_tab));  
+$end
+  dbug.leave;
+$end
+exception
+  when others
+  then
+    cleanup(true);
+$if oracle_tools.ddl_crud_api.c_tracing $then
+    dbug.leave_on_error;
+$end
+    raise;
+end fetch_schema_objects;
+
+function get_display_ddl_sql_cursor
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- Sort objects in dependency order to reduce the number of installation errors/warnings.
+)
+return t_display_ddl_sql_cur
+is
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_DISPLAY_DDL_SQL_CURSOR';
+$end
+
+  l_cursor t_display_ddl_sql_cur;
+begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+  dbug.print(dbug."input", 'p_sort_objects_by_deps: %s', p_sort_objects_by_deps);
+$end
+$end
+
+  -- must be like oracle_tools.v_my_schema_ddls
+  if nvl(p_sort_objects_by_deps, 0) <> 0 
+  then
+    open l_cursor for
+      with src as
+      ( select  src.schema_object_id
+        ,       src.ddl#
+        ,       src.verb
+        ,       src.ddl_info
+        ,       src.chunk#
+        ,       src.chunk
+        ,       src.last_chunk
+        ,       src.obj as schema_object
+        ,       case when src.obj is not null then src.obj.object_type_order() end as object_type_order
+        ,       case when src.obj is not null then src.obj.object_schema() end as object_schema
+        ,       case when src.obj is not null then src.obj.dict_object_type() end as dict_object_type
+        ,       case when src.obj is not null then src.obj.object_name() end as object_name
+        from    oracle_tools.v_my_schema_ddls src
+      ), deps as
+      ( select  /*+ MATERIALIZE */
+                d.owner
+        ,       d.type
+        ,       d.name
+        ,       count(*) as nr_deps
+        from    all_dependencies d
+                inner join src so
+                on so.schema_object is not null and
+                   so.object_schema = d.referenced_owner and
+                   so.dict_object_type = d.referenced_type and
+                   so.object_name = d.referenced_name
+        where   -- don't count dependencies between specifications and their bodies
+                d.owner <> d.referenced_owner
+        or      d.name <> d.referenced_name
+        group by
+                d.owner
+        ,       d.type
+        ,       d.name
+      )
+      select  src.schema_object_id
+      ,       src.ddl#
+      ,       src.verb
+      ,       src.ddl_info
+      ,       src.chunk#
+      ,       src.chunk
+      ,       src.last_chunk
+      ,       src.schema_object
+      from    src
+              left outer join deps d
+              on d.owner = src.object_schema and d.type = src.dict_object_type and d.name = src.object_name
+      order by
+              src.object_type_order
+      ,       d.nr_deps desc nulls last
+      ,       src.schema_object_id
+      ,       src.ddl#
+      ,       src.chunk#;
+  else
+    open l_cursor for
+      select  src.schema_object_id
+      ,       src.ddl#
+      ,       src.verb
+      ,       src.ddl_info
+      ,       src.chunk#
+      ,       src.chunk
+      ,       src.last_chunk
+      ,       src.obj as schema_object
+      from    oracle_tools.v_my_schema_ddls src
+      order by
+              src.schema_object_id
+      ,       src.ddl#
+      ,       src.chunk#;
+  end if;
+  
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.leave;
+$end
+
+  return l_cursor;
+exception
+  when others
+  then
+$if oracle_tools.ddl_crud_api.c_tracing $then
+    dbug.leave_on_error;
+$end
+    raise;
 end get_display_ddl_sql_cursor;
+
+procedure fetch_display_ddl_sql
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_sort_objects_by_deps in t_numeric_boolean_nn -- Sort objects in dependency order to reduce the number of installation errors/warnings.
+, p_cursor in out nocopy integer
+, p_display_ddl_sql_tab out t_display_ddl_sql_tab
+)
+is
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FETCH_DISPLAY_DDL_SQL';
+$end
+
+  l_cursor t_display_ddl_sql_cur;
+  l_session_id t_session_id := null;
+
+  procedure cleanup(p_close in boolean)
+  is
+  begin
+    if l_session_id is not null
+    then
+      set_session_id(l_session_id);
+    end if;
+    if p_close and l_cursor%isopen
+    then
+      close l_cursor;
+      p_cursor := null;
+    end if;
+  end cleanup;
+begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+  dbug.print(dbug."input", 'p_sort_objects_by_deps: %s', p_sort_objects_by_deps);
+  dbug.print(dbug."input", 'p_cursor: %s', p_cursor);
+$end
+$end
+
+  if not dbms_sql.is_open(p_cursor)
+  then
+    l_session_id := get_session_id;
+    set_session_id(p_session_id); -- just a check
+
+    l_cursor := get_display_ddl_sql_cursor
+                ( p_session_id => p_session_id
+                , p_sort_objects_by_deps => p_sort_objects_by_deps
+                );
+  else
+    l_cursor := dbms_sql.to_refcursor(p_cursor);
+  end if;
+  
+  fetch l_cursor bulk collect into p_display_ddl_sql_tab limit c_fetch_limit;
+  
+  if p_display_ddl_sql_tab.count < c_fetch_limit
+  then
+    cleanup(true);
+  else
+    p_cursor := dbms_sql.to_cursor_number(l_cursor);
+    cleanup(false);
+  end if;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."output", 'p_cursor: %s', p_cursor);  
+  dbug.print(dbug."output", 'cardinality(p_display_ddl_sql_tab): %s', cardinality(p_display_ddl_sql_tab));  
+$end
+  dbug.leave;
+$end
+exception
+  when others
+  then
+    cleanup(true);
+$if oracle_tools.ddl_crud_api.c_tracing $then
+    dbug.leave_on_error;
+$end
+    raise;
+end fetch_display_ddl_sql;    
 
 procedure set_ddl_output_written
 ( p_schema_object_id in varchar2
@@ -1180,60 +1421,210 @@ begin
   where   gdsso.session_id = l_session_id
   and     ( p_schema_object_id is null or gdsso.schema_object_id = p_schema_object_id );
 
-  case sql%rowcount
-    when 0
-    then oracle_tools.pkg_ddl_error.raise_error
-         ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
-         , utl_lms.format_message
-           ( 'Could not set ORACLE_TOOLS.GENERATE_DDL_SESSION_SCHEMA_OBJECTS.DDL_OUTPUT_WRITTEN to %s'
-           , nvl(to_char(p_ddl_output_written), 'NULL')
-           )
-         , utl_lms.format_message('%s, "%s"', to_char(l_session_id), nvl(p_schema_object_id, '%'))
-         , 'session id, schema object id'
-         );
-    else null; -- ok
-  end case;
+  if sql%rowcount = 0 and p_schema_object_id is not null
+  then
+    oracle_tools.pkg_ddl_error.raise_error
+    ( oracle_tools.pkg_ddl_error.c_reraise_with_backtrace
+    , utl_lms.format_message
+      ( 'Could not set ORACLE_TOOLS.GENERATE_DDL_SESSION_SCHEMA_OBJECTS.DDL_OUTPUT_WRITTEN to %s'
+      , nvl(to_char(p_ddl_output_written), 'NULL')
+      )
+    , utl_lms.format_message('%s, "%s"', to_char(l_session_id), nvl(p_schema_object_id, '%'))
+    , 'session id, schema object id'
+    );
+  end if;
 end set_ddl_output_written;
 
-procedure get_ddl_generate_report_cursor
-( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor out nocopy t_ddl_generate_report_cur
+procedure fetch_ddl_generate_report
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_cursor in out nocopy integer
+, p_ddl_generate_report_tab out nocopy t_ddl_generate_report_tab
 )
 is
-  l_session_id t_session_id;
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'FETCH_DDL_GENERATE_REPORT';
+$end
+
+  l_cursor sys_refcursor;
+  l_session_id t_session_id := null;
+
+  procedure cleanup(p_close in boolean)
+  is
+  begin
+    if l_session_id is not null
+    then
+      set_session_id(l_session_id);
+    end if;
+    if p_close and l_cursor%isopen
+    then
+      close l_cursor;
+      p_cursor := null;
+    end if;
+  end cleanup;
 begin
-  set_session_id(p_session_id); -- just a check
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."input", 'p_session_id: %s', p_session_id);
+  dbug.print(dbug."input", 'p_cursor: %s', p_cursor);  
+$end
+$end
 
-  l_session_id := get_session_id;
+  if not dbms_sql.is_open(p_cursor)
+  then
+    l_session_id := get_session_id;
+    set_session_id(p_session_id); -- just a check
 
-  open p_cursor for
-    select  gdc.transform_param_list
-    ,       gdc.db_version
-    ,       gdc.last_ddl_time_schema
-    ,       so.obj as schema_object
-    ,       sofr.generate_ddl
-    ,       case
-              when gdsso.last_ddl_time is not null and gdsso.generate_ddl_configuration_id is not null
-              then 1
-              else 0
-            end as ddl_generated
-    ,       nvl(gdsso.ddl_output_written, 0) as ddl_output_written
+    open l_cursor for
+      select  gdc.transform_param_list
+      ,       gdc.db_version
+      ,       gdc.last_ddl_time_schema
+      ,       so.obj as schema_object
+      ,       sofr.generate_ddl
+      ,       sofr.generate_ddl_info
+      ,       case
+                when gdsso.last_ddl_time is not null and gdsso.generate_ddl_configuration_id is not null
+                then 1
+                else 0
+              end as ddl_generated
+      ,       nvl(gdsso.ddl_output_written, 0) as ddl_output_written
+      from    oracle_tools.generate_ddl_sessions gds
+              inner join oracle_tools.generate_ddl_configurations gdc
+              on gdc.id = gds.generate_ddl_configuration_id
+              inner join oracle_tools.schema_object_filters sof
+              on sof.id = gds.schema_object_filter_id
+              inner join oracle_tools.schema_object_filter_results sofr
+              on sofr.schema_object_filter_id = sof.id
+              inner join oracle_tools.schema_objects so
+              on so.id = sofr.schema_object_id
+              left outer join oracle_tools.generate_ddl_session_schema_objects gdsso
+              on gdsso.session_id = gds.session_id and
+                 gdsso.schema_object_id = sofr.schema_object_id
+      where   gds.session_id = p_session_id
+      order by
+              so.obj.id;
+  else
+    l_cursor := dbms_sql.to_refcursor(p_cursor);  
+  end if;  
+
+  fetch l_cursor bulk collect into p_ddl_generate_report_tab limit c_fetch_limit;
+  
+  if p_ddl_generate_report_tab.count < c_fetch_limit
+  then
+    cleanup(true);
+  else
+    p_cursor := dbms_sql.to_cursor_number(l_cursor);
+    cleanup(false);
+  end if;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."output", 'p_cursor: %s', p_cursor);  
+  dbug.print(dbug."output", 'cardinality(p_ddl_generate_report_tab): %s', cardinality(p_ddl_generate_report_tab));  
+$end
+  dbug.leave;
+$end
+exception
+  when others
+  then
+    cleanup(true);
+$if oracle_tools.ddl_crud_api.c_tracing $then
+    dbug.leave_on_error;
+$end
+    raise;
+end fetch_ddl_generate_report;
+
+procedure delete_generate_ddl_sessions
+( p_session_id in t_session_id 
+)
+is
+begin
+  if p_session_id is null
+  then
+    delete
     from    oracle_tools.generate_ddl_sessions gds
-            inner join oracle_tools.generate_ddl_configurations gdc
-            on gdc.id = gds.generate_ddl_configuration_id
-            inner join oracle_tools.schema_object_filters sof
-            on sof.id = gds.schema_object_filter_id
-            inner join oracle_tools.schema_object_filter_results sofr
-            on sofr.schema_object_filter_id = sof.id
-            inner join oracle_tools.schema_objects so
-            on so.id = sofr.schema_object_id
-            left outer join oracle_tools.generate_ddl_session_schema_objects gdsso
-            on gdsso.session_id = gds.session_id and
-               gdsso.schema_object_id = sofr.schema_object_id
-    where   gds.session_id = l_session_id
-    order by
-            so.obj.id;
-end get_ddl_generate_report_cursor;
+    where   gds.created <= g_min_timestamp_to_keep;
+  else
+    delete
+    from    oracle_tools.generate_ddl_sessions gds
+    where   gds.session_id = p_session_id;
+  end if;
+
+$if oracle_tools.ddl_crud_api.c_debugging $then
+  dbug.print(dbug."info", '# rows deleted from generate_ddl_sessions: %s', sql%rowcount);
+$end
+
+end delete_generate_ddl_sessions;  
+
+procedure disable_parallel_status
+is
+  l_parallel_status_tab t_parallel_status_tab;
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'DISABLE_PARALLEL_STATUS';
+$end
+begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
+  commit;
+  get_parallel_status(g_parallel_status_tab);
+  for i_idx in 1..3
+  loop
+    l_parallel_status_tab(i_idx) := 'DISABLED';
+  end loop;
+  set_parallel_status(l_parallel_status_tab);
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end disable_parallel_status;
+
+procedure reset_parallel_status
+is
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'RESET_PARALLEL_STATUS';
+$end
+begin
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.enter(l_module_name);
+$end
+
+  commit;
+  set_parallel_status(g_parallel_status_tab);
+
+$if oracle_tools.ddl_crud_api.c_tracing $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end reset_parallel_status;
+
+procedure purge_schema_objects
+( p_schema in varchar2 -- The schema to inspect.
+, p_reference_time in timestamp -- The reference timestamp.
+)
+is
+begin
+  delete
+  from    oracle_tools.schema_objects so
+  where   p_schema in (so.obj.object_schema(), so.obj.base_object_schema()) -- should use SCHEMA_OBJECTS$IDX$1 or SCHEMA_OBJECTS$IDX$2
+  and     so.updated < p_reference_time
+  and     so.obj.dict_last_ddl_time() is null;
+
+$if oracle_tools.schema_objects_api.c_debugging $then
+  dbug.print(dbug."info", '# rows deleted from SCHEMA_OBJECTS: %s', sql%rowcount);  
+$end
+end purge_schema_objects;
 
 END DDL_CRUD_API;
 /

@@ -11,7 +11,7 @@ is
   l_clob clob := null;
   " ADD  " constant varchar2(6) := ' ADD  '; -- so we can replace 'ADD ' by 'DROP'
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR');
 $end
 
@@ -48,7 +48,7 @@ $end
 
   dbms_lob.freetemporary(l_clob);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -62,7 +62,7 @@ overriding member procedure migrate
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'MIGRATE');
   dbug.print(dbug."input", 'p_source: %s; p_target: %s', p_source.obj.signature(), p_target.obj.signature());
 $end
@@ -77,7 +77,7 @@ $end
   self.uninstall(p_target => p_target);
   self.install(p_source => p_source);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 end migrate;
@@ -88,7 +88,7 @@ overriding member procedure uninstall
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'UNINSTALL');
 $end
 
@@ -96,7 +96,7 @@ $end
 
   self.ddl_tab(1).text_tab(1) := replace(self.ddl_tab(1).text_tab(1), 'ADD ', 'DROP');
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 end uninstall;

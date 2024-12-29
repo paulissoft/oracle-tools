@@ -6,17 +6,17 @@ overriding member procedure add_ddl
 , p_text_tab in oracle_tools.t_text_tab
 )
 is
-$if oracle_tools.pkg_ddl_util.c_set_start_with_to_minvalue $then
+$if oracle_tools.pkg_ddl_defs.c_set_start_with_to_minvalue $then
   l_ddl_text varchar2(32767);
 $end  
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'ADD_DDL (1)');
 $end
 
   self.ddl_tab.extend(1);
 
-$if oracle_tools.pkg_ddl_util.c_set_start_with_to_minvalue $then
+$if oracle_tools.pkg_ddl_defs.c_set_start_with_to_minvalue $then
 
   l_ddl_text := p_text_tab(1);
 
@@ -50,7 +50,7 @@ $end
 
   self.chk(null);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 2 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 2 $then
   dbug.leave;
 $end
 end add_ddl;

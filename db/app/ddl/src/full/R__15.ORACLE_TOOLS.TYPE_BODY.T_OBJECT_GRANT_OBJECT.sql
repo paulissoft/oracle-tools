@@ -11,7 +11,7 @@ constructor function t_object_grant_object
 return self as result
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR');
   p_base_object.print();
   dbug.print
@@ -38,7 +38,7 @@ $end
 
   oracle_tools.t_schema_object.normalize(self);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -86,7 +86,7 @@ overriding member procedure chk
 , p_schema in varchar2
 )
 is
-$if oracle_tools.pkg_ddl_util.c_#140920801 $then
+$if oracle_tools.pkg_ddl_defs.c_#140920801 $then
   pragma autonomous_transaction;
 
   -- Capture invalid objects before releasing to next enviroment.
@@ -94,7 +94,7 @@ $if oracle_tools.pkg_ddl_util.c_#140920801 $then
   l_error_message varchar2(2000 char);
 $end
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
@@ -116,7 +116,7 @@ $end
     oracle_tools.pkg_ddl_error.raise_error(oracle_tools.pkg_ddl_error.c_invalid_parameters, l_error_message, self.schema_object_info());
   end if;
 
-$if oracle_tools.pkg_ddl_util.c_#140920801 $then
+$if oracle_tools.pkg_ddl_defs.c_#140920801 $then
 
   -- Capture invalid objects before releasing to next enviroment.
   -- This is implemented by re-granting the grant statement when the grantor is equal to the logged in user.
@@ -165,7 +165,7 @@ $end
 
 $end
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.leave;
 $end
 end chk;
@@ -177,7 +177,7 @@ is
   l_object_name constant all_objects.object_name%type := self.base_object_name();
   l_last_ddl_time all_objects.last_ddl_time%type;
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'LAST_DDL_TIME');
   dbug.print
   ( dbug."input"
@@ -194,7 +194,7 @@ $end
   where   o.owner = l_owner
   and     o.object_name = l_object_name;
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.print(dbug."output", 'return: %s', l_last_ddl_time);
   dbug.leave;
 $end

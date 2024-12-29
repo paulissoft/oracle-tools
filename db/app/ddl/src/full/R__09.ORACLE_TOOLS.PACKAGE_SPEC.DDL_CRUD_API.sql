@@ -42,13 +42,22 @@ b. for the current session id (to_number(sys_context('USERENV', 'SESSIONID')))
 [This documentation is in PLOC format](https://github.com/ogobrecht/ploc)
 **/
 
-c_tracing constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 1;
-c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
+c_tracing constant boolean := oracle_tools.pkg_ddl_defs.c_debugging >= 2;
+c_debugging constant boolean := oracle_tools.pkg_ddl_defs.c_debugging >= 3;
 
-subtype t_session_id is integer;  
+c_min_timestamp_to_keep constant timestamp(6) :=
+  (sys_extract_utc(current_timestamp) - interval '2' day);
+
+subtype t_session_id is integer;
+subtype t_session_id_nn is t_session_id not null;  
+
+subtype t_schema_object_filter_id is integer;
+subtype t_schema_object_filter_id_nn is t_session_id not null;  
+
+subtype t_numeric_boolean_nn is oracle_tools.pkg_ddl_defs.t_numeric_boolean_nn;
 
 procedure set_session_id
-( p_session_id in t_session_id -- The session id.
+( p_session_id in t_session_id_nn -- The session id.
 );
 /**
 
@@ -61,11 +70,11 @@ b. the current session id (to_number(sys_context('USERENV', 'SESSIONID')))
 **/
 
 function get_session_id
-return t_session_id;
+return t_session_id_nn;
 /** Get the session id that will be used for the CRUD operations. **/
 
 function get_schema_object_filter_id
-return positive;
+return t_schema_object_filter_id;
 /**
 
 Return the current schema object filter id.
@@ -88,7 +97,7 @@ function get_schema_object_filter
 return oracle_tools.t_schema_object_filter;
 
 function get_schema_object_filter
-( p_schema_object_filter_id in positiven
+( p_schema_object_filter_id in t_schema_object_filter_id_nn
 )
 return oracle_tools.t_schema_object_filter;
 
@@ -128,15 +137,8 @@ deterministic;
 /** Return the match percentage threshold as set by default_match_perc_threshold(). **/
 
 procedure add
-( p_schema in varchar2 -- The schema name.
-, p_object_type in varchar2 -- Filter for object type.
-, p_object_names in varchar2 -- A comma separated list of (base) object names.
-, p_object_names_include in integer -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
-, p_grantor_is_schema in integer -- An extra filter for grants. If the value is 1, only grants with grantor equal to p_schema will be chosen.
-, p_exclude_objects in clob -- A newline separated list of objects to exclude (their schema object id actually).
-, p_include_objects in clob -- A newline separated list of objects to include (their schema object id actually).
+( p_schema_object_filter in oracle_tools.t_schema_object_filter -- The schema object filter.
 , p_transform_param_list in varchar2 -- A comma separated list of transform parameters, see dbms_metadata.set_transform_param().
-, p_schema_object_filter out nocopy oracle_tools.t_schema_object_filter -- The schema object filter.
 , p_generate_ddl_configuration_id out nocopy integer -- The GENERATE_DDL_CONFIGURATIONS.ID.
 );
 /**
@@ -179,10 +181,9 @@ Otherwise (there is a record in SCHEMA_OBJECT_FILTERS) when the
 previous last modification time is not the same as the value calculated in
 step 4, all entries in SCHEMA_OBJECT_FILTER_RESULTS for this
 schema object filter id will be removed. That is necessary since we must
-recalculate p_schema_object_filter.matches_schema_object() for every object
+recalculate p_schema_object_filter.matches_schema_object_details() for every object
 since the schema is not the same anymore hence the results not reliable
-anymore. The LAST_MODIFICATION_TIME_SCHEMA and UPDATED columns will be
-updated in any case.
+anymore. The UPDATED column will be updated in any case.
 
 | Table                               | CRUD |
 |:------------------------------------|:-----|
@@ -195,7 +196,7 @@ updated in any case.
 
 procedure add
 ( p_schema_object in oracle_tools.t_schema_object -- The schema object to add to GENERATE_DDL_SESSION_SCHEMA_OBJECTS.
-, p_schema_object_filter_id in positiven
+, p_schema_object_filter_id in t_schema_object_filter_id_nn
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 );
 /**
@@ -294,7 +295,7 @@ Add a record to table GENERATE_DDL_SESSION_BATCHES.
 
 procedure add
 ( p_schema_object_tab in oracle_tools.t_schema_object_tab -- The schema object table.
-, p_schema_object_filter_id in positiven -- The schema object filter id.
+, p_schema_object_filter_id in t_schema_object_filter_id_nn -- The schema object filter id.
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 );
 /**
@@ -372,9 +373,10 @@ And thus all related tables thanks to the cascading foreign keys.
 
 **/
 
-procedure get_schema_objects_cursor
-( p_session_id in positiven
-, p_cursor out nocopy sys_refcursor
+procedure fetch_schema_objects
+( p_session_id in t_session_id_nn
+, p_cursor in out nocopy integer -- null the first input, null on output when closed/finished, i.e. nothing more to fetch
+, p_schema_object_tab out nocopy oracle_tools.t_schema_object_tab
 );
 
 type t_display_ddl_sql_rec is record
@@ -392,9 +394,17 @@ type t_display_ddl_sql_tab is table of t_display_ddl_sql_rec;
 
 type t_display_ddl_sql_cur is ref cursor return t_display_ddl_sql_rec;
 
-procedure get_display_ddl_sql_cursor
-( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor out nocopy t_display_ddl_sql_cur
+function get_display_ddl_sql_cursor
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- Sort objects in dependency order to reduce the number of installation errors/warnings.
+)
+return t_display_ddl_sql_cur;
+
+procedure fetch_display_ddl_sql
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- Sort objects in dependency order to reduce the number of installation errors/warnings.
+, p_cursor in out nocopy integer -- null the first input, null on output when closed/finished, i.e. nothing more to fetch
+, p_display_ddl_sql_tab out nocopy t_display_ddl_sql_tab
 );
 
 procedure set_ddl_output_written
@@ -411,7 +421,8 @@ type t_ddl_generate_report_rec is record
   -- from SCHEMA_OBJECTS
 , schema_object oracle_tools.t_schema_object
   -- from SCHEMA_OBJECT_FILTER_RESULTS
-, generate_ddl number(1, 0) -- result of procedure PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT()
+, generate_ddl number(1, 0) -- result part 1 of procedure PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT_DETAILS()
+, generate_ddl_info varchar2(1000 byte) -- result part 2 of procedure PKG_SCHEMA_OBJECT_FILTER.MATCHES_SCHEMA_OBJECT_DETAILS()
   -- from GENERATE_DDL_SESSION_SCHEMA_OBJECTS
 , ddl_generated number(1, 0) -- see v_schema_objects.ddl_generated
 , ddl_output_written number(1, 0)
@@ -419,12 +430,28 @@ type t_ddl_generate_report_rec is record
 
 type t_ddl_generate_report_tab is table of t_ddl_generate_report_rec;
 
-type t_ddl_generate_report_cur is ref cursor return t_ddl_generate_report_rec;
-
-procedure get_ddl_generate_report_cursor
-( p_session_id in positiven -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
-, p_cursor out nocopy t_ddl_generate_report_cur
+procedure fetch_ddl_generate_report
+( p_session_id in t_session_id_nn -- The session id from V_MY_GENERATE_DDL_SESSIONS, i.e. must belong to your USERNAME.
+, p_cursor in out nocopy integer -- null the first input, null on output when closed/finished, i.e. nothing more to fetch
+, p_ddl_generate_report_tab out nocopy t_ddl_generate_report_tab
 );
+
+procedure delete_generate_ddl_sessions
+( p_session_id in t_session_id default null -- The session id to delete (or sessions longer than 2 days ago).
+);
+/** Delete rows from GENERATE_DDL_SESSIONS. **/
+
+procedure disable_parallel_status;
+/** Disable parallel DML, DDL and Query. Will commit first. **/
+
+procedure reset_parallel_status;
+/** Restore parallel DML, DDL and Query to the situation just before disable_parallel_status was called. Will commit first. **/
+
+procedure purge_schema_objects
+( p_schema in varchar2 -- The schema to inspect.
+, p_reference_time in timestamp -- The reference timestamp.
+);
+/** Purge schema objects belonging to this schema with an updated value before the reference timestamp. **/
 
 END DDL_CRUD_API;
 /

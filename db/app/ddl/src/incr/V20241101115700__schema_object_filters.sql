@@ -9,8 +9,6 @@ create table schema_object_filters
 , created timestamp(6)
   default sys_extract_utc(systimestamp)
   constraint schema_object_filters$nnc$created not null
-, last_modification_time_schema date -- last modification time of any object in this schema (obj.schema)
-  constraint schema_object_filters$nnc$last_modification_time_schema not null
 , updated timestamp(6)
 -- in overflow
 , obj_json clob -- representation of t_schema_object_filter

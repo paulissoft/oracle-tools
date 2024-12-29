@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE "ORACLE_TOOLS"."PKG_SCHEMA_OBJECT_FILTER" AUTHID CURRENT_USER IS
 
-c_debugging constant boolean := oracle_tools.pkg_ddl_util.c_debugging >= 3;
+c_debugging constant boolean := oracle_tools.pkg_ddl_defs.c_debugging >= 3;
 
 -- subtype t_schema_object_filter is oracle_tools.t_schema_object_filter;
 
@@ -46,21 +46,13 @@ The constructor for an oracle_tools.t_schema_object_filter object.
 
 **/
 
-procedure matches_schema_object
+function matches_schema_object_details
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter -- The schema object filter
 , p_schema_object_id in varchar2 -- The schema object id
-, p_result out nocopy integer -- The result (0 = false, 1 = true)
-, p_details out nocopy varchar2 -- A varchar2(1000 char) should be enough
-);
-/** Does the schema object id match the schema object filter? **/
-
-function matches_schema_object
-( p_schema_object_filter in oracle_tools.t_schema_object_filter
-, p_schema_object_id in varchar2
 )
-return integer
+return varchar2 -- The result (like ' |%' = ignore object, like '0|%' = false, like '1|%' = true)
 deterministic;
-/** Does the schema object id match the schema object filter? **/
+/** Does the schema object id match the schema object filter (with info)? **/
 
 procedure serialize
 ( p_schema_object_filter in oracle_tools.t_schema_object_filter
@@ -92,7 +84,7 @@ $if oracle_tools.cfg_pkg.c_testing $then
 procedure ut_construct;
 
 --%test;
-procedure ut_matches_schema_object;
+procedure ut_matches_schema_object_details;
 
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 

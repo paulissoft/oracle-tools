@@ -8,7 +8,7 @@ constructor function t_table_object
 return self as result
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR' || ' (1)');
   dbug.print
   ( dbug."input"
@@ -41,7 +41,7 @@ $end
 
   oracle_tools.t_schema_object.normalize(self);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.print(dbug."info", 'self.tablespace_name$: %s', self.tablespace_name$);
   dbug.leave;
 $end
@@ -58,7 +58,7 @@ constructor function t_table_object
 return self as result
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.CONSTRUCTOR' || ' (2)');
   dbug.print(dbug."input", 'p_object_schema: %s; p_object_name: %s; p_tablespace_name: %s', p_object_schema, p_object_name, p_tablespace_name);
 $end
@@ -70,7 +70,7 @@ $end
 
   oracle_tools.t_schema_object.normalize(self);
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.leave;
 $end
 
@@ -108,7 +108,7 @@ overriding member procedure chk
 )
 is
 begin
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'CHK');
 $end
 
@@ -116,7 +116,7 @@ $end
 
   -- tablespace name may or may not be empty
 
-$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_util.c_debugging >= 3 $then
+$if oracle_tools.cfg_pkg.c_debugging and oracle_tools.pkg_ddl_defs.c_debugging >= 3 $then
   dbug.leave;
 $end
 end chk;

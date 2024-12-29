@@ -2,9 +2,9 @@ CREATE OR REPLACE PACKAGE BODY "ORACLE_TOOLS"."SCHEMA_OBJECTS_API" IS /* -*-codi
 
 -- PRIVATE
 subtype t_module is varchar2(100);
-subtype t_numeric_boolean is oracle_tools.pkg_ddl_util.t_numeric_boolean;
-subtype t_schema is oracle_tools.pkg_ddl_util.t_schema;
-subtype t_schema_nn is oracle_tools.pkg_ddl_util.t_schema_nn;
+subtype t_numeric_boolean is oracle_tools.pkg_ddl_defs.t_numeric_boolean;
+subtype t_schema is oracle_tools.pkg_ddl_defs.t_schema;
+subtype t_schema_nn is oracle_tools.pkg_ddl_defs.t_schema_nn;
 
 -- steps in get_schema_objects
 "named objects" constant varchar2(30 char) := 'base objects';
@@ -12,8 +12,21 @@ subtype t_schema_nn is oracle_tools.pkg_ddl_util.t_schema_nn;
 "synonyms" constant varchar2(30 char) := 'SYNONYM';
 "comments" constant varchar2(30 char) := 'COMMENT';
 "constraints" constant varchar2(30 char) := 'CONSTRAINT';
+"referential constraints" constant varchar2(30 char) := 'REF_CONSTRAINT';
 "triggers" constant varchar2(30 char) := 'TRIGGER';
 "indexes" constant varchar2(30 char) := 'INDEX';
+
+c_steps constant sys.odcivarchar2list :=
+  sys.odcivarchar2list
+  ( "named objects"                 -- no base object
+  , "object grants"                 -- base object (named)
+  , "synonyms"                      -- base object (named)
+  , "comments"                      -- base object (named)
+  , "constraints"                   -- base object (named)
+  , "referential constraints"       -- base object (named)
+  , "triggers"                      -- base object (NOT named)
+  , "indexes"                       -- base object (NOT named)
+  );
 
 procedure get_named_objects
 ( p_schema in varchar2
@@ -24,8 +37,8 @@ is
 
   l_excluded_tables_tab t_excluded_tables_tab;
 
-  l_schema_md_object_type_tab constant oracle_tools.pkg_ddl_util.t_md_object_type_tab :=
-    oracle_tools.pkg_ddl_util.get_md_object_type_tab('SCHEMA');
+  l_schema_md_object_type_tab constant oracle_tools.pkg_ddl_defs.t_md_object_type_tab :=
+    oracle_tools.pkg_ddl_defs.get_md_object_type_tab('SCHEMA');
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_NAMED_OBJECTS');
@@ -60,7 +73,7 @@ $if oracle_tools.schema_objects_api.c_debugging $then
           dbug.print(dbug."info", 'excluding queue table: %s', r.object_name);
 $end
 
-$if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
+$if oracle_tools.pkg_ddl_defs.c_get_queue_ddl $then
 
           p_schema_object_tab.extend(1);
           p_schema_object_tab(p_schema_object_tab.last) :=          
@@ -126,7 +139,7 @@ $end
           where   t.owner = p_schema
           and     t.object_type = 'TABLE'
           and     t.temporary = 'Y'
-$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
+$if oracle_tools.pkg_ddl_defs.c_exclude_system_objects $then
           and     t.generated = 'N' -- GPA 2016-12-19 #136334705
 $end      
                   -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
@@ -162,31 +175,26 @@ $end
             ,       obj.object_type
             ,       obj.object_name
             ,       obj.status
-            ,       obj.generated
-            ,       obj.temporary
-            ,       obj.subobject_name
                     -- use scalar subqueries for a (possible) better performance
             ,       ( select substr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), 1, 23) from dual ) as md_object_type
---            ,       ( select oracle_tools.t_schema_object.is_a_repeatable(obj.object_type) from dual ) as is_a_repeatable
---            ,       ( select oracle_tools.pkg_ddl_util.is_exclude_name_expr(oracle_tools.t_schema_object.dict2metadata_object_type(obj.object_type), obj.object_name) from dual ) as is_exclude_name_expr
-            ,       ( select oracle_tools.pkg_ddl_util.is_dependent_object_type(obj.object_type) from dual ) as is_dependent_object_type
+            ,       ( select oracle_tools.pkg_ddl_defs.is_dependent_object_type(obj.object_type) from dual ) as is_dependent_object_type
             from    all_objects obj
+            where   obj.owner = p_schema
+            and     obj.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
+            and     not( obj.object_type = 'SEQUENCE' and substr(obj.object_name, 1, 5) = 'ISEQ$' )
+$if oracle_tools.pkg_ddl_defs.c_exclude_system_objects $then
+            and     obj.generated = 'N' -- GPA 2016-12-19 #136334705
+$end                
+                    -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
+                    -- =====         ===========                      ==============
+                    -- ORACLE_TOOLS  oracle_tools.t_table_column_ddl  $VSN_1
+            and     obj.subobject_name is null
           )
           select  o.owner as object_schema
           ,       o.md_object_type as object_type
           ,       o.object_name
           from    obj o
-          where   o.owner = p_schema
-          and     o.object_type not in ('QUEUE', 'MATERIALIZED VIEW', 'TABLE', 'TRIGGER', 'INDEX', 'SYNONYM')
-          and     not( o.object_type = 'SEQUENCE' and substr(o.object_name, 1, 5) = 'ISEQ$' )
-          and     o.md_object_type member of l_schema_md_object_type_tab
-$if oracle_tools.pkg_ddl_util.c_exclude_system_objects $then
-          and     o.generated = 'N' -- GPA 2016-12-19 #136334705
-$end                
-                  -- OWNER         OBJECT_NAME                      SUBOBJECT_NAME
-                  -- =====         ===========                      ==============
-                  -- ORACLE_TOOLS  oracle_tools.t_table_column_ddl  $VSN_1
-          and     o.subobject_name is null
+          where   o.md_object_type member of l_schema_md_object_type_tab
                   -- GPA 2017-06-28 #147916863 - As a release operator I do not want comments without table or column.
           and     o.is_dependent_object_type = 0
         )
@@ -205,6 +213,11 @@ $end
 $if oracle_tools.schema_objects_api.c_tracing $then
 $if oracle_tools.schema_objects_api.c_debugging $then
   dbug.print(dbug."output", 'p_schema_object_tab.count: %s', p_schema_object_tab.count);
+  for i_idx in 1..p_schema_object_tab.count
+  loop
+    dbug.print(dbug."output", 'p_schema_object_tab(%s)', i_idx);
+    p_schema_object_tab(i_idx).print();
+  end loop;
 $end  
   dbug.leave;
 $end
@@ -230,16 +243,19 @@ $if oracle_tools.schema_objects_api.c_tracing $then
 $end
   l_schema constant t_schema_nn := p_schema_object_filter.schema();
   l_grantor_is_schema constant t_numeric_boolean := p_schema_object_filter.grantor_is_schema();
+  l_my_named_objects_count pls_integer := null;
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $if oracle_tools.schema_objects_api.c_debugging $then
   dbug.print
   ( dbug."input"
-  , 'p_schema_object_filter null?: %s; p_schema_object_filter_id: %s; p_step: %s'
+  , 'p_schema_object_filter not null?: %s; p_schema_object_filter_id: %s; p_step: %s: schema: %s; grantor_is_schema: %s'
   , dbug.cast_to_varchar2(p_schema_object_filter is not null)
   , p_schema_object_filter_id
   , p_step
+  , l_schema
+  , l_grantor_is_schema
   );
   if p_schema_object_filter is not null
   then
@@ -262,6 +278,24 @@ $end
       , p_schema_object_filter => p_schema_object_filter
       );
       p_schema_object_tab.delete;
+      -- there must be something in oracle_tools.v_my_named_schema_objects mnso
+      select  count(*)
+      into    l_my_named_objects_count
+      from    oracle_tools.v_my_named_schema_objects mnso;
+
+      if l_my_named_objects_count = 0
+      then
+        oracle_tools.pkg_ddl_error.raise_error
+        ( oracle_tools.pkg_ddl_error.c_object_not_found
+        , 'There are no named objects (ORACLE_TOOLS.V_MY_NAMED_SCHEMA_OBJECTS)'
+        , oracle_tools.ddl_crud_api.get_session_id
+        , 'session id'
+        );
+      end if;
+
+$if oracle_tools.schema_objects_api.c_debugging $then
+      dbug.print(dbug."info", 'l_my_named_objects_count: %s', l_my_named_objects_count);
+$end
 
     -- object grants must depend on a base object already gathered (see above)
     when "object grants"
@@ -274,7 +308,9 @@ $end
                 -- several grantors may have executed the same grant statement
         ,       max(p.grantable) as grantable -- YES comes after NO
         from    all_tab_privs p
-        where   l_schema = p.table_schema and ( l_grantor_is_schema = 0 or p.grantor = l_schema )
+        where   l_schema = p.table_schema
+        and     ( l_grantor_is_schema = 0 or p.grantor = l_schema )
+        and     p.grantee <> 'ADMIN' -- https://github.com/paulissoft/oracle-tools/issues/187
         group by
                 p.table_schema
         ,       p.table_name
@@ -297,7 +333,7 @@ $end
                                         , 'TYPE_BODY'
                                         , 'MATERIALIZED_VIEW' -- grants are on underlying tables
                                         ); 
-      
+
     when "comments"
     then
       with v_my_comments_dict as
@@ -359,32 +395,24 @@ $end
       for r in
       ( -- constraints for objects in the same schema
         with v_my_constraints_dict as
-        ( select  t.object_schema
-          ,       t.object_type
-          ,       t.object_name
-          ,       t.base_object_schema
-          ,       t.base_object_name
-          ,       t.constraint_type
-          ,       t.search_condition
-          from    ( select  c.owner as object_schema
-                    ,       case when c.constraint_type = 'R' then 'REF_CONSTRAINT' else 'CONSTRAINT' end as object_type
-                    ,       c.constraint_name as object_name
-                    ,       nvl(c.r_owner, c.owner) as base_object_schema -- referential constraint can be in another schema
-                    ,       c.table_name as base_object_name
-                    ,       c.constraint_type
-                    ,       c.search_condition
-                    from    all_constraints c
-                    where   l_schema in (c.r_owner, c.owner)
-                    and     /* Type of constraint definition:
-                               C (check constraint on a table)
-                               P (primary key)
-                               U (unique key)
-                               R (referential integrity)
-                               V (with check option, on a view)
-                               O (with read only, on a view)
-                            */
-                            c.constraint_type in ('C', 'P', 'U', 'R')
-                  ) t
+        ( select  c.owner as object_schema
+          ,       'CONSTRAINT' as object_type
+          ,       c.constraint_name as object_name
+          ,       c.owner as base_object_schema
+          ,       c.table_name as base_object_name
+          ,       c.constraint_type
+          ,       c.search_condition
+          from    all_constraints c
+          where   c.owner = l_schema
+          and     /* Type of constraint definition:
+                     C (check constraint on a table)
+                     P (primary key)
+                     U (unique key)
+                     R (referential integrity)
+                     V (with check option, on a view)
+                     O (with read only, on a view)
+                  */
+                  c.constraint_type in ('C', 'P', 'U')
         )
         select  t.*
         from    ( select  value(mnso) as base_object
@@ -401,30 +429,92 @@ $end
       )
       loop
         p_schema_object_tab.extend(1);
+        p_schema_object_tab(p_schema_object_tab.last) :=
+          oracle_tools.t_constraint_object
+          ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+          , p_object_schema => r.object_schema
+          , p_object_name => r.object_name
+          , p_constraint_type => r.constraint_type
+          , p_search_condition => r.search_condition
+          );
+      end loop;
 
-        case r.object_type
-          when 'REF_CONSTRAINT'
-          then
-            p_schema_object_tab(p_schema_object_tab.last) :=
-              oracle_tools.t_ref_constraint_object
-              ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-              , p_object_schema => r.object_schema
-              , p_object_name => r.object_name
-              , p_constraint_type => r.constraint_type
-              , p_column_names => null
-              );
-
-          when 'CONSTRAINT'
-          then
-            p_schema_object_tab(p_schema_object_tab.last) :=
-              oracle_tools.t_constraint_object
-              ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-              , p_object_schema => r.object_schema
-              , p_object_name => r.object_name
-              , p_constraint_type => r.constraint_type
-              , p_search_condition => r.search_condition
-              );
-        end case;
+    -- constraints must depend on a base object already gathered
+    when "referential constraints"
+    then
+      p_schema_object_tab := oracle_tools.t_schema_object_tab();
+      for r in
+      ( -- constraints for objects in the same schema
+        with v_my_constraints_dict as
+        ( select  -- REFERENTIAL CONSTRAINT
+                  r.owner as object_schema
+          ,       'REF_CONSTRAINT' as object_type
+          ,       r.constraint_name as object_name
+          ,       r.constraint_type
+          ,       ro.object_type as base_object_type
+          ,       r.owner as base_object_schema
+          ,       r.table_name as base_object_name
+                  -- PRIMARY/UNIQUE KEY CONSTRAINT
+          ,       k.owner as ref_object_schema -- referential constraint can be in another schema
+          ,       'CONSTRAINT' as ref_object_type
+          ,       k.constraint_name as ref_object_name
+          ,       k.constraint_type as ref_constraint_type
+          ,       ko.object_type as base_ref_object_type
+          ,       k.owner as base_ref_object_schema
+          ,       k.table_name as base_ref_object_name
+          from    all_constraints r
+                  inner join all_objects ro
+                  on ro.owner = r.owner and ro.object_name = r.table_name and ro.object_type in ('TABLE', 'VIEW')
+                  inner join all_constraints k
+                  on k.owner = r.r_owner and k.constraint_name = r.r_constraint_name
+                  inner join all_objects ko
+                  on ko.owner = k.owner and ko.object_name = k.table_name and ko.object_type in ('TABLE', 'VIEW')
+          where   r.owner = l_schema
+          and     /* Type of constraint definition:
+                     C (check constraint on a table)
+                     P (primary key)
+                     U (unique key)
+                     R (referential integrity)
+                     V (with check option, on a view)
+                     O (with read only, on a view)
+                  */
+                  r.constraint_type in ('R')
+          and     k.constraint_type in ('P', 'U')
+        )
+        select  value(mnso) as base_object
+        ,       r.object_schema
+        ,       r.object_type
+        ,       r.object_name
+        ,       r.constraint_type
+        ,       oracle_tools.t_constraint_object
+                ( p_base_object =>
+                    oracle_tools.t_named_object.create_named_object
+                    ( p_object_type => r.base_ref_object_type
+                    , p_object_schema => r.base_ref_object_schema
+                    , p_object_name => r.base_ref_object_name
+                    )
+                , p_object_schema => r.ref_object_schema
+                , p_object_name => r.ref_object_name
+                , p_constraint_type => r.ref_constraint_type
+                , p_column_names => null
+                , p_search_condition => null
+                ) as ref_object
+        from    oracle_tools.v_my_named_schema_objects mnso
+                inner join v_my_constraints_dict r /* this is where we are interested in */
+                on r.base_object_schema = mnso.object_schema() and r.base_object_name = mnso.object_name()
+        where   mnso.object_type() in ('TABLE', 'VIEW')
+      )
+      loop
+        p_schema_object_tab.extend(1);
+        p_schema_object_tab(p_schema_object_tab.last) :=
+          oracle_tools.t_ref_constraint_object
+          ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
+          , p_object_schema => r.object_schema
+          , p_object_name => r.object_name
+          , p_constraint_type => r.constraint_type
+          , p_column_names => null
+          , p_ref_object => r.ref_object
+          );
       end loop;
 
     -- these are not dependent on named objects:
@@ -525,7 +615,7 @@ $end
               -- When constraint_index = 'YES' the index is created as part of the constraint DDL,
               -- so it will not be listed as a separate DDL statement.
       and     not(i.constraint_index = 'YES')
-$if oracle_tools.pkg_ddl_util.c_exclude_system_indexes $then
+$if oracle_tools.pkg_ddl_defs.c_exclude_system_indexes $then
       and     i.generated = 'N'
 $end
       ;
@@ -538,6 +628,11 @@ $if oracle_tools.schema_objects_api.c_debugging $then
   , 'cardinality(p_schema_object_tab): %s'
   , cardinality(p_schema_object_tab)
   );
+  for i_idx in 1 .. nvl(cardinality(p_schema_object_tab), 0)
+  loop
+    dbug.print(dbug."output", 'p_schema_object_tab(%s)', i_idx);
+    p_schema_object_tab(i_idx).print();
+  end loop;
 $end  
   dbug.leave;
 exception
@@ -576,8 +671,10 @@ end add_schema_objects;
 
 procedure ddl_batch_process
 is
-  l_session_id constant integer := oracle_tools.ddl_crud_api.get_session_id;
-  l_task_name constant varchar2(100 byte) := $$PLSQL_UNIT || '.DDL_BATCH-' || to_char(l_session_id);
+  l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
+  l_task_name_fmt constant varchar2(100 byte) := $$PLSQL_UNIT || '.DDL_BATCH-';
+  l_task_name constant varchar2(100 byte) := l_task_name_fmt || to_char(l_session_id);
+  l_count pls_integer;
 
   -- Here we substitute the session id into the statement since it may be executed by another session.
   l_sql_stmt constant varchar2(1000 byte) :=
@@ -599,7 +696,30 @@ $if oracle_tools.schema_objects_api.c_tracing $then
 $end
 
   -- No need to check whether V_DEPENDENT_OR_GRANTED_OBJECT_TYPES contains rows: it always does.
-  
+  select  count(*)
+  into    l_count
+  from    oracle_tools.v_dependent_or_granted_object_types;
+
+  if l_count <> c_steps.count - 1 -- skip first item
+  then
+    raise program_error;
+  end if;
+
+  -- Remove old USER_PARALLEL_EXECUTE_TASKS / USER_PARALLEL_EXECUTE_CHUNKS
+  for r in
+  ( select  distinct
+            c.task_name
+    from    user_parallel_execute_chunks c
+            inner join user_parallel_execute_tasks t
+            on t.task_name = c.task_name
+    where   c.task_name like l_task_name_fmt || '%'
+    and     c.start_ts < oracle_tools.ddl_crud_api.c_min_timestamp_to_keep
+    and     t.status in ('FINISHED', 'FINISHED_WITH_ERROR', 'CRASHED')
+  )
+  loop
+    dbms_parallel_execute.drop_task(r.task_name);
+  end loop;
+
   -- Create the TASK for all but SCHEMA_EXPORT
   dbms_parallel_execute.create_task(l_task_name);
 
@@ -609,63 +729,71 @@ $end
     , table_owner => 'ORACLE_TOOLS'
     , table_name => 'V_DEPENDENT_OR_GRANTED_OBJECT_TYPES'
     , table_column => 'NR'
-      -- V_DEPENDENT_OR_GRANTED_OBJECT_TYPES contains 6 rows
-    , chunk_size => nvl(ceil(6 / oracle_tools.pkg_ddl_util.c_default_parallel_level), 1)
+    , chunk_size => case when oracle_tools.pkg_ddl_defs.c_default_parallel_level >= 1 then ceil(l_count / oracle_tools.pkg_ddl_defs.c_default_parallel_level) else 1 end
     );
 
 $if oracle_tools.schema_objects_api.c_debugging $then
     dbug.print(dbug."info", 'starting dbms_parallel_execute.run_task');
 $end
 
-    -- Execute the DML in parallel
-    dbms_parallel_execute.run_task
-    ( l_task_name
-    , l_sql_stmt
-    , dbms_sql.native
-    , parallel_level => oracle_tools.pkg_ddl_util.c_default_parallel_level
-    );
+    declare
+      -- ORA-27486: insufficient privileges
+      e_insufficient_privileges exception;
+      pragma exception_init(e_insufficient_privileges, -27486);
+    begin
+      -- Execute the DML in parallel
+      dbms_parallel_execute.run_task
+      ( l_task_name
+      , l_sql_stmt
+      , dbms_sql.native
+      , parallel_level => oracle_tools.pkg_ddl_defs.c_default_parallel_level
+      );
+    exception
+      when e_insufficient_privileges
+      then
+        -- Execute the DML in parallel
+        dbms_parallel_execute.run_task
+        ( l_task_name
+        , l_sql_stmt
+        , dbms_sql.native
+        , parallel_level => 0
+        );
+    end;
 
 $if oracle_tools.schema_objects_api.c_debugging $then
     dbug.print(dbug."info", 'stopped dbms_parallel_execute.run_task');
 $end
 
     -- If there is error, RESUME it for at most 2 times.
+    <<try_loop>>
     for i_try in 1..2
     loop
       l_status := dbms_parallel_execute.task_status(l_task_name);
-      exit when l_status = dbms_parallel_execute.finished;
+      exit try_loop when l_status = dbms_parallel_execute.finished;
 
 $if oracle_tools.schema_objects_api.c_debugging $then
       dbug.print(dbug."info", 'dbms_parallel_execute.resume_task (try: %s, status: %s)', i_try, l_status);
 $end
       dbms_parallel_execute.resume_task(l_task_name);
-    end loop;
+    end loop try_loop;
 
-    -- check errors
-    for r in
-    ( select  upec.error_message
-      ,       upec.job_name
-      from    user_parallel_execute_chunks upec
-      where   upec.task_name = l_task_name
-      and     upec.error_message is not null
-      and     rownum = 1
-    )
-    loop
+    if l_status = dbms_parallel_execute.finished
+    then
+      -- Done with processing; drop the task
+      dbms_parallel_execute.drop_task(l_task_name);
+    else
       oracle_tools.pkg_ddl_error.raise_error
       ( p_error_number => oracle_tools.pkg_ddl_error.c_batch_failed 
-      , p_error_message => r.error_message
-      , p_context_info => r.job_name
-      , p_context_label => 'job name'
+      , p_error_message => 'Task did not finish correctly: please look at USER_PARALLEL_EXECUTE_TASKS/USER_PARALLEL_EXECUTE_CHUNKS.'
+      , p_context_info => l_task_name
+      , p_context_label => 'task name'
       );
-    end loop;
-
-    -- Done with processing; drop the task
-    dbms_parallel_execute.drop_task(l_task_name);
+    end if;
   exception
     when others
     then
-      -- On error also done with processing; drop the task
-      dbms_parallel_execute.drop_task(l_task_name);
+      -- Github issue #186: When a DBMS_PARALLEL_EXECUTE task fails it should NOT be dropped for further investigation.
+      -- dbms_parallel_execute.drop_task(l_task_name);
       raise;      
   end;
 
@@ -684,20 +812,8 @@ procedure add_schema_objects
 , p_schema_object_filter_id in positiven
 )
 is
-$if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
-  c_steps constant sys.odcivarchar2list :=
-    sys.odcivarchar2list
-    ( "named objects"                 -- no base object
-    , "object grants"                 -- base object (named)
-    , "synonyms"                      -- base object (named)
-    , "comments"                      -- base object (named)
-    , "constraints"                   -- base object (named)
-    , "triggers"                      -- base object (NOT named)
-    , "indexes"                       -- base object (NOT named)
-    );
-$end -- $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
-
   l_schema_object_tab oracle_tools.t_schema_object_tab := null;
+  l_start_time constant oracle_tools.schema_objects.updated%type := sys_extract_utc(systimestamp);
 $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then  
   l_all_schema_object_tab oracle_tools.t_schema_object_tab := oracle_tools.t_schema_object_tab();
 $end  
@@ -769,12 +885,14 @@ $else
     ( p_object_type => r.object_type
     );
   end loop;
-  
+
   commit; -- may need to make this an autonomous session
 
   ddl_batch_process;
-  
+
 $end -- $if not(oracle_tools.schema_objects_api.c_use_ddl_batch_process) $then
+
+  oracle_tools.ddl_crud_api.purge_schema_objects(p_schema => p_schema_object_filter.schema(), p_reference_time => l_start_time);
 
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;
@@ -846,22 +964,27 @@ $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter(l_module_name);
 $end
 
+  oracle_tools.ddl_crud_api.disable_parallel_status;
+  
   add
   ( p_schema_object_filter => p_schema_object_filter
   , p_generate_ddl_configuration_id => p_generate_ddl_configuration_id
   , p_add_schema_objects => true
   );
-  
+
   select  value(t) as obj
   bulk collect
   into    p_schema_object_tab
   from    oracle_tools.v_my_schema_objects t;
+
+  oracle_tools.ddl_crud_api.reset_parallel_status;
 
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.leave;
 exception
   when others
   then
+    oracle_tools.ddl_crud_api.reset_parallel_status;
     dbug.leave_on_error;
     raise;
 $end
@@ -881,7 +1004,7 @@ return oracle_tools.t_schema_object_tab
 pipelined
 is
   pragma autonomous_transaction;
-  
+
   l_schema_object_filter oracle_tools.t_schema_object_filter := null;
   l_generate_ddl_configuration_id integer := null;
   l_program constant t_module := 'function ' || 'GET_SCHEMA_OBJECTS'; -- geen schema omdat l_program in dbms_application_info wordt gebruikt
@@ -897,24 +1020,31 @@ is
   procedure cleanup
   is
   begin
+    oracle_tools.ddl_crud_api.reset_parallel_status;
     -- on error save so we can verify else rollback because we do not need the data
     oracle_tools.api_longops_pkg.longops_done(l_longops_rec);
+    commit;
   end cleanup;
 begin
 $if oracle_tools.schema_objects_api.c_tracing $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_SCHEMA_OBJECTS');
 $end
 
+  oracle_tools.ddl_crud_api.disable_parallel_status;
+
+  l_schema_object_filter :=
+    oracle_tools.t_schema_object_filter
+    ( p_schema => p_schema
+    , p_object_type => p_object_type
+    , p_object_names => p_object_names
+    , p_object_names_include => p_object_names_include
+    , p_grantor_is_schema => 0
+    , p_exclude_objects => p_exclude_objects
+    , p_include_objects => p_include_objects
+    );
   oracle_tools.ddl_crud_api.add
-  ( p_schema => p_schema
-  , p_object_type => p_object_type
-  , p_object_names => p_object_names
-  , p_object_names_include => p_object_names_include
-  , p_grantor_is_schema => p_grantor_is_schema
-  , p_exclude_objects => p_exclude_objects
-  , p_include_objects => p_include_objects
+  ( p_schema_object_filter => l_schema_object_filter
   , p_transform_param_list => p_transform_param_list
-  , p_schema_object_filter => l_schema_object_filter
   , p_generate_ddl_configuration_id => l_generate_ddl_configuration_id
   );
   add
@@ -950,7 +1080,6 @@ $end
   when no_data_found
   then
     cleanup;
-    commit;
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave_on_error;
 $end
@@ -960,7 +1089,6 @@ $end
   when others
   then
     cleanup;
-    commit;
 $if oracle_tools.schema_objects_api.c_tracing $then
     dbug.leave_on_error;
 $end
@@ -968,19 +1096,16 @@ $end
 end get_schema_objects;
 
 function get_schema_objects
-( p_session_id in positiven
+( p_session_id in t_session_id_nn
 )
 return oracle_tools.t_schema_object_tab
 pipelined
 is
-  l_cursor sys_refcursor;
+  l_cursor integer := null;
   l_schema_object_tab oracle_tools.t_schema_object_tab;
-  c_fetch_limit constant positiven := 100;
 begin
-  oracle_tools.ddl_crud_api.get_schema_objects_cursor(p_session_id, l_cursor);
-
   loop
-    fetch l_cursor bulk collect into l_schema_object_tab limit c_fetch_limit;
+    oracle_tools.ddl_crud_api.fetch_schema_objects(p_session_id, l_cursor, l_schema_object_tab);
 
     if l_schema_object_tab.count > 0
     then
@@ -990,14 +1115,14 @@ begin
       end loop;
     end if;
 
-    exit when l_schema_object_tab.count < c_fetch_limit; -- next fetch will return 0 rows
+    exit when l_cursor is null;
   end loop;
-  close l_cursor;
+
   return; -- essential
 end get_schema_objects;
 
 procedure ddl_batch_process
-( p_session_id in integer
+( p_session_id in t_session_id_nn
 , p_start_id in number
 , p_end_id in number
 )
@@ -1016,13 +1141,13 @@ is
     order by
             gdsb.session_id
     ,       gdsb.seq;
-    
+
   type t_gdssdb_tab is table of c_gdssdb%rowtype;
-  
+
   l_gdssdb_tab t_gdssdb_tab;
 
   -- to restore session id at the end
-  l_session_id constant positiven := oracle_tools.ddl_crud_api.get_session_id;
+  l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
 
   procedure cleanup
   is
@@ -1065,7 +1190,7 @@ $end
         , p_schema_object_filter_id => l_gdssdb_tab(i_idx).schema_object_filter_id
         , p_step => l_gdssdb_tab(i_idx).object_type
         );
-      
+
         oracle_tools.ddl_crud_api.set_batch_end_time(l_gdssdb_tab(i_idx).seq);
         commit;
       exception
@@ -1112,7 +1237,7 @@ $if oracle_tools.schema_objects_api.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || l_program);
 $end
 
-$if oracle_tools.pkg_ddl_util.c_get_queue_ddl $then
+$if oracle_tools.pkg_ddl_defs.c_get_queue_ddl $then
 
   -- check queue tables
   for r in
@@ -1213,7 +1338,7 @@ $end
     where   i.owner <> i.table_owner
     and     i.owner = user
     and     i.table_name is not null
-$if oracle_tools.pkg_ddl_util.c_exclude_system_indexes $then
+$if oracle_tools.pkg_ddl_defs.c_exclude_system_indexes $then
     and     i.generated = 'N'
 $end      
   )
