@@ -442,80 +442,70 @@ $end
     -- constraints must depend on a base object already gathered
     when "referential constraints"
     then
-      p_schema_object_tab := oracle_tools.t_schema_object_tab();
-      for r in
-      ( -- constraints for objects in the same schema
-        with v_my_constraints_dict as
-        ( select  -- REFERENTIAL CONSTRAINT
-                  r.owner as object_schema
-          ,       'REF_CONSTRAINT' as object_type
-          ,       r.constraint_name as object_name
-          ,       r.constraint_type
-          ,       ro.object_type as base_object_type
-          ,       r.owner as base_object_schema
-          ,       r.table_name as base_object_name
-                  -- PRIMARY/UNIQUE KEY CONSTRAINT
-          ,       k.owner as ref_object_schema -- referential constraint can be in another schema
-          ,       'CONSTRAINT' as ref_object_type
-          ,       k.constraint_name as ref_object_name
-          ,       k.constraint_type as ref_constraint_type
-          ,       ko.object_type as base_ref_object_type
-          ,       k.owner as base_ref_object_schema
-          ,       k.table_name as base_ref_object_name
-          from    all_constraints r
-                  inner join all_objects ro
-                  on ro.owner = r.owner and ro.object_name = r.table_name and ro.object_type in ('TABLE', 'VIEW')
-                  inner join all_constraints k
-                  on k.owner = r.r_owner and k.constraint_name = r.r_constraint_name
-                  inner join all_objects ko
-                  on ko.owner = k.owner and ko.object_name = k.table_name and ko.object_type in ('TABLE', 'VIEW')
-          where   r.owner = l_schema
-          and     /* Type of constraint definition:
-                     C (check constraint on a table)
-                     P (primary key)
-                     U (unique key)
-                     R (referential integrity)
-                     V (with check option, on a view)
-                     O (with read only, on a view)
-                  */
-                  r.constraint_type in ('R')
-          and     k.constraint_type in ('P', 'U')
-        )
-        select  value(mnso) as base_object
-        ,       r.object_schema
-        ,       r.object_type
-        ,       r.object_name
+      -- constraints for objects in the same schema
+      with v_my_constraints_dict as
+      ( select  -- REFERENTIAL CONSTRAINT
+                r.owner as object_schema
+        ,       'REF_CONSTRAINT' as object_type
+        ,       r.constraint_name as object_name
         ,       r.constraint_type
-        ,       oracle_tools.t_constraint_object
-                ( p_base_object =>
-                    oracle_tools.t_named_object.create_named_object
-                    ( p_object_type => r.base_ref_object_type
-                    , p_object_schema => r.base_ref_object_schema
-                    , p_object_name => r.base_ref_object_name
-                    )
-                , p_object_schema => r.ref_object_schema
-                , p_object_name => r.ref_object_name
-                , p_constraint_type => r.ref_constraint_type
-                , p_column_names => null
-                , p_search_condition => null
-                ) as ref_object
-        from    oracle_tools.v_my_named_schema_objects mnso
-                inner join v_my_constraints_dict r /* this is where we are interested in */
-                on r.base_object_schema = mnso.object_schema() and r.base_object_name = mnso.object_name()
-        where   mnso.object_type() in ('TABLE', 'VIEW')
+        ,       ro.object_type as base_object_type
+        ,       r.owner as base_object_schema
+        ,       r.table_name as base_object_name
+                -- PRIMARY/UNIQUE KEY CONSTRAINT
+        ,       k.owner as ref_object_schema -- referential constraint can be in another schema
+        ,       'CONSTRAINT' as ref_object_type
+        ,       k.constraint_name as ref_object_name
+        ,       k.constraint_type as ref_constraint_type
+        ,       ko.object_type as base_ref_object_type
+        ,       k.owner as base_ref_object_schema
+        ,       k.table_name as base_ref_object_name
+        from    all_constraints r
+                inner join all_objects ro
+                on ro.owner = r.owner and ro.object_name = r.table_name and ro.object_type in ('TABLE', 'VIEW')
+                inner join all_constraints k
+                on k.owner = r.r_owner and k.constraint_name = r.r_constraint_name
+                inner join all_objects ko
+                on ko.owner = k.owner and ko.object_name = k.table_name and ko.object_type in ('TABLE', 'VIEW')
+        where   r.owner = l_schema
+        and     /* Type of constraint definition:
+                   C (check constraint on a table)
+                   P (primary key)
+                   U (unique key)
+                   R (referential integrity)
+                   V (with check option, on a view)
+                   O (with read only, on a view)
+                */
+                r.constraint_type in ('R')
+        and     k.constraint_type in ('P', 'U')
       )
-      loop
-        p_schema_object_tab.extend(1);
-        p_schema_object_tab(p_schema_object_tab.last) :=
-          oracle_tools.t_ref_constraint_object
-          ( p_base_object => treat(r.base_object as oracle_tools.t_named_object)
-          , p_object_schema => r.object_schema
-          , p_object_name => r.object_name
-          , p_constraint_type => r.constraint_type
-          , p_column_names => null
-          , p_ref_object => r.ref_object
-          );
-      end loop;
+      select  oracle_tools.t_ref_constraint_object
+              ( p_base_object => value(mnso)
+              , p_object_schema => r.object_schema
+              , p_object_name => r.object_name
+              , p_constraint_type => r.constraint_type
+              , p_column_names => null
+              , p_ref_object =>
+                  oracle_tools.t_constraint_object
+                  ( p_base_object =>
+                      oracle_tools.t_named_object.create_named_object
+                      ( p_object_type => r.base_ref_object_type
+                      , p_object_schema => r.base_ref_object_schema
+                      , p_object_name => r.base_ref_object_name
+                      )
+                  , p_object_schema => r.ref_object_schema
+                  , p_object_name => r.ref_object_name
+                  , p_constraint_type => r.ref_constraint_type
+                  , p_column_names => null
+                  , p_search_condition => null
+                  )
+              )
+      bulk collect
+      into    p_schema_object_tab
+      from    oracle_tools.v_my_named_schema_objects mnso
+              inner join v_my_constraints_dict r /* this is where we are interested in */
+              on r.base_object_schema = mnso.object_schema() and r.base_object_name = mnso.object_name()
+      where   mnso.object_type() in ('TABLE', 'VIEW');
 
     -- these are not dependent on named objects:
     -- * private synonyms from this schema pointing to a base object in ANY schema possible

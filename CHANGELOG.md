@@ -15,6 +15,12 @@ Types of changes:
 
 ## [Unreleased]
 
+## [4.1.1] - 2024-12-30
+
+### Fixed
+
+- [The package PKG_DDL_DEFS is not granted to PUBLIC.](https://github.com/paulissoft/oracle-tools/issues/188)
+
 ## [4.1.0] - 2024-12-29
 
 ### Added
