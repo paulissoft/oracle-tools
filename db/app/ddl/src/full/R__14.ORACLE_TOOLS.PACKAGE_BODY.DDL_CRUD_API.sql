@@ -1251,7 +1251,8 @@ $end
   then
     open l_cursor for
       with src as
-      ( select  src.schema_object_id
+      ( select  /*+ MATERIALIZE */
+                src.schema_object_id
         ,       src.ddl#
         ,       src.verb
         ,       src.ddl_info
