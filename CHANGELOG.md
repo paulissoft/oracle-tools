@@ -15,6 +15,13 @@ Types of changes:
 
 ## [Unreleased]
 
+## [4.1.2] - 2025-01-07
+
+### Fixed
+
+- [File install.sql is not created even though it should.](https://github.com/paulissoft/oracle-tools/issues/189)
+- [Generating DDL files takes a long time when sorting by dependencies is used.](https://github.com/paulissoft/oracle-tools/issues/190)
+
 ## [4.1.1] - 2024-12-30
 
 ### Fixed

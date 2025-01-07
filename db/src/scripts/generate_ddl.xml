@@ -3,7 +3,52 @@
   <description>
     Generate database scripts for a fresh (full) and incremental installation.
 
-    This buildfile is used to run the following utilities from:
+    This Ant buildfile is invoked by db/pom.xml with the following targets (and properties):
+    - generate-ddl-full
+      * show.properties
+      * source.db.name
+      * schema
+      * userid
+      * object.type
+      * object.names
+      * object.names.include
+      * exclude.objects
+      * include.objects
+      * full.force.view
+      * full.group.constraints
+      * full.output.directory
+      * full.skip.install.sql
+      * full.interface
+      * full.strip.source.schema
+      * full.transform.params
+      * owner
+      * src.dir
+      * build.dir
+      * compile.classpath
+      * runtime.classpath
+    - generate-ddl-incr
+      * show.properties
+      * userid
+      * source.db.name
+      * target.db.name
+      * schema
+      * object.type
+      * object.names
+      * object.names.include
+      * exclude.objects
+      * include.objects
+      * incr.dynamic.sql
+      * incr.output.directory
+      * incr.skip.repeatables
+      * incr.interface
+      * incr.transform.params
+      * owner
+      * src.dir
+      * build.dir
+      * compile.classpath
+      * runtime.classpath
+
+    The following utilities will be run from this file:
     - generate_ddl.pl
 
     The following public targets are defined:

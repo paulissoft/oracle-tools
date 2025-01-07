@@ -751,13 +751,21 @@ sub process () {
         @obsolete_files = get_files(FILE_NOT_REUSED);
 
         # GJP 2021-08-27  Add install files too
-        push(@obsolete_files, 'install.sql');
+        push(@obsolete_files, 'install.sql')
+            if ($skip_install_sql);
         
         foreach my $file (@obsolete_files) {
             my $output_file = File::Spec->rel2abs(File::Spec->catfile($output_directory, $file));
 
-            error("File $output_file can not be removed")
-                if (-f $output_file && unlink($output_file) != 1);
+            if (-f $output_file) {
+                if (unlink($output_file) != 1) {
+                    error("File $output_file can not be removed");
+                } else {
+                    info("File $output_file has been removed");
+                }
+            } else {
+                warning("File $output_file can not be removed since it does not exist.");
+            }
         }
     }
     info(sprintf("The number of files generated is %d (%d new or changed).", scalar(get_files(FILE_NOT_MODIFIED, FILE_MODIFIED)), scalar(get_files(FILE_MODIFIED))));
