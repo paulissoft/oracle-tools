@@ -1072,7 +1072,7 @@ begin
   exception
     when e_space_usage_too_high
     then
-      for i_idx in 1 .. cardinality(p_schema_object_tab)
+      for i_idx in 1 .. nvl(cardinality(p_schema_object_tab), 0)
       loop
         add_schema_object
         ( p_session_id => get_session_id
