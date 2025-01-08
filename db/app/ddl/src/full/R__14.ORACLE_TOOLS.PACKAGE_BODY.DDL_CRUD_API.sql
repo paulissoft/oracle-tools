@@ -345,7 +345,12 @@ $end
 
     case sql%rowcount
       when 0
-      then raise no_data_found;
+      then oracle_tools.pkg_ddl_error.raise_error
+           ( oracle_tools.pkg_ddl_error.c_object_not_found
+           , 'Could not update GENERATE_DDL_SESSION_SCHEMA_OBJECTS'
+           , p_session_id||','||l_schema_object_id
+           , 'SESSION_ID,SCHEMA_OBJECT_ID'
+           );
       when 1
       then null; -- ok
       else raise too_many_rows;
@@ -1052,14 +1057,31 @@ procedure add
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
+  -- ORA-65114: space usage in container is too high
+  e_space_usage_too_high exception;
+  pragma exception_init(e_space_usage_too_high, -65114);
 begin
   PRAGMA INLINE (add_schema_object_tab, 'YES');
-  add_schema_object_tab
-  ( p_session_id => get_session_id
-  , p_schema_object_tab => p_schema_object_tab
-  , p_schema_object_filter_id => p_schema_object_filter_id
-  , p_schema_object_filter => p_schema_object_filter
-  );
+  begin
+    add_schema_object_tab
+    ( p_session_id => get_session_id
+    , p_schema_object_tab => p_schema_object_tab
+    , p_schema_object_filter_id => p_schema_object_filter_id
+    , p_schema_object_filter => p_schema_object_filter
+    );
+  exception
+    when e_space_usage_too_high
+    then
+      for i_idx in 1 .. cardinality(p_schema_object_tab)
+      loop
+        add_schema_object
+        ( p_session_id => get_session_id
+        , p_schema_object => p_schema_object_tab(i_idx)
+        , p_schema_object_filter_id => p_schema_object_filter_id
+        , p_schema_object_filter => p_schema_object_filter
+        );
+      end loop;
+  end;
 end add;
 
 procedure clear_batch
