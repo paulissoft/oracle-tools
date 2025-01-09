@@ -8,6 +8,10 @@ c_fetch_limit constant positiven := 100;
 e_can_not_insert_null exception;
 pragma exception_init(e_can_not_insert_null, -1400);
 
+-- ORA-65114: space usage in container is too high
+e_space_usage_too_high exception;
+pragma exception_init(e_space_usage_too_high, -65114);
+
 g_default_match_perc_threshold integer := 50;
 
 c_session_id constant t_session_id_nn := to_number(sys_context('USERENV', 'SESSIONID'));
@@ -280,7 +284,9 @@ $end
   when    not matched
   then    insert ( id, obj ) values ( src.id, src.obj )
   when    matched 
-  then    update set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$, dst.updated = sys_extract_utc(systimestamp)
+  then    update
+          set dst.obj.last_ddl_time$ = src.obj.last_ddl_time$
+          ,   dst.updated = sys_extract_utc(systimestamp)
           delete where src.obj.last_ddl_time$ is null /* check constraint SCHEMA_OBJECTS$CK$OBJ$LAST_DDL_TIME$ */;
 
   -- merge into SCHEMA_OBJECT_FILTER_RESULTS (but only when not matched)
@@ -311,8 +317,7 @@ $end
     from    oracle_tools.schema_object_filter_results sofr
     where   sofr.schema_object_filter_id = p_schema_object_filter_id
     and     sofr.schema_object_id = l_schema_object_id
-    -- ignore objects that never ever need to be generated
-    and     sofr.generate_ddl in (/*0,*/ 1);
+    and     sofr.generate_ddl in (1);
   exception
     when no_data_found
     then -- no match
@@ -327,6 +332,7 @@ $end
                       gds.session_id
               ,       gd.schema_object_id
                       /* data */
+              ,       p_schema_object_filter_id as schema_object_filter_id        
               ,       gd.last_ddl_time
               ,       gd.generate_ddl_configuration_id
               from    oracle_tools.generate_ddl_sessions gds
@@ -340,21 +346,14 @@ $end
               src.session_id = dst.session_id and
               src.schema_object_id = dst.schema_object_id
             )
+    when    not matched
+    then    insert ( session_id, schema_object_id, schema_object_filter_id, last_ddl_time, generate_ddl_configuration_id )
+            values ( src.session_id, src.schema_object_id, src.schema_object_filter_id, src.last_ddl_time, src.generate_ddl_configuration_id )
     when    matched
-    then    update set dst.last_ddl_time = dst.last_ddl_time, dst.generate_ddl_configuration_id = src.generate_ddl_configuration_id;
-
-    case sql%rowcount
-      when 0
-      then oracle_tools.pkg_ddl_error.raise_error
-           ( oracle_tools.pkg_ddl_error.c_object_not_found
-           , 'Could not update GENERATE_DDL_SESSION_SCHEMA_OBJECTS'
-           , p_session_id||','||l_schema_object_id
-           , 'SESSION_ID,SCHEMA_OBJECT_ID'
-           );
-      when 1
-      then null; -- ok
-      else raise too_many_rows;
-    end case;
+    then    update
+            set dst.schema_object_filter_id = src.schema_object_filter_id
+            ,   dst.last_ddl_time = dst.last_ddl_time
+            ,   dst.generate_ddl_configuration_id = src.generate_ddl_configuration_id;
   end if;
 
 $if oracle_tools.ddl_crud_api.c_tracing $then
@@ -624,37 +623,96 @@ $end
   -- * SCHEMA_OBJECT_FILTER_RESULTS
   */
 
-  -- Ignore this entry when MATCHES_SCHEMA_OBJECT_DETAILS returns ' |_%'
-  merge
-  into    oracle_tools.generate_ddl_session_schema_objects dst
-  using   ( select  p_session_id as session_id
-            ,       p_schema_object_filter_id as schema_object_filter_id
-            ,       t.id as schema_object_id
-                    -- when DDL has been generated for this last_ddl_time, save that info so we will not generate DDL again
-            ,       gd.last_ddl_time
-            ,       gd.generate_ddl_configuration_id
-            from    oracle_tools.generate_ddl_sessions gds
-                    cross join table(p_schema_object_tab) t -- may contain duplicates (constraints)
-                    inner join oracle_tools.schema_object_filter_results sofr
-                    on sofr.schema_object_filter_id = gds.schema_object_filter_id and
-                       sofr.schema_object_id = t.id and
-           -- ignore objects that never ever need to be generated
-           -- necessary to add 0+1 and not only 1 to get them into GENERATE_DDL_SESSION_SCHEMA_OBJECTS and thus V_SCHEMA_OBJECTS and thus V_MY_NAMED_OBJECTS
-                       sofr.generate_ddl in (/*0,*/ 1) 
-                    left outer join oracle_tools.generated_ddls gd
-                    on gd.schema_object_id = t.id and
-                       gd.last_ddl_time = t.last_ddl_time() and
-                       gd.generate_ddl_configuration_id = gds.generate_ddl_configuration_id
-            where   gds.session_id = p_session_id
-            and     gds.schema_object_filter_id = p_schema_object_filter_id
-          ) src
-  on      ( /* GENERATE_DDL_SESSION_SCHEMA_OBJECTS$PK */
-            src.session_id = dst.session_id and
-            src.schema_object_id = dst.schema_object_id
+  begin
+    -- Ignore this entry when MATCHES_SCHEMA_OBJECT_DETAILS returns ' |_%'
+    merge
+    into    oracle_tools.generate_ddl_session_schema_objects dst
+    using   ( select  -- key
+                      p_session_id as session_id
+              ,       t.id as schema_object_id
+                      -- data
+                      -- when DDL has been generated for this last_ddl_time, save that info so we will not generate DDL again
+              ,       p_schema_object_filter_id as schema_object_filter_id
+              ,       gd.last_ddl_time
+              ,       gd.generate_ddl_configuration_id
+              from    oracle_tools.generate_ddl_sessions gds
+                      cross join table(p_schema_object_tab) t -- may contain duplicates (constraints)
+                      inner join oracle_tools.schema_object_filter_results sofr
+                      on sofr.schema_object_filter_id = gds.schema_object_filter_id and
+                         sofr.schema_object_id = t.id and
+                         sofr.generate_ddl in (1) 
+                      left outer join oracle_tools.generated_ddls gd
+                      on gd.schema_object_id = t.id and
+                         gd.last_ddl_time = t.last_ddl_time() and
+                         gd.generate_ddl_configuration_id = gds.generate_ddl_configuration_id
+              where   gds.session_id = p_session_id
+              and     gds.schema_object_filter_id = p_schema_object_filter_id
+            ) src
+    on      ( /* GENERATE_DDL_SESSION_SCHEMA_OBJECTS$PK */
+              src.session_id = dst.session_id and
+              src.schema_object_id = dst.schema_object_id
+            )
+    when    not matched
+    then    insert ( session_id, schema_object_id, schema_object_filter_id, last_ddl_time, generate_ddl_configuration_id )
+            values ( src.session_id, src.schema_object_id, src.schema_object_filter_id, src.last_ddl_time, src.generate_ddl_configuration_id )
+    when    matched
+    then    update
+            set dst.schema_object_filter_id = src.schema_object_filter_id
+            ,   dst.last_ddl_time = dst.last_ddl_time
+            ,   dst.generate_ddl_configuration_id = src.generate_ddl_configuration_id;
+  exception
+    when e_space_usage_too_high
+    then
+      -- upsert
+      for src in
+      ( select  -- key
+                p_session_id as session_id
+        ,       t.id as schema_object_id
+                -- data
+                -- when DDL has been generated for this last_ddl_time, save that info so we will not generate DDL again
+        ,       p_schema_object_filter_id as schema_object_filter_id
+        ,       gd.last_ddl_time
+        ,       gd.generate_ddl_configuration_id
+        from    oracle_tools.generate_ddl_sessions gds
+                cross join table(p_schema_object_tab) t -- may contain duplicates (constraints)
+                inner join oracle_tools.schema_object_filter_results sofr
+                on sofr.schema_object_filter_id = gds.schema_object_filter_id and
+                   sofr.schema_object_id = t.id and
+                   sofr.generate_ddl in (1) 
+                left outer join oracle_tools.generated_ddls gd
+                on gd.schema_object_id = t.id and
+                   gd.last_ddl_time = t.last_ddl_time() and
+                   gd.generate_ddl_configuration_id = gds.generate_ddl_configuration_id
+        where   gds.session_id = p_session_id
+        and     gds.schema_object_filter_id = p_schema_object_filter_id
+      )
+      loop
+        update  oracle_tools.generate_ddl_session_schema_objects dst
+        set     dst.schema_object_filter_id = src.schema_object_filter_id
+        ,       dst.last_ddl_time = dst.last_ddl_time
+        ,       dst.generate_ddl_configuration_id = src.generate_ddl_configuration_id
+        where   src.session_id = dst.session_id
+        and     src.schema_object_id = dst.schema_object_id;
+
+        if sql%rowcount = 0
+        then
+          insert into oracle_tools.generate_ddl_session_schema_objects
+          ( session_id
+          , schema_object_id
+          , schema_object_filter_id
+          , last_ddl_time
+          , generate_ddl_configuration_id
           )
-  when    not matched
-  then    insert ( session_id, schema_object_filter_id, schema_object_id, last_ddl_time, generate_ddl_configuration_id )
-          values ( src.session_id, src.schema_object_filter_id, src.schema_object_id, src.last_ddl_time, src.generate_ddl_configuration_id );
+          values
+          ( src.session_id
+          , src.schema_object_id
+          , src.schema_object_filter_id
+          , src.last_ddl_time
+          , src.generate_ddl_configuration_id
+          );
+        end if;
+      end loop;
+  end;  
 
 $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print(dbug."info", '# rows inserted into generate_ddl_session_schema_objects: %s', sql%rowcount);
@@ -1057,31 +1115,14 @@ procedure add
 , p_schema_object_filter in oracle_tools.t_schema_object_filter
 )
 is
-  -- ORA-65114: space usage in container is too high
-  e_space_usage_too_high exception;
-  pragma exception_init(e_space_usage_too_high, -65114);
 begin
   PRAGMA INLINE (add_schema_object_tab, 'YES');
-  begin
-    add_schema_object_tab
-    ( p_session_id => get_session_id
-    , p_schema_object_tab => p_schema_object_tab
-    , p_schema_object_filter_id => p_schema_object_filter_id
-    , p_schema_object_filter => p_schema_object_filter
-    );
-  exception
-    when e_space_usage_too_high
-    then
-      for i_idx in 1 .. nvl(cardinality(p_schema_object_tab), 0)
-      loop
-        add_schema_object
-        ( p_session_id => get_session_id
-        , p_schema_object => p_schema_object_tab(i_idx)
-        , p_schema_object_filter_id => p_schema_object_filter_id
-        , p_schema_object_filter => p_schema_object_filter
-        );
-      end loop;
-  end;
+  add_schema_object_tab
+  ( p_session_id => get_session_id
+  , p_schema_object_tab => p_schema_object_tab
+  , p_schema_object_filter_id => p_schema_object_filter_id
+  , p_schema_object_filter => p_schema_object_filter
+  );
 end add;
 
 procedure clear_batch
