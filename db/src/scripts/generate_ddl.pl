@@ -769,9 +769,10 @@ sub process () {
                 warning("File $file can not be removed since it does not exist.");
             }
         }
-        info(sprintf("The number of files removed is %d.", scalar(@obsolete_files)));
+        info(sprintf("The number of files modified (new or changed) is %d.", scalar(get_files(FILE_MODIFIED))));
+        info(sprintf("The number of files not modified is %d.", scalar(get_files(FILE_NOT_MODIFIED))));
+        info(sprintf("The number of files not reused and thus removed is %d.", scalar(@obsolete_files)));
     }
-    info(sprintf("The number of files generated is %d (%d new or changed).", scalar(get_files(FILE_NOT_MODIFIED, FILE_MODIFIED)), scalar(get_files(FILE_MODIFIED))));
 } # process
 
 sub process_object_type ($$$$) {
