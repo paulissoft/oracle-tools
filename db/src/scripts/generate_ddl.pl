@@ -172,6 +172,10 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2025-01-09
+
+Enhanced checks for file names versus base names.
+
 =item 2024-12-29
 
 Small bug while scanning the object sequence number for a view (e.g. R__10.02.ORACLE_TOOLS.VIEW.V_MY_NAMED_SCHEMA_OBJECTS.sql).
@@ -443,7 +447,7 @@ my %object_type_info = (
     );
 
 my %object_info = (); # a hash table with key (object: schema, type, name) and data (file basename, sequence)
-my %file_info = (); # a hash table with key file basename and data object ($object_info{$file_info{$file}}{file} eq $file)
+my %basename_info = (); # a hash table with key file basename and data object ($object_info{$basename_info{$basename}}{basename} eq $basename)
 my $object_seq_max = undef;
 
 # Key: file handle; Value: base file name.
@@ -751,22 +755,21 @@ sub process () {
         @obsolete_files = get_files(FILE_NOT_REUSED);
 
         # GJP 2021-08-27  Add install files too
-        push(@obsolete_files, 'install.sql')
+        push(@obsolete_files, File::Spec->catfile($output_directory, 'install.sql'))
             if ($skip_install_sql);
         
         foreach my $file (@obsolete_files) {
-            my $output_file = File::Spec->rel2abs(File::Spec->catfile($output_directory, $file));
-
-            if (-f $output_file) {
-                if (unlink($output_file) != 1) {
-                    error("File $output_file can not be removed");
+            if (-f $file) {
+                if (unlink($file) != 1) {
+                    error("File $file can not be removed");
                 } else {
-                    info("File $output_file has been removed");
+                    info("File $file has been removed");
                 }
             } else {
-                warning("File $output_file can not be removed since it does not exist.");
+                warning("File $file can not be removed since it does not exist.");
             }
         }
+        info(sprintf("The number of files removed is %d.", scalar(@obsolete_files)));
     }
     info(sprintf("The number of files generated is %d (%d new or changed).", scalar(get_files(FILE_NOT_MODIFIED, FILE_MODIFIED)), scalar(get_files(FILE_MODIFIED))));
 } # process
@@ -1777,13 +1780,13 @@ sub get_object_file ($) {
     error("Object '$object' must be in upper case")
         unless $object eq uc($object);
 
-    return exists($object_info{$object}) && exists($object_info{$object}{file}) ? $object_info{$object}{file} : undef;
+    return exists($object_info{$object}) && exists($object_info{$object}{basename}) ? $object_info{$object}{basename} : undef;
 }
 
 sub add_object_info ($;$$) {
     trace((caller(0))[3]);
 
-    my ($object, $object_seq, $file) = @_;
+    my ($object, $object_seq, $basename) = @_;
 
     $object = uc($object);
 
@@ -1793,20 +1796,20 @@ sub add_object_info ($;$$) {
     error("Object '$object' should match 'SCHEMA:TYPE:NAME'")
         unless $object =~ m/^.+\..+\..+$/;
 
-    error("File ($file) must be a base name")
-        if (defined($file) && basename($file) ne $file);
+    error("File ($basename) must be a base name")
+        if (defined($basename) && basename($basename) ne $basename);
 
     error("Object '$object' already exists.")
         if defined(get_object_file($object));
 
-    debug(sprintf("Add object info for object '%s', object sequence '%s' and file '%s'.",
+    debug(sprintf("Add object info for object '%s', object sequence '%s' and basename '%s'",
                   (defined($object) ? $object : 'UNKNOWN'),
                   (defined($object_seq) ? sprintf("%d", $object_seq) : 'UNKNOWN'),
-                  (defined($file) ? $file : 'UNKNOWN')));
+                  (defined($basename) ? $basename : 'UNKNOWN')));
 
-    my $status = (defined($file) ? FILE_NOT_REUSED : FILE_UNKNOWN);
+    my $status = (defined($basename) ? FILE_NOT_REUSED : FILE_UNKNOWN);
     
-    if (defined($object_seq) && defined($file)) {
+    if (defined($object_seq) && defined($basename)) {
         # strip leading zeros otherwise it will be treated as an octal number
         # GJP 2024-12-29
         # A view can be named R__10.02.ORACLE_TOOLS.VIEW.V_MY_NAMED_SCHEMA_OBJECTS.sql and not just R__10.ORACLE_TOOLS.VIEW.V_MY_NAMED_SCHEMA_OBJECTS.sql
@@ -1817,13 +1820,13 @@ sub add_object_info ($;$$) {
         $object_seq = int($nr);
         $object_seq_max = $object_seq
             if ($interface ne PKG_DDL_UTIL_V4 && $object_seq > $object_seq_max);
-    } elsif (!(defined($object_seq) && defined($file))) {
+    } elsif (!(defined($object_seq) && defined($basename))) {
         my ($object_schema, $object_type, $object_name) = split($object_sep_rex, $object);
         my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
 
         # get the highest plus 1
         $object_seq = ($interface eq PKG_DDL_UTIL_V4 ? $object_type_info{$object_type}->{'seq'} : ++$object_seq_max);
-        $file = uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
+        $basename = uc(sprintf("%s%0${nr_zeros}d.%s%s.%s", 
                            ($object_type_info{$object_type}->{'repeatable'} ? 'R__' : ''),
                            $object_seq,
                            (${strip_source_schema} && $source_schema eq $object_schema ? '' : $object_schema . '.'),
@@ -1834,39 +1837,41 @@ sub add_object_info ($;$$) {
     }
     
     $object_info{$object}{seq} = $object_seq;
-    $object_info{$object}{file} = $file;
+    $object_info{$object}{basename} = $basename;
 
     # set status, just once
-    set_file_status($file, $status, $object);
+    set_file_status(File::Spec->catfile($output_directory, $basename), $status, $object);
 
-    info("File '$file' is used for object '$object' and has sequence $object_seq");
+    info("File '$basename' is used for object '$object' and has sequence $object_seq");
 
-    return $file;
+    return $basename;
 }
 
 sub set_file_status ($$;$) {
     trace((caller(0))[3]);
 
     my ($file, $status, $object) = ($_[0], $_[1], $_[2]);
-    my $base_file = basename($file);
+    my $basename = basename($file);
 
-    info("File '$base_file' has been " . (-f $file ? "changed": "created"))
-        if ($status eq FILE_NOT_MODIFIED || $status eq FILE_MODIFIED);
+    error("File ($file) should NOT just a base name")
+        if ($basename eq $file);
 
-    $file = $base_file;
+    info(sprintf("File '%s' will have internal status %s", $file, $status));
 
-    debug(sprintf("Set file status for file '%s', status '%s' and object '%s'.",
+#    $file = $basename;
+
+    debug(sprintf("Set file status for file '%s', status '%s' and object '%s'",
                   (defined($file) ? $file : 'UNKNOWN'),
                   (defined($status) ? $status : 'UNKNOWN'),
                   (defined($object) ? $object : 'UNKNOWN')));
 
     error("File status set twice for file $file, status $status and object $object")
-        if (defined($object) && exists($file_info{$file}));
+        if (defined($object) && exists($basename_info{$basename}));
 
     if (defined($object)) {
-        $file_info{$file}{object} = $object;
+        $basename_info{$basename}{object} = $object;
     }
-    $file_info{$file}{status} = $status;
+    $basename_info{$basename}{status} = $status;
 }
 
 sub get_files (@) {
@@ -1877,8 +1882,10 @@ sub get_files (@) {
 
     debug("Getting files for status(es) @status");
 
-    foreach my $file (keys %file_info) {
-        my $status = $file_info{$file}{status};
+    foreach my $basename (keys %basename_info) {
+        my $status = $basename_info{$basename}{status};
+
+        my $file = File::Spec->catfile($output_directory, $basename);
 
         if (grep(/^$status$/, @status)) {
             debug("Adding file $file with status $status");
@@ -1905,21 +1912,22 @@ sub read_object_info () {
     my ($seq, $schema, $type, $name);
 
     opendir my $dh, $dir or die "Could not open '$dir' for reading '$!'\n";
-    while (my $file = readdir $dh) {
+    while (my $basename = readdir $dh) {
+        my $file = File::Spec->catfile($output_directory, $basename);
         debug("Checking whether file $file can be reused");
-        if ($file =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<schema>[^.]+)\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
+        if ($basename =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<schema>[^.]+)\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
             ($seq, $schema, $type, $name) = ($+{seq}, $+{schema}, $+{type}, $+{name});
             $objects{$seq}{object} = join($object_sep, $schema, $type, $name);
-            $objects{$seq}{file} = $file;
-            add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{file});
-        } elsif ($file =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
+            $objects{$seq}{basename} = $basename;
+            add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{basename});
+        } elsif ($basename =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
             ($seq, $schema, $type, $name) = ($+{seq}, $source_schema, $+{type}, $+{name});
             $objects{$seq}{object} = join($object_sep, $schema, $type, $name);
-            $objects{$seq}{file} = $file;
-            add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{file});
+            $objects{$seq}{basename} = $basename;
+            add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{basename});
         } else {
             warning("File $file does not match naming conventions for reuse")
-                unless ($file eq '.' || $file eq '..');
+                unless ($basename eq '.' || $basename eq '..');
         }
     }
     closedir $dh;
