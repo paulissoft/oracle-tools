@@ -769,9 +769,9 @@ sub process () {
                 warning("File $file can not be removed since it does not exist.");
             }
         }
-        info(sprintf("The number of files modified (new or changed) is %d.", scalar(get_files(FILE_MODIFIED))));
-        info(sprintf("The number of files not modified is %d.", scalar(get_files(FILE_NOT_MODIFIED))));
-        info(sprintf("The number of files not reused and thus removed is %d.", scalar(@obsolete_files)));
+        info(sprintf("The number of files modified (new or changed) is %d", scalar(get_files(FILE_MODIFIED))));
+        info(sprintf("The number of files not modified is %d", scalar(get_files(FILE_NOT_MODIFIED))));
+        info(sprintf("The number of files not reused and thus removed is %d", scalar(@obsolete_files)));
     }
 } # process
 
@@ -1857,9 +1857,7 @@ sub set_file_status ($$;$) {
     error("File ($file) should NOT just a base name")
         if ($basename eq $file);
 
-    info(sprintf("File '%s' will have internal status %s", $file, $status));
-
-#    $file = $basename;
+    debug(sprintf("File '%s' will have internal status %s", $file, $status));
 
     debug(sprintf("Set file status for file '%s', status '%s' and object '%s'",
                   (defined($file) ? $file : 'UNKNOWN'),
