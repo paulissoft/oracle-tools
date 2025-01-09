@@ -15,6 +15,12 @@ Types of changes:
 
 ## [Unreleased]
 
+## [4.1.3] - 2025-01-09
+
+### Fixed
+
+- [DDL generation fails with ORA-65114: space usage in container is too high.](https://github.com/paulissoft/oracle-tools/issues/191)
+
 ## [4.1.2] - 2025-01-07
 
 ### Fixed
