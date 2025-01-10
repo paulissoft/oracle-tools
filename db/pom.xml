@@ -432,6 +432,7 @@
                 </goals>
                 <configuration>
                   <autocommit>true</autocommit>
+                  <onError>continue</onError> <!-- when not installed yet for instance -->
                   <sqlCommand>
                     select oracle_tools.cfg_install_pkg.purge_flyway_table('"${flyway.table}"', ${nr_months_to_keep.flyway.table}) as "# rows purged from ${flyway.table}" from dual;
                   </sqlCommand>
