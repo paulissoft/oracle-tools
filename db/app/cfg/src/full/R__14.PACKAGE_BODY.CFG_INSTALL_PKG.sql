@@ -846,6 +846,45 @@ begin
   return;
 end format_compiler_messages;
 
+function purge_flyway_table
+( p_table_name in varchar2
+, p_nr_months_to_keep in positiven
+)
+return integer
+is
+  pragma autonomous_transaction; -- ORA-14551: cannot perform a DML operation inside a query
+
+  -- In order to delete from a merge youmust update first.
+  l_sql_statement constant varchar2(4000 byte) :=
+    utl_lms.format_message
+    ( q'[
+merge
+into    %s dst
+using   ( select  "installed_rank"
+          ,       "installed_on"
+          ,       row_number() over (partition by "script" order by "installed_on" desc) as seq$
+          from    %s
+        ) src
+on      ( src."installed_rank" = dst."installed_rank" )
+when    matched 
+then    update set dst."checksum" = null where src.seq$ <> 1 and src."installed_on" < systimestamp - interval '%s' month
+        delete where src.seq$ <> 1 and src."installed_on" < systimestamp - interval '%s' month]'
+    , p_table_name
+    , p_table_name
+    , to_char(p_nr_months_to_keep)
+    , to_char(p_nr_months_to_keep)
+    );
+  l_count pls_integer;  
+begin
+  execute immediate l_sql_statement;
+  l_count := sql%rowcount;
+  commit;
+  return l_count;
+exception
+  when others
+  then raise_application_error(-20000, 'Error while executing this SQL statement:' || chr(10) || l_sql_statement, true); 
+end purge_flyway_table;
+
 end cfg_install_pkg;
 /
 

@@ -15,6 +15,12 @@ Types of changes:
 
 ## [Unreleased]
 
+## [4.2.0] - 2025-01-10
+
+### Added
+
+- [It is necessary to purge the Flyway history table.](https://github.com/paulissoft/oracle-tools/issues/192)
+
 ## [4.1.3] - 2025-01-09
 
 ### Fixed

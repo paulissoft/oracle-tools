@@ -39,6 +39,9 @@
     <flyway.placeholders.compile_all>false</flyway.placeholders.compile_all>
     <flyway.placeholders.reuse_settings>false</flyway.placeholders.reuse_settings>
     <flyway.outOfOrder>false</flyway.outOfOrder>
+    <flyway.table>flyway_schema_history</flyway.table>
+    <!-- should not start with flyway. -->
+    <nr_months_to_keep.flyway.table>12</nr_months_to_keep.flyway.table>
 
     <!-- ======================================================================= -->
     <!-- Properties for generate DDL (db-generate-ddl-full/db-generate-ddl-incr) -->
@@ -416,6 +419,26 @@
           <plugin>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-maven-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>sql-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>db-purge-flyway-table</id>
+                <phase>${db.phase.process}</phase>
+                <goals>
+                  <goal>execute</goal>
+                </goals>
+                <configuration>
+                  <autocommit>true</autocommit>
+                  <sqlCommand>
+                    select oracle_tools.cfg_install_pkg.purge_flyway_table('"${flyway.table}"', ${nr_months_to_keep.flyway.table}) as "# rows purged from ${flyway.table}" from dual;
+                  </sqlCommand>
+                  <printResultSet>true</printResultSet>
+                </configuration>
+              </execution>
+            </executions>
           </plugin>
         </plugins>
       </build>

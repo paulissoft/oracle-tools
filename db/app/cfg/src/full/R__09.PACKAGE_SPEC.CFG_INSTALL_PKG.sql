@@ -74,6 +74,19 @@ return t_message_tab -- A list of USER_ERRORS rows ordered by name, type, sequen
 pipelined;
 /** Format compiler messages. **/
 
+function purge_flyway_table
+( p_table_name in varchar2
+, p_nr_months_to_keep in positiven default 12
+)
+return integer;
+/**
+
+Purge the Flyway table:
+1. keep all entries with a "version" not null (non-repeatables)
+2. always keep the latest entry per repeatable script ("version" null) and keep at most p_nr_months_to_keep for older entries
+
+**/
+
 end cfg_install_pkg;
 /
 
