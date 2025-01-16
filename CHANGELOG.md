@@ -15,6 +15,8 @@ Types of changes:
 
 ## [Unreleased]
 
+- [The Flyway purge operation fails.](https://github.com/paulissoft/oracle-tools/issues/193)
+
 ## [4.2.0] - 2025-01-10
 
 ### Added
