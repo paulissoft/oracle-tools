@@ -117,7 +117,7 @@ _switch() {
     declare -r branch=$1
     
     _x git switch $branch
-    _x git pull origin $branch
+    _x git pull
 }
 
 _tag() {
@@ -160,7 +160,8 @@ merge() {
 
     # merge the changes made to $to in the meantime back into $from before we will merge back
     _switch $from
-    _x git merge $to
+    # theirs is actually ours since we switch from/to
+    _x git merge -X theirs $to || { echo ""; read -p "Fix the conflicts and press RETURN when ready..." dummy; }
     _x git commit -m"Make $from up to date with $to"
 
     # now the real merge
