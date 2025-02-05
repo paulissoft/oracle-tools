@@ -8,22 +8,24 @@ Usage: $0 <COMMAND> [ <OPTIONS> ]
 
 Git workflow based on a LOCAL and CLEAN repository workspace.
 The remote repository will NEVER be updated since that is your responsability.
-You can update (push) the remote repository either using some GUI or the command line.
+You can update (push) the remote repository either using some GUI or the git command line tool.
 
 You can debug what is going by setting environment variable DEBUG.
 
 You can have a (kind of a) dry run by setting environment variable DRY_RUN.
-In this case "set -nv" will be used (syntax check and verbose).
+In this case "set -nv" will be used (enable syntax checking and verbosity).
 
 COMMAND
 =======
+These are the options:
 - clean (workspace)
 - copy (from/to a branch)
 - merge (from/to a branch)
 
 clean
 -----
-The workspace will be cleaned (.gitignore will be used) but you will decide what to clean interactively.
+The workspace will be cleaned (Git will use file(s) .gitignore for that),
+but you will decide what to clean interactively.
 The Git command used is: "git clean -d -x -i".
 
 copy <from> <to>
