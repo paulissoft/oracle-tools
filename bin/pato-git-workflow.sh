@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-function usage {
+usage() {
     declare -r exit_status=${1:-0}
     
     cat <<EOF
@@ -21,6 +21,7 @@ These are the options:
 - clean (workspace)
 - copy (from/to a branch)
 - merge (from/to a branch)
+- merge_abort
 
 clean
 -----
@@ -38,6 +39,10 @@ merge <from> <to> <git merge options>
 -------------------------------------
 First make <from> up to date with respect to <to>, i.e. merge <to> into <from>.
 Next switch back to <to> and merge <from> into <to> using the <git merge options>.
+
+merge_abort
+-----------
+Issues "git merge --abort".
 
 USE CASES
 =========
@@ -61,11 +66,12 @@ Say you want to make a DDL export from the development database.
 You have the branch "development" for the status of the development database,
 but you want to store the export in branch "export/development" and
 later create a Pull Request from "export/development" to "development".
+In case of merge conflicts you want to keep the latest changes (ours).
 
 These are your workflow actions:
 1. pato-git-workflow.sh copy development export/development
 2. # do your export, commit and push export/development (current branch) to the remote repository
-3. pato-git-workflow.sh merge export/development development
+3. pato-git-workflow.sh merge export/development development -X ours
 
 alias
 -----
@@ -79,14 +85,10 @@ EOF
     exit $exit_status
 }
 
-function error {
+error() {
     echo ""
     echo "ERROR: $*" 1>&2
     echo ""
-}
-
-function _check_no_changes {
-    test -z "$(git status --porcelain)" || { error "You have changes in your workspace"; git status; exit 1; }
 }
 
 # start a subshell to set -x and run the command
@@ -107,18 +109,28 @@ _ignore_output() { eval "$@" $ignore_output; }
 
 export -f _ignore_stdout _ignore_stderr _ignore_output
 
-function _switch {
+_check_no_changes() {
+    test -z "$(git status --porcelain)" || { error "You have changes in your workspace"; git status; exit 1; }
+}
+
+_switch() {
     declare -r branch=$1
     
     _x git switch $branch
     _x git pull origin $branch
 }
 
-function clean {
+_tag() {
+    declare -r tag="`basename $0 .sh`-`date -I`"
+    
+    _x git tag $tag
+}
+
+clean() {
     _x git clean -d -x -i
 }
 
-function copy {
+copy() {
     declare -r from=$1
     declare -r to=$2
     
@@ -133,9 +145,11 @@ function copy {
         _x git reset --hard '@{u}'
     fi
     _x git switch $to
+
+    _tag
 }
 
-function merge {
+merge() {
     declare -r from=$1
     shift
     declare -r to=$1
@@ -152,6 +166,12 @@ function merge {
     # now the real merge
     _switch $to    
     _x git merge $options $from
+
+    _tag
+}
+
+merge_abort() {
+    _x git merge --abort
 }
 
 # MAIN
@@ -167,7 +187,7 @@ test $# -ne 0 || usage
 command=$1
 shift
 case "$command" in
-    clean)
+    clean | merge_abort)
         test $# -eq 0 || usage 1
         $command
         ;;
