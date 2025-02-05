@@ -123,7 +123,7 @@ _switch() {
 _tag() {
     declare -r tag="`basename $0 .sh`-`date -I`"
     
-    _x git tag $tag
+    _x git tag -f $tag
 }
 
 clean() {
@@ -162,7 +162,7 @@ merge() {
     _switch $from
     # theirs is actually ours since we switch from/to
     _x git merge -X theirs $to || { echo ""; read -p "Fix the conflicts and press RETURN when ready..." dummy; }
-    _x git commit -m"Make $from up to date with $to"
+    _x git commit -m "Make $from up to date with $to" || true
 
     # now the real merge
     _switch $to    
