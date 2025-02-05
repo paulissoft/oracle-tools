@@ -29,7 +29,7 @@ The Git command used is: "git clean -d -x -i".
 copy <from> <to>
 ----------------
 When the branch to copy does NOT exist, the Git command will be "git checkout -b <to> <from>".
-When the branch exists: "git switch <to> && git reset --hard <from>".
+When the branch exists: "git switch <to> && git reset --hard '@{u}'".
 In both cases, the <to> branch will be the current branch ("git switch <to>").
 
 merge <from> <to> <git merge options>
@@ -87,15 +87,33 @@ function _check_no_changes {
     test -z "$(git status --porcelain)" || { error "You have changes in your workspace"; git status; exit 1; }
 }
 
+# start a subshell to set -x and run the command
+_x() { (echo ""; set -x; "$@") } 
+
+export -f _x
+
+# to be used with 'eval COMMAND $ignore_stdout'
+export ignore_stdout='1>/dev/null'
+export ignore_stderr='2>/dev/null'
+export ignore_output='1>/dev/null 2>&1'
+
+! printenv DEBUG 1>/dev/null 2>&1 || { ignore_stdout=; ignore_stderr=; ignore_output=; }
+
+_ignore_stdout() { eval "$@" $ignore_stdout; }
+_ignore_stderr() { eval "$@" $ignore_stderr; }
+_ignore_output() { eval "$@" $ignore_output; }
+
+export -f _ignore_stdout _ignore_stderr _ignore_output
+
 function _switch {
     declare -r branch=$1
     
-    git switch $branch
-    git pull origin $branch
+    _x git switch $branch
+    _x git pull origin $branch
 }
 
 function clean {
-    git clean -d -x -i
+    _x git clean -d -x -i
 }
 
 function copy {
@@ -106,13 +124,13 @@ function copy {
     _switch $from
     
     # $from exists but $to maybe not
-    if ! git checkout -b $to $from
+    if ! _ignore_stderr git checkout -b $to $from
     then
         # $to exists: switch to it and reset
-        git switch $to
-        git reset --hard $from
+        _x git switch $to
+        _x git reset --hard '@{u}'
     fi
-    git switch $to
+    _x git switch $to
 }
 
 function merge {
@@ -126,12 +144,12 @@ function merge {
 
     # merge the changes made to $to in the meantime back into $from before we will merge back
     _switch $from
-    git merge $to
-    git commit -m"Make $from up to date with $to"
+    _x git merge $to
+    _x git commit -m"Make $from up to date with $to"
 
     # now the real merge
     _switch $to    
-    git merge $options $from
+    _x git merge $options $from
 }
 
 # MAIN
