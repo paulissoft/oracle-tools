@@ -3,8 +3,9 @@
 usage() {
     declare -r exit_status=${1:-0}
     
-    cat <<EOF
-Usage: $0 <COMMAND> [ <OPTIONS> ]
+    cat <<EOF | more
+
+USAGE: $0 <COMMAND> [ <OPTIONS> ]
 
 Git workflow based on a LOCAL and CLEAN repository workspace.
 The remote repository will NEVER be updated since that is your responsability.
