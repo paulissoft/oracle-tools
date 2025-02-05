@@ -32,7 +32,7 @@ The Git command used is: "git clean -d -x -i".
 copy <from> <to>
 ----------------
 When the branch to copy does NOT exist, the Git command will be "git checkout -b <to> <from>".
-When the branch exists: "git switch <to> && git reset --hard '@{u}'".
+When the branch exists: "git switch <to> && git reset --hard <from>".
 In both cases, the <to> branch will be the current branch ("git switch <to>").
 
 merge <from> <to> <git merge options>
@@ -140,9 +140,9 @@ copy() {
     # $from exists but $to maybe not
     if ! _ignore_stderr git checkout -b $to $from
     then
-        # $to exists: switch to it and reset
+        # $to exists: switch to it and reset to $from
         _x git switch $to
-        _x git reset --hard '@{u}'
+        _x git reset --hard $from
     fi
     _x git switch $to
 
