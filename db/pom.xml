@@ -426,7 +426,8 @@
             <executions>
               <execution>
                 <id>db-purge-flyway-table</id>
-                <phase>none</phase> <!-- GJP 2025-01-16 disable -->
+                <!--phase>none</phase--> <!-- GJP 2025-01-16 disable -->
+                <phase>${db.phase.process}</phase>                
                 <goals>
                   <goal>execute</goal>
                 </goals>
