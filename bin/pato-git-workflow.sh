@@ -5,7 +5,9 @@ usage() {
     
     cat <<EOF | more
 
-USAGE: $0 <COMMAND> [ <OPTIONS> ]
+USAGE
+=====
+$0 <COMMAND> [ <OPTIONS> ]
 
 Git workflow based on a LOCAL and CLEAN repository workspace.
 The remote repository will NEVER be updated since that is your responsability.
@@ -32,6 +34,7 @@ The Git command used is: "git clean -d -x -i".
 
 copy <from> <to>
 ----------------
+The branch to copy must not be protected.
 When the branch to copy does NOT exist, the Git command will be "git checkout -b <to> <from>".
 When the branch exists: "git switch <to> && git reset --hard <from>".
 In both cases, the <to> branch will be the current branch ("git switch <to>").
@@ -39,7 +42,15 @@ In both cases, the <to> branch will be the current branch ("git switch <to>").
 merge <from> <to> <git merge options>
 -------------------------------------
 First make <from> up to date with respect to <to>, i.e. merge <to> into <from>.
-Next switch back to <to> and merge <from> into <to> using the <git merge options>.
+Next switch back to <to> and:
+- merge <from> into <to> using the <git merge options> (not a protected branch) OR
+- create a Pull Request (PR)
+
+A PR will be used withe appropiate tooling:
+- GitHub command line client "gh" OR
+- Azure DevOps command line client "az"
+
+You need to install the client first.
 
 merge_abort
 -----------
@@ -110,6 +121,29 @@ _ignore_output() { eval "$@" $ignore_output; }
 
 export -f _ignore_stdout _ignore_stderr _ignore_output
 
+test -n "${PROTECTED_BRANCHES:-}" || PROTECTED_BRANCHES="development test acceptance main master"
+export PROTECTED_BRANCHES
+
+_prompt() {
+    declare -r msg=$1
+    
+    echo ""
+    read -p "$msg. Press RETURN when ready..." dummy
+}
+
+_error_branch_protected() {
+    declare -r branch=$1
+    error "Branch $branch is protected (${PROTECTED_BRANCHES})"
+    exit 1
+}
+
+_check_branch_not_protected() {
+    declare -r branch=$1
+
+    echo " ${PROTECTED_BRANCHES} " | grep -q " $branch "
+    [[ $? -eq 0 ]] && return 1 || return 0
+}
+
 _check_no_changes() {
     test -z "$(git status --porcelain)" || { error "You have changes in your workspace"; git status; exit 1; }
 }
@@ -134,7 +168,9 @@ clean() {
 copy() {
     declare -r from=$1
     declare -r to=$2
-    
+
+    # We will never copy to a protected branch since it implies a hard reset (NEVER).
+    _check_branch_not_protected $to || _error_branch_protected $to
     _check_no_changes
     _switch $from
     
@@ -161,13 +197,36 @@ merge() {
 
     # merge the changes made to $to in the meantime back into $from before we will merge back
     _switch $from
-    # theirs is actually ours since we switch from/to
-    _x git merge -X theirs $to || { echo ""; read -p "Fix the conflicts and press RETURN when ready..." dummy; }
+    _x git merge $to || _prompt "Fix the conflicts"
     _x git commit -m "Make $from up to date with $to" || true
 
     # now the real merge
-    _switch $to    
-    _x git merge $options $from
+    if _check_branch_not_protected $to
+    then
+        _switch $to
+        _x git merge $options $from
+    else
+        # to merge into a protected branch we need a Pull Request
+        _x git push # push $from to remote
+        if `git remote -v | grep github 1>/dev/null`
+        then
+            _x gh pr create --title "$from => $to" --editor --base $from
+        elif `git remote -v | grep azure 1>/dev/null`
+        then
+            x az repos pr create \
+              --auto-complete false \
+              --bypass-policy false \
+              --delete-source-branch true \
+              --detect true \
+              --draft false \
+              --open \
+              --source-branch $from \
+              --squash true \
+              --target-branch $to \
+              --title "$from => $to"
+        fi
+        _switch $to
+    fi        
 
     _tag
 }
@@ -176,7 +235,9 @@ merge_abort() {
     _x git merge --abort
 }
 
+# ----
 # MAIN
+# ----
 
 ! printenv DEBUG 1>/dev/null 2>&1 || set -x
 ! printenv DRY_RUN 1>/dev/null 2>&1 || set -nv
