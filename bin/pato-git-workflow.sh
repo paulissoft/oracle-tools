@@ -25,6 +25,7 @@ These are the options:
 - copy (from/to a branch)
 - merge (from/to a branch)
 - merge_abort
+- release (from/to a protected branch)
 
 clean
 -----
@@ -55,6 +56,11 @@ You need to install the client first.
 merge_abort
 -----------
 Issues "git merge --abort".
+
+release <from> <to>
+-------------------
+Both branches must be protected.
+Branch <from> is merged into <to> (franch <from> is not updated).
 
 USE CASES
 =========
@@ -133,7 +139,15 @@ _prompt() {
 
 _error_branch_protected() {
     declare -r branch=$1
+    
     error "Branch $branch is protected (i.e. one of $(echo ${PROTECTED_BRANCHES} | sed 's/ /,/g'))"
+    exit 1
+}
+
+_error_branch_not_protected() {
+    declare -r branch=$1
+    
+    error "Branch $branch is NOT protected (i.e. one of $(echo ${PROTECTED_BRANCHES} | sed 's/ /,/g'))"
     exit 1
 }
 
@@ -142,6 +156,24 @@ _check_branch_not_protected() {
 
     echo " ${PROTECTED_BRANCHES} " | grep -q " $branch "
     [[ $? -eq 0 ]] && return 1 || return 0
+}
+
+_get_upstream() {
+    git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null
+}   
+
+_error_upstream_does_not_exist() {
+    declare -r branch=$1
+    
+    error "Branch $branch does not have an upstream"
+    exit 1
+}
+
+_check_upstream_exists() {
+    declare -r branch=$1
+    declare -r upstream=$(_get_upstream $branch)
+
+    [[ -n "$upstream" ]]
 }
 
 _check_no_changes() {
@@ -158,7 +190,32 @@ _switch() {
 _tag() {
     declare -r tag="`basename $0 .sh`-`date -I`"
     
-    _x git tag -f $tag
+    _x git tag $tag
+}
+
+_pull_request() {
+    declare -r from=$1
+    declare -r to=$2
+
+    if `git remote -v | grep github 1>/dev/null`
+    then
+        _x gh pr create --title "$from => $to" --editor --base $from
+    elif `git remote -v | grep azure 1>/dev/null`
+    then
+        _x az repos pr create \
+          --auto-complete false \
+          --bypass-policy false \
+          --delete-source-branch true \
+          --detect true \
+          --draft false \
+          --open \
+          --source-branch $from \
+          --squash true \
+          --target-branch $to \
+          --title "$from => $to"
+    fi
+
+    _switch $to
 }
 
 clean() {
@@ -182,8 +239,6 @@ copy() {
         _x git reset --hard $from
     fi
     _x git switch $to
-
-    _tag
 }
 
 merge() {
@@ -194,6 +249,8 @@ merge() {
     declare -r options="$@"
     
     _check_no_changes
+    _check_upstream_exists $from || _error_upstream_does_not_exist $from
+    _check_upstream_exists $to || _error_upstream_does_not_exist $to
 
     # merge the changes made to $to in the meantime back into $from before we will merge back
     _switch $from
@@ -208,31 +265,38 @@ merge() {
     else
         # to merge into a protected branch we need a Pull Request
         _x git push # push $from to remote
-        if `git remote -v | grep github 1>/dev/null`
-        then
-            _x gh pr create --title "$from => $to" --editor --base $from
-        elif `git remote -v | grep azure 1>/dev/null`
-        then
-            x az repos pr create \
-              --auto-complete false \
-              --bypass-policy false \
-              --delete-source-branch true \
-              --detect true \
-              --draft false \
-              --open \
-              --source-branch $from \
-              --squash true \
-              --target-branch $to \
-              --title "$from => $to"
-        fi
-        _switch $to
+        _pull_request $from $to
     fi        
-
-    _tag
 }
 
 merge_abort() {
     _x git merge --abort
+}
+
+release() {
+    declare -r from=$1
+    declare -r to=$2
+    
+    _check_no_changes
+
+    ! _check_branch_not_protected $from || _error_branch_not_protected $from
+    ! _check_branch_not_protected $to || _error_branch_not_protected $to
+
+    # check direction
+    case "$from|$to" in
+        "development|test" | \
+        "development|acceptance" | \
+        "test|acceptance" | \
+        "acceptance|main" | \
+        "acceptance|master")
+            error "Wrong combination for release: $from => $to"
+            exit 1
+            ;;
+    esac
+    
+    _switch $from
+    _pull_request $from $to
+    _tag
 }
 
 # ----
