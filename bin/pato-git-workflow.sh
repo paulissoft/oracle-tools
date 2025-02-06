@@ -133,7 +133,7 @@ _prompt() {
 
 _error_branch_protected() {
     declare -r branch=$1
-    error "Branch $branch is protected (${PROTECTED_BRANCHES})"
+    error "Branch $branch is protected (i.e. one of $(echo ${PROTECTED_BRANCHES} | sed 's/ /,/g'))"
     exit 1
 }
 
