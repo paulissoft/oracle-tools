@@ -278,6 +278,8 @@ release() {
     declare -r to=$2
     
     _check_no_changes
+    _check_upstream_exists $from || _error_upstream_does_not_exist $from
+    _check_upstream_exists $to || _error_upstream_does_not_exist $to
 
     ! _check_branch_not_protected $from || _error_branch_not_protected $from
     ! _check_branch_not_protected $to || _error_branch_not_protected $to
