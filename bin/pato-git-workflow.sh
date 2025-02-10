@@ -213,6 +213,9 @@ _pull_request() {
           --squash true \
           --target-branch $to \
           --title "$from => $to"
+    else
+        error "There is no GitHub nor Azure \"git remote -v\" info available."
+        exit 1
     fi
 
     _switch $to
@@ -276,6 +279,7 @@ merge_abort() {
 release() {
     declare -r from=$1
     declare -r to=$2
+    declare -r release="release/$from-$to"
     
     _check_no_changes
     _check_upstream_exists $from || _error_upstream_does_not_exist $from
@@ -291,13 +295,25 @@ release() {
         "test|acceptance" | \
         "acceptance|main" | \
         "acceptance|master")
+            echo "Releasing from $from to $to"
+            ;;
+        *)
             error "Wrong combination for release: $from => $to"
             exit 1
             ;;
     esac
     
     _switch $from
-    _pull_request $from $to
+    if _x git checkout -b $release $to
+    then
+        # new local branch: move it to upstream
+        _x git push --set-upstream origin $release
+    else
+        _switch $release
+    fi
+    _x git merge -X ours $from || _prompt "Fix the conflicts (branch $release must be leading)"
+    _switch $to # must be on a branch named differently than "release/acceptance-main"
+    _pull_request $release $to
     _tag
 }
 
@@ -320,7 +336,7 @@ case "$command" in
         test $# -eq 0 || usage 1
         $command
         ;;
-    copy)
+    copy | release)
         test $# -eq 2 || usage 1
         $command $*
         ;;
