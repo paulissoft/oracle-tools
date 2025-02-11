@@ -103,6 +103,12 @@ EOF
     exit $exit_status
 }
 
+info() {
+    echo ""
+    echo "INFO: $*" 1>&2
+    echo ""
+}
+
 error() {
     echo ""
     echo "ERROR: $*" 1>&2
@@ -134,7 +140,7 @@ _prompt() {
     declare -r msg=$1
     
     echo ""
-    read -p "$msg. Press RETURN when ready..." dummy
+    read -p "PROMPT: $msg. Press RETURN when ready..." dummy
 }
 
 _error_branch_protected() {
@@ -159,7 +165,17 @@ _check_branch_not_protected() {
 }
 
 _get_upstream() {
-    git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null
+    declare -r branch=$1
+    declare -r current_branch=$(git rev-parse --abbrev-ref HEAD)
+    
+    if [ "$current_branch" != "$branch" ]
+    then
+        git switch $branch 1>/dev/null
+        git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null
+        git switch $current_branch 1>/dev/null
+    else
+        git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null
+    fi
 }   
 
 _error_upstream_does_not_exist() {
@@ -184,7 +200,7 @@ _switch() {
     declare -r branch=$1
     
     _x git switch $branch
-    _x git pull
+    _x git pull || _x git branch --set-upstream-to=origin/$branch $branch
 }
 
 _tag() {
@@ -235,13 +251,15 @@ copy() {
     _switch $from
     
     # $from exists but $to maybe not
-    while ! _ignore_stderr git checkout -b $to $from
-    do
-        # delete branch locally and remotely
-        _x git branch -D $to
-        _x git push origin --delete $to
-    done
+    if ! _ignore_stderr git checkout -b $to $from
+    then
+        _x git branch -d $to
+        _x git checkout -b $to $from
+        _x git branch --set-upstream-to=origin/$to $to
+    fi
     _x git switch $to
+    _x git diff $from $to
+    _x git diff origin/$from origin/$to
 }
 
 merge() {
@@ -267,6 +285,7 @@ merge() {
         _x git merge $options $from
     else
         # to merge into a protected branch we need a Pull Request
+        _prompt "Pushing branch $from"
         _x git push # push $from to remote
         _switch $to # must be on a branch named differently than "release/acceptance-main"
         _pull_request $from $to
@@ -305,10 +324,11 @@ release() {
     esac
 
     copy $from $release
-    _x git push --set-upstream origin $release
+    _prompt "Pushing branch $release"
+    _x git push
     _switch $to # must be on a branch named differently than "release/acceptance-main"
-    _pull_request $release $to
     _tag
+    _pull_request $release $to
 }
 
 # ----
