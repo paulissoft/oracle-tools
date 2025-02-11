@@ -235,12 +235,12 @@ copy() {
     _switch $from
     
     # $from exists but $to maybe not
-    if ! _ignore_stderr git checkout -b $to $from
-    then
-        # $to exists: switch to it and reset to $from
-        _x git switch $to
-        _x git reset --hard $from
-    fi
+    while ! _ignore_stderr git checkout -b $to $from
+    do
+        # delete branch locally and remotely
+        _x git branch -D $to
+        _x git push origin --delete $to
+    done
     _x git switch $to
 }
 
@@ -268,6 +268,7 @@ merge() {
     else
         # to merge into a protected branch we need a Pull Request
         _x git push # push $from to remote
+        _switch $to # must be on a branch named differently than "release/acceptance-main"
         _pull_request $from $to
     fi        
 }
@@ -302,16 +303,9 @@ release() {
             exit 1
             ;;
     esac
-    
-    _switch $from
-    if _x git checkout -b $release $to
-    then
-        # new local branch: move it to upstream
-        _x git push --set-upstream origin $release
-    else
-        _switch $release
-    fi
-    _x git merge -X ours $from || _prompt "Fix the conflicts (branch $release must be leading)"
+
+    copy $from $release
+    _x git push --set-upstream origin $release
     _switch $to # must be on a branch named differently than "release/acceptance-main"
     _pull_request $release $to
     _tag
