@@ -249,17 +249,21 @@ copy() {
     _check_branch_not_protected $to || _error_branch_protected $to
     _check_no_changes
     _switch $from
+    _x git pull
     
     # $from exists but $to maybe not
     if ! _ignore_stderr git checkout -b $to $from
     then
-        _x git branch -d $to
+        # delete local and remote branch (just pointers)
+        _prompt "Remove local (and remote) branch $to before re-creating it from branch $from"
+        _x git branch -D $to
+        _x git push origin --delete $to || true
         _x git checkout -b $to $from
-        _x git branch --set-upstream-to=origin/$to $to
     fi
-    _x git switch $to
-    _x git diff $from $to
-    _x git diff origin/$from origin/$to
+    _x git push --set-upstream origin $to
+    _prompt "Showing \"git diff $from $to\" for both local and remote branches"
+    _x git diff --name-status $from $to
+    _x git diff --name-status origin/$from origin/$to
 }
 
 merge() {
