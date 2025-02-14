@@ -21,11 +21,18 @@ In this case "set -nv" will be used (enable syntax checking and verbosity).
 COMMAND
 =======
 These are the options:
+- info
 - clean (workspace)
 - copy (from/to a branch)
 - merge (from/to a branch)
 - merge_abort
 - release (from/to a protected branch)
+
+info
+----
+Show information about the workspace:
+- git status
+- git remote -v
 
 clean
 -----
@@ -103,13 +110,16 @@ EOF
     exit $exit_status
 }
 
-info() {
+_info() {
     echo ""
-    echo "INFO: $*" 1>&2
+    for msg in "$@"
+    do
+        echo "INFO: $msg" 1>&2
+    done
     echo ""
 }
 
-error() {
+_error() {
     echo ""
     echo "ERROR: $*" 1>&2
     echo ""
@@ -137,38 +147,42 @@ test -n "${PROTECTED_BRANCHES:-}" || PROTECTED_BRANCHES="development test accept
 export PROTECTED_BRANCHES
 
 _prompt() {
-    declare -r msg=$1
+    declare -r msg=${1:?}
     
     echo ""
     read -p "PROMPT: $msg. Press RETURN when ready..." dummy
 }
 
 _error_branch_protected() {
-    declare -r branch=$1
+    declare -r branch=${1:?}
     
-    error "Branch $branch is protected (i.e. one of $(echo ${PROTECTED_BRANCHES} | sed 's/ /,/g'))"
+    _error "Branch $branch is protected (i.e. one of $(echo ${PROTECTED_BRANCHES} | sed 's/ /,/g'))"
     exit 1
 }
 
 _error_branch_not_protected() {
-    declare -r branch=$1
+    declare -r branch=${1:?}
     
-    error "Branch $branch is NOT protected (i.e. one of $(echo ${PROTECTED_BRANCHES} | sed 's/ /,/g'))"
+    _error "Branch $branch is NOT protected (i.e. one of $(echo ${PROTECTED_BRANCHES} | sed 's/ /,/g'))"
     exit 1
 }
 
 _check_branch_not_protected() {
-    declare -r branch=$1
+    declare -r branch=${1:?}
 
     echo " ${PROTECTED_BRANCHES} " | grep -q " $branch "
     [[ $? -eq 0 ]] && return 1 || return 0
 }
 
+_current_branch() {
+    git rev-parse --abbrev-ref HEAD
+}
+
 _get_upstream() {
-    declare -r branch=$1
-    declare -r current_branch=$(git rev-parse --abbrev-ref HEAD)
+    declare -r branch=${1:-}
+    declare -r current_branch=$(_current_branch)
     
-    if [ "$current_branch" != "$branch" ]
+    if [ -n "$branch" -a "$current_branch" != "$branch" ]
     then
         git switch $branch 1>/dev/null
         git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null
@@ -179,25 +193,25 @@ _get_upstream() {
 }   
 
 _error_upstream_does_not_exist() {
-    declare -r branch=$1
+    declare -r branch=${1:?}
     
-    error "Branch $branch does not have an upstream"
+    _error "Branch $branch does not have an upstream"
     exit 1
 }
 
 _check_upstream_exists() {
-    declare -r branch=$1
+    declare -r branch=${1:?}
     declare -r upstream=$(_get_upstream $branch)
 
     [[ -n "$upstream" ]]
 }
 
 _check_no_changes() {
-    test -z "$(git status --porcelain)" || { error "You have changes in your workspace"; git status; exit 1; }
+    test -z "$(git status --porcelain)" || { _error "You have changes in your workspace"; git status; exit 1; }
 }
 
 _switch() {
-    declare -r branch=$1
+    declare -r branch=${1:?}
     
     _x git switch $branch
     _x git pull || _x git branch --set-upstream-to=origin/$branch $branch
@@ -210,8 +224,8 @@ _tag() {
 }
 
 _pull_request() {
-    declare -r from=$1
-    declare -r to=$2
+    declare -r from=${1:?}
+    declare -r to=${2:?}
 
     if `git remote -v | grep github 1>/dev/null`
     then
@@ -230,11 +244,20 @@ _pull_request() {
           --target-branch $to \
           --title "$from => $to"
     else
-        error "There is no GitHub nor Azure \"git remote -v\" info available."
+        _error "There is no GitHub nor Azure \"git remote -v\" info available."
         exit 1
     fi
 
     _switch $to
+}
+
+info() {    
+    # _info "Current branch : $(_current_branch)" "Upstream branch: $(_get_upstream)"
+    _info "=== git status ==="
+    git status || true
+    _info "=== git remote -v ==="
+    git remote -v || true
+    echo ""
 }
 
 clean() {
@@ -242,8 +265,8 @@ clean() {
 }
 
 copy() {
-    declare -r from=$1
-    declare -r to=$2
+    declare -r from=${1:?}
+    declare -r to=${2:?}
 
     # We will never copy to a protected branch since it implies a hard reset (NEVER).
     _check_branch_not_protected $to || _error_branch_protected $to
@@ -267,9 +290,9 @@ copy() {
 }
 
 merge() {
-    declare -r from=$1
+    declare -r from=${1:?}
     shift
-    declare -r to=$1
+    declare -r to=${1:?}
     shift
     declare -r options="$@"
     
@@ -301,8 +324,8 @@ merge_abort() {
 }
 
 release() {
-    declare -r from=$1
-    declare -r to=$2
+    declare -r from=${1:?}
+    declare -r to=${2:?}
     declare -r release="release/$from-$to"
     
     _check_no_changes
@@ -322,7 +345,7 @@ release() {
             echo "Releasing from $from to $to"
             ;;
         *)
-            error "Wrong combination for release: $from => $to"
+            _error "Wrong combination for release: $from => $to"
             exit 1
             ;;
     esac
@@ -350,7 +373,7 @@ test $# -ne 0 || usage
 command=$1
 shift
 case "$command" in
-    clean | merge_abort)
+    info | clean | merge_abort)
         test $# -eq 0 || usage 1
         $command
         ;;
@@ -363,7 +386,7 @@ case "$command" in
         $command $*
         ;;
     *)
-        error "Unknown command ($command)"
+        _error "Unknown command ($command)"
         usage 1
         ;;
 esac
