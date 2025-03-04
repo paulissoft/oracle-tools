@@ -139,7 +139,7 @@ Since you do not like to type in more than needed, you can make an alias in your
 
 Now you can just type pgw.
 
-The export from development and merge back into it from above can now be written as (provided variable r is a repo like backoffice_rel_mgt and you are in dev):
+The export from development and merging it back into development from above can now be written as (provided variable r is a repo and you are in folder ~/dev):
 
   (set -e; cd $r; b=development; pgw copy $b export/$b; cd ../pato-gui; pato-gui ../$r/db/pom.xml; pato-gui ../$r/apex/pom.xml; cd ../$r; pgw merge export/$b $b -X ours)
 
