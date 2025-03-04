@@ -26,7 +26,7 @@ These are the options:
 - copy (from/to a branch)
 - merge (from/to a branch)
 - merge_abort
-- release (from/to a protected branch)
+- release (from lowest to highest protected branch)
 
 info
 ----
@@ -64,10 +64,43 @@ merge_abort
 -----------
 Issues "git merge --abort".
 
-release <from> <to>
+release <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
 -------------------
-Both branches must be protected.
-Branch <from> is merged into <to> (franch <from> is not updated).
+All branches must be protected.
+The branch <protected_branch_1> will usually be 'development', <protected_branch_2> 'acceptance' and <protected_branch_3> 'main' or 'master' (N = 3).
+This is a prompted workflow, meaning at every step the user is asked to do something.
+1. Branch <protected_branch_1> must be installed first to ensure that all development stuff is correctly installed from feature branches.
+   A user action is needed in another session.
+2. Next every branch n will be released to release/<protected_branch_n> (and exported to export/<protected_branch_n> as a safety measure):
+   a. using the copy command first, see above (no user action needed)
+   b. generate DDL next (for environment n) using the PATO GUI (user action in another session)
+   c. pushing the changes back to the GitHub repo (no user action needed)
+3. Next every release branch (release/<protected_branch_n>) is merged into <protected_branch_m> (m = n+1):
+   a. use a Pull Request
+   b. tag the resulting branch with "`basename $0 .sh`-`date -I`" (for example pato-git-workflow-2025-03-04)
+4. Now every protected branch has the new code, so just install the branches m, 1 < m <= N. Please note that branch 1 has already been installed.
+
+
+ENVIRONMENT VARIABLES
+=====================
+
+These environment variables can be set from the outside:
+- DEBUG
+- DRY_RUN
+- PROTECTED_BRANCHES
+
+DEBUG
+-----
+When set, the script will issue "set -x".
+
+DRY_RUN
+-------
+When set, the script will issue "set -nv".
+
+PROTECTED_BRANCHES
+------------------
+Defaults to "development test acceptance main master".
+
 
 USE CASES
 =========
@@ -102,9 +135,21 @@ alias
 -----
 Since you do not like to type in more than needed, you can make an alias in your shell source script:
 
-  alias pgw="~/dev/oracle-tools/bin/pato-git-workflow.sh $@"
+  alias pgw='~/dev/oracle-tools/bin/pato-git-workflow.sh'
 
 Now you can just type pgw.
+
+The export from development and merge back into it from above can now be written as (provided variable r is a repo like backoffice_rel_mgt and you are in dev):
+
+  (set -e; cd $r; b=development; pgw copy $b export/$b; cd ../pato-gui; pato-gui ../$r/db/pom.xml; pato-gui ../$r/apex/pom.xml; cd ../$r; pgw merge export/$b $b -X ours)
+
+alias pato-gui:
+
+  pato-gui='sdk use java 17.0.9-sem && mamba run -n pato-gui pato-gui'
+
+alias pgw;
+
+  pgw='~/dev/oracle-tools/bin/pato-git-workflow.sh'
 
 EOF
     exit $exit_status
@@ -324,38 +369,72 @@ merge_abort() {
 }
 
 release() {
-    declare -r from=${1:?}
-    declare -r to=${2:?}
-    declare -r release="release/$from-$to"
-    
+    declare -r branches=$*
+    declare from=
+    declare to=
+    declare release=
+    declare export=
+
     _check_no_changes
-    _check_upstream_exists $from || _error_upstream_does_not_exist $from
-    _check_upstream_exists $to || _error_upstream_does_not_exist $to
 
-    ! _check_branch_not_protected $from || _error_branch_not_protected $from
-    ! _check_branch_not_protected $to || _error_branch_not_protected $to
+    # steps 1, 2 and 3 from usage for release
+    for to in $branches
+    do
+        _check_upstream_exists $to || _error_upstream_does_not_exist $to
+        ! _check_branch_not_protected $to || _error_branch_not_protected $to
+        
+        if [[ -n "$from" ]]
+        then
+            # check direction
+            case "$from|$to" in
+                "development|test" | \
+                    "development|acceptance" | \
+                    "test|acceptance" | \
+                    "acceptance|main" | \
+                    "acceptance|master")
+                    echo "Releasing from $from to $to"
+                    ;;
+                *)
+                    _error "Wrong combination for release: $from => $to"
+                    exit 1
+                    ;;
+            esac
+            
+            # step 2 from usage for release
+            export="export/$from-$to"
+            copy $from $export
+            _prompt "Pushing branch $export"
+            _x git push           
+            release="release/$from-$to"
+            copy $from $release
+            _prompt "Pushing branch $release"
+            _x git push
 
-    # check direction
-    case "$from|$to" in
-        "development|test" | \
-        "development|acceptance" | \
-        "test|acceptance" | \
-        "acceptance|main" | \
-        "acceptance|master")
-            echo "Releasing from $from to $to"
-            ;;
-        *)
-            _error "Wrong combination for release: $from => $to"
-            exit 1
-            ;;
-    esac
+            # step 3 from usage for release
+            _switch $to # must be on a branch named differently than "release/acceptance-main"
+            _pull_request $release $to
+            _tag
+        else
+            # step 1 from usage for release
+            # install first branch
+            _switch $to
+            _prompt "Install branch '$to' first in another session (for instance using the PATO GUI)"
+        fi
+        from=$to
+    done
 
-    copy $from $release
-    _prompt "Pushing branch $release"
-    _x git push
-    _switch $to # must be on a branch named differently than "release/acceptance-main"
-    _tag
-    _pull_request $release $to
+    # step 4 from usage for release
+    from=
+    for to in $branches
+    do
+        if [[ -n "$from" ]]
+        then
+            # install all except the first branch
+            _switch $to
+            _prompt "Install branch '$to' first in another session (for instance using the PATO GUI)"
+        fi
+        from=$to
+    done
 }
 
 # ----
@@ -377,11 +456,15 @@ case "$command" in
         test $# -eq 0 || usage 1
         $command
         ;;
-    copy | release)
+    copy)
         test $# -eq 2 || usage 1
         $command $*
         ;;
     merge)
+        test $# -ge 2 || usage 1
+        $command $*
+        ;;
+    release)
         test $# -ge 2 || usage 1
         $command $*
         ;;
