@@ -181,11 +181,10 @@ The following properties are only important during export:
           <exec executable="sqlplus"
                 failonerror="true"
                 spawn="false"
-                dir="@{dir}"
-                inputstring="${my.password}">
+                dir="@{dir}">
             <arg value="-S" /> <!-- silent -->
-            <arg value="${quote}${my.userid}${quote}" />
             <arg value="@{sqlfile}" />
+            <arg value="${quote}${userid}${quote}" />
             <arg value="@{sqlarg1}" />
             <arg value="@{sqlarg2}" />
             <arg value="@{sqlarg3}" />
@@ -244,11 +243,11 @@ The following properties are only important during export:
             <!-- There are environments where you can not launch SQLcl from the command line but only thru Java (Citrix for example). -->
             <istrue value="${launch-sqlcl-java}"/>
             <then>
+              <echo message="Launch SQLcl via Java"/>
               <java classname="oracle.dbtools.raptor.scriptrunner.cmdline.SqlCli"
                     fork="true"
                     spawn="false"
                     dir="@{dir}"
-                    inputstring="${my.password}"
                     failonerror="true">
                 <sysproperty key="java.awt.headless" value="true"/>
                 <sysproperty key="apple.awt.UIElement" value="true"/>
@@ -333,10 +332,12 @@ The following properties are only important during export:
                 <!-- for Unix -->
                 <env key="LD_LIBRARY_PATH"
                      value="${my.sql.home}/lib:${my.sql.home}:${env.LD_LIBRARY_PATH}"/>
+                <env key="NLS_LANG" value="AMERICAN_AMERICA.UTF8"/>
                 <!-- finally the arguments for the class -->
                 <arg value="-S" /> <!-- silent -->
-                <arg value="${quote}${my.userid}${quote}" />
+                <arg value="/nolog" />
                 <arg value="@{sqlfile}" />
+                <arg value="${quote}${userid}${quote}" />
                 <arg value="@{sqlarg1}" />
                 <arg value="@{sqlarg2}" />
                 <arg value="@{sqlarg3}" />
@@ -344,31 +345,38 @@ The following properties are only important during export:
             </then>
             <else>
               <!-- empty sqlarg3 gives a string index -1 error -->
+              <!-- The SQLcl tries to use the thick driver when ORACLE_HOME is set. -->
+              <!-- https://github.com/paulissoft/oracle-tools/issues/196 -->
+              <ac:var name="ORACLE_HOME" unset="true"/>
               <ac:if>
                 <equals arg1="@{sqlarg3}" arg2=""/>
                 <then>
+                  <echo message="Launch SQLcl direct (2 arguments)"/>
                   <exec executable="${sql.executable}"
                         dir="@{dir}"
-                        inputstring="${my.password}"
                         failonerror="true">
                     <arg value="-S" /> <!-- silent -->
-                    <arg value="${quote}${my.userid}${quote}" />
+                    <arg value="/nolog" />
                     <arg value="@{sqlfile}" />
+                    <arg value="${quote}${userid}${quote}" />
                     <arg value="@{sqlarg1}" />
                     <arg value="@{sqlarg2}" />
+                    <env key="NLS_LANG" value="AMERICAN_AMERICA.UTF8"/>
                   </exec>
                 </then>
                 <else>
+                  <echo message="Launch SQLcl direct (3 arguments)"/>
                   <exec executable="${sql.executable}"
                         dir="@{dir}"
-                        inputstring="${my.password}"
                         failonerror="true">
                     <arg value="-S" /> <!-- silent -->
-                    <arg value="${quote}${my.userid}${quote}" />
+                    <arg value="/nolog" />
                     <arg value="@{sqlfile}" />
+                    <arg value="${quote}${userid}${quote}" />
                     <arg value="@{sqlarg1}" />
                     <arg value="@{sqlarg2}" />
                     <arg value="@{sqlarg3}" />
+                    <env key="NLS_LANG" value="AMERICAN_AMERICA.UTF8"/>
                   </exec>
                 </else>
               </ac:if>
