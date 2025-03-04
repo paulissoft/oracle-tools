@@ -274,7 +274,7 @@ _pull_request() {
 
     if `git remote -v | grep github 1>/dev/null`
     then
-        _x gh pr create --title "$from => $to" --editor --base $from
+        _x gh pr create --title "$from => $to" --editor --head $from --base $to
     elif `git remote -v | grep azure 1>/dev/null`
     then
         _x az repos pr create \
