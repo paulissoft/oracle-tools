@@ -28,11 +28,13 @@ These are the options:
 - merge_abort
 - release (from lowest to highest protected branch)
 
+
 info
 ----
 Show information about the workspace:
 - git status
 - git remote -v
+
 
 clean
 -----
@@ -40,12 +42,14 @@ The workspace will be cleaned (Git will use file(s) .gitignore for that),
 but you will decide what to clean interactively.
 The Git command used is: "git clean -d -x -i".
 
+
 copy <from> <to>
 ----------------
 The branch to copy must not be protected.
 When the branch to copy does NOT exist, the Git command will be "git checkout -b <to> <from>".
 When the branch exists: "git switch <to> && git reset --hard <from>".
 In both cases, the <to> branch will be the current branch ("git switch <to>").
+
 
 merge <from> <to> <git merge options>
 -------------------------------------
@@ -60,24 +64,27 @@ A PR will be used withe appropiate tooling:
 
 You need to install the client first.
 
+
 merge_abort
 -----------
 Issues "git merge --abort".
 
+
 release <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
--------------------
+--------------------------------------------------------------------------
 All branches must be protected.
 The branch <protected_branch_1> will usually be 'development', <protected_branch_2> 'acceptance' and <protected_branch_3> 'main' or 'master' (N = 3).
-This is a prompted workflow, meaning at every step the user is asked to do something.
-1. Branch <protected_branch_1> must be installed first to ensure that all development stuff is correctly installed from feature branches.
-   A user action is needed in another session.
-2. Next every branch n will be released to release/<protected_branch_n> (and exported to export/<protected_branch_n> as a safety measure):
+This is a prompted workflow, meaning that at every step the user is asked to do something.
+0. Each branch <protected_branch_n> will be copied to export/<protected_branch_n> and the user will be asked to create an export using the PATO GUI (export APEX and generate DDL). This is a safety measure that is MANDATORY.
+1. Next, branch <protected_branch_1> may need to be installed first to ensure that all development stuff is correctly installed from feature branches.
+   A user action (with the PATO GUI) for APEX and/or database is needed in another session.
+2. Next every branch n will be released to release/<protected_branch_n>:
    a. using the copy command first, see above (no user action needed)
-   b. generate DDL next (for environment n) using the PATO GUI (user action in another session)
+   b. export APEX and/or database (generate DDL) next (for environment n) using the PATO GUI (user action in another session)
    c. pushing the changes back to the GitHub repo (no user action needed)
 3. Next every release branch (release/<protected_branch_n>) is merged into <protected_branch_m> (m = n+1):
    a. use a Pull Request
-   b. tag the resulting branch with "`basename $0 .sh`-`date -I`" (for example pato-git-workflow-2025-03-04)
+   b. tag the resulting branch with "\`basename \$0 .sh\`-\`date -I\`" (for example pato-git-workflow-2025-03-04)
 4. Now every protected branch has the new code, so just install the branches m, 1 < m <= N. Please note that branch 1 has already been installed.
 
 
@@ -89,13 +96,16 @@ These environment variables can be set from the outside:
 - DRY_RUN
 - PROTECTED_BRANCHES
 
+
 DEBUG
 -----
 When set, the script will issue "set -x".
 
+
 DRY_RUN
 -------
 When set, the script will issue "set -nv".
+
 
 PROTECTED_BRANCHES
 ------------------
@@ -118,6 +128,7 @@ These are your workflow actions:
 
 The latter step will first make your feature branch up to date.
 
+
 export
 ------
 Say you want to make a DDL export from the development database.
@@ -131,6 +142,7 @@ These are your workflow actions:
 2. # do your export, commit and push export/development (current branch) to the remote repository
 3. pato-git-workflow.sh merge export/development development -X ours
 
+
 alias
 -----
 Since you do not like to type in more than needed, you can make an alias in your shell source script:
@@ -141,7 +153,7 @@ Now you can just type pgw.
 
 The export from development and merging it back into development from above can now be written as (provided variable r is a repo and you are in folder ~/dev):
 
-  (set -e; cd $r; b=development; pgw copy $b export/$b; cd ../pato-gui; pato-gui ../$r/db/pom.xml; pato-gui ../$r/apex/pom.xml; cd ../$r; pgw merge export/$b $b -X ours)
+  (set -e; cd \$r; b=development; pgw copy \$b export/\$b; cd ../pato-gui; pato-gui ../\$r/db/pom.xml; pato-gui ../\$r/apex/pom.xml; cd ../\$r; pgw merge export/\$b \$b -X ours)
 
 alias pato-gui:
 
@@ -275,6 +287,7 @@ _pull_request() {
     if `git remote -v | grep github 1>/dev/null`
     then
         _x gh pr create --title "$from => $to" --editor --head $from --base $to
+        _x gh pr view --web
     elif `git remote -v | grep azure 1>/dev/null`
     then
         _x az repos pr create \
@@ -329,9 +342,9 @@ copy() {
         _x git checkout -b $to $from
     fi
     _x git push --set-upstream origin $to
-    _prompt "Showing \"git diff $from $to\" for both local and remote branches"
-    _x git diff --name-status $from $to
-    _x git diff --name-status origin/$from origin/$to
+#    _prompt "Showing \"git diff $from $to\" for both local and remote branches"
+#    _x git diff --name-status $from $to
+#    _x git diff --name-status origin/$from origin/$to
 }
 
 merge() {
@@ -377,7 +390,7 @@ release() {
 
     _check_no_changes
 
-    # steps 1, 2 and 3 from usage for release
+    # step 0 from usage for release
     for to in $branches
     do
         _check_upstream_exists $to || _error_upstream_does_not_exist $to
@@ -399,26 +412,52 @@ release() {
                     exit 1
                     ;;
             esac
+        fi
             
+        export="export/$to"
+        copy $from $export
+        _prompt "Please create a backup export (APEX and/or database) in another session (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+        _prompt "Pushing branch $export"
+        _x git push
+
+        from=$to
+    done
+
+    # steps 1, 2 and 3 from usage for release
+    from=
+    for to in $branches
+    do
+        _check_upstream_exists $to || _error_upstream_does_not_exist $to
+        ! _check_branch_not_protected $to || _error_branch_not_protected $to
+
+        if [[ -z "$from" ]]
+        then
+            # step 1 from usage for release
+            # install first branch
+            _switch $to
+            _prompt "You may need to install branch '$to' first in another session (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+        fi
+        
+        if [[ -n "$from" ]]
+        then
             # step 2 from usage for release
-            export="export/$from-$to"
-            copy $from $export
-            _prompt "Pushing branch $export"
-            _x git push           
+            # step 2a
             release="release/$from-$to"
             copy $from $release
+            # step 2b
+            _prompt "Please create a release export (APEX and/or database) in another session (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+            # step 2c
             _prompt "Pushing branch $release"
             _x git push
 
             # step 3 from usage for release
-            _switch $to # must be on a branch named differently than "release/acceptance-main"
+            # step 3a
             _pull_request $release $to
+            # step 3b
             _tag
-        else
-            # step 1 from usage for release
-            # install first branch
-            _switch $to
-            _prompt "Install branch '$to' first in another session (for instance using the PATO GUI)"
+            url=$(git config --get remote.origin.url)
+            url=$(basename $url .git)
+            _prompt "Please ensure that the Pull Request from $release to $to has been accepted (go to $url)"
         fi
         from=$to
     done
@@ -431,7 +470,7 @@ release() {
         then
             # install all except the first branch
             _switch $to
-            _prompt "Install branch '$to' first in another session (for instance using the PATO GUI)"
+            _prompt "Install branch '$to' first in another session (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
         fi
         from=$to
     done
