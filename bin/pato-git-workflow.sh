@@ -509,6 +509,7 @@ set -eu
 
 test $# -ne 0 || usage
 
+pwd=$(pwd)
 command=$1
 shift
 case "$command" in
