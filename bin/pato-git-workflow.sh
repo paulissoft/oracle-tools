@@ -27,6 +27,8 @@ These are the options:
 - merge (from/to a branch)
 - merge_abort
 - release (from lowest to highest protected branch)
+- release_init (from lowest to highest protected branch)
+- release_exec (from lowest to highest protected branch)
 
 
 info
@@ -70,23 +72,27 @@ merge_abort
 Issues "git merge --abort".
 
 
-release <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
+release      <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
+release_init <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
+release_exec <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
 --------------------------------------------------------------------------
 All branches must be protected.
 The branch <protected_branch_1> will usually be 'development', <protected_branch_2> 'acceptance' and <protected_branch_3> 'main' or 'master' (N = 3).
 This is a prompted workflow, meaning that at every step the user is asked to do something.
 0. Each branch <protected_branch_n> will be copied to export/<protected_branch_n> and the user will be asked to create an export using the PATO GUI (export APEX and generate DDL). This is a safety measure that is MANDATORY.
 1. Next, branch <protected_branch_1> may need to be installed first to ensure that all development stuff is correctly installed from feature branches.
-   A user action (with the PATO GUI) for APEX and/or database is needed in another session.
-2. Next every branch n will be released to release/<protected_branch_n>:
+   A user action (with the PATO GUI) for APEX and/or database is needed in ANOTHER SESSION.
+2. Next every branch n will be released to release/<protected_branch_n>-<protected_branch_m> (m = n+1):
    a. using the copy command first, see above (no user action needed)
-   b. export APEX and/or database (generate DDL) next (for environment n) using the PATO GUI (user action in another session)
+   b. export APEX and/or database (generate DDL) next (for environment n) using the PATO GUI (user action in ANOTHER SESSION)
    c. pushing the changes back to the GitHub repo (no user action needed)
-3. Next every release branch (release/<protected_branch_n>) is merged into <protected_branch_m> (m = n+1):
+3. Next every release branch (release/<protected_branch_n>-<protected_branch_m>) is merged into <protected_branch_m> (m = n+1):
    a. use a Pull Request
    b. tag the resulting branch with "\`basename \$0 .sh\`-\`date -I\`" (for example pato-git-workflow-2025-03-04)
 4. Now every protected branch has the new code, so just install the branches m, 1 < m <= N. Please note that branch 1 has already been installed.
 
+Option release invokes release_init (steps 0 till 3) to prepare the release and then release_exec (step 4) to execute it.
+This allows to prepare and execute a release on different moments.
 
 ENVIRONMENT VARIABLES
 =====================
@@ -342,9 +348,12 @@ copy() {
         _x git checkout -b $to $from
     fi
     _x git push --set-upstream origin $to
-#    _prompt "Showing \"git diff $from $to\" for both local and remote branches"
-#    _x git diff --name-status $from $to
-#    _x git diff --name-status origin/$from origin/$to
+    if [[ -n "${DEBUG:-}" ]]
+    then
+        _prompt "Showing \"git diff $from $to\" for both local and remote branches"
+        _x git diff --name-status $from $to
+        _x git diff --name-status origin/$from origin/$to
+    fi
 }
 
 merge() {
@@ -381,7 +390,7 @@ merge_abort() {
     _x git merge --abort
 }
 
-release() {
+release_init() {
     declare -r branches=$*
     declare from=
     declare to=
@@ -415,8 +424,8 @@ release() {
         fi
             
         export="export/$to"
-        copy $from $export
-        _prompt "Please create a backup export (APEX and/or database) in another session (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+        copy $to $export
+        _prompt "Please create a backup export (APEX and/or database) in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
         _prompt "Pushing branch $export"
         _x git push
 
@@ -427,15 +436,12 @@ release() {
     from=
     for to in $branches
     do
-        _check_upstream_exists $to || _error_upstream_does_not_exist $to
-        ! _check_branch_not_protected $to || _error_branch_not_protected $to
-
         if [[ -z "$from" ]]
         then
             # step 1 from usage for release
             # install first branch
             _switch $to
-            _prompt "You may need to install branch '$to' first in another session (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+            _prompt "You may need to install branch $to first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
         fi
         
         if [[ -n "$from" ]]
@@ -445,7 +451,7 @@ release() {
             release="release/$from-$to"
             copy $from $release
             # step 2b
-            _prompt "Please create a release export (APEX and/or database) in another session (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+            _prompt "Please create a release export (APEX and/or database) in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
             # step 2c
             _prompt "Pushing branch $release"
             _x git push
@@ -459,8 +465,17 @@ release() {
             url=$(basename $url .git)
             _prompt "Please ensure that the Pull Request from $release to $to has been accepted (go to $url)"
         fi
+        
         from=$to
     done
+}
+
+release_exec() {
+    declare -r branches=$*
+    declare from=
+    declare to=
+
+    _check_no_changes
 
     # step 4 from usage for release
     from=
@@ -470,10 +485,16 @@ release() {
         then
             # install all except the first branch
             _switch $to
-            _prompt "Install branch '$to' first in another session (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+            _prompt "Install branch $to first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
         fi
+        
         from=$to
     done
+}
+
+release() {
+    release_init "$@"
+    release_exec "$@"
 }
 
 # ----
@@ -503,7 +524,7 @@ case "$command" in
         test $# -ge 2 || usage 1
         $command $*
         ;;
-    release)
+    release | release_init | release_exec)
         test $# -ge 2 || usage 1
         $command $*
         ;;
