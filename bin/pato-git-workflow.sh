@@ -27,8 +27,9 @@ These are the options:
 - merge (from/to a branch)
 - merge_abort
 - release (from lowest to highest protected branch)
-- release_init (from lowest to highest protected branch)
-- release_exec (from lowest to highest protected branch)
+- release_backup (from lowest to highest protected branch)
+- release_copy (from lowest to highest protected branch)
+- release_install (from lowest to highest protected branch)
 
 
 info
@@ -72,13 +73,16 @@ merge_abort
 Issues "git merge --abort".
 
 
-release      <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
-release_init <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
-release_exec <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
+release <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
+release_backup <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
+release_copy <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
+release_install <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
 --------------------------------------------------------------------------
 All branches must be protected.
 The branch <protected_branch_1> will usually be 'development', <protected_branch_2> 'acceptance' and <protected_branch_3> 'main' or 'master' (N = 3).
 This is a prompted workflow, meaning that at every step the user is asked to do something.
+
+These are the steps:
 0. Each branch <protected_branch_n> will be copied to export/<protected_branch_n> and the user will be asked to create an export using the PATO GUI (export APEX and generate DDL). This is a safety measure that is MANDATORY.
 1. Next, branch <protected_branch_1> may need to be installed first to ensure that all development stuff is correctly installed from feature branches.
    A user action (with the PATO GUI) for APEX and/or database is needed in ANOTHER SESSION.
@@ -91,8 +95,8 @@ This is a prompted workflow, meaning that at every step the user is asked to do 
    b. tag the resulting branch with "\`basename \$0 .sh\`-\`date -I\`" (for example pato-git-workflow-2025-03-04)
 4. Now every protected branch has the new code, so just install the branches m, 1 < m <= N. Please note that branch 1 has already been installed.
 
-Option release invokes release_init (steps 0 till 3) to prepare the release and then release_exec (step 4) to execute it.
-This allows to prepare and execute a release on different moments.
+Option release invokes release_backup (step 0) and release_copy (steps 1 till 3) to prepare the release and then release_install to install it (step 4).
+This allows for initializing, copying and installing a release on different moments.
 
 ENVIRONMENT VARIABLES
 =====================
@@ -390,7 +394,7 @@ merge_abort() {
     _x git merge --abort
 }
 
-release_init() {
+release_backup() {
     declare -r branches=$*
     declare from=
     declare to=
@@ -431,6 +435,16 @@ release_init() {
 
         from=$to
     done
+}
+
+release_copy() {
+    declare -r branches=$*
+    declare from=
+    declare to=
+    declare release=
+    declare export=
+
+    _check_no_changes
 
     # steps 1, 2 and 3 from usage for release
     from=
@@ -470,7 +484,7 @@ release_init() {
     done
 }
 
-release_exec() {
+release_install() {
     declare -r branches=$*
     declare from=
     declare to=
@@ -493,8 +507,9 @@ release_exec() {
 }
 
 release() {
-    release_init "$@"
-    release_exec "$@"
+    release_backup "$@"
+    release_copy "$@"
+    release_install "$@"
 }
 
 # ----
@@ -525,7 +540,7 @@ case "$command" in
         test $# -ge 2 || usage 1
         $command $*
         ;;
-    release | release_init | release_exec)
+    release | release_backup | release_copy | release_install)
         test $# -ge 2 || usage 1
         $command $*
         ;;
