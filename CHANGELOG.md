@@ -15,6 +15,22 @@ Types of changes:
 
 ## [Unreleased]
 
+- [Some private synonyms are not recognised during DDL export.](https://github.com/paulissoft/oracle-tools/issues/195)
+
+## [4.3.1] - 2025-04-07
+
+- [It is necessary to purge the Flyway history table.](https://github.com/paulissoft/oracle-tools/issues/192)
+
+## [4.3.0] - 2025-02-05
+
+### Added
+
+- [Create a git workflow script.](https://github.com/paulissoft/oracle-tools/issues/194)
+
+### Fixed
+
+- [The Flyway purge operation fails.](https://github.com/paulissoft/oracle-tools/issues/193)
+
 ## [4.2.0] - 2025-01-10
 
 ### Added
