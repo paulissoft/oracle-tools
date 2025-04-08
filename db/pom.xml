@@ -428,8 +428,8 @@
                 <id>db-purge-flyway-table</id>
                 <!-- GJP 2025-01-16 disable -->
                 <!-- GJP 2025-02-12 disable again for installing into BC_BO@BC_PRD -->
-                <!--phase>none</phase-->
-                <phase>${db.phase.process}</phase>
+                <phase>none</phase>
+                <!--phase>${db.phase.process}</phase-->
                 <goals>
                   <goal>execute</goal>
                 </goals>
