@@ -17,7 +17,15 @@ Types of changes:
 
 - [Some private synonyms are not recognised during DDL export.](https://github.com/paulissoft/oracle-tools/issues/195)
 
+## [4.3.2] - 2025-04-08
+
+### Fixed
+
+- [It is necessary to purge the Flyway history table.](https://github.com/paulissoft/oracle-tools/issues/192)
+
 ## [4.3.1] - 2025-04-07
+
+### Fixed
 
 - [It is necessary to purge the Flyway history table.](https://github.com/paulissoft/oracle-tools/issues/192)
 
