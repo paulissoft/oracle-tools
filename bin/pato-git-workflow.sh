@@ -10,8 +10,6 @@ USAGE
 $0 <COMMAND> [ <OPTIONS> ]
 
 Git workflow based on a LOCAL and CLEAN repository workspace.
-The remote repository will NEVER be updated since that is your responsability.
-You can update (push) the remote repository either using some GUI or the git command line tool.
 
 You can debug what is going by setting environment variable DEBUG.
 
