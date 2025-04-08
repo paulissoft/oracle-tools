@@ -111,7 +111,12 @@
                       <available file="${db.src.full.scripts}" type="dir" />
                     </not>
                   </condition>
-                  <property name="db.install.skip" value="${conf.connect.skip}" />
+                  <condition property="db.phase.purge.flyway.table" value="none" else="${db.phase.process}">
+                    <not>
+                      <available file="${db.src.full.scripts}" type="dir" />
+                    </not>
+                  </condition>
+                  <property name="db.install.skip" value="${conf.connect.skip}" />                  
                 </target>
               </configuration>
               <goals>
@@ -365,6 +370,8 @@
             <url>${db.url}</url>
             <username>${db.username}</username>
             <password>${db.password}</password>
+            <skip>${db.install.skip}</skip>
+            <skipOnConnectionError>true</skipOnConnectionError>
           </configuration>
         </plugin>
       </plugins>
@@ -426,10 +433,8 @@
             <executions>
               <execution>
                 <id>db-purge-flyway-table</id>
-                <!-- GJP 2025-01-16 disable -->
-                <!-- GJP 2025-02-12 disable again for installing into BC_BO@BC_PRD -->
-                <phase>none</phase>
-                <!--phase>${db.phase.process}</phase-->
+                <!-- GJP 2025-04-08 enable but with phase ${db.phase.purge.flyway.table} set above -->
+                <phase>${db.phase.purge.flyway.table}</phase>
                 <goals>
                   <goal>execute</goal>
                 </goals>
