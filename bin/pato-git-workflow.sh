@@ -444,7 +444,7 @@ release_copy() {
 
     _check_no_changes
 
-    # steps 1, 2 and 3 from usage for release
+    # steps 1, 2 from usage for release
     from=
     for to in $branches
     do
@@ -467,7 +467,19 @@ release_copy() {
             # step 2c
             _prompt "Pushing branch $release"
             _x git push
+        fi
+        
+        from=$to
+    done
 
+    # step 3 from usage for release
+    from=
+    release=
+    for to in $branches
+    do
+        if [[ -n "$from" ]]
+        then
+            release="release/$from-$to"
             # step 3 from usage for release
             # step 3a
             _pull_request $release $to
