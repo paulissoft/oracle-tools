@@ -44,6 +44,12 @@ as
     , p_units => 'rows'
     , p_target_desc => l_program
     );
+    
+  procedure cleanup
+  is
+  begin
+    ddl_crud_api.reset_parallel_status;
+  end cleanup;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT);
@@ -72,6 +78,8 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , dbms_lob.getlength(lob_loc => pi_include_objects)
   );
 $end
+
+  ddl_crud_api.disable_parallel_status;
 
   dbms_lob.createtemporary(po_clob, true);
 
@@ -209,12 +217,15 @@ $end
     raise_application_error(oracle_tools.pkg_ddl_error.c_could_not_process_interface, 'Could not process interface ' || pi_interface);
   end if;
 
+  cleanup;
+
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
 exception
   when others
   then
+    cleanup;
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.leave_on_error;
 $end
