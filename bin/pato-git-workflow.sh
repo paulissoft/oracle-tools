@@ -344,7 +344,7 @@ copy() {
     if ! _ignore_stderr git checkout -b $to $from
     then
         # delete local and remote branch (just pointers)
-        _prompt "Remove local (and remote) branch $to before re-creating it from branch $from"
+        _prompt "This script is about to remove local (and remote) branch $to before re-creating it from branch $from"
         _x git branch -D $to
         _x git push origin --delete $to || true
         _x git checkout -b $to $from
@@ -352,7 +352,7 @@ copy() {
     _x git push --set-upstream origin $to
     if [[ -n "${DEBUG:-}" ]]
     then
-        _prompt "Showing \"git diff $from $to\" for both local and remote branches"
+        _prompt "This script is about to show \"git diff $from $to\" for both local and remote branches"
         _x git diff --name-status $from $to
         _x git diff --name-status origin/$from origin/$to
     fi
@@ -371,7 +371,7 @@ merge() {
 
     # merge the changes made to $to in the meantime back into $from before we will merge back
     _switch $from
-    _x git merge $to || _prompt "Fix the conflicts"
+    _x git merge $to || _prompt "You must fix the conflicts"
     _x git commit -m "Make $from up to date with $to" || true
 
     # now the real merge
@@ -381,7 +381,7 @@ merge() {
         _x git merge $options $from
     else
         # to merge into a protected branch we need a Pull Request
-        _prompt "Pushing branch $from"
+        _prompt "This script is about to push branch $from"
         _x git push # push $from to remote
         _switch $to # must be on a branch named differently than "release/acceptance-main"
         _pull_request $from $to
@@ -427,8 +427,8 @@ release_backup() {
             
         export="export/$to"
         copy $to $export
-        _prompt "Please create a backup export (APEX and/or database) in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
-        _prompt "Pushing branch $export"
+        _prompt "You must create a backup export (APEX and/or database) in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+        _prompt "This script is about to push branch $export"
         _x git push
 
         from=$to
@@ -463,9 +463,9 @@ release_copy() {
             release="release/$from-$to"
             copy $from $release
             # step 2b
-            _prompt "Please create a release export (APEX and/or database) in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+            _prompt "You must create a release export (APEX and/or database) in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
             # step 2c
-            _prompt "Pushing branch $release"
+            _prompt "This script is about to push branch $release"
             _x git push
         fi
         
@@ -487,7 +487,7 @@ release_copy() {
             _tag
             url=$(git config --get remote.origin.url)
             url=$(basename $url .git)
-            _prompt "Please ensure that the Pull Request from $release to $to has been accepted (go to $url)"
+            _prompt "You must ensure that the Pull Request from $release to $to has been accepted (go to $url)"
         fi
         
         from=$to
@@ -509,7 +509,7 @@ release_install() {
         then
             # install all except the first branch
             _switch $to
-            _prompt "Install branch $to first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+            _prompt "You must install branch $to first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
         fi
         
         from=$to
