@@ -662,7 +662,9 @@ end add_schema_objects;
 procedure ddl_batch_process
 is
   l_session_id constant t_session_id_nn := oracle_tools.ddl_crud_api.get_session_id;
-  l_task_name_fmt constant varchar2(100 byte) := $$PLSQL_UNIT || '.DDL_BATCH-';
+  -- ORA-27452: "SCHEMA_OBJECTS_API.DDL_BATCH-3436872617-STOP" is an invalid name for a database object.
+  -- ORA-27452: "SCHEMA_OBJECTS_API$DDL_BATCH-1851296641-STOP" is an invalid name for a database object.
+  l_task_name_fmt constant varchar2(100 byte) := $$PLSQL_UNIT || '$DDL_BATCH$';
   l_task_name constant varchar2(100 byte) := l_task_name_fmt || to_char(l_session_id);
   l_count pls_integer;
 
@@ -753,6 +755,19 @@ $end
 $if oracle_tools.schema_objects_api.c_debugging $then
     dbug.print(dbug."info", 'stopped dbms_parallel_execute.run_task');
 $end
+
+    -- NOTE INTERRUPT: create a job to stop this task twice
+    dbms_scheduler.create_job
+    ( job_name => l_task_name || '$STOP'
+    , job_type => 'PLSQL_BLOCK'
+    , job_action => 'dbms_parallel_execute.stop_task(''' || l_task_name || ''');'
+    , number_of_arguments => 0
+    , start_date => systimestamp + interval '10' minute -- start after 10 minutes
+    , repeat_interval => 'FREQ=MINUTELY;INTERVAL=10'    -- repeat every 10 minutes
+    , end_date  => systimestamp + interval '21' minute  -- stop after 21 minutes (two times stop_task)
+    , enabled => true
+    , auto_drop => true
+    );
 
     -- If there is error, RESUME it for at most 2 times.
     <<try_loop>>

@@ -22,7 +22,7 @@ g_min_timestamp_to_keep constant oracle_tools.generate_ddl_sessions.created%type
 
 subtype t_parallel_status_tab is dbms_sql.varchar2s;
 
-g_parallel_status_tab t_parallel_status_tab;
+g_parallel_status_tab t_parallel_status_tab; -- a stack of parallel status values for DML, DDL and QUERY
 
 function get_schema_object_filter_id
 ( p_session_id in t_session_id_nn
@@ -729,12 +729,13 @@ $end
 end add_schema_object_tab;
 
 procedure get_parallel_status
-( p_parallel_status_tab out nocopy t_parallel_status_tab
+( p_parallel_status_tab in out nocopy t_parallel_status_tab -- push three parallel status values
 )
 is
 $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'GET_PARALLEL_STATUS';
 $end
+  l_old_count constant simple_integer := p_parallel_status_tab.count; -- old count at the start of this call
 begin
 $if oracle_tools.ddl_crud_api.c_tracing $then
   dbug.enter(l_module_name);
@@ -743,9 +744,9 @@ $end
   select  s.pdml_status
   ,       s.pddl_status
   ,       s.pq_status
-  into    p_parallel_status_tab(1)
-  ,       p_parallel_status_tab(2)
-  ,       p_parallel_status_tab(3)
+  into    p_parallel_status_tab(l_old_count+1)
+  ,       p_parallel_status_tab(l_old_count+2)
+  ,       p_parallel_status_tab(l_old_count+3)
   from    v$session s
   where   s.audsid = c_session_id;
 
@@ -754,9 +755,9 @@ $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print
   ( dbug."output"
   , 'Parallel DML: %s; parallel DDL: %s; parallel query: %s'
-  , p_parallel_status_tab(1)
-  , p_parallel_status_tab(2)
-  , p_parallel_status_tab(3)
+  , p_parallel_status_tab(l_old_count+1)
+  , p_parallel_status_tab(l_old_count+2)
+  , p_parallel_status_tab(l_old_count+3)
   );
 $end  
   dbug.leave;
@@ -769,12 +770,13 @@ $end
 end get_parallel_status;
 
 procedure set_parallel_status
-( p_parallel_status_tab in out nocopy t_parallel_status_tab
+( p_parallel_status_tab in out nocopy t_parallel_status_tab -- pop three parallel status values
 )
 is
   l_type varchar2(10 byte) := null;
   l_status varchar2(10 byte) := null;
-
+  l_new_count constant simple_integer := p_parallel_status_tab.count - 3; -- new count after this call returns
+  
 $if oracle_tools.ddl_crud_api.c_tracing $then
   l_module_name constant dbug.module_name_t := $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || 'SET_PARALLEL_STATUS';
 $end
@@ -785,28 +787,28 @@ $if oracle_tools.ddl_crud_api.c_debugging $then
   dbug.print
   ( dbug."input"
   , 'Parallel DML: %s; parallel DDL: %s; parallel query: %s'
-  , p_parallel_status_tab(1)
-  , p_parallel_status_tab(2)
-  , p_parallel_status_tab(3)
+  , p_parallel_status_tab(l_new_count+1)
+  , p_parallel_status_tab(l_new_count+2)
+  , p_parallel_status_tab(l_new_count+3)
   );
 $end  
 $end
 
-  for i_idx in 1..3
+  for i_idx in reverse l_new_count+1 .. l_new_count+3
   loop    
     case 
       when upper(p_parallel_status_tab(i_idx)) in ('ENABLE' , 'ENABLED' ) then l_status := 'enable';
       when upper(p_parallel_status_tab(i_idx)) in ('DISABLE', 'DISABLED') then l_status := 'disable';
     end case;
     l_type :=
-      case i_idx
+      case i_idx - l_new_count
         when 1 then 'dml'
         when 2 then 'ddl'
         when 3 then 'query'
       end;
     execute immediate 'alter session ' || l_status || ' parallel ' || l_type;  
+    p_parallel_status_tab.delete(i_idx); -- so we don't call reset again without a disable first
   end loop;
-  p_parallel_status_tab.delete; -- so we don't call reset again without a disable first
 
 $if oracle_tools.ddl_crud_api.c_tracing $then
   dbug.leave;
