@@ -401,7 +401,7 @@ _release_state_file_reuse() { # usage: PROTECTED_BRANCHE_1 ... PROTECTED_BRANCHE
         read -p "Do you want to reuse the previous state (from file ${release_state_file}) ? [Y] " yes_no
         case "${yes_no}" in
             n | N)
-                rm {release_state_file}
+                rm ${release_state_file}
                 ;;
             *)
                 :
@@ -413,7 +413,7 @@ _release_state_file_reuse() { # usage: PROTECTED_BRANCHE_1 ... PROTECTED_BRANCHE
 _release_state_file_cleanup() { # usage: PROTECTED_BRANCHE_1 ... PROTECTED_BRANCHE_N
     declare -r release_state_file="target/$(basename $0 .sh)-release-$(echo $* | sed -e 's/ /-/g').txt"
 
-    test ! -f ${release_state_file} || rm {release_state_file}
+    test ! -f ${release_state_file} || rm ${release_state_file}
 }
 
 _release_step_exists() { # usage: RELEASE_STEP PROTECTED_BRANCHE_1 ... PROTECTED_BRANCHE_N
@@ -459,7 +459,6 @@ release_backup() {
                     "test|acceptance" | \
                     "acceptance|main" | \
                     "acceptance|master")
-                    echo "Releasing from $from to $to"
                     ;;
                 *)
                     _error "Wrong combination for release: $from => $to"
@@ -640,7 +639,7 @@ case "$command" in
         test $# -ge 2 || usage 1
         _release_state_file_reuse $*
         $command $*
-        _release_state_file_cleanup $* # on success
+        [[ $command != "release" ]] || _release_state_file_cleanup $* # on success remove for release only
         ;;
     *)
         _error "Unknown command ($command)"
