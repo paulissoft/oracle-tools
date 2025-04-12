@@ -25,9 +25,6 @@ These are the options:
 - merge (from/to a branch)
 - merge_abort
 - release (from lowest to highest protected branch)
-- release_backup (from lowest to highest protected branch)
-- release_copy (from lowest to highest protected branch)
-- release_install (from lowest to highest protected branch)
 
 
 info
@@ -72,13 +69,12 @@ Issues "git merge --abort".
 
 
 release <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
-release_backup <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
-release_copy <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
-release_install <protected_branch_1> <protected_branch_2> ... <protected_branch_N>
 --------------------------------------------------------------------------
 All branches must be protected.
 The branch <protected_branch_1> will usually be 'development', <protected_branch_2> 'acceptance' and <protected_branch_3> 'main' or 'master' (N = 3).
 This is a prompted workflow, meaning that at every step the user is asked to do something.
+While executing the steps, a release state file is updated so you restart from where you left in case of an error (or quitting from your side).
+This file is located in the \`target\` folder and starts with \`pato-git-workflow\`.
 
 These are the steps:
 0. Each branch <protected_branch_n> will be copied to export/<protected_branch_n> and the user will be asked to create an export using the PATO GUI (export APEX and generate DDL). This is a safety measure that is MANDATORY.
@@ -93,8 +89,6 @@ These are the steps:
    b. tag the resulting branch with "\`basename \$0 .sh\`-\`date -I\`" (for example pato-git-workflow-2025-03-04)
 4. Now every protected branch has the new code, so just install the branches m, 1 < m <= N. Please note that branch 1 has already been installed.
 
-Option release invokes release_backup (step 0) and release_copy (steps 1 till 3) to prepare the release and then release_install to install it (step 4).
-This allows for initializing, copying and installing a release on different moments.
 
 ENVIRONMENT VARIABLES
 =====================
@@ -434,17 +428,21 @@ _release_step_write() { # usage: RELEASE_STEP PROTECTED_BRANCHE_1 ... PROTECTED_
     echo ${release_step} >> ${release_state_file}
 }
 
-release_backup() {
+release() {
     declare -r branches=$*
     declare from=
     declare to=
-    declare -r step=0
+    declare step=
     declare release_step=
     declare export=
-    
+    declare release=
+
     _check_no_changes
 
+    _release_state_file_reuse $*
+
     # step 0 from usage for release
+    step=0
     for to in $branches
     do
         _check_upstream_exists $to || _error_upstream_does_not_exist $to
@@ -486,54 +484,53 @@ release_backup() {
 
         from=$to
     done
-}
-
-release_copy() {
-    declare -r branches=$*
-    declare from=
-    declare to=
-    declare step=
-    declare release_step=
-    declare release=
     
-    _check_no_changes
-
     # steps 1, 2 from usage for release
     from=
-    step=1
     for to in $branches
     do
-        release_step="$step:$to"
+        for step in 1 2a 2b 2c
+        do
+            if [[ $step == "1" ]]
+            then
+                if [[ -n "$from" ]]; then continue; fi
+            else
+                if [[ -z "$from" ]]; then continue; fi
+            fi
 
-        if _release_step_exists $release_step $branches
-        then
-            _info "Skipping release step '${release_step}' since it already exists"
-        else            
-            if [[ -z "$from" ]]
+            release_step="$step:$to"
+
+            if _release_step_exists $release_step $branches
             then
-                # step 1 from usage for release
-                # install first branch
-                _switch $to
-                _prompt "You may need to install branch $to first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+                _info "Skipping release step '${release_step}' since it already exists"
+            else
+                case $step in
+                    1)
+                        # install first branch
+                        _switch $to
+                        _prompt "You may need to install branch $to first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+                        ;;
+
+                    2a)
+                        # copy to release branch
+                        release="release/$from-$to"
+                        copy $from $release
+                        ;;
+                    2b)
+                        # commit the release branch
+                        _prompt "You must create a release export (APEX and/or database) in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+                        _x git add .
+                        _x git commit -m "Created release $release" || true
+                        ;;
+                    2c)
+                        # push the release branch
+                        _prompt "This script is about to push branch $release"
+                        _x git push
+                        ;;
+                esac
+                _release_step_write $release_step $branches
             fi
-            
-            if [[ -n "$from" ]]
-            then
-                # step 2 from usage for release
-                # step 2a
-                release="release/$from-$to"
-                
-                copy $from $release
-                # step 2b
-                _prompt "You must create a release export (APEX and/or database) in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
-                _x git add .
-                _x git commit -m "Created release $release" || true
-                # step 2c
-                _prompt "This script is about to push branch $release"
-                _x git push
-            fi
-            _release_step_write $release_step $branches
-        fi
+        done
         
         from=$to
         step=2
@@ -544,67 +541,57 @@ release_copy() {
     step=3
     for to in $branches
     do
-        release_step="$step:$to"
+        for step in 3a 3b
+        do
+            if [[ -z "$from" ]]; then continue; fi
 
-        if _release_step_exists $release_step $branches
-        then
-            _info "Skipping release step '${release_step}' since it already exists"
-        else            
-            if [[ -n "$from" ]]
+            release_step="$step:$to"
+
+            if _release_step_exists $release_step $branches
             then
-                release="release/$from-$to"
-                # step 3 from usage for release
-                # step 3a
-                _pull_request $release $to
-                # step 3b
-                _tag
-                url=$(git config --get remote.origin.url)
-                url=$(basename $url .git)
-                _prompt "You must ensure that the Pull Request from $release to $to has been accepted (go to $url)"
+                _info "Skipping release step '${release_step}' since it already exists"
+            else
+                case $step in
+                    3a)
+                        release="release/$from-$to"
+                        _pull_request $release $to
+                        ;;
+                    3b)
+                        _tag
+                        url=$(git config --get remote.origin.url)
+                        url=$(basename $url .git)
+                        _prompt "You must ensure that the Pull Request from $release to $to has been accepted (go to $url)"
+                esac
+                _release_step_write $release_step $branches
             fi
-            _release_step_write $release_step $branches
-        fi
+        done
         
         from=$to
     done
-}
-
-release_install() {
-    declare -r branches=$*
-    declare from=
-    declare to=
-    declare -r step=4
-    declare release_step=
-    
-    _check_no_changes
 
     # step 4 from usage for release
     from=
+    step=4
     for to in $branches
     do
+        if [[ -z "$from" ]]; then continue; fi
+
         release_step="$step:$to"
 
         if _release_step_exists $release_step $branches
         then
             _info "Skipping release step '${release_step}' since it already exists"
         else            
-            if [[ -n "$from" ]]
-            then
-                # install all except the first branch
-                _switch $to
-                _prompt "You must install branch $to first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
-            fi
+            # install all except the first branch
+            _switch $to
+            _prompt "You must install branch $to first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
             _release_step_write $release_step $branches
         fi
         
         from=$to
     done
-}
 
-release() {
-    release_backup "$@"
-    release_copy "$@"
-    release_install "$@"
+    _release_state_file_cleanup $* # on success remove release state
 }
 
 # ----
@@ -635,11 +622,9 @@ case "$command" in
         test $# -ge 2 || usage 1
         $command $*
         ;;
-    release | release_backup | release_copy | release_install)
+    release)
         test $# -ge 2 || usage 1
-        _release_state_file_reuse $*
         $command $*
-        [[ $command != "release" ]] || _release_state_file_cleanup $* # on success remove for release only
         ;;
     *)
         _error "Unknown command ($command)"
