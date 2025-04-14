@@ -522,8 +522,10 @@ release() {
             if [[ $step == "1" ]]
             then
                 if [[ -n "$from" ]]; then continue; fi
+                release=
             else
                 if [[ -z "$from" ]]; then continue; fi
+                release="release/$from-$to"                        
             fi
 
             if ! _release_step_skip $to $step
@@ -535,8 +537,7 @@ release() {
                         ;;
 
                     # copy to release branch
-                    2a) release="release/$from-$to"
-                        if [[ "$first" == "$to" ]]
+                    2a) if [[ "$first" == "$to" ]]
                         then
                             copy $from $release
                         else
@@ -568,18 +569,18 @@ release() {
 
     # step 3 from usage for release
     from=
-    release=
     for to in $branches
     do
         for step in 3a 3b
         do
             if [[ -z "$from" ]]; then continue; fi
 
+            release="release/$from-$to"                        
+
             if ! _release_step_skip $to $step
             then
                 case $step in
-                    3a) release="release/$from-$to"
-                        _pull_request $release $to
+                    3a) _pull_request $release $to
                         # from Github command line help for pull request
                         _x git pull origin $to
                         _x git checkout $release
