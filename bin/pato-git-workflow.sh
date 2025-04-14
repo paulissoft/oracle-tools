@@ -301,6 +301,7 @@ _tag() {
     declare -r tag="`basename $0 .sh`-`date -I`"
     
     _x git tag $tag
+    _x git push
 }
 
 _pull_request() {
@@ -309,8 +310,12 @@ _pull_request() {
 
     if `git remote -v | grep github 1>/dev/null`
     then
-        _x gh pr create --title "$from => $to" --editor --head $from --base $to
-        _x gh pr view --web $from
+        if _x gh pr create --title "$from => $to" --editor --head $from --base $to
+        then
+            _x gh pr view --web $from
+        else
+            _prompt "Something went wrong"
+        fi
     elif `git remote -v | grep azure 1>/dev/null`
     then
         _x az repos pr create \
@@ -576,10 +581,12 @@ release() {
                     3a) release="release/$from-$to"
                         _pull_request $release $to
                         ;;
-                    3b) _tag
-                        url=$(git config --get remote.origin.url)
+                    3b) url=$(git config --get remote.origin.url)
                         url=$(basename $url .git)
                         _prompt "You must ensure that the Pull Request from $release to $to has been accepted (go to $url)"
+                        _switch $to
+                        _tag
+                        ;;
                 esac
                 _release_step_write $to $step
             fi
