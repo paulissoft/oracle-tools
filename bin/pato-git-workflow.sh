@@ -310,7 +310,7 @@ _pull_request() {
     if `git remote -v | grep github 1>/dev/null`
     then
         _x gh pr create --title "$from => $to" --editor --head $from --base $to
-        _x gh pr view --web
+        _x gh pr view --web $from
     elif `git remote -v | grep azure 1>/dev/null`
     then
         _x az repos pr create \
@@ -451,6 +451,7 @@ _release_step_write() { # usage: BRANCH STEP
 
     [[ -d target ]] || mkdir target
     echo "${branch}:${step}" >> ${release_state_file}
+    _info "Finished step ${step} for branch ${branch}"
 }
 
 release() {
@@ -562,6 +563,7 @@ release() {
 
     # step 3 from usage for release
     from=
+    release=
     for to in $branches
     do
         for step in 3a 3b
