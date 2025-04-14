@@ -580,9 +580,16 @@ release() {
                 case $step in
                     3a) release="release/$from-$to"
                         _pull_request $release $to
+                        # from Github command line help for pull request
+                        _x git pull origin $to
+                        _x git checkout $release
+                        _x git merge $to -X ours
+                        _prompt "You must fix any existing conflicts (using GitHub Desktop for instance)"
+                        _x git push -u origin $release
                         ;;
                     3b) url=$(git config --get remote.origin.url)
                         url=$(basename $url .git)
+                        _switch $to
                         _prompt "You must ensure that the Pull Request from $release to $to has been accepted (go to $url)"
                         _switch $to
                         _tag
