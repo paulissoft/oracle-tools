@@ -17,6 +17,12 @@ Types of changes:
 
 - [Some private synonyms are not recognised during DDL export.](https://github.com/paulissoft/oracle-tools/issues/195)
 
+## [4.4.1] - 2025-04-15
+
+### Fixed
+
+- [The DDL generation fails to create a job with error message ORA-27486: insufficient privileges.](https://github.com/paulissoft/oracle-tools/issues/206)
+
 ## [4.4.0] - 2025-04-15
 
 ### Added

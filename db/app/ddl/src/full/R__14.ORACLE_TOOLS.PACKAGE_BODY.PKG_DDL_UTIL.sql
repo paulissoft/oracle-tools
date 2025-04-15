@@ -5800,17 +5800,26 @@ $if oracle_tools.pkg_ddl_defs.c_debugging >= 1 $then
 $end
 
         -- NOTE INTERRUPT: create a job to stop this task twice
-        dbms_scheduler.create_job
-        ( job_name => l_task_name || '$STOP'
-        , job_type => 'PLSQL_BLOCK'
-        , job_action => 'dbms_parallel_execute.stop_task(''' || l_task_name || ''');'
-        , number_of_arguments => 0
-        , start_date => systimestamp + interval '10' minute -- start after 10 minutes
-        , repeat_interval => 'FREQ=MINUTELY;INTERVAL=10'    -- repeat every 10 minutes
-        , end_date  => systimestamp + interval '21' minute  -- stop after 21 minutes (two times stop_task)
-        , enabled => true
-        , auto_drop => true
-        );
+        declare
+          -- ORA-27486: insufficient privileges
+          e_insufficient_privileges exception;
+          pragma exception_init(e_insufficient_privileges, -27486);
+        begin
+          dbms_scheduler.create_job
+          ( job_name => l_task_name || '$STOP'
+          , job_type => 'PLSQL_BLOCK'
+          , job_action => 'dbms_parallel_execute.stop_task(''' || l_task_name || ''');'
+          , number_of_arguments => 0
+          , start_date => systimestamp + interval '10' minute -- start after 10 minutes
+          , repeat_interval => 'FREQ=MINUTELY;INTERVAL=10'    -- repeat every 10 minutes
+          , end_date  => systimestamp + interval '21' minute  -- stop after 21 minutes (two times stop_task)
+          , enabled => true
+          , auto_drop => true
+          );
+        exception
+          when e_insufficient_privileges
+          then null;
+        end;
 
         -- If there is error, RESUME it for at most 2 times.
         -- See NOTE INTERRUPT above about interrupting twice.
