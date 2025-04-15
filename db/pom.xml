@@ -111,11 +111,6 @@
                       <available file="${db.src.full.scripts}" type="dir" />
                     </not>
                   </condition>
-                  <condition property="db.phase.purge.flyway.table" value="none" else="${db.phase.process}">
-                    <not>
-                      <available file="${db.src.full.scripts}" type="dir" />
-                    </not>
-                  </condition>
                   <property name="db.install.skip" value="${conf.connect.skip}" />                  
                 </target>
               </configuration>
@@ -428,24 +423,47 @@
             <artifactId>flyway-maven-plugin</artifactId>
           </plugin>
           <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>sql-maven-plugin</artifactId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>${maven-antrun-plugin.version}</version>
             <executions>
               <execution>
                 <id>db-purge-flyway-table</id>
-                <!-- GJP 2025-04-08 enable but with phase ${db.phase.purge.flyway.table} set above -->
-                <phase>${db.phase.purge.flyway.table}</phase>
-                <goals>
-                  <goal>execute</goal>
-                </goals>
+                <phase>${db.phase.process}</phase>
                 <configuration>
-                  <autocommit>true</autocommit>
-                  <onError>continue</onError> <!-- when not installed yet for instance -->
-                  <sqlCommand>
-                    select oracle_tools.cfg_install_pkg.purge_flyway_table('"${flyway.table}"', ${nr_months_to_keep.flyway.table}) as "# rows purged from ${flyway.table}" from dual;
-                  </sqlCommand>
-                  <printResultSet>true</printResultSet>
+                  <target unless="${db.install.skip}">
+                    <fail message="Property db.userid must be set" unless="db.userid" />
+                    <fail message="Property db.password must be set" unless="db.password" />
+                    
+                    <!-- GPA 2017-04-05 We must quote arguments with spaces on Windows. -->
+                    <condition property="quote" value="&quot;" else="">
+                      <os family="windows" />
+                    </condition>
+
+                    <!-- sql.home is already set -->
+                    <condition property="my.sql.home" value="${sql.home}">
+                      <available file="${sql.home}/bin/sql" type="file" />
+                    </condition>
+                    <condition property="my.sql.home" value="${env.SQL_HOME}">
+                      <available file="${env.SQL_HOME}/bin/sql" type="file" />
+                    </condition>
+                    <condition property="sql.executable" value="${my.sql.home}/bin/sql.exe" else="${my.sql.home}/bin/sql">
+                      <os family="windows"/>
+                    </condition>
+
+                    <exec executable="${sql.executable}"
+                          inputstring="${db.password}"
+                          failonerror="true">                     
+                      <arg value="-S" /> <!-- silent -->
+                      <arg value="${quote}${db.userid}${quote}" />
+                      <arg value="@${oracle-tools.db.src.dir}/scripts/purge_flyway_table.sql" />
+                      <arg value="${flyway.table}" />
+                      <arg value="${nr_months_to_keep.flyway.table}" />
+                    </exec>
+                  </target>
                 </configuration>
+                <goals>
+                  <goal>run</goal>
+                </goals>
               </execution>
             </executions>
           </plugin>

@@ -17,6 +17,20 @@ Types of changes:
 
 - [Some private synonyms are not recognised during DDL export.](https://github.com/paulissoft/oracle-tools/issues/195)
 
+## [4.4.0] - 2025-04-15
+
+### Added
+
+- [The PATO Git workflow for the release command must be able to restart from where it left after an interruption.](https://github.com/paulissoft/oracle-tools/issues/204)
+
+### Fixed
+
+- [Error during DDL generation (ORA-12838: cannot read/modify an object after modifying it in parallel).](https://github.com/paulissoft/oracle-tools/issues/199)
+- [Error while creating APEX export.](https://github.com/paulissoft/oracle-tools/issues/200)
+- [PATO Git workflow for command option release will now replace all but the first protected branch.](https://github.com/paulissoft/oracle-tools/issues/201)
+- [DDL script generation keeps hanging.](https://github.com/paulissoft/oracle-tools/issues/202)
+- [Purging the Flyway table will now be executed by Oracle SQLcl.](https://github.com/paulissoft/oracle-tools/issues/203)
+
 ## [4.3.2] - 2025-04-08
 
 ### Fixed
