@@ -189,6 +189,8 @@ The following properties are only important during export:
             <arg value="@{sqlarg1}" />
             <arg value="@{sqlarg2}" />
             <arg value="@{sqlarg3}" />
+            <!-- Oracle clients love NLS_LANG -->
+            <env key="NLS_LANG" value="American_America.UTF8"/>
           </exec>
           <record name="${@{name}.file}" action="stop"/>
           <fail>
@@ -205,6 +207,8 @@ The following properties are only important during export:
                 failonerror="false"
                 spawn="false">
             <arg value="-V" /> <!-- show version -->
+            <!-- Oracle clients love NLS_LANG -->
+            <env key="NLS_LANG" value="American_America.UTF8"/>
           </exec>
           <!-- Fail anyhow -->
           <fail message="${@{name}.error}"/>
@@ -356,6 +360,8 @@ The following properties are only important during export:
                     <arg value="@{sqlfile}" />
                     <arg value="@{sqlarg1}" />
                     <arg value="@{sqlarg2}" />
+                    <!-- Oracle clients love NLS_LANG -->
+                    <env key="NLS_LANG" value="American_America.UTF8"/>
                   </exec>
                 </then>
                 <else>
@@ -369,6 +375,8 @@ The following properties are only important during export:
                     <arg value="@{sqlarg1}" />
                     <arg value="@{sqlarg2}" />
                     <arg value="@{sqlarg3}" />
+                    <!-- Oracle clients love NLS_LANG -->
+                    <env key="NLS_LANG" value="American_America.UTF8"/>
                   </exec>
                 </else>
               </ac:if>
@@ -456,9 +464,10 @@ The following properties are only important during export:
     <!-- Following command may create ${output.file} or not depending on SQL version -->
     <sqlcl name="export"
            dir="${output.dir}"
-           sqlfile='@${basedir}/export.sql'
+           sqlfile='@${basedir}/export_apex.sql'
            sqlarg1='"${workspace}"'
-           sqlarg2='"${application}"'/>
+           sqlarg2='"${application}"'
+           sqlarg3='"${basedir}"'/>
   </target>
 
   <!-- export solution with oracle.apex.APEXExport class -->

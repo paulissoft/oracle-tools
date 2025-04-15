@@ -18,7 +18,7 @@
     <!-- this project uses Flyway placeholders -->
     <!--db.generate.ddl.full.skip>true</db.generate.ddl.full.skip-->
     <db.object.names.include>1</db.object.names.include>
-    <db.object.names>UI_RESET_PWD_JOB,UI_APEX_MESSAGES_PKG,UI_APEX_SYNCHRONIZE,UI_ERROR_PKG,UI_SESSION_PKG,UI_USER_MANAGEMENT_PKG,UI_APEX_MESSAGES_V,UI_APEX_MESSAGES_TRG</db.object.names>
+    <db.object.names>UI_RESET_PWD_JOB,UI_APEX_MESSAGES_PKG,UI_APEX_SYNCHRONIZE,UI_ERROR_PKG,UI_SESSION_PKG,UI_USER_MANAGEMENT_PKG,UI_APEX_MESSAGES_V,UI_APEX_MESSAGES_TRG,TMP_EXPORT_APEX</db.object.names>
     <db.test.phase>test</db.test.phase>
   </properties>
 
