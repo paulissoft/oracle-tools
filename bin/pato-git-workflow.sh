@@ -91,14 +91,14 @@ These are the steps:
    A database install (with the PATO GUI) is needed in ANOTHER SESSION.
 2. Next every branch n will be released to release/<protected_branch_n>-<protected_branch_m> (m = n+1):
    a. using the copy command first, see above (no user action needed):
-      the first release branch will copy from modified (due to the database install in step 1) protected_branch_1,
-      the rest from export/protected_branch_n (n > 1)
-   b. export APEX and/or database (generate DDL) next (for environment protected_branch_1)
+      the first release branch will copy from the modified <protected_branch_1> (due to the database install in step 1),
+      the rest from export/<protected_branch_n> (n > 1)
+   b. export APEX and/or database (generate DDL) next (for branch/environment <protected_branch_1> only)
       using the PATO GUI (user action in ANOTHER SESSION)
    c. pushing the changes back to the GitHub repo (no user action needed)
 3. Next every release branch (release/<protected_branch_n>-<protected_branch_m>) is merged into <protected_branch_m> (m = n+1):
-   a. use a Pull Request
-   b. tag the resulting branch with "\`basename \$0 .sh\`-\`date -I\`" (for example pato-git-workflow-2025-03-04)
+   - by using the merge strategy 'ours', effectively replacing branch <protected_branch_m> (but keeping history)
+   - the resulting branch will be tagged with "\`basename \$0 .sh\`-\`date -I\`" (for example pato-git-workflow-2025-03-04)
 4. Now every protected branch has the new code, so just install the branches m, 1 < m <= N.
    Please note that branch 1 has already been installed.
 
@@ -298,10 +298,10 @@ _switch() {
 }
 
 _tag() {
-    declare -r tag="`basename $0 .sh`-`date -I`"
+    declare -r branch=${1:?}
+    declare -r tag="`basename $0 .sh`-`date -I`-${branch}"
     
     _x git tag $tag
-    _x git push
 }
 
 _pull_request() {
@@ -358,7 +358,7 @@ copy() {
     _check_branch_not_protected $to || _error_branch_protected $to
     _check_no_changes
     _switch $from
-    _x git pull
+    # _x git pull
     
     # $from exists but $to maybe not
     if ! _ignore_stderr git checkout -b $to $from
@@ -376,6 +376,7 @@ copy() {
         _x git diff --name-status $from $to
         _x git diff --name-status origin/$from origin/$to
     fi
+    _info "Copied branch $from to $to"
 }
 
 merge() {
@@ -433,7 +434,7 @@ _release_state_file_reuse() { # usage: PROTECTED_BRANCHE_1 ... PROTECTED_BRANCHE
 }
 
 _release_state_file_cleanup() {
-    test ! -f ${release_state_file} || rm ${release_state_file}
+    test ! -f ${release_state_file} || mv ${release_state_file} "${release_state_file}~"
 }
 
 _release_step_skip() { # usage: BRANCH STEP
@@ -569,36 +570,33 @@ release() {
 
     # step 3 from usage for release
     from=
+    step=3
     for to in $branches
     do
-        for step in 3a 3b
-        do
-            if [[ -z "$from" ]]; then continue; fi
-
+        if [[ -n "$from" ]]
+        then
             release="release/$from-$to"                        
 
             if ! _release_step_skip $to $step
             then
-                case $step in
-                    3a) _pull_request $release $to
-                        # from Github command line help for pull request
-                        _x git pull origin $to
-                        _x git checkout $release
-                        _x git merge $to -X ours
-                        _prompt "You must fix any existing conflicts (using GitHub Desktop for instance)"
-                        _x git push -u origin $release
-                        ;;
-                    3b) url=$(git config --get remote.origin.url)
-                        url=$(basename $url .git)
-                        _switch $to
-                        _prompt "You must ensure that the Pull Request from $release to $to has been accepted (go to $url)"
-                        _switch $to
-                        _tag
-                        ;;
-                esac
+                _prompt "The contents of branch $to will be REPLACED (not MERGED) with the contents of $release"
+                _switch $release
+                # replace $to by $release but keep history
+                _x git merge --strategy=ours --no-commit $to
+                ! _x git commit -m"Replaced contents of branch $to by branch $release" || _x git push
+                # normal merge to $to
+                _switch $to
+                _x git merge $release
+                _prompt "You must fix any existing conflicts (using GitHub Desktop for instance)"
+                url=$(git config --get remote.origin.url)
+                url=$(basename $url .git)
+                # _switch $to
+                _tag $to
+                _x git push
+
                 _release_step_write $to $step
             fi
-        done
+        fi
         
         from=$to
     done
@@ -608,14 +606,15 @@ release() {
     step=4
     for to in $branches
     do
-        if [[ -z "$from" ]]; then continue; fi
-
-        if ! _release_step_skip $to $step
+        if [[ -n "$from" ]]
         then
-            # install all except the first branch
-            _switch $to
-            _prompt "You must install branch $to first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
-            _release_step_write $to $step
+            if ! _release_step_skip $to $step
+            then
+                # install all except the first branch
+                _switch $to
+                _prompt "You must install branch $to first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+                _release_step_write $to $step
+            fi
         fi
         
         from=$to
