@@ -361,7 +361,7 @@ copy() {
     # _x git pull
     
     # $from exists but $to maybe not
-    if ! _ignore_stderr git checkout -b $to $from
+    if ! _ignore_stderr git checkout -b $to $from || ! _ignore_stderr git push --set-upstream origin $to
     then
         # delete local and remote branch (just pointers)
         _prompt "This script is about to remove local (and remote) branch $to before re-creating it from branch $from"
@@ -369,7 +369,6 @@ copy() {
         _x git push origin --delete $to || true
         _x git checkout -b $to $from
     fi
-    _x git push --set-upstream origin $to
     if [[ -n "${DEBUG:-}" ]]
     then
         _prompt "This script is about to show \"git diff $from $to\" for both local and remote branches"
@@ -557,7 +556,7 @@ release() {
 
                     # push the release branch
                     2c) _prompt "This script is about to push branch $release"
-                        _x git push
+                        _x git push || _x git push --set-upstream origin $release
                         ;;
                 esac
                 _release_step_write $to $step
