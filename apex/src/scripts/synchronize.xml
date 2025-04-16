@@ -492,6 +492,7 @@ The following properties are only important during export:
       <arg value='${quote}${basedir}/export_plsql.pl${quote}'/>
       <arg value='${quote}${output.dir}/${output.file}${quote}'/>
     </exec>
+    <delete file="${output.dir}/${output.file}" quiet="true" />
   </target>
 
   <!-- export solution with oracle.apex.APEXExport class -->
