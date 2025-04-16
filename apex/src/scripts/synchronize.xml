@@ -489,6 +489,7 @@ The following properties are only important during export:
           failonerror="true"
           spawn="false"
           dir="${output.dir}">
+      <arg value='${quote}${basedir}/export_plsql.pl${quote}'/>
       <arg value='${quote}${output.dir}/${output.file}${quote}'/>
     </exec>
   </target>
