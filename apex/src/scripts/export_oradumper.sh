@@ -4,12 +4,10 @@ set -x
 
 declare -r srcdir=$(cd $(dirname $0) && pwd)
 
-declare -r userid=$1
-declare -r workspace_name=$2
-declare -r application=$3
+declare -r workspace_name=$1
+declare -r application=$2
 
 oradumper \
-    userid="$userid" \
     feedback=0 \
     column_heading=0 \
     enclosure_string= \
@@ -28,4 +26,4 @@ from    table
           , p_with_no_subscriptions => 0
           , p_with_comments => 0
           )
-        )" | perl $srcdir/export_plsql.pl
+        )" <<< "$USERID" | perl $srcdir/export_plsql.pl
