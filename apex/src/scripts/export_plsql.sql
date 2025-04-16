@@ -1,6 +1,5 @@
 -- &1 workspace name
 -- &2 application id
--- &3 output file
 
 set serveroutput on size unlimited format trunc
 
@@ -13,21 +12,14 @@ set define on verify off feedback off
 
 define workspace_name = '&1'
 define application_id = '&2'
-define output_file = '&3'
 
-/*
-prompt @@ pre_export.sql &&workspace_name &&application_id
-@@ pre_export.sql &&workspace_name &&application_id
-*/
-
-set heading off pagesize 0 trimspool on linesize 1000 termout off
-
-spool &output_file
+set heading off pagesize 0 trimspool on linesize 1000 termout on arraysize 1000
 
 select  line
 from    table
         ( oracle_tools.ui_apex_export_pkg.get_application
-          ( p_application_id => &application_id
+          ( p_workspace_name => '&workspace_name'
+          , p_application_id => &application_id
           , p_split => 1
           , p_with_date => 0
           , p_with_ir_public_reports => 1
@@ -40,8 +32,6 @@ from    table
           )
         );
 
-spool off
-
-undefine 1 2 3 workspace_name application_id output_file
+undefine 1 2 workspace_name application_id
 
 exit sql.sqlcode

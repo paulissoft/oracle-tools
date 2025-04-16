@@ -22,7 +22,8 @@ type item_rec_t is record
 type item_tab_t is table of item_rec_t;
 
 function get_application
-( p_application_id          in number
+( p_workspace_name          in varchar2
+, p_application_id          in number
 , p_type                    in apex_export.t_export_type       default apex_export.c_type_application_source
 , p_split                   in boolean_t                       default 0
 , p_with_date               in boolean_t                       default 0

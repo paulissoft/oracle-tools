@@ -6,7 +6,7 @@
 
 =head1 SYNOPSIS
 
-perl export_pl.sql FILE...
+cat FILE | perl export_pl.sql 
 
 =head1 DESCRIPTION
 
@@ -25,6 +25,7 @@ the file ($2) must be created with as content the lines following this header li
 
 =cut
 
+use strict;
 use autodie;
 use warnings;
 use IO::File;
@@ -34,7 +35,7 @@ use File::Basename;
 my ($fh, $description, $file) = (undef, undef, undef);
 my $debug = 0;
 
-while (<>) {
+while (<STDIN>) {
     # print STDERR $_;
     if (m!^-- === (file \d+): (.+) ===$!) {
         ($description, $file) = ($1, $2);
@@ -56,7 +57,7 @@ while (<>) {
 
         print STDOUT "opened $file\n"
             if ($debug);
-    } elsif ($fh) {
+    } elsif (defined($fh)) {
         $fh->print($_);
 
         print STDOUT "written $_ to $file\n"

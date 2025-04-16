@@ -2,7 +2,8 @@ CREATE OR REPLACE PACKAGE BODY "UI_APEX_EXPORT_PKG"
 as
 
 function get_application
-( p_application_id          in number
+( p_workspace_name          in varchar2
+, p_application_id          in number
 , p_type                    in apex_export.t_export_type       default apex_export.c_type_application_source
 , p_split                   in boolean_t                       default 0
 , p_with_date               in boolean_t                       default 0
@@ -45,6 +46,8 @@ begin
   execute immediate q'[alter session set nls_numeric_characters = '.,']';
 
   l_error_rec.code := 'ERROR';
+
+  ui_apex_synchronize.pre_export(upper(p_workspace_name), p_application_id, false, true);
   
   <<try_loop>>
   for i_try in 1..l_max_tries
