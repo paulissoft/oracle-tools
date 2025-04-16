@@ -85,6 +85,11 @@ The following properties are only important during export:
     <condition property="my.sql.home" value="${env.SQL_HOME}">
       <available file="${env.SQL_HOME}/bin/sql" type="file" />
     </condition>
+
+    <!--property name="export.sqlcl.apex" value="true" /-->
+    <property name="export.sqlcl.plsql" value="true" />
+    <!--property name="export.java" value="true" /-->
+
     <condition property="sql.executable" value="${my.sql.home}/bin/sql.exe" else="${my.sql.home}/bin/sql">
       <os family="windows"/>
     </condition>
@@ -459,21 +464,39 @@ The following properties are only important during export:
   <!-- export solution with Java SqlCli class -->
   <target name="export-sqlcl"
           depends="init-export"
-          if="my.sql.home">
+          if="export.sqlcl.apex">
     <echo message="(synchronize.xml.export-sqlcl) Writing Apex export of application ${application}" />
     <!-- Following command may create ${output.file} or not depending on SQL version -->
     <sqlcl name="export"
            dir="${output.dir}"
-           sqlfile='@${basedir}/export_apex.sql'
+           sqlfile='@${basedir}/export.sql'
            sqlarg1='"${workspace}"'
-           sqlarg2='"${application}"'
-           sqlarg3='"${basedir}"'/>
+           sqlarg2='"${application}"'/>
+  </target>
+
+  <target name="export-plsql"
+          depends="init-export"
+          if="export.sqlcl.plsql">
+    <echo message="(synchronize.xml.export-plsql) Writing Apex export of application ${application}" />
+    <!-- Following command may create ${output.file} or not depending on SQL version -->
+    <sqlcl name="export"
+           dir="${output.dir}"
+           sqlfile='@${basedir}/export_plsql.sql'
+           sqlarg1='${quote}${workspace}${quote}'
+           sqlarg2='${quote}${application}${quote}'
+           sqlarg3='${quote}${output.dir}/export_plsql.txt${quote}'/>
+    <exec executable="perl"
+          failonerror="true"
+          spawn="false"
+          dir="${output.dir}">
+      <arg value='${quote}${output.dir}/export_plsql.txt${quote}'/>
+    </exec>
   </target>
 
   <!-- export solution with oracle.apex.APEXExport class -->
   <target name="export-java"
           depends="init-export,init-split-userid"
-          unless="my.sql.home">
+          if="export.java">
     <echo message="(synchronize.xml.export-java)" />
 
     <!-- first run pre_export.sql to apply seed translations and publish the
@@ -507,7 +530,7 @@ The following properties are only important during export:
   </target>
 
   <target name="export"
-          depends="init,init-split-userid,export-java,export-sqlcl"
+          depends="init,init-split-userid,export-java,export-sqlcl,export-plsql"
           description="export">
     <echo message="(synchronize.xml.export)" />
     <fail message="Error creating temporary export directory ${output.dir}/${output.file.base}">
