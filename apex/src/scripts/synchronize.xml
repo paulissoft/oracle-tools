@@ -484,12 +484,12 @@ The following properties are only important during export:
            sqlfile='@${basedir}/export_plsql.sql'
            sqlarg1='${quote}${workspace}${quote}'
            sqlarg2='${quote}${application}${quote}'
-           sqlarg3='${quote}${output.dir}/export_plsql.txt${quote}'/>
+           sqlarg3='${quote}${output.dir}/${output.file}${quote}'/>
     <exec executable="perl"
           failonerror="true"
           spawn="false"
           dir="${output.dir}">
-      <arg value='${quote}${output.dir}/export_plsql.txt${quote}'/>
+      <arg value='${quote}${output.dir}/${output.file}${quote}'/>
     </exec>
   </target>
 
