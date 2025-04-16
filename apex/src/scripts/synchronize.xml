@@ -86,43 +86,50 @@ The following properties are only important during export:
       <available file="${env.SQL_HOME}/bin/sql" type="file" />
     </condition>
 
-    <condition property="oradumper" value="/usr/local/bin/oradumper" >
+    <!--
+        For APEX export try (in this order):
+        1. oradumper (with oracle_tools.ui_apex_export)
+        2. SQLcl (with oracle_tools.ui_apex_export)
+        3. SQLcl apex export ...
+        4. Java
+    -->
+    <condition property="oradumper.executable" value="/usr/local/bin/oradumper" >
       <available file="/usr/local/bin/oradumper" type="file" />
     </condition>
     <condition property="export.oradumper" value="true" >
-      <isset property="oradumper" />
+      <isset property="oradumper.executable" />
     </condition>
     <echo message="(synchronize.xml.init) export.oradumper: ${export.oradumper}" />
-
-    <condition property="export.sqlcl.apex" value="true">
-      <and>
-        <isset property="my.sql.home" />
-        <not>
-          <isset property="export.oradumper" />
-        </not>
-      </and>
-    </condition>
-    <echo message="(synchronize.xml.init) export.sqlcl.apex: ${export.sqlcl.apex}" />
 
     <condition property="export.sqlcl.plsql" value="true">
       <and>
         <isset property="my.sql.home" />
         <not>
-          <or>
-            <isset property="export.oradumper" />
-            <isset property="export.sqlcl.apex" />
-          </or>
+          <isset property="export.oradumper" />
         </not>
       </and>
     </condition>
     <echo message="(synchronize.xml.init) export.sqlcl.plsql: ${export.sqlcl.plsql}" />
 
+    <condition property="export.sqlcl.apex" value="true">
+      <and>
+        <isset property="my.sql.home" />
+        <not>
+          <or>
+            <isset property="export.oradumper" />
+            <isset property="export.sqlcl.plsql" />
+          </or>
+        </not>
+      </and>
+    </condition>
+    <echo message="(synchronize.xml.init) export.sqlcl.apex: ${export.sqlcl.apex}" />
+
     <condition property="export.java" value="true">
       <not>
         <or>
           <isset property="export.oradumper" />
-          <isset property="export.sqlcl.apex" />
           <isset property="export.sqlcl.plsql" />
+          <isset property="export.sqlcl.apex" />
         </or>
       </not>
     </condition>
@@ -507,12 +514,12 @@ The following properties are only important during export:
     <exec executable="bash"
           failonerror="true"
           spawn="false"
-          dir="${output.dir}"
-          inputstring="${my.password}">
+          dir="${output.dir}">
       <arg value="-c"/>
-      <arg value="${basedir}/export_oradumper.sh '${my.userid}' ${workspace} ${application}"/>
+      <arg value="${basedir}/export_oradumper.sh ${oradumper.executable} ${workspace} ${application}"/>
       <!-- Oracle clients love NLS_LANG -->
       <env key="NLS_LANG" value="American_America.UTF8"/>
+      <env key="USERID" value="${userid}"/>
     </exec>
   </target>
 
@@ -536,12 +543,12 @@ The following properties are only important during export:
     <exec executable="bash"
           failonerror="true"
           spawn="false"
-          dir="${output.dir}"
-          inputstring="${my.password}">
+          dir="${output.dir}">
       <arg value="-c"/>
-      <arg value="${basedir}/export_plsql.sh ${sql.executable} '${my.userid}' ${workspace} ${application}"/>
+      <arg value="${basedir}/export_plsql.sh ${sql.executable} ${workspace} ${application}"/>
       <!-- Oracle clients love NLS_LANG -->
       <env key="NLS_LANG" value="American_America.UTF8"/>
+      <env key="USERID" value="${userid}"/>
     </exec>
   </target>
 
