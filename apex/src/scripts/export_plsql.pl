@@ -28,19 +28,39 @@ the file ($2) must be created with as content the lines following this header li
 use autodie;
 use warnings;
 use IO::File;
+use File::Path qw(make_path);
+use File::Basename;
 
-my $fh = undef;
+my ($fh, $description, $file) = (undef, undef, undef);
+my $debug = 0;
 
 while (<>) {
-    if (m!^-- === (file \d+: (.+)) ===$!) {
-        my ($description, $file) = ($1, $2);
+    # print STDERR $_;
+    if (m!^-- === (file \d+): (.+) ===$!) {
+        ($description, $file) = ($1, $2);
         
-        print STDOUT "creating $description\n";
+        print STDOUT "creating $description: $file\n";
+
+        make_path(dirname($file));
+
+        print STDOUT "created directory ", dirname($file), "\n"
+            if ($debug);
+
         $fh->close
             if defined($fh);
+        
         $fh = new IO::File "> $file";
+
+        die "Could not open file $file: $!"
+            unless defined($fh);
+
+        print STDOUT "opened $file\n"
+            if ($debug);
     } elsif ($fh) {
         $fh->print($_);
+
+        print STDOUT "written $_ to $file\n"
+            if ($debug);
     }
 }
 

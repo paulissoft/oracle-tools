@@ -20,7 +20,7 @@ prompt @@ pre_export.sql &&workspace_name &&application_id
 @@ pre_export.sql &&workspace_name &&application_id
 */
 
-set heading off pagesize 0 trimspool on long 1000000 longchunksize 4000 linesize 1000
+set heading off pagesize 0 trimspool on long 1000000 longchunksize 4000 linesize 1000 termout off
 
 spool &output_file
 
