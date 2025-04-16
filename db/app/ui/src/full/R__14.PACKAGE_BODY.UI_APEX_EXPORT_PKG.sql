@@ -18,7 +18,7 @@ function get_application
 , p_components              in apex_t_varchar2                 default null
 , p_with_audit_info         in apex_export.t_audit_type        default null
 )
-return file_tab_t pipelined
+return item_tab_t pipelined
 is
 /*
 ORA-14552: cannot perform a DDL, commit or rollback inside a query or DML 
@@ -34,12 +34,18 @@ ORA-06512: at "ORACLE_TOOLS.UI_APEX_EXPORT_PKG", line 31
   
   l_files apex_t_export_files;
 
+  l_error_rec item_rec_t;
+  l_file_rec item_rec_t;
+  l_line_tab dbms_sql.varchar2a; -- The output table.
+  
   l_max_tries constant pls_integer := 3;
 begin
   -- ORA-08177: can't serialize access for this transaction
   -- https://support.oracle.com/epmos/faces/DocumentDisplay?_afrLoop=103654445502564&parent=EXTERNAL_SEARCH&sourceId=PROBLEM&id=2893264.1&_afrWindowMode=0&_adf.ctrl-state=eb5o4ic74_4
   execute immediate q'[alter session set nls_numeric_characters = '.,']';
 
+  l_error_rec.code := 'ERROR';
+  
   <<try_loop>>
   for i_try in 1..l_max_tries
   loop
@@ -67,17 +73,45 @@ begin
     exception
       when others
       then
-        pipe row (to_clob('-- === error ' || i_try || ' ==='));
-        pipe row (to_clob(sqlerrm));
+        l_error_rec.nr := l_error_rec.nr + 1;
+        l_error_rec.line# := 0;
+        l_error_rec.line := '-- === error ' || i_try || ' ===';
+        pipe row (l_error_rec);
+        
+        oracle_tools.pkg_str_util.split
+        ( p_str => to_clob(sqlerrm)
+        , p_delimiter => chr(10)
+        , p_str_tab => l_line_tab
+        );
+        for i_line_idx in l_line_tab.first .. l_line_tab.last
+        loop
+          l_error_rec.line# := l_error_rec.line# + 1;
+          l_error_rec.line := l_line_tab(i_line_idx);
+          pipe row (l_error_rec);
+        end loop;  
 
         if i_try = l_max_tries then raise; end if;        
     end;             
   end loop try_loop;
   
-  for i_idx in 1..l_files.count
+  for i_file_idx in 1..l_files.count
   loop
-    pipe row (to_clob('-- === file ' || to_char(i_idx, 'FM0000') || ': ' || l_files(i_idx).name || ' ==='));
-    pipe row (l_files(i_idx).contents);
+    l_file_rec.nr := l_file_rec.nr + 1;
+    l_file_rec.line# := 0;
+    l_file_rec.line := '-- === file ' || to_char(i_file_idx, 'FM0000') || ': ' || l_files(i_file_idx).name || ' ===';
+    pipe row (l_file_rec);
+    
+    oracle_tools.pkg_str_util.split
+    ( p_str => l_files(i_file_idx).contents
+    , p_delimiter => chr(10)
+    , p_str_tab => l_line_tab
+    );
+    for i_line_idx in l_line_tab.first .. l_line_tab.last
+    loop
+      l_file_rec.line# := l_file_rec.line# + 1;
+      l_file_rec.line := l_line_tab(i_line_idx);
+      pipe row (l_file_rec);
+    end loop;  
   end loop;
 
   commit;

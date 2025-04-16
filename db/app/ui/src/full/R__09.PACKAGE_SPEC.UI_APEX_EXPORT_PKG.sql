@@ -12,7 +12,14 @@ as
 
 subtype boolean_t is naturaln; -- 0/1
 
-type file_tab_t is table of clob;
+type item_rec_t is record
+( code varchar2(5 byte) default 'FILE' -- error/file
+, nr integer default 0
+, line# integer default 0 -- 0 for heading
+, line varchar2(32767 byte)
+);
+
+type item_tab_t is table of item_rec_t;
 
 function get_application
 ( p_application_id          in number
@@ -31,13 +38,13 @@ function get_application
 , p_components              in apex_t_varchar2                 default null
 , p_with_audit_info         in apex_export.t_audit_type        default null
 )
-return file_tab_t pipelined; -- returns errors and/or files
+return item_tab_t pipelined; -- returns errors and/or files
 /**
 
 A copy of APEX_EXPORT.get_application (excluding obsolete parameters).
-But instead of an array of type APEX_T_EXPORT_FILES it returns errors and/or files in CLOB format:
-1. errors: for odd rows the Nth error  (-- === error N ===) and for even rows the SQLERRM
-2. files : for odd rows the Mth file and NAME (-- === file M: NAME ===) and for even rows the content of that file
+But instead of an array of type APEX_T_EXPORT_FILES it returns 'ERROR' and/or 'FILE' (code):
+1. errors: for line# = 0 the Nth error (-- === error N ===) and for line# >0 the SQLERRM lines
+2. files : for line# = 0 the Mth file and NAME (-- === file M: NAME ===) and for line# > 0 the lines of that file
 
 **/
 

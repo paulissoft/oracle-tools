@@ -20,11 +20,11 @@ prompt @@ pre_export.sql &&workspace_name &&application_id
 @@ pre_export.sql &&workspace_name &&application_id
 */
 
-set heading off pagesize 0 trimspool on long 1000000 longchunksize 4000 linesize 1000 termout off
+set heading off pagesize 0 trimspool on linesize 1000 termout off
 
 spool &output_file
 
-select  *
+select  line
 from    table
         ( oracle_tools.ui_apex_export_pkg.get_application
           ( p_application_id => &application_id
