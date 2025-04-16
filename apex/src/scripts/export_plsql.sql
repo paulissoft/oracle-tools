@@ -24,7 +24,21 @@ set heading off pagesize 0 trimspool on long 1000000 longchunksize 4000 linesize
 
 spool &output_file
 
-select * from table(oracle_tools.ui_apex_export_pkg.get_application(p_application_id => &application_id, p_split => 1));
+select  *
+from    table
+        ( oracle_tools.ui_apex_export_pkg.get_application
+          ( p_application_id => &application_id
+          , p_split => 1
+          , p_with_date => 0
+          , p_with_ir_public_reports => 1
+          , p_with_ir_private_reports => 1
+          , p_with_ir_notifications => 0
+          , p_with_translations => 1
+          , p_with_original_ids => 1
+          , p_with_no_subscriptions => 0
+          , p_with_comments => 0
+          )
+        );
 
 spool off
 
