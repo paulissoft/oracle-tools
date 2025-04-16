@@ -511,16 +511,41 @@ The following properties are only important during export:
           depends="init-export"
           if="export.oradumper">
     <echo message="(synchronize.xml.export-oradumper) Writing Apex export of application ${application}" />
-    <exec executable="bash"
-          failonerror="true"
-          spawn="false"
-          dir="${output.dir}">
-      <arg value="-c"/>
-      <arg value="${basedir}/export_oradumper.sh ${oradumper.executable} ${workspace} ${application}"/>
-      <!-- Oracle clients love NLS_LANG -->
-      <env key="NLS_LANG" value="American_America.UTF8"/>
-      <env key="USERID" value="${userid}"/>
-    </exec>
+
+    <tempfile property="oradumper.file" deleteonexit="true" />
+    <ac:trycatch property="oradumper.error">
+      <try>
+        <!-- record the output so we can check for ORA- errors -->
+        <record name="${oradumper.file}" action="start"/>
+        <exec executable="bash"
+              failonerror="false"
+              resultproperty="oradumper.result"
+              spawn="false"
+              dir="${output.dir}">
+          <arg value="-c"/>
+          <arg value="${basedir}/export_oradumper.sh ${oradumper.executable} ${workspace} ${application}"/>
+          <!-- Oracle clients love NLS_LANG -->
+          <env key="NLS_LANG" value="American_America.UTF8"/>
+          <env key="USERID" value="${userid}"/>
+        </exec>
+        <record name="${oradumper.file}" action="stop"/>
+        <fail>
+          <condition>
+            <or>
+              <resourcecontains resource="${oradumper.file}" substring="ORA-" />
+              <not>
+                <equals arg1="${oradumper.result}" arg2="0" />
+              </not>
+            </or>
+          </condition>
+        </fail>
+      </try>
+      <catch>
+        <!-- Fail anyhow -->
+        <echo message="return code: ${oradumper.result}" />
+        <fail message="${oradumper.error}"/>
+      </catch>
+      </ac:trycatch>
   </target>
 
   <!-- export solution with Java SqlCli class -->
