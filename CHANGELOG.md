@@ -17,6 +17,10 @@ Types of changes:
 
 - [Some private synonyms are not recognised during DDL export.](https://github.com/paulissoft/oracle-tools/issues/195)
 
+## [4.4.2] - 2025-04-17
+
+- [Error while creating APEX export.](https://github.com/paulissoft/oracle-tools/issues/200)
+
 ## [4.4.1] - 2025-04-15
 
 ### Fixed

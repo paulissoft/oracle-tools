@@ -85,6 +85,56 @@ The following properties are only important during export:
     <condition property="my.sql.home" value="${env.SQL_HOME}">
       <available file="${env.SQL_HOME}/bin/sql" type="file" />
     </condition>
+
+    <!--
+        For APEX export try (in this order):
+        1. oradumper (with oracle_tools.ui_apex_export)
+        2. SQLcl (with oracle_tools.ui_apex_export)
+        3. SQLcl apex export ...
+        4. Java
+    -->
+    <condition property="oradumper.executable" value="/usr/local/bin/oradumper" >
+      <available file="/usr/local/bin/oradumper" type="file" />
+    </condition>
+    <condition property="export.oradumper" value="true" >
+      <isset property="oradumper.executable" />
+    </condition>
+    <echo message="(synchronize.xml.init) export.oradumper: ${export.oradumper}" />
+
+    <condition property="export.sqlcl.plsql" value="true">
+      <and>
+        <isset property="my.sql.home" />
+        <not>
+          <isset property="export.oradumper" />
+        </not>
+      </and>
+    </condition>
+    <echo message="(synchronize.xml.init) export.sqlcl.plsql: ${export.sqlcl.plsql}" />
+
+    <condition property="export.sqlcl.apex" value="true">
+      <and>
+        <isset property="my.sql.home" />
+        <not>
+          <or>
+            <isset property="export.oradumper" />
+            <isset property="export.sqlcl.plsql" />
+          </or>
+        </not>
+      </and>
+    </condition>
+    <echo message="(synchronize.xml.init) export.sqlcl.apex: ${export.sqlcl.apex}" />
+
+    <condition property="export.java" value="true">
+      <not>
+        <or>
+          <isset property="export.oradumper" />
+          <isset property="export.sqlcl.plsql" />
+          <isset property="export.sqlcl.apex" />
+        </or>
+      </not>
+    </condition>
+    <echo message="(synchronize.xml.init) export.java: ${export.java}" />
+
     <condition property="sql.executable" value="${my.sql.home}/bin/sql.exe" else="${my.sql.home}/bin/sql">
       <os family="windows"/>
     </condition>
@@ -189,6 +239,8 @@ The following properties are only important during export:
             <arg value="@{sqlarg1}" />
             <arg value="@{sqlarg2}" />
             <arg value="@{sqlarg3}" />
+            <!-- Oracle clients love NLS_LANG -->
+            <env key="NLS_LANG" value="American_America.UTF8"/>
           </exec>
           <record name="${@{name}.file}" action="stop"/>
           <fail>
@@ -205,6 +257,8 @@ The following properties are only important during export:
                 failonerror="false"
                 spawn="false">
             <arg value="-V" /> <!-- show version -->
+            <!-- Oracle clients love NLS_LANG -->
+            <env key="NLS_LANG" value="American_America.UTF8"/>
           </exec>
           <!-- Fail anyhow -->
           <fail message="${@{name}.error}"/>
@@ -356,6 +410,8 @@ The following properties are only important during export:
                     <arg value="@{sqlfile}" />
                     <arg value="@{sqlarg1}" />
                     <arg value="@{sqlarg2}" />
+                    <!-- Oracle clients love NLS_LANG -->
+                    <env key="NLS_LANG" value="American_America.UTF8"/>
                   </exec>
                 </then>
                 <else>
@@ -369,6 +425,8 @@ The following properties are only important during export:
                     <arg value="@{sqlarg1}" />
                     <arg value="@{sqlarg2}" />
                     <arg value="@{sqlarg3}" />
+                    <!-- Oracle clients love NLS_LANG -->
+                    <env key="NLS_LANG" value="American_America.UTF8"/>
                   </exec>
                 </else>
               </ac:if>
@@ -449,9 +507,51 @@ The following properties are only important during export:
   </target>
   
   <!-- export solution with Java SqlCli class -->
+  <target name="export-oradumper"
+          depends="init-export"
+          if="export.oradumper">
+    <echo message="(synchronize.xml.export-oradumper) Writing Apex export of application ${application}" />
+
+    <tempfile property="oradumper.file" deleteonexit="true" />
+    <ac:trycatch property="oradumper.error">
+      <try>
+        <!-- record the output so we can check for ORA- errors -->
+        <record name="${oradumper.file}" action="start"/>
+        <exec executable="bash"
+              failonerror="false"
+              resultproperty="oradumper.result"
+              spawn="false"
+              dir="${output.dir}">
+          <arg value="-c"/>
+          <arg value="${basedir}/export_oradumper.sh ${oradumper.executable} ${workspace} ${application}"/>
+          <!-- Oracle clients love NLS_LANG -->
+          <env key="NLS_LANG" value="American_America.UTF8"/>
+          <env key="USERID" value="${userid}"/>
+        </exec>
+        <record name="${oradumper.file}" action="stop"/>
+        <fail>
+          <condition>
+            <or>
+              <resourcecontains resource="${oradumper.file}" substring="ORA-" />
+              <not>
+                <equals arg1="${oradumper.result}" arg2="0" />
+              </not>
+            </or>
+          </condition>
+        </fail>
+      </try>
+      <catch>
+        <!-- Fail anyhow -->
+        <echo message="return code: ${oradumper.result}" />
+        <fail message="${oradumper.error}"/>
+      </catch>
+      </ac:trycatch>
+  </target>
+
+  <!-- export solution with Java SqlCli class -->
   <target name="export-sqlcl"
           depends="init-export"
-          if="my.sql.home">
+          if="export.sqlcl.apex">
     <echo message="(synchronize.xml.export-sqlcl) Writing Apex export of application ${application}" />
     <!-- Following command may create ${output.file} or not depending on SQL version -->
     <sqlcl name="export"
@@ -461,10 +561,26 @@ The following properties are only important during export:
            sqlarg2='"${application}"'/>
   </target>
 
+  <target name="export-plsql"
+          depends="init-export"
+          if="export.sqlcl.plsql">
+    <echo message="(synchronize.xml.export-plsql) Writing Apex export of application ${application}" />
+    <exec executable="bash"
+          failonerror="true"
+          spawn="false"
+          dir="${output.dir}">
+      <arg value="-c"/>
+      <arg value="${basedir}/export_plsql.sh ${sql.executable} ${workspace} ${application}"/>
+      <!-- Oracle clients love NLS_LANG -->
+      <env key="NLS_LANG" value="American_America.UTF8"/>
+      <env key="USERID" value="${userid}"/>
+    </exec>
+  </target>
+
   <!-- export solution with oracle.apex.APEXExport class -->
   <target name="export-java"
           depends="init-export,init-split-userid"
-          unless="my.sql.home">
+          if="export.java">
     <echo message="(synchronize.xml.export-java)" />
 
     <!-- first run pre_export.sql to apply seed translations and publish the
@@ -498,7 +614,7 @@ The following properties are only important during export:
   </target>
 
   <target name="export"
-          depends="init,init-split-userid,export-java,export-sqlcl"
+          depends="init,init-split-userid,export-oradumper,export-sqlcl,export-plsql,export-java"
           description="export">
     <echo message="(synchronize.xml.export)" />
     <fail message="Error creating temporary export directory ${output.dir}/${output.file.base}">
