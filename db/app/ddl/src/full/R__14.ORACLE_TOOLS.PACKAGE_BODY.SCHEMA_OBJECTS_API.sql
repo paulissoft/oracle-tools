@@ -712,8 +712,22 @@ $end
     dbms_parallel_execute.drop_task(r.task_name);
   end loop;
 
-  -- Create the TASK for all but SCHEMA_EXPORT
-  dbms_parallel_execute.create_task(l_task_name);
+  declare
+    -- ORA-29497: duplicate task name
+    e_duplicate_task_name exception;
+    pragma exception_init(e_duplicate_task_name, -29497);
+  begin
+    dbms_parallel_execute.create_task(l_task_name);
+  exception
+    when e_duplicate_task_name
+    then
+      oracle_tools.pkg_ddl_error.raise_error
+      ( p_error_number => oracle_tools.pkg_ddl_error.c_duplicate_item
+      , p_error_message => sqlerrm
+      , p_context_info => l_task_name
+      , p_context_label => 'task'
+      );
+  end;
 
   begin
     dbms_parallel_execute.create_chunks_by_number_col
@@ -756,23 +770,42 @@ $if oracle_tools.schema_objects_api.c_debugging $then
     dbug.print(dbug."info", 'stopped dbms_parallel_execute.run_task');
 $end
 
+    -- NOTE INTERRUPT: create a job to stop this task twice
     declare
       -- ORA-27486: insufficient privileges
       e_insufficient_privileges exception;
       pragma exception_init(e_insufficient_privileges, -27486);
+      -- ORA-27477: "BCE_BO"."SCHEMA_OBJECTS_API$DDL_BATCH$1390583157$STOP" already exists
+      e_job_already_exists exception;
+      pragma exception_init(e_job_already_exists, -27477);
     begin
-      -- NOTE INTERRUPT: create a job to stop this task twice
-      dbms_scheduler.create_job
-      ( job_name => l_task_name || '$STOP'
-      , job_type => 'PLSQL_BLOCK'
-      , job_action => 'dbms_parallel_execute.stop_task(''' || l_task_name || ''');'
-      , number_of_arguments => 0
-      , start_date => systimestamp + interval '10' minute -- start after 10 minutes
-      , repeat_interval => 'FREQ=MINUTELY;INTERVAL=10'    -- repeat every 10 minutes
-      , end_date  => systimestamp + interval '21' minute  -- stop after 21 minutes (two times stop_task)
-      , enabled => true
-      , auto_drop => true
-      );
+      for i_try in 1..2
+      loop
+        begin
+          dbms_scheduler.create_job
+          ( job_name => l_task_name || '$STOP'
+          , job_type => 'PLSQL_BLOCK'
+          , job_action => 'dbms_parallel_execute.stop_task(''' || l_task_name || ''');'
+          , number_of_arguments => 0
+          , start_date => systimestamp + interval '10' minute -- start after 10 minutes
+          , repeat_interval => 'FREQ=MINUTELY;INTERVAL=10'    -- repeat every 10 minutes
+          , end_date  => systimestamp + interval '21' minute  -- stop after 21 minutes (two times stop_task)
+          , enabled => true
+          , auto_drop => true
+          );
+          exit; -- OK
+        exception
+          when e_job_already_exists
+          then
+            if i_try = 2 then raise; end if;
+
+            dbms_scheduler.drop_job
+            ( job_name => l_task_name || '$STOP'
+            , force => true
+            , defer => false
+            );
+        end;
+      end loop;
     exception
       when e_insufficient_privileges
       then null;
@@ -791,6 +824,18 @@ $end
       dbms_parallel_execute.resume_task(l_task_name);
     end loop try_loop;
 
+    -- drop this in any case since we are done
+    begin
+      dbms_scheduler.drop_job
+      ( job_name => l_task_name || '$STOP'
+      , force => true
+      , defer => false
+      );
+    exception
+      when others
+      then null;
+    end;
+    
     if l_status = dbms_parallel_execute.finished
     then
       -- Done with processing; drop the task
