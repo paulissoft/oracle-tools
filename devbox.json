@@ -1,22 +1,27 @@
 {
-  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.2/.schema/devbox.schema.json",
-  "packages": {
-    "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#maven": "",
-    "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#sqlcl": {
-      "excluded_platforms": ["aarch64-darwin"]
+    "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.2/.schema/devbox.schema.json",
+    "packages": {
+        "sqlcl": {
+            "version": "24.4.3.070.2106",
+            "excluded_platforms": ["aarch64-darwin"]
+        },
+        "podman": "5.4.1",
+        "podman-compose@1.2.0":                                                 "",
+        "perl":   "5.40.0",
+        "poetry": "1.8.5",
+        "maven":                                                                "3.8.6"
     },
-    "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#podman": "",
-    "podman-compose@1.2.0": "",
-    "github:NixOS/nixpkgs/5ed627539ac84809c78b2dd6d26a5cebeb5ae269#perl": ""
-  },
-  "shell": {
-    "init_hook": [
-      "echo 'Welcome to devbox!' > /dev/null"
-    ],
-    "scripts": {
-      "test": [
-        "echo \"Error: no test specified\" && exit 1"
-      ]
+    "shell": {
+        "init_hook": [
+            "echo 'Welcome to devbox!' > /dev/null"
+        ],
+        "scripts": {
+            "test": [
+                "echo \"Error: no test specified\" && exit 1"
+            ],
+            "ocifs": [
+                "poetry run python bin/ocifs-do.py \"$@\""
+            ]
+        }
     }
-  }
 }

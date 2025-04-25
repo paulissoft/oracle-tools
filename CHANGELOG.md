@@ -17,6 +17,7 @@ Types of changes:
 
 - [Some private synonyms are not recognised during DDL export.](https://github.com/paulissoft/oracle-tools/issues/195)
 - [When using V_MY_INCLUDE_OBJECTS there is a JOB or TASK error.](https://github.com/paulissoft/oracle-tools/issues/209)
+- [Add script with OCI filesystem operations.](https://github.com/paulissoft/oracle-tools/issues/210)
 
 ## [4.4.2] - 2025-04-17
 
