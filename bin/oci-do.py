@@ -108,10 +108,14 @@ def main():
             for file in files.data.objects:
                 object = object_storage.get_object(args.namespace, args.bucket_name, file.name)
                 output_file = f"{args.local_folder}/{file.name}"
-                print(f"downloading {file.name} to {output_file}")
-                with open(output_file, 'wb') as f:
-                    for chunk in object.data.raw.stream(1024 * 1024, decode_content=False):
-                        f.write(chunk)
+                if output_file.endswith("/"):
+                    print(f"creating directory {output_file}")
+                    Path(output_file).mkdir(parents=True, exist_ok=True)
+                else:
+                    print(f"downloading {file.name} to {output_file}")
+                    with open(output_file, 'wb') as f:
+                        for chunk in object.data.raw.stream(1024 * 1024, decode_content=False):
+                            f.write(chunk)
         
 
 if __name__ == "__main__":
