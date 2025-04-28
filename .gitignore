@@ -34,3 +34,4 @@ cloud/pulumi/
 ddl-generate-report.md
 null*
 __pycache__/
+.env
