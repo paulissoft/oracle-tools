@@ -25,6 +25,7 @@ These are the options:
 - merge (from/to a branch)
 - merge_abort
 - release (from lowest to highest protected branch)
+- release_state
 
 
 info
@@ -102,6 +103,9 @@ These are the steps:
 4. Now every protected branch has the new code, so just install the branches m, 1 < m <= N.
    Please note that branch 1 has already been installed.
 
+release_state
+-------------
+Create a (complete) release state file so you can edit/view it before you start a release (to skip certain steps).
 
 ENVIRONMENT VARIABLES
 =====================
@@ -297,6 +301,22 @@ _switch() {
     _x git pull || _x git branch --set-upstream-to=origin/$branch $branch
 }
 
+_push() {
+    declare -r branch=${1:?}
+
+    # + git push
+    # fatal: The current branch export/development has no upstream branch.
+    # To push the current branch and set the remote as upstream, use
+    # 
+    #     git push --set-upstream origin export/development
+    # 
+    # To have this happen automatically for branches without a tracking
+    # upstream, see 'push.autoSetupRemote' in 'git help config'.
+
+    git config push.autoSetupRemote true
+    _x git push
+}
+
 _tag() {
     declare -r branch=${1:?}
     declare -r tag="`basename $0 .sh`-`date -I`-${branch}"
@@ -365,6 +385,7 @@ copy() {
     then
         # delete local and remote branch (just pointers)
         _prompt "This script is about to remove local (and remote) branch $to before re-creating it from branch $from"
+        _switch $from # must switch to prevent this error: Cannot delete branch 'export/main' checked out at '/Users/gpaulissen/dev/bc/portal_rel_mgt'
         _x git branch -D $to
         _x git push origin --delete $to || true
         _x git checkout -b $to $from
@@ -402,7 +423,7 @@ merge() {
     else
         # to merge into a protected branch we need a Pull Request
         _prompt "This script is about to push branch $from"
-        _x git push # push $from to remote
+        _push $from
         _switch $to # must be on a branch named differently than "release/acceptance-main"
         _pull_request $from $to
     fi        
@@ -413,14 +434,78 @@ merge_abort() {
 }
 
 declare release_state_file=
-_release_state_file_reuse() { # usage: PROTECTED_BRANCHE_1 ... PROTECTED_BRANCHE_N
+
+release_state() { # usage: PROTECTED_BRANCHE_1 ... PROTECTED_BRANCHE_N
+    declare -r branches=$*
+    declare from=
+    declare step=
+    
+    release_state_file="target/$(basename $0 .sh)-release-$(echo ${branches} | sed -e 's/ /-/g').txt"
+
+    from=
+    step=0
+    for to in $branches
+    do
+        _release_step_write $to $step
+
+        from=$to
+    done
+    
+    from=
+    for to in $branches
+    do
+        for step in 1 2a 2b 2c
+        do
+            if [[ $step == "1" ]]
+            then
+                if [[ -n "$from" ]]; then continue; fi
+                release=
+            else
+                if [[ -z "$from" ]]; then continue; fi
+                release="release/$from-$to"                        
+            fi
+
+            _release_step_write $to $step
+        done
+        
+        from=$to
+    done
+
+    from=
+    step=3
+    for to in $branches
+    do
+        if [[ -n "$from" ]]
+        then
+            _release_step_write $to $step
+        fi
+        
+        from=$to
+    done
+
+    from=
+    step=4
+    for to in $branches
+    do
+        if [[ -n "$from" ]]
+        then
+            _release_step_write $to $step
+        fi
+        
+        from=$to
+    done
+
+    _info "Release state file: ${release_state_file}"
+}
+
+_release_state_file_init() { # usage: PROTECTED_BRANCHE_1 ... PROTECTED_BRANCHE_N
     declare yes_no=
 
     release_state_file="target/$(basename $0 .sh)-release-$(echo $* | sed -e 's/ /-/g').txt"
 
     if [[ -f ${release_state_file} ]]
     then
-        read -p "Do you want to reuse the previous state (from file ${release_state_file}) ? [Y] " yes_no
+        read -p "Do you want to re-use the previous state (from file ${release_state_file}) ? [Y] " yes_no
         case "${yes_no}" in
             n | N)
                 rm ${release_state_file}
@@ -428,7 +513,7 @@ _release_state_file_reuse() { # usage: PROTECTED_BRANCHE_1 ... PROTECTED_BRANCHE
             *)
                 :
                 ;;
-        esac        
+        esac
     fi
 }
 
@@ -470,7 +555,7 @@ release() {
 
     _check_no_changes
 
-    _release_state_file_reuse $*
+    _release_state_file_init $*
 
     # step 0 from usage for release
     step=0
@@ -501,11 +586,11 @@ release() {
             export="export/$to"
             
             copy $to $export
-            _prompt "You must create an export (APEX and/or database) for '$to' in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+            _prompt "You must create an export (APEX and/or database) for environment '$to' in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
             _x git add .
             _x git commit -m "Created export $export" || true
             _prompt "This script is about to push export branch $export"
-            _x git push
+            _push $export
             _release_step_write $to $step
         fi
 
@@ -533,11 +618,11 @@ release() {
                 case $step in
                     # install first branch
                     1)  _switch $to
-                        _prompt "You may need to install (database only) for '$to' first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+                        _prompt "You may need to install (database only) to environment '$to' first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/db)"
                         ;;
 
                     # copy to release branch
-                    2a) if [[ "$first" == "$to" ]]
+                    2a) if [[ "$first" == "$from" ]]
                         then
                             copy $from $release
                         else
@@ -545,10 +630,10 @@ release() {
                         fi
                         ;;
 
-                    # create a release export (only for the first, the others can use the previous export)
-                    2b) if [[ "$first" == "$to" ]]
+                    # create a release export (only for the first branch/environment, the others can use the previous export)
+                    2b) if [[ "$first" == "$from" ]]
                         then
-                            _prompt "You must create an export (APEX and/or database) for '$to' in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+                            _prompt "You must create an export (APEX and/or database) for environment '$from' in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
                             _x git add .
                             _x git commit -m "Created release $release" || true
                         fi
@@ -556,7 +641,7 @@ release() {
 
                     # push the release branch
                     2c) _prompt "This script is about to push branch $release"
-                        _x git push || _x git push --set-upstream origin $release
+                        _push $release
                         ;;
                 esac
                 _release_step_write $to $step
@@ -611,7 +696,7 @@ release() {
             then
                 # install all except the first branch
                 _switch $to
-                _prompt "You must install branch $to first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
+                _prompt "You must install to environment '$to' first in ANOTHER SESSION (using PATO GUI with POMs from $pwd/apex and $pwd/db)"
                 _release_step_write $to $step
             fi
         fi
@@ -651,6 +736,10 @@ case "$command" in
         $command $*
         ;;
     release)
+        test $# -ge 2 || usage 1
+        $command $*
+        ;;
+    release_state)
         test $# -ge 2 || usage 1
         $command $*
         ;;
