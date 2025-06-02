@@ -854,6 +854,10 @@ return integer
 is
   pragma autonomous_transaction; -- ORA-14551: cannot perform a DML operation inside a query
 
+  -- ORA-00942: table or view does not exist
+  e_table_or_view_does_not_exist exception;
+  pragma exception_init(e_table_or_view_does_not_exist, -942);
+
   -- In order to delete from a merge youmust update first.
   l_sql_statement constant varchar2(4000 byte) :=
     utl_lms.format_message
@@ -881,6 +885,8 @@ begin
   commit;
   return l_count;
 exception
+  when e_table_or_view_does_not_exist
+  then return 0;
   when others
   then raise_application_error(-20000, 'Error while executing this SQL statement:' || chr(10) || l_sql_statement, true); 
 end purge_flyway_table;
