@@ -21,11 +21,19 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
 
     final static HikariDataSource delegate = new HikariDataSource();
 
-    private volatile static SmartPoolDataSourceHikari first = null; // first datasource created
+    private volatile static SmartPoolDataSourceHikari first = null; // only the first smart pool datasource created ever can set properties, the rest must have the same
 
     // overridden methods from HikariDataSource
     
-    public HikariDataSource();
+    public HikariDataSource() {
+        super();
+
+        if (first == null) {
+            synchronized(first) {
+                first = this;
+            }
+        }
+    }
 
     public HikariDataSource(HikariConfig configuration);
 
