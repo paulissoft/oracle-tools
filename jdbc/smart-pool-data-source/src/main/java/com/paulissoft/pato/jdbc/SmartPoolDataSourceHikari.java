@@ -1,244 +1,337 @@
 package com.paulissoft.pato.jdbc;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariConfigMXBean;
+import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.HikariPoolMXBean;
+import java.io.PrintWriter;
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLTransientConnectionException;
-import lombok.NonNull;
-import lombok.experimental.Delegate;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Properties;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.logging.Logger;
+import javax.sql.DataSource;
 
 @Slf4j
-public class SmartPoolDataSourceHikari
-    extends SmartPoolDataSource<SimplePoolDataSourceHikari>
-    implements SimplePoolDataSource, PoolDataSourcePropertiesSettersHikari, PoolDataSourcePropertiesGettersHikari {
+public class SmartPoolDataSourceHikari extends HikariDataSource {
 
-    static final long MIN_CONNECTION_TIMEOUT = SimplePoolDataSourceHikari.MIN_CONNECTION_TIMEOUT; // milliseconds for one pool, so twice this number for two
+    final static HikariDataSource delegate = new HikariDataSource();
 
-    static final String REX_CONNECTION_TIMEOUT = "^.+ - Connection is not available, request timed out after \\d+ms\\.$";
+    private volatile static SmartPoolDataSourceHikari first = null; // first datasource created
+
+    // overridden methods from HikariDataSource
     
-    /*
-     * Constructors
-     */
-    
-    public SmartPoolDataSourceHikari() {
-        super(SimplePoolDataSourceHikari::new);
-    }
+    public HikariDataSource();
 
-    public SmartPoolDataSourceHikari(@NonNull final PoolDataSourceConfigurationHikari poolDataSourceConfigurationHikari) {
-        // configuration is supposed to be set completely
-        super(SimplePoolDataSourceHikari::new, poolDataSourceConfigurationHikari);
-    }
+    public HikariDataSource(HikariConfig configuration);
 
-    public SmartPoolDataSourceHikari(String driverClassName,
-                                     String url,
-                                     String username,
-                                     String password,
-                                     String type) {
-        // configuration is set partially so just use the default constructor
-        this(PoolDataSourceConfigurationHikari.build(driverClassName,
-                                                     url,
-                                                     username,
-                                                     password,
-                                                     type != null ? type : SmartPoolDataSourceHikari.class.getName()));
-    }
-
-    public SmartPoolDataSourceHikari(String driverClassName,
-                                     String url,
-                                     String username,
-                                     String password,
-                                     String type,
-                                     String poolName,
-                                     int maximumPoolSize,
-                                     int minimumIdle,
-                                     String dataSourceClassName,
-                                     boolean autoCommit,
-                                     long connectionTimeout,
-                                     long idleTimeout,
-                                     long maxLifetime,
-                                     String connectionTestQuery,
-                                     long initializationFailTimeout,
-                                     boolean isolateInternalQueries,
-                                     boolean allowPoolSuspension,
-                                     boolean readOnly,
-                                     boolean registerMbeans,    
-                                     long validationTimeout,
-                                     long leakDetectionThreshold) {
-        this(PoolDataSourceConfigurationHikari.build(driverClassName,
-                                                     url,
-                                                     username,
-                                                     password,
-                                                     // cannot reference this before supertype constructor has been called,
-                                                     // hence can not use this in constructor above
-                                                     type != null ? type : SmartPoolDataSourceHikari.class.getName(),
-                                                     poolName,
-                                                     maximumPoolSize,
-                                                     minimumIdle,
-                                                     dataSourceClassName,
-                                                     autoCommit,
-                                                     connectionTimeout,
-                                                     idleTimeout,
-                                                     maxLifetime,
-                                                     connectionTestQuery,
-                                                     initializationFailTimeout,
-                                                     isolateInternalQueries,
-                                                     allowPoolSuspension,
-                                                     readOnly,
-                                                     registerMbeans,    
-                                                     validationTimeout,
-                                                     leakDetectionThreshold));
-    }
-
-    protected interface ToOverrideHikari extends ToOverride {
-        // setUsername(java.lang.String) in com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari
-        // cannot implement setUsername(java.lang.String) in com.zaxxer.hikari.HikariConfigMXBean:
-        // overridden method does not throw java.sql.SQLException
-        void setUsername(String password) /*throws SQLException*/;
-
-        // setPassword(java.lang.String) in com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari
-        // cannot implement setPassword(java.lang.String) in com.zaxxer.hikari.HikariConfigMXBean:
-        // overridden method does not throw java.sql.SQLException
-        void setPassword(String password) /*throws SQLException*/;
-
-        int getMaximumPoolSize(); // may add the overflow
-
-        void setConnectionTimeout(long connectionTimeout);
-    }
-
-    // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
-    @Delegate(types=PoolDataSourcePropertiesSettersHikari.class, excludes=ToOverrideHikari.class) // do not delegate setPassword()
-    private PoolDataSourcePropertiesSettersHikari getPoolDataSourceSetter() {
-        try {
-            switch (getState()) {
-            case INITIALIZING:
-                return getPoolDataSource();
-            case CLOSED:
-                throw new IllegalStateException("You can not use the pool once it is closed.");
-            default:
-                throw new IllegalStateException("The configuration of the pool is sealed once initialized or started.");
-            }
-        } catch (IllegalStateException ex) {
-            log.error("Exception in getPoolDataSourceSetter():", ex);
-            throw ex;
-        }
-    }
-        
-    // getXXX methods only (getPoolDataSourceGetter() may return different values depending on state hence use a function)
-    @Delegate(types=PoolDataSourcePropertiesGettersHikari.class, excludes=ToOverrideHikari.class)
-    private PoolDataSourcePropertiesGettersHikari getPoolDataSourceGetter() {
-        try {
-            switch (getState()) {
-            case CLOSED:
-                throw new IllegalStateException("You can not use the pool once it is closed.");
-            default:
-                return getPoolDataSource();
-            }
-        } catch (IllegalStateException ex) {
-            log.error("Exception in getPoolDataSourceGetter():", ex);
-            throw ex;
-        }
-    }
-
-    // no getXXX() nor setXXX(), just the rest (getPoolDataSource() may return different values depending on state hence use a function)
-    @Delegate(excludes={ PoolDataSourcePropertiesSettersHikari.class, PoolDataSourcePropertiesGettersHikari.class, ToOverrideHikari.class })
     @Override
-    protected final SimplePoolDataSourceHikari getPoolDataSource() {
-        return super.getPoolDataSource();
-    }
+    public Connection getConnection() throws SQLException;
 
-    protected boolean getConnectionFailsDueToNoIdleConnections(final Exception ex) {
-        return (ex instanceof SQLTransientConnectionException) && ex.getMessage().matches(REX_CONNECTION_TIMEOUT);
-    }
-    
-    // methods defined in interface ToOverrideHikari
-    public void setUsername(String username) {
-        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
-
-        try {
-            poolDataSource.setUsername(username);
-        } catch (RuntimeException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
-        }
-    }
-
-    public void setPassword(String password) {
-        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
-
-        try {
-            poolDataSource.setPassword(password);        
-        } catch (RuntimeException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new RuntimeException(SimplePoolDataSource.exceptionToString(ex));
-        }
-    }
-
-    public PoolDataSourceConfiguration get() {
-        return PoolDataSourceConfigurationHikari
-            .builder()
-            .driverClassName(getDriverClassName())
-            .url(getJdbcUrl())
-            .username(getUsername())
-            .password(null) // do not copy password
-            .type(this.getClass().getName())
-            .poolName(null) // do not copy pool name
-            .maximumPoolSize(getMaximumPoolSize())
-            .minimumIdle(getMinimumIdle())
-            .autoCommit(isAutoCommit())
-            .connectionTimeout(getConnectionTimeout())
-            .idleTimeout(getIdleTimeout())
-            .maxLifetime(getMaxLifetime())
-            .connectionTestQuery(getConnectionTestQuery())
-            .initializationFailTimeout(getInitializationFailTimeout())
-            .isolateInternalQueries(isIsolateInternalQueries())
-            .allowPoolSuspension(isAllowPoolSuspension())
-            .readOnly(isReadOnly())
-            .registerMbeans(isRegisterMbeans())
-            .validationTimeout(getValidationTimeout())
-            .leakDetectionThreshold(getLeakDetectionThreshold())
-            .build();
-    }
-
-    public int getMaximumPoolSize() {
-        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
-        SimplePoolDataSourceHikari poolDataSourceOverflow;
-
-        if (getState() == State.INITIALIZING || getState() == State.INITIALIZED || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
-            return poolDataSource.getMaximumPoolSize();
-        } else {
-            return poolDataSource.getMaximumPoolSize() + poolDataSourceOverflow.getMaximumPoolSize();
-        }
-    }
-    
-    public void setConnectionTimeout(long connectionTimeout) {
-        final SimplePoolDataSourceHikari poolDataSource = getPoolDataSource();
-        
-        if (connectionTimeout < 2 * MIN_CONNECTION_TIMEOUT) { // both pools must have at least this minimum
-            // if we subtract we will get an invalid value (less than minimum)
-            throw new IllegalArgumentException(String.format("The connection timeout (%d) must be at least %d.",
-                                                             connectionTimeout,
-                                                             2 * MIN_CONNECTION_TIMEOUT));
-        }
-        poolDataSource.setConnectionTimeout(connectionTimeout);
-    }
+    @Override
+    public Connection getConnection(String username, String password) throws SQLException;
     
     @Override
-    protected void initializeOverflowPool(final PoolDataSourceConfiguration poolDataSourceConfiguration,
-                                          final int maxPoolSizeOverflow) throws SQLException {
-        super.initializeOverflowPool(poolDataSourceConfiguration, maxPoolSizeOverflow);
-  
-        final SimplePoolDataSourceHikari poolDataSourceOverflow = getPoolDataSourceOverflow();
+    public PrintWriter getLogWriter() throws SQLException;
 
-        poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
+    @Override
+    public void setLogWriter(PrintWriter out) throws SQLException;
 
-        if (isOverflowStatic()) {
-            poolDataSourceOverflow.setMinimumIdle(maxPoolSizeOverflow);
-        } else {
-            // settings to keep the overflow pool data source as empty as possible
-            // see https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#youre-probably-doing-it-wrong
-            poolDataSourceOverflow.setMinimumIdle(0);
-            poolDataSourceOverflow.setIdleTimeout(10000); // minimum
-            poolDataSourceOverflow.setMaxLifetime(30000); // minimum
-        }
-    }
+    @Override
+    public void setLoginTimeout(int seconds) throws SQLException;
+
+    @Override
+    public int getLoginTimeout() throws SQLException;
+
+    @Override
+    public Logger getParentLogger() throws SQLFeatureNotSupportedException;
+
+    @Override
+    public <T> T unwrap(Class<T> iface) throws SQLException;
+
+    @Override
+    public boolean isWrapperFor(Class<?> iface) throws SQLException;
+
+    @Override
+    public void setMetricRegistry(Object metricRegistry);
+    
+    @Override
+    public void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory);
+
+    @Override
+    public void setHealthCheckRegistry(Object healthCheckRegistry);
+
+    @Override
+    public boolean isRunning();
+
+    @Override
+    public HikariPoolMXBean getHikariPoolMXBean();
+
+    @Override
+    public HikariConfigMXBean getHikariConfigMXBean();
+
+    @Override
+    public void evictConnection(Connection connection);
+
+    @Deprecated
+    @Override
+    public void suspendPool();
+
+    @Deprecated
+    @Override
+    public void resumePool();
+
+    @Override
+    public void close();
+
+    @Override
+    public boolean isClosed();
+
+    @Deprecated
+    @Override
+    public void shutdown();
+
+    @Override
+    public String toString();    
+
+    // overridden methods from HikariConfig
+
+    @Override
+    public void addDataSourceProperty(String propertyName, Object value);
+
+    @Override
+    public void addHealthCheckProperty(String key, String value);
+
+    @Deprecated
+    @Override
+    public void copyState(HikariConfig other);
+
+    @Override
+    public void copyStateTo(HikariConfig other);
+
+    @Override
+    public String getCatalog();
+
+    @Override
+    public String getConnectionInitSql();
+
+    @Override
+    public String getConnectionTestQuery();
+
+    @Override
+    public long getConnectionTimeout();
+
+    @Override
+    public javax.sql.DataSource getDataSource();
+
+    @Override
+    public String getDataSourceClassName();
+
+    @Override
+    public String getDataSourceJNDI();
+
+    @Override
+    public Properties getDataSourceProperties();
+
+    @Override
+    public String getDriverClassName();
+
+    @Override
+    public Properties getHealthCheckProperties();
+
+    @Override
+    public Object getHealthCheckRegistry();
+
+    @Override
+    public long getIdleTimeout();
+
+    @Override
+    public long getInitializationFailTimeout();
+
+    @Override
+    public String getJdbcUrl();
+
+    @Override
+    public long getLeakDetectionThreshold();
+
+    @Override
+    public int getMaximumPoolSize();
+
+    @Override
+    public long getMaxLifetime();
+
+    @Override
+    public Object getMetricRegistry();
+
+    @Override
+    public int getMinimumIdle();
+
+    @Override
+    public String getPassword();
+
+    @Override
+    public String getPoolName();
+
+    @Override
+    public ScheduledExecutorService getScheduledExecutor();
+
+    @Deprecated
+    @Override
+    public ScheduledThreadPoolExecutor getScheduledExecutorService();
+
+    @Override
+    public String getSchema();
+
+    @Override
+    public ThreadFactory getThreadFactory();
+
+    @Override
+    public String getTransactionIsolation();
+
+    @Override
+    public String getUsername();
+
+    @Override
+    public long getValidationTimeout();
+
+    @Override
+    public boolean isAllowPoolSuspension();
+
+    @Override
+    public boolean isAutoCommit();
+
+    @Deprecated
+    @Override
+    public boolean isInitializationFailFast();
+
+    @Override
+    public boolean isIsolateInternalQueries();
+
+    @Deprecated
+    @Override
+    public boolean isJdbc4ConnectionTest();
+
+    @Override
+    public boolean isReadOnly();
+
+    @Override
+    public boolean isRegisterMbeans();
+
+    @Override
+    public void setAllowPoolSuspension(boolean isAllowPoolSuspension);
+
+    @Override
+    public void setAutoCommit(boolean isAutoCommit);
+
+    @Override
+    public void setCatalog(String catalog);
+
+    @Override
+    public void setConnectionInitSql(String connectionInitSql);
+
+    @Override
+    public void setConnectionTestQuery(String connectionTestQuery);
+
+    @Override
+    public void setConnectionTimeout(long connectionTimeoutMs);
+
+    @Override
+    public void setDataSource(javax.sql.DataSource dataSource);
+
+    @Override
+    public void setDataSourceClassName(String className);
+
+    @Override
+    public void setDataSourceJNDI(String jndiDataSource);
+
+    @Override
+    public void setDataSourceProperties(Properties dsProperties);
+
+    @Override
+    public void setDriverClassName(String driverClassName);
+
+    @Override
+    public void setHealthCheckProperties(Properties healthCheckProperties);
+
+    @Override
+    public void setHealthCheckRegistry(Object healthCheckRegistry);
+
+    @Override
+    public void setIdleTimeout(long idleTimeoutMs);
+
+    @Deprecated
+    @Override
+    public void setInitializationFailFast(boolean failFast);
+
+    @Override
+    public void setInitializationFailTimeout(long initializationFailTimeout);
+
+    @Override
+    public void setIsolateInternalQueries(boolean isolate);
+
+    @Deprecated
+    @Override
+    public void setJdbc4ConnectionTest(boolean useIsValid);
+
+    @Override
+    public void setJdbcUrl(String jdbcUrl);
+
+    @Override
+    public void setLeakDetectionThreshold(long leakDetectionThresholdMs);
+
+    @Override
+    public void setMaximumPoolSize(int maxPoolSize);
+
+    @Override
+    public void setMaxLifetime(long maxLifetimeMs);
+
+    @Override
+    public void setMetricRegistry(Object metricRegistry);
+
+    @Override
+    public void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory);
+
+    @Override
+    public void setMinimumIdle(int minIdle);
+
+    @Override
+    public void setPassword(String password);
+
+    @Override
+    public void setPoolName(String poolName);
+
+    @Override
+    public void setReadOnly(boolean readOnly);
+
+    @Override
+    public void setRegisterMbeans(boolean register);
+
+    @Override
+    public void setScheduledExecutor(ScheduledExecutorService executor);
+
+    @Deprecated
+    @Override
+    public void setScheduledExecutorService(ScheduledThreadPoolExecutor executor);
+
+    @Override
+    public void setSchema(String schema);
+
+    @Override
+    public void setThreadFactory(ThreadFactory threadFactory);
+
+    @Override
+    public void setTransactionIsolation(String isolationLevel);
+
+    @Override
+    public void setUsername(String username);
+
+    @Override
+    public void setValidationTimeout(long validationTimeoutMs);
+
+    @Override
+    public void validate();
 }
