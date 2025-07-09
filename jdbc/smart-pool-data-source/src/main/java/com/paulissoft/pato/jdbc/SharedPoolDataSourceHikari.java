@@ -40,6 +40,35 @@ class SharedPoolDataSourceHikari {
     public void configure() {
         ds.setMinimumIdle(members.stream().mapToInt(HikariDataSource::getMinimumIdle).sum());
         ds.setMaximumPoolSize(members.stream().mapToInt(HikariDataSource::getMaximumPoolSize).sum());
+
+        // properties that may NOT differ, i.e. must be common
+        /*
+        // private String dataSourceClassName;
+        // 
+        // private boolean autoCommit;
+        // 
+        // private long connectionTimeout;
+        // 
+        // private long idleTimeout;
+        // 
+        // private long maxLifetime;
+        // 
+        // private String connectionTestQuery;
+        // 
+        // private long initializationFailTimeout;
+        // 
+        // private boolean isolateInternalQueries;
+        // 
+        // private boolean allowPoolSuspension;
+        // 
+        // private boolean readOnly;
+        // 
+        // private boolean registerMbeans;
+        // 
+        // private long validationTimeout;
+        // 
+        // private long leakDetectionThreshold;
+        */
     }
 
     public Connection getConnection() throws SQLException {
