@@ -199,14 +199,9 @@ class SharedPoolDataSourceHikari {
         }
 
         // private boolean autoCommit;
-        var streamAutoCommit = members.stream().map(HikariDataSource::isAutoCommit);
-
-        if (streamAutoCommit.distinct().count() == 1) {
-            /* all the same */
-            ds.setAutoCommit(members.get(0).isAutoCommit());
-        } else {
-            throw new IllegalStateException(String.format("Not all auto commit values are the same: %s", streamAutoCommit.collect(Collectors.toList()).toString()));
-        }
+        configureBooleanProperty((ds) -> ds.isAutoCommit(),
+                                 (ds, value) -> ds.setAutoCommit(value),
+                                 "auto commit");
         
         // private long connectionTimeout;
         configureLongProperty((ds) -> ds.getConnectionTimeout(),
@@ -229,44 +224,24 @@ class SharedPoolDataSourceHikari {
                               "initialization fail timeout");
 
         // private boolean isolateInternalQueries;
-        var streamIsolateInternalQueries = members.stream().map(HikariDataSource::isIsolateInternalQueries);
-
-        if (streamIsolateInternalQueries.distinct().count() == 1) {
-            /* all the same */
-            ds.setIsolateInternalQueries(members.get(0).isIsolateInternalQueries());
-        } else {
-            throw new IllegalStateException(String.format("Not all isolate internal queries values are the same: %s", streamIsolateInternalQueries.collect(Collectors.toList()).toString()));
-        }
+        configureBooleanProperty((ds) -> ds.isIsolateInternalQueries(),
+                                 (ds, value) -> ds.setIsolateInternalQueries(value),
+                                 "isolate internal queries");
 
         // private boolean allowPoolSuspension;
-        var streamAllowPoolSuspension = members.stream().map(HikariDataSource::isAllowPoolSuspension);
-
-        if (streamAllowPoolSuspension.distinct().count() == 1) {
-            /* all the same */
-            ds.setAllowPoolSuspension(members.get(0).isAllowPoolSuspension());
-        } else {
-            throw new IllegalStateException(String.format("Not all allow pool suspension values are the same: %s", streamAllowPoolSuspension.collect(Collectors.toList()).toString()));
-        }
+        configureBooleanProperty((ds) -> ds.isAllowPoolSuspension(),
+                                 (ds, value) -> ds.setAllowPoolSuspension(value),
+                                 "allow pool suspension");
 
         // private boolean readOnly;
-        var streamReadOnly = members.stream().map(HikariDataSource::isReadOnly);
-
-        if (streamReadOnly.distinct().count() == 1) {
-            /* all the same */
-            ds.setReadOnly(members.get(0).isReadOnly());
-        } else {
-            throw new IllegalStateException(String.format("Not all read only values are the same: %s", streamReadOnly.collect(Collectors.toList()).toString()));
-        }
+        configureBooleanProperty((ds) -> ds.isReadOnly(),
+                                 (ds, value) -> ds.setReadOnly(value),
+                                 "read only");
 
         // private boolean registerMbeans;
-        var streamRegisterMbeans = members.stream().map(HikariDataSource::isRegisterMbeans);
-
-        if (streamRegisterMbeans.distinct().count() == 1) {
-            /* all the same */
-            ds.setRegisterMbeans(members.get(0).isRegisterMbeans());
-        } else {
-            throw new IllegalStateException(String.format("Not all register Mbeans values are the same: %s", streamRegisterMbeans.collect(Collectors.toList()).toString()));
-        }
+        configureBooleanProperty((ds) -> ds.isRegisterMbeans(),
+                                 (ds, value) -> ds.setRegisterMbeans(value),
+                                 "register Mbeans");
 
         // private long validationTimeout;
         configureLongProperty((ds) -> ds.getValidationTimeout(),
