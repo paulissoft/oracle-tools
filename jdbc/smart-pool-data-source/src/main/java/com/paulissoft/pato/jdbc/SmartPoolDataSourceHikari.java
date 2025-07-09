@@ -358,7 +358,7 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
     */
     
     @Override
-    public void setUsername(String username) {
+    public synchronized void setUsername(String username) {
         if (username == null) {
             proxyUsername = schema = null;
         } else {

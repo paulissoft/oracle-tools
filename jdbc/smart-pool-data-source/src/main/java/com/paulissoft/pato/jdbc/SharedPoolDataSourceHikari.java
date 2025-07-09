@@ -41,7 +41,7 @@ class SharedPoolDataSourceHikari {
         members.add(member);
     }
 
-    public static void remove(HikariDataSource member) {
+    public static synchronized void remove(HikariDataSource member) {
         members.remove(member);
 
         if (members.size() == 0) {
@@ -75,7 +75,7 @@ class SharedPoolDataSourceHikari {
     }
 
     public static Connection getConnection(String username, String password) throws SQLException {
-        return ds.getConnection(username, password);
+        throw new SQLFeatureNotSupportedException("getConnection");
     }
 
     public static PrintWriter getLogWriter() throws SQLException {
@@ -288,7 +288,6 @@ class SharedPoolDataSourceHikari {
         } else {
             throw new IllegalStateException(String.format("Not all leak detection threshold values are the same: %s", streamLeakDetectionThreshold.collect(Collectors.toList()).toString()));
         }
-
     }
 
     private static synchronized void open() {
