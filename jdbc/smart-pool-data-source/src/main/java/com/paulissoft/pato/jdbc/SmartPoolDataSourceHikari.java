@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
+import com.zaxxer.hikari.metrics.MetricsTrackerFactory;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -20,78 +21,98 @@ import javax.sql.DataSource;
 
 public class SmartPoolDataSourceHikari extends HikariDataSource {
 
-    private static SharedPoolDataSourceHikari delegate = new SharedPoolDataSourceHikari();
+    private volatile String schema = null;
 
+    private volatile String proxyUsername = null;
+    
     @Override
     public Connection getConnection() throws SQLException {
-        return delegate.getConnection();
+        return SharedPoolDataSourceHikari.getConnection();
     }
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
-        return delegate.getConnection(username, password);
+        return SharedPoolDataSourceHikari.getConnection(username, password);
     }
     
-    /*
     @Override
-    public PrintWriter getLogWriter() throws SQLException;
+    public PrintWriter getLogWriter() throws SQLException {
+        return SharedPoolDataSourceHikari.getLogWriter();
+    }
 
     @Override
-    public void setLogWriter(PrintWriter out) throws SQLException;
+    public void setLogWriter(PrintWriter out) throws SQLException {
+        SharedPoolDataSourceHikari.setLogWriter(out);
+    }
 
     @Override
-    public void setLoginTimeout(int seconds) throws SQLException;
+    public void setLoginTimeout(int seconds) throws SQLException {
+        SharedPoolDataSourceHikari.setLoginTimeout(seconds);
+    }
 
     @Override
-    public int getLoginTimeout() throws SQLException;
+    public int getLoginTimeout() throws SQLException {
+        return SharedPoolDataSourceHikari.getLoginTimeout();
+    }
 
     @Override
-    public Logger getParentLogger() throws SQLFeatureNotSupportedException;
+    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+        return SharedPoolDataSourceHikari.getParentLogger();
+    }
 
     @Override
-    public <T> T unwrap(Class<T> iface) throws SQLException;
+    public <T> T unwrap(Class<T> iface) throws SQLException {
+        return SharedPoolDataSourceHikari.unwrap(iface);
+    }
 
     @Override
-    public boolean isWrapperFor(Class<?> iface) throws SQLException;
+    public boolean isWrapperFor(Class<?> iface) throws SQLException {
+        return SharedPoolDataSourceHikari.isWrapperFor(iface);
+    }
 
     @Override
-    public void setMetricRegistry(Object metricRegistry);
+    public void setMetricRegistry(Object metricRegistry) {
+        SharedPoolDataSourceHikari.setMetricRegistry(metricRegistry);
+    }
     
     @Override
-    public void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory);
+    public void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
+        SharedPoolDataSourceHikari.setMetricsTrackerFactory(metricsTrackerFactory);
+    }
 
     @Override
-    public void setHealthCheckRegistry(Object healthCheckRegistry);
+    public void setHealthCheckRegistry(Object healthCheckRegistry) {
+        SharedPoolDataSourceHikari.setHealthCheckRegistry(healthCheckRegistry);
+    }
 
     @Override
-    public boolean isRunning();
+    public boolean isRunning() {
+        return SharedPoolDataSourceHikari.isRunning();
+    }
 
     @Override
-    public HikariPoolMXBean getHikariPoolMXBean();
+    public HikariPoolMXBean getHikariPoolMXBean() {
+        return SharedPoolDataSourceHikari.getHikariPoolMXBean();
+    }
 
     @Override
-    public HikariConfigMXBean getHikariConfigMXBean();
+    public HikariConfigMXBean getHikariConfigMXBean() {
+        return SharedPoolDataSourceHikari.getHikariConfigMXBean();
+    }
 
     @Override
-    public void evictConnection(Connection connection);
-    
-    @Deprecated
-    @Override
-    public void suspendPool();
-
-    @Deprecated
-    @Override
-    public void resumePool();
-    */
+    public void evictConnection(Connection connection) {
+        SharedPoolDataSourceHikari.evictConnection(connection);
+    }
     
     @Override
     public void close() {
-        delegate.remove(this);
+        SharedPoolDataSourceHikari.remove(this);
     }
 
     @Override
     public boolean isClosed() {
-        return !delegate.contains(this);
+        return !SharedPoolDataSourceHikari.contains(this);
     }
 
     /*
@@ -118,10 +139,14 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
 
     @Override
     public String getConnectionInitSql();
-
+    */
+    
     @Override
-    public String getConnectionTestQuery();
+    public String getConnectionTestQuery() {
+        return "alter session set current_schema = " + schema;
+    }
 
+    /*
     @Override
     public long getConnectionTimeout();
 
@@ -297,10 +322,15 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
 
     @Override
     public void setMinimumIdle(int minIdle);
-
+    */
+    
     @Override
-    public void setPassword(String password);
+    public void setPassword(String password) {
+        super.setPassword(password);
+        SharedPoolDataSourceHikari.setPassword(password);
+    }
 
+    /*
     @Override
     public void setPoolName(String poolName);
 
@@ -329,9 +359,29 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
     
     @Override
     public void setUsername(String username) {
-        super.setUsername(username);
-        
-        delegate.add(this); // do it here (should always be called) and not in the constructor to prevent a this escape warning in the constructor
+        if (username == null) {
+            proxyUsername = schema = null;
+        } else {
+            final int pos1 = username.indexOf("[");
+            final int pos2 = ( username.endsWith("]") ? username.length() - 1 : -1 );
+      
+            if (pos1 >= 0 && pos2 >= pos1) {
+                // a username like bc_proxy[bodomain]
+                proxyUsername = username.substring(0, pos1);
+                schema = username.substring(pos1+1, pos2);
+            } else {
+                // a username like bodomain
+                proxyUsername = null;
+                schema = username;
+            }
+        }
+
+        super.setUsername(proxyUsername != null ? proxyUsername : schema);
+        SharedPoolDataSourceHikari.setUsername(proxyUsername != null ? proxyUsername : schema);
+
+        // Add this object here (setUsername() should always be called) and
+        // not in the constructor to prevent a this escape warning in the constructor.
+        SharedPoolDataSourceHikari.add(this); 
     }
 
     /*

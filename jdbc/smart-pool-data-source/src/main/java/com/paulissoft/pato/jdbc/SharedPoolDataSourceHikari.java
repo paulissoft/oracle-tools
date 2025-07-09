@@ -28,19 +28,19 @@ class SharedPoolDataSourceHikari {
 
     final static CopyOnWriteArrayList<HikariDataSource> members = new CopyOnWriteArrayList<>();
 
-    public void add(HikariDataSource member) {
+    public static void add(HikariDataSource member) {
         members.add(member);
     }
 
-    public void remove(HikariDataSource member) {
+    public static void remove(HikariDataSource member) {
         members.remove(member);
     }
 
-    public Boolean contains(HikariDataSource member) {
+    public static Boolean contains(HikariDataSource member) {
         return members.contains(member);
     }
 
-    public void configure() {
+    public static void configure() {
         if (members.isEmpty()) {
             throw new IllegalStateException("Members should have been added before you can configure.");
         }
@@ -176,67 +176,75 @@ class SharedPoolDataSourceHikari {
 
     }
 
-    public Connection getConnection() throws SQLException {
+    public static Connection getConnection() throws SQLException {
         return ds.getConnection();
     }
 
-    public Connection getConnection(String username, String password) throws SQLException {
+    public static Connection getConnection(String username, String password) throws SQLException {
         return ds.getConnection(username, password);
     }
 
-    public PrintWriter getLogWriter() throws SQLException {
+    public static PrintWriter getLogWriter() throws SQLException {
         return ds.getLogWriter();
     }
 
-    public void setLogWriter(PrintWriter out) throws SQLException {
+    public static void setLogWriter(PrintWriter out) throws SQLException {
         ds.setLogWriter(out);
     }
 
-    public void setLoginTimeout(int seconds) throws SQLException {
+    public static void setLoginTimeout(int seconds) throws SQLException {
         ds.setLoginTimeout(seconds);
     }
 
-    public int getLoginTimeout() throws SQLException {
+    public static int getLoginTimeout() throws SQLException {
         return ds.getLoginTimeout();
     }
 
-    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+    public static Logger getParentLogger() throws SQLFeatureNotSupportedException {
         return ds.getParentLogger();
     }
 
-    public <T> T unwrap(Class<T> iface) throws SQLException {
+    public static <T> T unwrap(Class<T> iface) throws SQLException {
         return ds.unwrap(iface);
     }
 
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
+    public static boolean isWrapperFor(Class<?> iface) throws SQLException {
         return ds.isWrapperFor(iface);
     }
 
-    public void setMetricRegistry(Object metricRegistry) {
+    public static void setMetricRegistry(Object metricRegistry) {
         ds.setMetricRegistry(metricRegistry);
     }
     
-    public void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
+    public static void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
         ds.setMetricsTrackerFactory(metricsTrackerFactory);
     }
 
-    public void setHealthCheckRegistry(Object healthCheckRegistry) {
+    public static void setHealthCheckRegistry(Object healthCheckRegistry) {
         ds.setHealthCheckRegistry(healthCheckRegistry);
     }
 
-    public boolean isRunning() {
+    public static boolean isRunning() {
         return ds.isRunning();
     }
 
-    public HikariPoolMXBean getHikariPoolMXBean() {
+    public static HikariPoolMXBean getHikariPoolMXBean() {
         return ds.getHikariPoolMXBean();
     }
 
-    public HikariConfigMXBean getHikariConfigMXBean() {
+    public static HikariConfigMXBean getHikariConfigMXBean() {
         return ds.getHikariConfigMXBean();
     }
 
-    public void evictConnection(Connection connection) {
+    public static void evictConnection(Connection connection) {
         ds.evictConnection(connection);
+    }
+
+    public static void setPassword(String password) {
+        ds.setPassword(password);
+    }
+    
+    public static void setUsername(String username) {
+        ds.setUsername(username);
     }
 }    
