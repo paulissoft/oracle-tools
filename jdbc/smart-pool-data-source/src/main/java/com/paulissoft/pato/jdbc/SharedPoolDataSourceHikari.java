@@ -260,18 +260,6 @@ class SharedPoolDataSourceHikari {
                               "leak detection threshold");
     }
 
-    private synchronized void open() {
-        if (state == State.INITIALIZING) {
-            try {
-                configure();
-                state = State.OPEN;                
-            } catch (Exception ex) {
-                state = State.ERROR;
-                throw ex;
-            }
-        }
-    }
-
     private void configureLongProperty(Function<HikariDataSource, Long> getProperty,
                                        BiConsumer<HikariDataSource, Long> setProperty,
                                        String description) {
@@ -295,6 +283,18 @@ class SharedPoolDataSourceHikari {
             setProperty.accept(ds, getProperty.apply(members.get(0)));
         } else {
             throw new IllegalStateException(String.format("Not all %s values are the same: %s.", description, stream.collect(Collectors.toList()).toString()));
+        }
+    }
+
+    private synchronized void open() {
+        if (state == State.INITIALIZING) {
+            try {
+                configure();
+                state = State.OPEN;                
+            } catch (Exception ex) {
+                state = State.ERROR;
+                throw ex;
+            }
         }
     }
 
