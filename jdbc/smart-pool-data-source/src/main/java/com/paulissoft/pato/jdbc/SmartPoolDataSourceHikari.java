@@ -19,6 +19,10 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
     private volatile String schema = null;
 
     private volatile String proxyUsername = null;
+
+    /*
+    // overridden methods from HikariDataSource
+    */
     
     @Override
     public Connection getConnection() throws SQLException {
@@ -112,10 +116,14 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
 
     /*
     @Override
-    public String toString();    
+    public String toString();
+    */
 
+    /*
     // overridden methods from HikariConfig
+    */
 
+    /*
     @Override
     public void addDataSourceProperty(String propertyName, Object value);
 
@@ -321,6 +329,8 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
     
     @Override
     public void setPassword(String password) {
+        // Here we will set both the super and the delegate password so that the overridden getConnection() will always use
+        // the same password no matter where it comes from.
         super.setPassword(password);
         delegate.setPassword(password);
     }
@@ -353,21 +363,26 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
     */
     
     @Override
-    public synchronized void setUsername(String username) {
-        if (username == null) {
-            proxyUsername = schema = null;
-        } else {
-            final int pos1 = username.indexOf("[");
-            final int pos2 = ( username.endsWith("]") ? username.length() - 1 : -1 );
-      
-            if (pos1 >= 0 && pos2 >= pos1) {
-                // a username like bc_proxy[bodomain]
-                proxyUsername = username.substring(0, pos1);
-                schema = username.substring(pos1+1, pos2);
+    public void setUsername(String username) {
+        // Here we will set both the super and the delegate username so that the overridden getConnection() will always use
+        // the same password no matter where it comes from.
+
+        synchronized(this) {
+            if (username == null) {
+                proxyUsername = schema = null;
             } else {
-                // a username like bodomain
-                proxyUsername = null;
-                schema = username;
+                final int pos1 = username.indexOf("[");
+                final int pos2 = ( username.endsWith("]") ? username.length() - 1 : -1 );
+      
+                if (pos1 >= 0 && pos2 >= pos1) {
+                    // a username like bc_proxy[bodomain]
+                    proxyUsername = username.substring(0, pos1);
+                    schema = username.substring(pos1+1, pos2);
+                } else {
+                    // a username like bodomain
+                    proxyUsername = null;
+                    schema = username;
+                }
             }
         }
 
@@ -376,7 +391,7 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
 
         // Add this object here (setUsername() should always be called) and
         // not in the constructor to prevent a this escape warning in the constructor.
-        delegate.add(this); 
+        delegate.add(this);
     }
 
     /*
