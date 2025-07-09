@@ -9,10 +9,13 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.Objects;
 import javax.sql.DataSource;
 
 // a package accessible class
 abstract class SharedPoolDataSource<T extends DataSource>  {
+    private final String VALUES_ERROR = "Not all %s values are the same: %s.";
+    
     final T ds;
 
     final CopyOnWriteArrayList<T> members = new CopyOnWriteArrayList<>();
@@ -119,6 +122,36 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
         }
     }
 
+    void configureStringProperty(Function<T, String> getProperty,
+				 BiConsumer<T, String> setProperty,
+				 String description) {
+        var stream = members.stream().map(getProperty);
+
+        if (stream.filter(Objects::isNull).count() == members.size()) {
+            /* all null */
+            setProperty.accept(ds, null);
+        } else if (stream.filter(Objects::nonNull).count() == members.size() &&
+                   stream.filter(Objects::nonNull).distinct().count() == 1) {
+            /* all not null and the same */
+            setProperty.accept(ds, getProperty.apply(members.get(0)));
+        } else {
+            throw new IllegalStateException(String.format(VALUES_ERROR, stream.collect(Collectors.toList()).toString()));
+        }
+    }
+
+    void configureIntegerProperty(Function<T, Integer> getProperty,
+				  BiConsumer<T, Integer> setProperty,
+				  String description) {
+        var stream = members.stream().map(getProperty);
+
+        if (stream.distinct().count() == 1) {
+            /* all the same */
+            setProperty.accept(ds, getProperty.apply(members.get(0)));
+        } else {
+            throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.collect(Collectors.toList()).toString()));
+        }
+    }
+    
     void configureLongProperty(Function<T, Long> getProperty,
                                BiConsumer<T, Long> setProperty,
                                String description) {
@@ -128,7 +161,7 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
             /* all the same */
             setProperty.accept(ds, getProperty.apply(members.get(0)));
         } else {
-            throw new IllegalStateException(String.format("Not all %s values are the same: %s.", description, stream.collect(Collectors.toList()).toString()));
+            throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.collect(Collectors.toList()).toString()));
         }
     }
     
@@ -141,7 +174,7 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
             /* all the same */
             setProperty.accept(ds, getProperty.apply(members.get(0)));
         } else {
-            throw new IllegalStateException(String.format("Not all %s values are the same: %s.", description, stream.collect(Collectors.toList()).toString()));
+            throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.collect(Collectors.toList()).toString()));
         }
     }
 

@@ -73,6 +73,80 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
 
     @Override
     void configure() {
+	/*
+	//  TO DO:
+	//
+	//  public String getCatalog();
+	//
+	//  public String getConnectionInitSql();
+	//
+	//  public String getConnectionTestQuery();
+	//
+	//  public long getConnectionTimeout();
+	//
+	//  public javax.sql.DataSource getDataSource();
+	//
+	//  public String getDataSourceClassName();
+	//
+	//  public String getDataSourceJNDI();
+	//
+	//  public Properties getDataSourceProperties();
+	//
+	//  public String getDriverClassName();
+	//
+	//  public Properties getHealthCheckProperties();
+	//
+	//  public Object getHealthCheckRegistry();
+	//
+	//  public long getIdleTimeout();
+	//
+	//  public long getInitializationFailTimeout();
+	//
+	//  public String getJdbcUrl();
+	//
+	//  public long getLeakDetectionThreshold();
+	//
+	//  public int getMaximumPoolSize();
+	//
+	//  public long getMaxLifetime();
+	//
+	//  public Object getMetricRegistry();
+	//
+	//  public int getMinimumIdle();
+	//
+	//  public String getPassword();
+	//
+	//  public String getPoolName();
+	//
+	//  public ScheduledExecutorService getScheduledExecutor();
+	//
+	//  public ScheduledThreadPoolExecutor getScheduledExecutorService();
+	//
+	//  public String getSchema();
+	//
+	//  public ThreadFactory getThreadFactory();
+	//
+	//  public String getTransactionIsolation();
+	//
+	//  public String getUsername();
+	//
+	//  public long getValidationTimeout();
+	//
+	//  public boolean isAllowPoolSuspension();
+	//
+	//  public boolean isAutoCommit();
+	//
+	//  public boolean isInitializationFailFast();
+	//
+	//  public boolean isIsolateInternalQueries();
+	//
+	//  public boolean isJdbc4ConnectionTest();
+	//
+	//  public boolean isReadOnly();
+	//
+	//  public boolean isRegisterMbeans();
+	*/
+
         super.configure();
         
         ds.setMinimumIdle(members.stream().mapToInt(HikariDataSource::getMinimumIdle).sum());
