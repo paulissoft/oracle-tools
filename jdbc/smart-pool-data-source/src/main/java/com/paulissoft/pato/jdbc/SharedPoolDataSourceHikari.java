@@ -53,6 +53,7 @@ class SharedPoolDataSourceHikari {
         // private String username;
         var streamUsername = members.stream().map(HikariDataSource::getUsername);
 
+        // just a check: no need to invoke ds.setUsername() since that has been done already in SmartPoolDataSourceHikari
         if (!(streamUsername.filter(Objects::nonNull).count() == members.size() &&
               streamUsername.filter(Objects::nonNull).distinct().count() == 1)) {
             /* some null or not the same */
