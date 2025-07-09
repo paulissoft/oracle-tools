@@ -122,26 +122,31 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
         }
     }
 
-    void configureStringProperty(Function<T, String> getProperty,
-				 BiConsumer<T, String> setProperty,
-				 String description) {
+    void checkStringProperty(Function<T, String> getProperty,
+                             String description) {
         var stream = members.stream().map(getProperty);
 
         if (stream.filter(Objects::isNull).count() == members.size()) {
-            /* all null */
-            setProperty.accept(ds, null);
+            // all null: OK
         } else if (stream.filter(Objects::nonNull).count() == members.size() &&
                    stream.filter(Objects::nonNull).distinct().count() == 1) {
-            /* all not null and the same */
-            setProperty.accept(ds, getProperty.apply(members.get(0)));
+            // all not null and the same
         } else {
             throw new IllegalStateException(String.format(VALUES_ERROR, stream.collect(Collectors.toList()).toString()));
         }
     }
 
+    void configureStringProperty(Function<T, String> getProperty,
+                                 BiConsumer<T, String> setProperty,
+                                 String description) {
+        checkStringProperty(getProperty, description);
+
+        setProperty.accept(ds, getProperty.apply(members.get(0)));
+    }
+
     void configureIntegerProperty(Function<T, Integer> getProperty,
-				  BiConsumer<T, Integer> setProperty,
-				  String description) {
+                                  BiConsumer<T, Integer> setProperty,
+                                  String description) {
         var stream = members.stream().map(getProperty);
 
         if (stream.distinct().count() == 1) {

@@ -1,9 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
 import oracle.ucp.jdbc.PoolDataSourceImpl;
-import java.sql.Connection;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 
 // a package accessible class
@@ -21,8 +18,8 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
         if (state != State.INITIALIZING) {
             throw new IllegalStateException("You can only issue setPassword() while initializing.");
         }
-	try {
-	    ds.setPassword(password);
+        try {
+            ds.setPassword(password);
         } catch (Exception ex) {
             throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
         }
@@ -32,8 +29,8 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
         if (state != State.INITIALIZING) {
             throw new IllegalStateException("You can only issue setUsername() while initializing.");
         }
-	try {
-	    ds.setUser(username);
+        try {
+            ds.setUser(username);
         } catch (Exception ex) {
             throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
         }
@@ -41,44 +38,44 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
 
     @Override
     void configure() {
-	/*
-	//  String getURL();
-	//
-	//  String getUser();
-	//
-	//  String getConnectionPoolName();
-	//
-	//  String getConnectionFactoryClassName();
-	//
-	//  boolean getValidateConnectionOnBorrow();
-	//
-	//  int getAbandonedConnectionTimeout();
-	//
-	//  int getTimeToLiveConnectionTimeout();
-	//
-	//  int getInactiveConnectionTimeout();
-	//
-	//  int getTimeoutCheckInterval();
-	//
-	//  int getMaxStatements();
-	//
-	//  long getConnectionWaitDurationInMillis();
-	//
-	//  long getMaxConnectionReuseTime();
-	//
-	//  int getSecondsToTrustIdleConnection();
-	//
-	//  int getConnectionValidationTimeout();
-	//
-	*/  
+        /*
+        //  String getURL();
+        //
+        //  String getUser();
+        //
+        //  String getConnectionPoolName();
+        //
+        //  String getConnectionFactoryClassName();
+        //
+        //  boolean getValidateConnectionOnBorrow();
+        //
+        //  int getAbandonedConnectionTimeout();
+        //
+        //  int getTimeToLiveConnectionTimeout();
+        //
+        //  int getInactiveConnectionTimeout();
+        //
+        //  int getTimeoutCheckInterval();
+        //
+        //  int getMaxStatements();
+        //
+        //  long getConnectionWaitDurationInMillis();
+        //
+        //  long getMaxConnectionReuseTime();
+        //
+        //  int getSecondsToTrustIdleConnection();
+        //
+        //  int getConnectionValidationTimeout();
+        //
+        */  
         super.configure();
 
-	try {
-	    ds.setInitialPoolSize(members.stream().mapToInt(PoolDataSourceImpl::getInitialPoolSize).sum());
-	    ds.setMinPoolSize(members.stream().mapToInt(PoolDataSourceImpl::getMinPoolSize).sum());
-	    ds.setMaxPoolSize(members.stream().mapToInt(PoolDataSourceImpl::getMaxPoolSize).sum());
+        try {
+            ds.setInitialPoolSize(members.stream().mapToInt(PoolDataSourceImpl::getInitialPoolSize).sum());
+            ds.setMinPoolSize(members.stream().mapToInt(PoolDataSourceImpl::getMinPoolSize).sum());
+            ds.setMaxPoolSize(members.stream().mapToInt(PoolDataSourceImpl::getMaxPoolSize).sum());
 
-	    // properties that may NOT differ, i.e. must be common
+            // properties that may NOT differ, i.e. must be common
 
         } catch (Exception ex) {
             throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
