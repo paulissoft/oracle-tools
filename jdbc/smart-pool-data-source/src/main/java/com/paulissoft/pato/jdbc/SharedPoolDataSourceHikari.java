@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
+import com.zaxxer.hikari.metrics.MetricsTrackerFactory;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -27,16 +28,16 @@ class SharedPoolDataSourceHikari {
 
     final static CopyOnWriteArrayList<HikariDataSource> members = new CopyOnWriteArrayList<>();
 
-    public void add(HikariDataSource ds) {
-        members.add(ds);
+    public void add(HikariDataSource member) {
+        members.add(member);
     }
 
-    public void remove(HikariDataSource ds) {
-        members.remove(ds);
+    public void remove(HikariDataSource member) {
+        members.remove(member);
     }
 
-    public Boolean contains(HikariDataSource ds) {
-        return members.contains(ds);
+    public Boolean contains(HikariDataSource member) {
+        return members.contains(member);
     }
 
     public void configure() {
@@ -51,7 +52,7 @@ class SharedPoolDataSourceHikari {
 
         // private String dataSourceClassName;
         var streamDataSourceClassName = members.stream().map(HikariDataSource::getDataSourceClassName);
-        
+
         if (streamDataSourceClassName.filter(Objects::isNull).count() == members.size()) {
             /* all null */
             ds.setDataSourceClassName(null);
@@ -140,7 +141,7 @@ class SharedPoolDataSourceHikari {
             /* all the same */
             ds.setReadOnly(members.get(0).isReadOnly());
         } else {
-            throw new IllegalStateException(String.format("Not all connection timeout values are the same: %s", streamReadOnly.collect(Collectors.toList()).toString()));
+            throw new IllegalStateException(String.format("Not all read only values are the same: %s", streamReadOnly.collect(Collectors.toList()).toString()));
         }
 
         // private boolean registerMbeans;
@@ -183,4 +184,59 @@ class SharedPoolDataSourceHikari {
         return ds.getConnection(username, password);
     }
 
+    public PrintWriter getLogWriter() throws SQLException {
+        return ds.getLogWriter();
+    }
+
+    public void setLogWriter(PrintWriter out) throws SQLException {
+        ds.setLogWriter(out);
+    }
+
+    public void setLoginTimeout(int seconds) throws SQLException {
+        ds.setLoginTimeout(seconds);
+    }
+
+    public int getLoginTimeout() throws SQLException {
+        return ds.getLoginTimeout();
+    }
+
+    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+        return ds.getParentLogger();
+    }
+
+    public <T> T unwrap(Class<T> iface) throws SQLException {
+        return ds.unwrap(iface);
+    }
+
+    public boolean isWrapperFor(Class<?> iface) throws SQLException {
+        return ds.isWrapperFor(iface);
+    }
+
+    public void setMetricRegistry(Object metricRegistry) {
+        ds.setMetricRegistry(metricRegistry);
+    }
+    
+    public void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
+        ds.setMetricsTrackerFactory(metricsTrackerFactory);
+    }
+
+    public void setHealthCheckRegistry(Object healthCheckRegistry) {
+        ds.setHealthCheckRegistry(healthCheckRegistry);
+    }
+
+    public boolean isRunning() {
+        return ds.isRunning();
+    }
+
+    public HikariPoolMXBean getHikariPoolMXBean() {
+        return ds.getHikariPoolMXBean();
+    }
+
+    public HikariConfigMXBean getHikariConfigMXBean() {
+        return ds.getHikariConfigMXBean();
+    }
+
+    public void evictConnection(Connection connection) {
+        ds.evictConnection(connection);
+    }
 }    
