@@ -71,75 +71,20 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
         /*
         //  TO DO:
         //
-        //  public String getCatalog();
-        //
-        //  public String getConnectionInitSql();
-        //
-        //  public String getConnectionTestQuery();
-        //
-        //  public long getConnectionTimeout();
-        //
         //  public javax.sql.DataSource getDataSource();
-        //
-        //  public String getDataSourceClassName();
         //
         //  public String getDataSourceJNDI();
         //
-        //  public Properties getDataSourceProperties();
-        //
-        //  public String getDriverClassName();
-        //
-        //  public Properties getHealthCheckProperties();
-        //
         //  public Object getHealthCheckRegistry();
         //
-        //  public long getIdleTimeout();
-        //
-        //  public long getInitializationFailTimeout();
-        //
-        //  public String getJdbcUrl();
-        //
-        //  public long getLeakDetectionThreshold();
-        //
-        //  public int getMaximumPoolSize();
-        //
-        //  public long getMaxLifetime();
-        //
         //  public Object getMetricRegistry();
-        //
-        //  public int getMinimumIdle();
-        //
-        //  public String getPassword();
-        //
-        //  public String getPoolName();
         //
         //  public ScheduledExecutorService getScheduledExecutor();
         //
         //  public ScheduledThreadPoolExecutor getScheduledExecutorService();
         //
-        //  public String getSchema();
-        //
         //  public ThreadFactory getThreadFactory();
         //
-        //  public String getTransactionIsolation();
-        //
-        //  public String getUsername();
-        //
-        //  public long getValidationTimeout();
-        //
-        //  public boolean isAllowPoolSuspension();
-        //
-        //  public boolean isAutoCommit();
-        //
-        //  public boolean isInitializationFailFast();
-        //
-        //  public boolean isIsolateInternalQueries();
-        //
-        //  public boolean isJdbc4ConnectionTest();
-        //
-        //  public boolean isReadOnly();
-        //
-        //  public boolean isRegisterMbeans();
         */
         
         super.configure();
@@ -147,6 +92,9 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
         ds.setMinimumIdle(members.stream().mapToInt(HikariDataSource::getMinimumIdle).sum());
         ds.setMaximumPoolSize(members.stream().mapToInt(HikariDataSource::getMaximumPoolSize).sum());
 
+        // Must use lambda expressions below since primitives are used and
+        // the functional interface does not support them all (boolean).
+        
         // properties that may NOT differ, i.e. must be common
 
         // private String username;
@@ -154,14 +102,31 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
         checkStringProperty((ds) -> ds.getUsername(),
                             "username");
 
+        // private String catalog;
+        configureStringProperty((ds) -> ds.getCatalog(),
+                                (ds, value) -> ds.setCatalog(value),
+                                "catalog");
+
+        // private String connectionInitSql;
+        configureStringProperty((ds) -> ds.getConnectionInitSql(),
+                                (ds, value) -> ds.setConnectionInitSql(value),
+                                "connection init sql");
+
         // private String dataSourceClassName;
         configureStringProperty((ds) -> ds.getDataSourceClassName(),
                                 (ds, value) -> ds.setDataSourceClassName(value),
                                 "data source class name");
 
-        // Must use lambda expressions below since primitives are used and
-        // the functional interface does not support them all (boolean).
-        
+        // private String driverClassName;
+        configureStringProperty((ds) -> ds.getDriverClassName(),
+                                (ds, value) -> ds.setDriverClassName(value),
+                                "driver class name");
+
+        // private boolean allowPoolSuspension;
+        configureBooleanProperty((ds) -> ds.isAllowPoolSuspension(),
+                                 (ds, value) -> ds.setAllowPoolSuspension(value),
+                                 "allow pool suspension");
+
         // private boolean autoCommit;
         configureBooleanProperty((ds) -> ds.isAutoCommit(),
                                  (ds, value) -> ds.setAutoCommit(value),
@@ -177,25 +142,25 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
                               (ds, value) -> ds.setIdleTimeout(value),
                               "idle timeout");
 
-        // private long maxLifetime;
-        configureLongProperty((ds) -> ds.getMaxLifetime(),
-                              (ds, value) -> ds.setMaxLifetime(value),
-                              "max lifetime");
-
         // private long initializationFailTimeout;
         configureLongProperty((ds) -> ds.getInitializationFailTimeout(),
                               (ds, value) -> ds.setInitializationFailTimeout(value),
                               "initialization fail timeout");
 
+        // private String jdbcUrl;
+        configureStringProperty((ds) -> ds.getJdbcUrl(),
+                              (ds, value) -> ds.setJdbcUrl(value),
+                              "JDBC URL");
+
+        // private long maxLifetime;
+        configureLongProperty((ds) -> ds.getMaxLifetime(),
+                              (ds, value) -> ds.setMaxLifetime(value),
+                              "max lifetime");
+
         // private boolean isolateInternalQueries;
         configureBooleanProperty((ds) -> ds.isIsolateInternalQueries(),
                                  (ds, value) -> ds.setIsolateInternalQueries(value),
                                  "isolate internal queries");
-
-        // private boolean allowPoolSuspension;
-        configureBooleanProperty((ds) -> ds.isAllowPoolSuspension(),
-                                 (ds, value) -> ds.setAllowPoolSuspension(value),
-                                 "allow pool suspension");
 
         // private boolean readOnly;
         configureBooleanProperty((ds) -> ds.isReadOnly(),
@@ -206,6 +171,16 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
         configureBooleanProperty((ds) -> ds.isRegisterMbeans(),
                                  (ds, value) -> ds.setRegisterMbeans(value),
                                  "register Mbeans");
+
+        // private String schema;
+        configureStringProperty((ds) -> ds.getSchema(),
+                              (ds, value) -> ds.setSchema(value),
+                              "schema");
+
+        // private String transactionIsolation;
+        configureStringProperty((ds) -> ds.getTransactionIsolation(),
+                              (ds, value) -> ds.setTransactionIsolation(value),
+                              "transaction isolation");
 
         // private long validationTimeout;
         configureLongProperty((ds) -> ds.getValidationTimeout(),
