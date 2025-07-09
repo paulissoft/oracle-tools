@@ -38,8 +38,8 @@ class SharedPoolDataSourceHikari {
     }
 
     public void configure() {
-        ds.setMinimumIdle(members.stream().mapToInt(e -> e.getMinimumIdle()).sum());
-        ds.setMaximumPoolSize(members.stream().mapToInt(e -> e.getMaximumPoolSize()).sum());
+        ds.setMinimumIdle(members.stream().mapToInt(HikariDataSource::getMinimumIdle).sum());
+        ds.setMaximumPoolSize(members.stream().mapToInt(HikariDataSource::getMaximumPoolSize).sum());
     }
 
     public Connection getConnection() throws SQLException {
