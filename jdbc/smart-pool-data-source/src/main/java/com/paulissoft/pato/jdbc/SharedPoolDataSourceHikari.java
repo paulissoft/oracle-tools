@@ -4,160 +4,67 @@ import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
 import com.zaxxer.hikari.metrics.MetricsTrackerFactory;
-import java.io.PrintWriter;
 import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
 import java.util.Objects;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 
 // a package accessible class
-class SharedPoolDataSourceHikari {
+class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> {
     private static final String USERNAMES_ERROR = "Not all usernames are the same and not null: %s.";
 
     private static final String DATA_SOURCE_CLASS_NAMES_ERROR = "Not all data source class names are the same: %s.";
-        
-    private final HikariDataSource ds = new HikariDataSource();
 
-    private final CopyOnWriteArrayList<HikariDataSource> members = new CopyOnWriteArrayList<>();
-
-    private enum State {
-        INITIALIZING, // a start state; next possible states: ERROR, OPEN or CLOSED
-        ERROR,        // INITIALIZATING error; next possible states: CLOSED
-        OPEN,         // next possible states: CLOSED
-        CLOSED
+    // constructor
+    SharedPoolDataSourceHikari() {
+        super(new HikariDataSource());
     }
 
-    private volatile State state = State.INITIALIZING; // changed in a synchronized methods open()/close()
-
-    public void add(HikariDataSource member) {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only add a member to the shared pool while initializing.");
-        }
-
-        members.add(member);
-    }
-
-    public void remove(HikariDataSource member) {
-        members.remove(member);
-
-        if (members.size() == 0) {
-            close();
-        }
-    }
-
-    public Boolean contains(HikariDataSource member) {
-        return members.contains(member);
-    }
-
-    @SuppressWarnings("fallthrough")
-    public Connection getConnection() throws SQLException {
-        switch (state) {
-        case INITIALIZING:
-            open(); // will change state to OPEN
-            if (state != State.OPEN) {
-                throw new IllegalStateException("After the pool data source is opened, the state must be OPEN.");
-            }
-
-            /* FALLTHROUGH */
-        case OPEN:
-            break;
-        default:
-            throw new IllegalStateException(String.format("You can only get a connection when the pool state is OPEN but it is %s.",
-                                                          state));
-        }
-
-        return ds.getConnection();
-    }
-
-    public Connection getConnection(String username, String password) throws SQLException {
-        throw new SQLFeatureNotSupportedException("getConnection");
-    }
-
-    public PrintWriter getLogWriter() throws SQLException {
-        return ds.getLogWriter();
-    }
-
-    public void setLogWriter(PrintWriter out) throws SQLException {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only issue setLogWriter() while initializing.");
-        }
-        ds.setLogWriter(out);
-    }
-
-    public void setLoginTimeout(int seconds) throws SQLException {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only issue setLoginTimeout() while initializing.");
-        }
-        ds.setLoginTimeout(seconds);
-    }
-
-    public int getLoginTimeout() throws SQLException {
-        return ds.getLoginTimeout();
-    }
-
-    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        return ds.getParentLogger();
-    }
-
-    public <T> T unwrap(Class<T> iface) throws SQLException {
-        return ds.unwrap(iface);
-    }
-
-    public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return ds.isWrapperFor(iface);
-    }
-
-    public void setMetricRegistry(Object metricRegistry) {
+    void setMetricRegistry(Object metricRegistry) {
         if (state != State.INITIALIZING) {
             throw new IllegalStateException("You can only issue setMetricRegistry() while initializing.");
         }
         ds.setMetricRegistry(metricRegistry);
     }
     
-    public void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
+    void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
         if (state != State.INITIALIZING) {
             throw new IllegalStateException("You can only issue setMetricsTrackerFactory() while initializing.");
         }
         ds.setMetricsTrackerFactory(metricsTrackerFactory);
     }
 
-    public void setHealthCheckRegistry(Object healthCheckRegistry) {
+    void setHealthCheckRegistry(Object healthCheckRegistry) {
         if (state != State.INITIALIZING) {
             throw new IllegalStateException("You can only issue setHealthCheckRegistry() while initializing.");
         }
         ds.setHealthCheckRegistry(healthCheckRegistry);
     }
 
-    public boolean isRunning() {
+    boolean isRunning() {
         return ds.isRunning();
     }
 
-    public HikariPoolMXBean getHikariPoolMXBean() {
+    HikariPoolMXBean getHikariPoolMXBean() {
         return ds.getHikariPoolMXBean();
     }
 
-    public HikariConfigMXBean getHikariConfigMXBean() {
+    HikariConfigMXBean getHikariConfigMXBean() {
         return ds.getHikariConfigMXBean();
     }
 
-    public void evictConnection(Connection connection) {
+    void evictConnection(Connection connection) {
         ds.evictConnection(connection);
     }
 
-    public void setPassword(String password) {
+    void setPassword(String password) {
         if (state != State.INITIALIZING) {
             throw new IllegalStateException("You can only issue setPassword() while initializing.");
         }
         ds.setPassword(password);
     }
     
-    public void setUsername(String username) {
+    void setUsername(String username) {
         if (state != State.INITIALIZING) {
             throw new IllegalStateException("You can only issue setUsername() while initializing.");
         }
@@ -166,10 +73,9 @@ class SharedPoolDataSourceHikari {
 
     // private stuff
 
-    private void configure() {
-        if (members.isEmpty()) {
-            throw new IllegalStateException("Members should have been added before you can configure.");
-        }
+    @Override
+    void configure() {
+        super.configure();
         
         ds.setMinimumIdle(members.stream().mapToInt(HikariDataSource::getMinimumIdle).sum());
         ds.setMaximumPoolSize(members.stream().mapToInt(HikariDataSource::getMaximumPoolSize).sum());
@@ -260,46 +166,10 @@ class SharedPoolDataSourceHikari {
                               "leak detection threshold");
     }
 
-    private void configureLongProperty(Function<HikariDataSource, Long> getProperty,
-                                       BiConsumer<HikariDataSource, Long> setProperty,
-                                       String description) {
-        var stream = members.stream().map(getProperty);
-
-        if (stream.distinct().count() == 1) {
-            /* all the same */
-            setProperty.accept(ds, getProperty.apply(members.get(0)));
-        } else {
-            throw new IllegalStateException(String.format("Not all %s values are the same: %s.", description, stream.collect(Collectors.toList()).toString()));
-        }
-    }
-
-    private void configureBooleanProperty(Function<HikariDataSource, Boolean> getProperty,
-                                          BiConsumer<HikariDataSource, Boolean> setProperty,
-                                          String description) {
-        var stream = members.stream().map(getProperty);
-
-        if (stream.distinct().count() == 1) {
-            /* all the same */
-            setProperty.accept(ds, getProperty.apply(members.get(0)));
-        } else {
-            throw new IllegalStateException(String.format("Not all %s values are the same: %s.", description, stream.collect(Collectors.toList()).toString()));
-        }
-    }
-
-    private synchronized void open() {
-        if (state == State.INITIALIZING) {
-            try {
-                configure();
-                state = State.OPEN;                
-            } catch (Exception ex) {
-                state = State.ERROR;
-                throw ex;
-            }
-        }
-    }
-
-    private synchronized void close() {
+    void close() {
         ds.close();
-        state = State.CLOSED;
+        synchronized(this) {
+            state = State.CLOSED;
+        }
     }
 }    
