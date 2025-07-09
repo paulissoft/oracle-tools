@@ -40,6 +40,10 @@ class SharedPoolDataSourceHikari {
     }
 
     public void configure() {
+        if (members.isEmpty()) {
+            throw new IllegalStateException("Members should have been added before you can configure.");
+        }
+        
         ds.setMinimumIdle(members.stream().mapToInt(HikariDataSource::getMinimumIdle).sum());
         ds.setMaximumPoolSize(members.stream().mapToInt(HikariDataSource::getMaximumPoolSize).sum());
 
@@ -70,17 +74,55 @@ class SharedPoolDataSourceHikari {
         }
         
         // private long connectionTimeout;
-        // 
+        var streamConnectionTimeout = members.stream().map(HikariDataSource::getConnectionTimeout);
+
+        if (streamConnectionTimeout.distinct().count() == 1) {
+            /* all the same */
+            ds.setConnectionTimeout(members.get(0).getConnectionTimeout());
+        } else {
+            throw new IllegalStateException(String.format("Not all connection timeout values are the same: %s", streamConnectionTimeout.collect(Collectors.toList()).toString()));
+        }
+
         // private long idleTimeout;
-        // 
+        var streamIdleTimeout = members.stream().map(HikariDataSource::getIdleTimeout);
+
+        if (streamIdleTimeout.distinct().count() == 1) {
+            /* all the same */
+            ds.setIdleTimeout(members.get(0).getIdleTimeout());
+        } else {
+            throw new IllegalStateException(String.format("Not all idle timeout values are the same: %s", streamIdleTimeout.collect(Collectors.toList()).toString()));
+        }
+
         // private long maxLifetime;
-        // 
-        // private String connectionTestQuery;
-        // 
+        var streamMaxLifetime = members.stream().map(HikariDataSource::getMaxLifetime);
+
+        if (streamMaxLifetime.distinct().count() == 1) {
+            /* all the same */
+            ds.setMaxLifetime(members.get(0).getMaxLifetime());
+        } else {
+            throw new IllegalStateException(String.format("Not all max lifetime values are the same: %s", streamMaxLifetime.collect(Collectors.toList()).toString()));
+        }
+
         // private long initializationFailTimeout;
-        // 
+        var streamInitializationFailTimeout = members.stream().map(HikariDataSource::getInitializationFailTimeout);
+
+        if (streamInitializationFailTimeout.distinct().count() == 1) {
+            /* all the same */
+            ds.setInitializationFailTimeout(members.get(0).getInitializationFailTimeout());
+        } else {
+            throw new IllegalStateException(String.format("Not all initialization fail timeout values are the same: %s", streamInitializationFailTimeout.collect(Collectors.toList()).toString()));
+        }
+
         // private boolean isolateInternalQueries;
-        // 
+        var streamIsolateInternalQueries = members.stream().map(HikariDataSource::isIsolateInternalQueries);
+
+        if (streamIsolateInternalQueries.distinct().count() == 1) {
+            /* all the same */
+            ds.setIsolateInternalQueries(members.get(0).isIsolateInternalQueries());
+        } else {
+            throw new IllegalStateException(String.format("Not all isolate internal queries values are the same: %s", streamIsolateInternalQueries.collect(Collectors.toList()).toString()));
+        }
+
         // private boolean allowPoolSuspension;
         // 
         // private boolean readOnly;
