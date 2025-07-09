@@ -28,19 +28,123 @@ class SharedPoolDataSourceHikari {
 
     final static CopyOnWriteArrayList<HikariDataSource> members = new CopyOnWriteArrayList<>();
 
+    private enum State {
+        INITIALIZING, // a start state; next possible states: ERROR, OPEN or CLOSED
+        ERROR,        // INITIALIZATING error; next possible states: CLOSED
+        OPEN,         // next possible states: CLOSED
+        CLOSED
+    }
+
+    private static volatile State state = State.INITIALIZING; // changed in a synchronized methods open()/close()
+
     public static void add(HikariDataSource member) {
         members.add(member);
     }
 
     public static void remove(HikariDataSource member) {
         members.remove(member);
+
+        if (members.size() == 0) {
+            ds.close();
+            state = State.CLOSED;
+        }
     }
 
     public static Boolean contains(HikariDataSource member) {
         return members.contains(member);
     }
 
-    public static void configure() {
+    @SuppressWarnings("fallthrough")
+    public static Connection getConnection() throws SQLException {
+        switch (state) {
+        case INITIALIZING:
+            open(); // will change state to OPEN
+            if (state != State.OPEN) {
+                throw new IllegalStateException("After the pool data source is opened, the state must be OPEN.");
+            }
+
+                /* FALLTHROUGH */
+        case OPEN:
+            break;
+        default:
+            throw new IllegalStateException(String.format("You can only get a connection when the pool state is OPEN but it is %s.",
+                                                          state));
+        }
+
+        return ds.getConnection();
+    }
+
+    public static Connection getConnection(String username, String password) throws SQLException {
+        return ds.getConnection(username, password);
+    }
+
+    public static PrintWriter getLogWriter() throws SQLException {
+        return ds.getLogWriter();
+    }
+
+    public static void setLogWriter(PrintWriter out) throws SQLException {
+        ds.setLogWriter(out);
+    }
+
+    public static void setLoginTimeout(int seconds) throws SQLException {
+        ds.setLoginTimeout(seconds);
+    }
+
+    public static int getLoginTimeout() throws SQLException {
+        return ds.getLoginTimeout();
+    }
+
+    public static Logger getParentLogger() throws SQLFeatureNotSupportedException {
+        return ds.getParentLogger();
+    }
+
+    public static <T> T unwrap(Class<T> iface) throws SQLException {
+        return ds.unwrap(iface);
+    }
+
+    public static boolean isWrapperFor(Class<?> iface) throws SQLException {
+        return ds.isWrapperFor(iface);
+    }
+
+    public static void setMetricRegistry(Object metricRegistry) {
+        ds.setMetricRegistry(metricRegistry);
+    }
+    
+    public static void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
+        ds.setMetricsTrackerFactory(metricsTrackerFactory);
+    }
+
+    public static void setHealthCheckRegistry(Object healthCheckRegistry) {
+        ds.setHealthCheckRegistry(healthCheckRegistry);
+    }
+
+    public static boolean isRunning() {
+        return ds.isRunning();
+    }
+
+    public static HikariPoolMXBean getHikariPoolMXBean() {
+        return ds.getHikariPoolMXBean();
+    }
+
+    public static HikariConfigMXBean getHikariConfigMXBean() {
+        return ds.getHikariConfigMXBean();
+    }
+
+    public static void evictConnection(Connection connection) {
+        ds.evictConnection(connection);
+    }
+
+    public static void setPassword(String password) {
+        ds.setPassword(password);
+    }
+    
+    public static void setUsername(String username) {
+        ds.setUsername(username);
+    }
+
+    // private stuff
+
+    private static void configure() {
         if (members.isEmpty()) {
             throw new IllegalStateException("Members should have been added before you can configure.");
         }
@@ -187,75 +291,15 @@ class SharedPoolDataSourceHikari {
 
     }
 
-    public static Connection getConnection() throws SQLException {
-        return ds.getConnection();
-    }
-
-    public static Connection getConnection(String username, String password) throws SQLException {
-        return ds.getConnection(username, password);
-    }
-
-    public static PrintWriter getLogWriter() throws SQLException {
-        return ds.getLogWriter();
-    }
-
-    public static void setLogWriter(PrintWriter out) throws SQLException {
-        ds.setLogWriter(out);
-    }
-
-    public static void setLoginTimeout(int seconds) throws SQLException {
-        ds.setLoginTimeout(seconds);
-    }
-
-    public static int getLoginTimeout() throws SQLException {
-        return ds.getLoginTimeout();
-    }
-
-    public static Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        return ds.getParentLogger();
-    }
-
-    public static <T> T unwrap(Class<T> iface) throws SQLException {
-        return ds.unwrap(iface);
-    }
-
-    public static boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return ds.isWrapperFor(iface);
-    }
-
-    public static void setMetricRegistry(Object metricRegistry) {
-        ds.setMetricRegistry(metricRegistry);
-    }
-    
-    public static void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
-        ds.setMetricsTrackerFactory(metricsTrackerFactory);
-    }
-
-    public static void setHealthCheckRegistry(Object healthCheckRegistry) {
-        ds.setHealthCheckRegistry(healthCheckRegistry);
-    }
-
-    public static boolean isRunning() {
-        return ds.isRunning();
-    }
-
-    public static HikariPoolMXBean getHikariPoolMXBean() {
-        return ds.getHikariPoolMXBean();
-    }
-
-    public static HikariConfigMXBean getHikariConfigMXBean() {
-        return ds.getHikariConfigMXBean();
-    }
-
-    public static void evictConnection(Connection connection) {
-        ds.evictConnection(connection);
-    }
-
-    public static void setPassword(String password) {
-        ds.setPassword(password);
-    }
-    
-    public static void setUsername(String username) {
-        ds.setUsername(username);
+    private static synchronized void open() {
+        if (state == State.INITIALIZING) {
+            try {
+                configure();
+                state = State.OPEN;                
+            } catch (Exception ex) {
+                state = State.ERROR;
+                throw ex;
+            }
+        }
     }
 }    
