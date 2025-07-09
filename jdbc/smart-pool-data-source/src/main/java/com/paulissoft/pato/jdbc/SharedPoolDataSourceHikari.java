@@ -43,12 +43,11 @@ class SharedPoolDataSourceHikari {
         members.add(member);
     }
 
-    public synchronized void remove(HikariDataSource member) {
+    public void remove(HikariDataSource member) {
         members.remove(member);
 
         if (members.size() == 0) {
-            ds.close();
-            state = State.CLOSED;
+            close();
         }
     }
 
@@ -202,6 +201,9 @@ class SharedPoolDataSourceHikari {
             throw new IllegalStateException(String.format(DATA_SOURCE_CLASS_NAMES_ERROR, streamDataSourceClassName.collect(Collectors.toList()).toString()));
         }
 
+        // Must use lambda expressions below since primitives are used and
+        // the functional interface does not support them all (boolean).
+        
         // private boolean autoCommit;
         configureBooleanProperty((ds) -> ds.isAutoCommit(),
                                  (ds, value) -> ds.setAutoCommit(value),
@@ -294,5 +296,10 @@ class SharedPoolDataSourceHikari {
         } else {
             throw new IllegalStateException(String.format("Not all %s values are the same: %s.", description, stream.collect(Collectors.toList()).toString()));
         }
+    }
+
+    private synchronized void close() {
+        ds.close();
+        state = State.CLOSED;
     }
 }    
