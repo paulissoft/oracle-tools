@@ -38,6 +38,10 @@ class SharedPoolDataSourceHikari {
     private static volatile State state = State.INITIALIZING; // changed in a synchronized methods open()/close()
 
     public static void add(HikariDataSource member) {
+        if (state != State.INITIALIZING) {
+            throw new IllegalStateException("You can only add a member to the shared pool while initializing.");
+        }
+
         members.add(member);
     }
 
@@ -63,7 +67,7 @@ class SharedPoolDataSourceHikari {
                 throw new IllegalStateException("After the pool data source is opened, the state must be OPEN.");
             }
 
-                /* FALLTHROUGH */
+            /* FALLTHROUGH */
         case OPEN:
             break;
         default:
@@ -83,10 +87,16 @@ class SharedPoolDataSourceHikari {
     }
 
     public static void setLogWriter(PrintWriter out) throws SQLException {
+        if (state != State.INITIALIZING) {
+            throw new IllegalStateException("You can only issue setLogWriter() while initializing.");
+        }
         ds.setLogWriter(out);
     }
 
     public static void setLoginTimeout(int seconds) throws SQLException {
+        if (state != State.INITIALIZING) {
+            throw new IllegalStateException("You can only issue setLoginTimeout() while initializing.");
+        }
         ds.setLoginTimeout(seconds);
     }
 
@@ -107,14 +117,23 @@ class SharedPoolDataSourceHikari {
     }
 
     public static void setMetricRegistry(Object metricRegistry) {
+        if (state != State.INITIALIZING) {
+            throw new IllegalStateException("You can only issue setMetricRegistry() while initializing.");
+        }
         ds.setMetricRegistry(metricRegistry);
     }
     
     public static void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
+        if (state != State.INITIALIZING) {
+            throw new IllegalStateException("You can only issue setMetricsTrackerFactory() while initializing.");
+        }
         ds.setMetricsTrackerFactory(metricsTrackerFactory);
     }
 
     public static void setHealthCheckRegistry(Object healthCheckRegistry) {
+        if (state != State.INITIALIZING) {
+            throw new IllegalStateException("You can only issue setHealthCheckRegistry() while initializing.");
+        }
         ds.setHealthCheckRegistry(healthCheckRegistry);
     }
 
@@ -135,10 +154,16 @@ class SharedPoolDataSourceHikari {
     }
 
     public static void setPassword(String password) {
+        if (state != State.INITIALIZING) {
+            throw new IllegalStateException("You can only issue setPassword() while initializing.");
+        }
         ds.setPassword(password);
     }
     
     public static void setUsername(String username) {
+        if (state != State.INITIALIZING) {
+            throw new IllegalStateException("You can only issue setUsername() while initializing.");
+        }
         ds.setUsername(username);
     }
 
