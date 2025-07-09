@@ -50,6 +50,16 @@ class SharedPoolDataSourceHikari {
 
         // properties that may NOT differ, i.e. must be common
 
+        // private String username;
+        var streamUsername = members.stream().map(HikariDataSource::getUsername);
+
+        if (!(streamUsername.filter(Objects::nonNull).count() == members.size() &&
+              streamUsername.filter(Objects::nonNull).distinct().count() == 1)) {
+            /* some null or not the same */
+        } else {
+            throw new IllegalStateException(String.format("Not all usernames are the same and not null: %s", streamUsername.collect(Collectors.toList()).toString()));
+        }
+
         // private String dataSourceClassName;
         var streamDataSourceClassName = members.stream().map(HikariDataSource::getDataSourceClassName);
 
