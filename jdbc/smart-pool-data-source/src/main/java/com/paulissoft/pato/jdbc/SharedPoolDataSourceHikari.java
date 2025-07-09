@@ -209,49 +209,24 @@ class SharedPoolDataSourceHikari {
         }
         
         // private long connectionTimeout;
-        configureLongProperty((ds) -> Long.valueOf(ds.getConnectionTimeout()),
+        configureLongProperty((ds) -> ds.getConnectionTimeout(),
                               (ds, value) -> ds.setConnectionTimeout(value),
                               "connection timeout");
-        /*
-        var streamConnectionTimeout = members.stream().map(HikariDataSource::getConnectionTimeout);
-
-        if (streamConnectionTimeout.distinct().count() == 1) {
-            // all the same
-            ds.setConnectionTimeout(members.get(0).getConnectionTimeout());
-        } else {
-            throw new IllegalStateException(String.format("Not all connection timeout values are the same: %s", streamConnectionTimeout.collect(Collectors.toList()).toString()));
-        }
-        */
 
         // private long idleTimeout;
-        var streamIdleTimeout = members.stream().map(HikariDataSource::getIdleTimeout);
-
-        if (streamIdleTimeout.distinct().count() == 1) {
-            /* all the same */
-            ds.setIdleTimeout(members.get(0).getIdleTimeout());
-        } else {
-            throw new IllegalStateException(String.format("Not all idle timeout values are the same: %s", streamIdleTimeout.collect(Collectors.toList()).toString()));
-        }
+        configureLongProperty((ds) -> ds.getIdleTimeout(),
+                              (ds, value) -> ds.setIdleTimeout(value),
+                              "idle timeout");
 
         // private long maxLifetime;
-        var streamMaxLifetime = members.stream().map(HikariDataSource::getMaxLifetime);
-
-        if (streamMaxLifetime.distinct().count() == 1) {
-            /* all the same */
-            ds.setMaxLifetime(members.get(0).getMaxLifetime());
-        } else {
-            throw new IllegalStateException(String.format("Not all max lifetime values are the same: %s", streamMaxLifetime.collect(Collectors.toList()).toString()));
-        }
+        configureLongProperty((ds) -> ds.getMaxLifetime(),
+                              (ds, value) -> ds.setMaxLifetime(value),
+                              "max lifetime");
 
         // private long initializationFailTimeout;
-        var streamInitializationFailTimeout = members.stream().map(HikariDataSource::getInitializationFailTimeout);
-
-        if (streamInitializationFailTimeout.distinct().count() == 1) {
-            /* all the same */
-            ds.setInitializationFailTimeout(members.get(0).getInitializationFailTimeout());
-        } else {
-            throw new IllegalStateException(String.format("Not all initialization fail timeout values are the same: %s", streamInitializationFailTimeout.collect(Collectors.toList()).toString()));
-        }
+        configureLongProperty((ds) -> ds.getInitializationFailTimeout(),
+                              (ds, value) -> ds.setInitializationFailTimeout(value),
+                              "initialization fail timeout");
 
         // private boolean isolateInternalQueries;
         var streamIsolateInternalQueries = members.stream().map(HikariDataSource::isIsolateInternalQueries);
@@ -294,24 +269,14 @@ class SharedPoolDataSourceHikari {
         }
 
         // private long validationTimeout;
-        var streamValidationTimeout = members.stream().map(HikariDataSource::getValidationTimeout);
-
-        if (streamValidationTimeout.distinct().count() == 1) {
-            /* all the same */
-            ds.setValidationTimeout(members.get(0).getValidationTimeout());
-        } else {
-            throw new IllegalStateException(String.format("Not all validation timeout values are the same: %s", streamValidationTimeout.collect(Collectors.toList()).toString()));
-        }
+        configureLongProperty((ds) -> ds.getValidationTimeout(),
+                              (ds, value) -> ds.setValidationTimeout(value),
+                              "validation timeout");
 
         // private long leakDetectionThreshold;
-        var streamLeakDetectionThreshold = members.stream().map(HikariDataSource::getLeakDetectionThreshold);
-
-        if (streamLeakDetectionThreshold.distinct().count() == 1) {
-            /* all the same */
-            ds.setLeakDetectionThreshold(members.get(0).getLeakDetectionThreshold());
-        } else {
-            throw new IllegalStateException(String.format("Not all leak detection threshold values are the same: %s", streamLeakDetectionThreshold.collect(Collectors.toList()).toString()));
-        }
+        configureLongProperty((ds) -> ds.getLeakDetectionThreshold(),
+                              (ds, value) -> ds.setLeakDetectionThreshold(value),
+                              "leak detection threshold");
     }
 
     private static synchronized void open() {
