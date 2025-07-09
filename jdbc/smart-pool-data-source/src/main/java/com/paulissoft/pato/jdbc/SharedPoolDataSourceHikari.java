@@ -209,14 +209,19 @@ class SharedPoolDataSourceHikari {
         }
         
         // private long connectionTimeout;
+        configureLongProperty((ds) -> Long.valueOf(ds.getConnectionTimeout()),
+                              (ds, value) -> ds.setConnectionTimeout(value),
+                              "connection timeout");
+        /*
         var streamConnectionTimeout = members.stream().map(HikariDataSource::getConnectionTimeout);
 
         if (streamConnectionTimeout.distinct().count() == 1) {
-            /* all the same */
+            // all the same
             ds.setConnectionTimeout(members.get(0).getConnectionTimeout());
         } else {
             throw new IllegalStateException(String.format("Not all connection timeout values are the same: %s", streamConnectionTimeout.collect(Collectors.toList()).toString()));
         }
+        */
 
         // private long idleTimeout;
         var streamIdleTimeout = members.stream().map(HikariDataSource::getIdleTimeout);
@@ -321,16 +326,33 @@ class SharedPoolDataSourceHikari {
         }
     }
 
-    private static void configureProperty(Function<HikariDataSource, Object> getProperty,
-                                          BiConsumer<HikariDataSource, Object> setProperty,
-                                          String description) {
+    private static void configureLongProperty(Function<HikariDataSource, Long> getProperty,
+                                              BiConsumer<HikariDataSource, Long> setProperty,
+                                              String description) {
         var stream = members.stream().map(getProperty);
 
         if (stream.distinct().count() == 1) {
             /* all the same */
             setProperty.accept(ds, getProperty.apply(members.get(0)));
         } else {
-            throw new IllegalStateException(String.format("Not all %s are the same: %s", description, stream.collect(Collectors.toList()).toString()));
+            throw new IllegalStateException(String.format("Not all %s values are the same: %s", description, stream.collect(Collectors.toList()).toString()));
         }
+    }
+
+    private static void configureBooleanProperty(Function<HikariDataSource, Boolean> getProperty,
+                                                 BiConsumer<HikariDataSource, Boolean> setProperty,
+                                                 String description) {
+        var stream = members.stream().map(getProperty);
+
+        if (stream.distinct().count() == 1) {
+            /* all the same */
+            setProperty.accept(ds, getProperty.apply(members.get(0)));
+        } else {
+            throw new IllegalStateException(String.format("Not all %s values are the same: %s", description, stream.collect(Collectors.toList()).toString()));
+        }
+    }
+
+    private static Long castObjectToLong(Object object) {
+        return Long.valueOf(object.toString());
     }
 }    
