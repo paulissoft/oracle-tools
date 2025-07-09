@@ -113,8 +113,6 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
         return ds.isWrapperFor(iface);
     }
 
-    // private stuff
-
     void configure() {
         if (members.isEmpty()) {
             throw new IllegalStateException("Members should have been added before you can configure.");

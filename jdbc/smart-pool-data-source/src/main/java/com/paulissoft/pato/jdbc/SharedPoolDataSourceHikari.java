@@ -71,8 +71,6 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
         ds.setUsername(username);
     }
 
-    // private stuff
-
     @Override
     void configure() {
         super.configure();
