@@ -68,25 +68,6 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
 
     @Override
     void configure() {
-        /*
-        //  TO DO:
-        //
-        //  public javax.sql.DataSource getDataSource();
-        //
-        //  public String getDataSourceJNDI();
-        //
-        //  public Object getHealthCheckRegistry();
-        //
-        //  public Object getMetricRegistry();
-        //
-        //  public ScheduledExecutorService getScheduledExecutor();
-        //
-        //  public ScheduledThreadPoolExecutor getScheduledExecutorService();
-        //
-        //  public ThreadFactory getThreadFactory();
-        //
-        */
-        
         super.configure();
         
         ds.setMinimumIdle(members.stream().mapToInt(HikariDataSource::getMinimumIdle).sum());
@@ -116,6 +97,11 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
         configureStringProperty((ds) -> ds.getDataSourceClassName(),
                                 (ds, value) -> ds.setDataSourceClassName(value),
                                 "data source class name");
+
+        // private String dataSourceJNDI;
+        configureStringProperty((ds) -> ds.getDataSourceJNDI(),
+                                (ds, value) -> ds.setDataSourceJNDI(value),
+                                "data source JNDI");
 
         // private String driverClassName;
         configureStringProperty((ds) -> ds.getDriverClassName(),
