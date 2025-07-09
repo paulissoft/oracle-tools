@@ -13,98 +13,101 @@ import java.util.logging.Logger;
 
 public class SmartPoolDataSourceHikari extends HikariDataSource {
 
+    // this delegate will do the actual work
+    private static final SharedPoolDataSourceHikari delegate = new SharedPoolDataSourceHikari();
+    
     private volatile String schema = null;
 
     private volatile String proxyUsername = null;
     
     @Override
     public Connection getConnection() throws SQLException {
-        return SharedPoolDataSourceHikari.getConnection();
+        return delegate.getConnection();
     }
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
-        return SharedPoolDataSourceHikari.getConnection(username, password);
+        return delegate.getConnection(username, password);
     }
     
     @Override
     public PrintWriter getLogWriter() throws SQLException {
-        return SharedPoolDataSourceHikari.getLogWriter();
+        return delegate.getLogWriter();
     }
 
     @Override
     public void setLogWriter(PrintWriter out) throws SQLException {
-        SharedPoolDataSourceHikari.setLogWriter(out);
+        delegate.setLogWriter(out);
     }
 
     @Override
     public void setLoginTimeout(int seconds) throws SQLException {
-        SharedPoolDataSourceHikari.setLoginTimeout(seconds);
+        delegate.setLoginTimeout(seconds);
     }
 
     @Override
     public int getLoginTimeout() throws SQLException {
-        return SharedPoolDataSourceHikari.getLoginTimeout();
+        return delegate.getLoginTimeout();
     }
 
     @Override
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        return SharedPoolDataSourceHikari.getParentLogger();
+        return delegate.getParentLogger();
     }
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
-        return SharedPoolDataSourceHikari.unwrap(iface);
+        return delegate.unwrap(iface);
     }
 
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return SharedPoolDataSourceHikari.isWrapperFor(iface);
+        return delegate.isWrapperFor(iface);
     }
 
     @Override
     public void setMetricRegistry(Object metricRegistry) {
-        SharedPoolDataSourceHikari.setMetricRegistry(metricRegistry);
+        delegate.setMetricRegistry(metricRegistry);
     }
     
     @Override
     public void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
-        SharedPoolDataSourceHikari.setMetricsTrackerFactory(metricsTrackerFactory);
+        delegate.setMetricsTrackerFactory(metricsTrackerFactory);
     }
 
     @Override
     public void setHealthCheckRegistry(Object healthCheckRegistry) {
-        SharedPoolDataSourceHikari.setHealthCheckRegistry(healthCheckRegistry);
+        delegate.setHealthCheckRegistry(healthCheckRegistry);
     }
 
     @Override
     public boolean isRunning() {
-        return SharedPoolDataSourceHikari.isRunning();
+        return delegate.isRunning();
     }
 
     @Override
     public HikariPoolMXBean getHikariPoolMXBean() {
-        return SharedPoolDataSourceHikari.getHikariPoolMXBean();
+        return delegate.getHikariPoolMXBean();
     }
 
     @Override
     public HikariConfigMXBean getHikariConfigMXBean() {
-        return SharedPoolDataSourceHikari.getHikariConfigMXBean();
+        return delegate.getHikariConfigMXBean();
     }
 
     @Override
     public void evictConnection(Connection connection) {
-        SharedPoolDataSourceHikari.evictConnection(connection);
+        delegate.evictConnection(connection);
     }
     
     @Override
     public void close() {
-        SharedPoolDataSourceHikari.remove(this);
+        delegate.remove(this);
     }
 
     @Override
     public boolean isClosed() {
-        return !SharedPoolDataSourceHikari.contains(this);
+        return !delegate.contains(this);
     }
 
     /*
@@ -319,7 +322,7 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
     @Override
     public void setPassword(String password) {
         super.setPassword(password);
-        SharedPoolDataSourceHikari.setPassword(password);
+        delegate.setPassword(password);
     }
 
     /*
@@ -369,11 +372,11 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
         }
 
         super.setUsername(proxyUsername != null ? proxyUsername : schema);
-        SharedPoolDataSourceHikari.setUsername(proxyUsername != null ? proxyUsername : schema);
+        delegate.setUsername(proxyUsername != null ? proxyUsername : schema);
 
         // Add this object here (setUsername() should always be called) and
         // not in the constructor to prevent a this escape warning in the constructor.
-        SharedPoolDataSourceHikari.add(this); 
+        delegate.add(this); 
     }
 
     /*
