@@ -124,15 +124,55 @@ class SharedPoolDataSourceHikari {
         }
 
         // private boolean allowPoolSuspension;
-        // 
+        var streamAllowPoolSuspension = members.stream().map(HikariDataSource::isAllowPoolSuspension);
+
+        if (streamAllowPoolSuspension.distinct().count() == 1) {
+            /* all the same */
+            ds.setAllowPoolSuspension(members.get(0).isAllowPoolSuspension());
+        } else {
+            throw new IllegalStateException(String.format("Not all allow pool suspension values are the same: %s", streamAllowPoolSuspension.collect(Collectors.toList()).toString()));
+        }
+
         // private boolean readOnly;
-        // 
+        var streamReadOnly = members.stream().map(HikariDataSource::isReadOnly);
+
+        if (streamReadOnly.distinct().count() == 1) {
+            /* all the same */
+            ds.setReadOnly(members.get(0).isReadOnly());
+        } else {
+            throw new IllegalStateException(String.format("Not all connection timeout values are the same: %s", streamReadOnly.collect(Collectors.toList()).toString()));
+        }
+
         // private boolean registerMbeans;
-        // 
+        var streamRegisterMbeans = members.stream().map(HikariDataSource::isRegisterMbeans);
+
+        if (streamRegisterMbeans.distinct().count() == 1) {
+            /* all the same */
+            ds.setRegisterMbeans(members.get(0).isRegisterMbeans());
+        } else {
+            throw new IllegalStateException(String.format("Not all register Mbeans values are the same: %s", streamRegisterMbeans.collect(Collectors.toList()).toString()));
+        }
+
         // private long validationTimeout;
-        // 
+        var streamValidationTimeout = members.stream().map(HikariDataSource::getValidationTimeout);
+
+        if (streamValidationTimeout.distinct().count() == 1) {
+            /* all the same */
+            ds.setValidationTimeout(members.get(0).getValidationTimeout());
+        } else {
+            throw new IllegalStateException(String.format("Not all validation timeout values are the same: %s", streamValidationTimeout.collect(Collectors.toList()).toString()));
+        }
+
         // private long leakDetectionThreshold;
-        //
+        var streamLeakDetectionThreshold = members.stream().map(HikariDataSource::getLeakDetectionThreshold);
+
+        if (streamLeakDetectionThreshold.distinct().count() == 1) {
+            /* all the same */
+            ds.setLeakDetectionThreshold(members.get(0).getLeakDetectionThreshold());
+        } else {
+            throw new IllegalStateException(String.format("Not all leak detection threshold values are the same: %s", streamLeakDetectionThreshold.collect(Collectors.toList()).toString()));
+        }
+
     }
 
     public Connection getConnection() throws SQLException {
