@@ -19,6 +19,7 @@ import javax.sql.DataSource;
 import java.util.function.Function;
     
 
+// a package accessible class
 class SharedPoolDataSourceHikari {
     final static HikariDataSource ds = new HikariDataSource();
 
@@ -37,7 +38,8 @@ class SharedPoolDataSourceHikari {
     }
 
     public void configure() {
-        
+        ds.setMinimumIdle(members.stream().mapToInt(e -> e.getMinimumIdle()).sum());
+        ds.setMaximumPoolSize(members.stream().mapToInt(e -> e.getMaximumPoolSize()).sum());
     }
 
     public Connection getConnection() throws SQLException {
