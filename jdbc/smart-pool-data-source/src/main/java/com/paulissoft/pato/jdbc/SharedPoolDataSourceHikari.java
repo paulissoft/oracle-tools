@@ -18,13 +18,13 @@ import java.util.stream.Collectors;
 
 // a package accessible class
 class SharedPoolDataSourceHikari {
-    final static String USERNAMES_ERROR = "Not all usernames are the same and not null: %s";
+    private final static String USERNAMES_ERROR = "Not all usernames are the same and not null: %s.";
 
-    final static String DATA_SOURCE_CLASS_NAMES_ERROR = "Not all data source class names are the same: %s";
+    private final static String DATA_SOURCE_CLASS_NAMES_ERROR = "Not all data source class names are the same: %s.";
         
-    final static HikariDataSource ds = new HikariDataSource();
+    private final static HikariDataSource ds = new HikariDataSource();
 
-    final static CopyOnWriteArrayList<HikariDataSource> members = new CopyOnWriteArrayList<>();
+    private final static CopyOnWriteArrayList<HikariDataSource> members = new CopyOnWriteArrayList<>();
 
     private enum State {
         INITIALIZING, // a start state; next possible states: ERROR, OPEN or CLOSED
@@ -279,7 +279,7 @@ class SharedPoolDataSourceHikari {
             /* all the same */
             setProperty.accept(ds, getProperty.apply(members.get(0)));
         } else {
-            throw new IllegalStateException(String.format("Not all %s values are the same: %s", description, stream.collect(Collectors.toList()).toString()));
+            throw new IllegalStateException(String.format("Not all %s values are the same: %s.", description, stream.collect(Collectors.toList()).toString()));
         }
     }
 
@@ -292,7 +292,7 @@ class SharedPoolDataSourceHikari {
             /* all the same */
             setProperty.accept(ds, getProperty.apply(members.get(0)));
         } else {
-            throw new IllegalStateException(String.format("Not all %s values are the same: %s", description, stream.collect(Collectors.toList()).toString()));
+            throw new IllegalStateException(String.format("Not all %s values are the same: %s.", description, stream.collect(Collectors.toList()).toString()));
         }
     }
 
