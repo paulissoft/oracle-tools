@@ -10,39 +10,29 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLTransientConnectionException;
 import java.util.Properties;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.logging.Logger;
 import javax.sql.DataSource;
 
-@Slf4j
+
 public class SmartPoolDataSourceHikari extends HikariDataSource {
 
-    final static HikariDataSource delegate = new HikariDataSource();
+    private static SharedPoolDataSourceHikari delegate = new SharedPoolDataSourceHikari();
 
-    private volatile static SmartPoolDataSourceHikari first = null; // only the first smart pool datasource created ever can set properties, the rest must have the same
-
-    // overridden methods from HikariDataSource
-    
-    public HikariDataSource() {
-        super();
-
-        if (first == null) {
-            synchronized(first) {
-                first = this;
-            }
-        }
+    @Override
+    public Connection getConnection() throws SQLException {
+        return delegate.getConnection();
     }
 
-    public HikariDataSource(HikariConfig configuration);
-
     @Override
-    public Connection getConnection() throws SQLException;
-
-    @Override
-    public Connection getConnection(String username, String password) throws SQLException;
+    public Connection getConnection(String username, String password) throws SQLException {
+        return delegate.getConnection(username, password);
+    }
     
+    /*
     @Override
     public PrintWriter getLogWriter() throws SQLException;
 
@@ -84,7 +74,7 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
 
     @Override
     public void evictConnection(Connection connection);
-
+    
     @Deprecated
     @Override
     public void suspendPool();
@@ -92,17 +82,19 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
     @Deprecated
     @Override
     public void resumePool();
+    */
+    
+    @Override
+    public void close() {
+        delegate.remove(this);
+    }
 
     @Override
-    public void close();
+    public boolean isClosed() {
+        return !delegate.contains(this);
+    }
 
-    @Override
-    public boolean isClosed();
-
-    @Deprecated
-    @Override
-    public void shutdown();
-
+    /*
     @Override
     public String toString();    
 
@@ -333,13 +325,20 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
 
     @Override
     public void setTransactionIsolation(String isolationLevel);
-
+    */
+    
     @Override
-    public void setUsername(String username);
+    public void setUsername(String username) {
+        super.setUsername(username);
+        
+        delegate.add(this); // do it here (should always be called) and not in the constructor to prevent a this escape warning in the constructor
+    }
 
+    /*
     @Override
     public void setValidationTimeout(long validationTimeoutMs);
 
     @Override
     public void validate();
+    */
 }
