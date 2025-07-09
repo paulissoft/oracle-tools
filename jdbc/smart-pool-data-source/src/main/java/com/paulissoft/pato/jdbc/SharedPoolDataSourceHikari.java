@@ -18,6 +18,10 @@ import java.util.stream.Collectors;
 
 // a package accessible class
 class SharedPoolDataSourceHikari {
+    final static String USERNAMES_ERROR = "Not all usernames are the same and not null: %s";
+
+    final static String DATA_SOURCE_CLASS_NAMES_ERROR = "Not all data source class names are the same: %s";
+        
     final static HikariDataSource ds = new HikariDataSource();
 
     final static CopyOnWriteArrayList<HikariDataSource> members = new CopyOnWriteArrayList<>();
@@ -181,7 +185,7 @@ class SharedPoolDataSourceHikari {
               streamUsername.filter(Objects::nonNull).distinct().count() == 1)) {
             /* some null or not the same */
         } else {
-            throw new IllegalStateException(String.format("Not all usernames are the same and not null: %s", streamUsername.collect(Collectors.toList()).toString()));
+            throw new IllegalStateException(String.format(USERNAMES_ERROR, streamUsername.collect(Collectors.toList()).toString()));
         }
 
         // private String dataSourceClassName;
@@ -195,7 +199,7 @@ class SharedPoolDataSourceHikari {
             /* all not null and the same */
             ds.setDataSourceClassName(members.get(0).getDataSourceClassName());
         } else {
-            throw new IllegalStateException(String.format("Not all data source class names are the same: %s", streamDataSourceClassName.collect(Collectors.toList()).toString()));
+            throw new IllegalStateException(String.format(DATA_SOURCE_CLASS_NAMES_ERROR, streamDataSourceClassName.collect(Collectors.toList()).toString()));
         }
 
         // private boolean autoCommit;
