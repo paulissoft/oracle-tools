@@ -8,10 +8,12 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.util.Objects;
 
 
 // a package accessible class
@@ -316,6 +318,19 @@ class SharedPoolDataSourceHikari {
                 state = State.ERROR;
                 throw ex;
             }
+        }
+    }
+
+    private static void configureProperty(Function<HikariDataSource, Object> getProperty,
+                                          BiConsumer<HikariDataSource, Object> setProperty,
+                                          String description) {
+        var stream = members.stream().map(getProperty);
+
+        if (stream.distinct().count() == 1) {
+            /* all the same */
+            setProperty.accept(ds, getProperty.apply(members.get(0)));
+        } else {
+            throw new IllegalStateException(String.format("Not all %s are the same: %s", description, stream.collect(Collectors.toList()).toString()));
         }
     }
 }    
