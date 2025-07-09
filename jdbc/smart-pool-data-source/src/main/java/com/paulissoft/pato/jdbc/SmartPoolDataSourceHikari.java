@@ -260,10 +260,19 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
 
     @Override
     public void setConnectionInitSql(String connectionInitSql);
-
+    */
+    
     @Override
-    public void setConnectionTestQuery(String connectionTestQuery);
+    public void setConnectionTestQuery(String connectionTestQuery) {
+        try {
+            // since getConnectionTestQuery is overridden it does not make sense to set it
+            throw new SQLFeatureNotSupportedException("setConnectionTestQuery");            
+        } catch (Exception ex) {
+            throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+        }
+    }
 
+    /*
     @Override
     public void setConnectionTimeout(long connectionTimeoutMs);
 
@@ -331,6 +340,7 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
     public void setPassword(String password) {
         // Here we will set both the super and the delegate password so that the overridden getConnection() will always use
         // the same password no matter where it comes from.
+
         super.setPassword(password);
         delegate.setPassword(password);
     }
