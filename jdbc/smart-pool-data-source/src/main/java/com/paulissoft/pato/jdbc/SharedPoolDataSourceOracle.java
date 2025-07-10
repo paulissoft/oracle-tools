@@ -42,9 +42,23 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
         super.configure();
 
         try {
-            ds.setInitialPoolSize(members.stream().mapToInt(PoolDataSourceImpl::getInitialPoolSize).sum());
-            ds.setMinPoolSize(members.stream().mapToInt(PoolDataSourceImpl::getMinPoolSize).sum());
-            ds.setMaxPoolSize(members.stream().mapToInt(PoolDataSourceImpl::getMaxPoolSize).sum());
+            var sumInitialPoolSize = members.stream().mapToInt(PoolDataSourceImpl::getInitialPoolSize).filter(i -> i >= 0).sum();
+
+            if (sumInitialPoolSize >= 0) {
+                ds.setInitialPoolSize(sumInitialPoolSize);
+            }
+
+            var sumMinPoolSize = members.stream().mapToInt(PoolDataSourceImpl::getMinPoolSize).filter(i -> i >= 0).sum();
+
+            if (sumMinPoolSize >= 0) {
+                ds.setMinPoolSize(sumMinPoolSize);
+            }
+
+            var sumMaxPoolSize = members.stream().mapToInt(PoolDataSourceImpl::getMaxPoolSize).filter(i -> i >= 0).sum();
+
+            if (sumMaxPoolSize >= 0) {
+                ds.setMaxPoolSize(sumMaxPoolSize);
+            }
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }

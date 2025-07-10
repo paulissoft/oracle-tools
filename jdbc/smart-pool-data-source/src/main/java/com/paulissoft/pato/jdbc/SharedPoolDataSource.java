@@ -124,15 +124,18 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
 
     void checkObjectProperty(Function<T, Object> getProperty,
                              String description) {
-        var stream = members.stream().map(getProperty);
+        var stream1 = members.stream().map(getProperty);
+        var stream2 = members.stream().map(getProperty);
+        var stream3 = members.stream().map(getProperty);
+        var stream4 = members.stream().map(getProperty);
 
-        if (stream.filter(Objects::isNull).count() == members.size()) {
+        if (stream1.filter(Objects::isNull).count() == members.size()) {
             // all null: OK
-        } else if (stream.filter(Objects::nonNull).count() == members.size() &&
-                   stream.filter(Objects::nonNull).distinct().count() == 1) {
+        } else if (stream2.filter(Objects::nonNull).count() == members.size() &&
+                   stream3.filter(Objects::nonNull).distinct().count() == 1) {
             // all not null and the same
         } else {
-            throw new IllegalStateException(String.format(VALUES_ERROR, stream.collect(Collectors.toList()).toString()));
+            throw new IllegalStateException(String.format(VALUES_ERROR, stream4.collect(Collectors.toList()).toString()));
         }
     }
 
@@ -146,7 +149,15 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
                                  String description) {
         checkObjectProperty(getProperty, description);
 
-        setProperty.accept(ds, getProperty.apply(members.get(0)));
+        var oldValue = getProperty.apply(ds);
+        var newValue = getProperty.apply(members.get(0));
+
+        if ((oldValue == null && newValue == null) ||
+            (oldValue != null && newValue != null && oldValue.equals(newValue))) {
+            // old and new value the same
+        } else {
+            setProperty.accept(ds, newValue);
+        }
     }
 
     void configureStringProperty(Function<T, String> getProperty,
@@ -160,39 +171,60 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
     void configureIntegerProperty(Function<T, Integer> getProperty,
                                   BiConsumer<T, Integer> setProperty,
                                   String description) {
-        var stream = members.stream().map(getProperty);
+        var stream1 = members.stream().map(getProperty);
+        var stream2 = members.stream().map(getProperty);
 
-        if (stream.distinct().count() == 1) {
+        if (stream1.distinct().count() == 1) {
             /* all the same */
-            setProperty.accept(ds, getProperty.apply(members.get(0)));
+            var oldValue = getProperty.apply(ds);
+            var newValue = getProperty.apply(members.get(0));
+
+            // old and new value not null
+            if (!oldValue.equals(newValue)) {
+                setProperty.accept(ds, newValue);
+            }
         } else {
-            throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.collect(Collectors.toList()).toString()));
+            throw new IllegalStateException(String.format(VALUES_ERROR, description, stream2.collect(Collectors.toList()).toString()));
         }
     }
     
     void configureLongProperty(Function<T, Long> getProperty,
                                BiConsumer<T, Long> setProperty,
                                String description) {
-        var stream = members.stream().map(getProperty);
+        var stream1 = members.stream().map(getProperty);
+        var stream2 = members.stream().map(getProperty);
 
-        if (stream.distinct().count() == 1) {
+        if (stream1.distinct().count() == 1) {
             /* all the same */
-            setProperty.accept(ds, getProperty.apply(members.get(0)));
+            var oldValue = getProperty.apply(ds);
+            var newValue = getProperty.apply(members.get(0));
+
+            // old and new value not null
+            if (!oldValue.equals(newValue)) {
+                setProperty.accept(ds, newValue);
+            }
         } else {
-            throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.collect(Collectors.toList()).toString()));
+            throw new IllegalStateException(String.format(VALUES_ERROR, description, stream2.collect(Collectors.toList()).toString()));
         }
     }
     
     void configureBooleanProperty(Function<T, Boolean> getProperty,
                                   BiConsumer<T, Boolean> setProperty,
                                   String description) {
-        var stream = members.stream().map(getProperty);
+        var stream1 = members.stream().map(getProperty);
+        var stream2 = members.stream().map(getProperty);
 
-        if (stream.distinct().count() == 1) {
+        if (stream1.distinct().count() == 1) {
             /* all the same */
-            setProperty.accept(ds, getProperty.apply(members.get(0)));
+            var oldValue = getProperty.apply(ds);
+            var newValue = getProperty.apply(members.get(0));
+
+            // old and new value not null
+            if (!oldValue.equals(newValue)) {
+                setProperty.accept(ds, newValue);
+            }
         } else {
-            throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.collect(Collectors.toList()).toString()));
+            throw new IllegalStateException(String.format(VALUES_ERROR, description, stream2.collect(Collectors.toList()).toString()));
         }
     }
 

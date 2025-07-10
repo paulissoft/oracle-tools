@@ -1,11 +1,11 @@
 package com.paulissoft.pato.jdbc;
 
+import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
-import oracle.jdbc.OracleConnection;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +37,27 @@ public class CheckCreationHikariUnitTest {
 
         properties.load(inputStream);
 
-        assertEquals("com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari", properties.get("spring.datasource.hikari.type"));
-        assertEquals("com.paulissoft.pato.jdbc.SmartPoolDataSourceOracle", properties.get("spring.datasource.oracleucp.type"));
+        assertEquals("com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari", properties.getProperty("spring.datasource.hikari.type"));
+
+        final String username = properties.getProperty("spring.datasource.proxy.username");
+        final String password = properties.getProperty("spring.datasource.proxy.password");
+        final String jdbcUrl = properties.getProperty("spring.datasource.url");
+
+        assertNotNull(username);
+        assertNotNull(password);
+        assertNotNull(jdbcUrl);
+
+        for (int i = 0; i < 2; i++) {
+            try (HikariDataSource ds = (i == 0 ? new HikariDataSource() : new SmartPoolDataSourceHikari())) {
+                ds.setUsername(username);
+                ds.setPassword(password);
+                ds.setJdbcUrl(jdbcUrl);
+
+                assertEquals(username, ds.getUsername(), "try " + i);
+                assertEquals(jdbcUrl, ds.getJdbcUrl(), "try " + i);
+
+                assertNotNull(ds.getConnection(), "try " + i);
+            }
+        }
     }
 }

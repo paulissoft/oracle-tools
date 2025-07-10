@@ -71,8 +71,17 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
     void configure() {
         super.configure();
 
-        ds.setMinimumIdle(members.stream().mapToInt(HikariDataSource::getMinimumIdle).sum());
-        ds.setMaximumPoolSize(members.stream().mapToInt(HikariDataSource::getMaximumPoolSize).sum());
+        var sumMinimumIdle = members.stream().mapToInt(HikariDataSource::getMinimumIdle).filter(i -> i >= 0).sum();
+
+        if (sumMinimumIdle >= 0) {
+            ds.setMinimumIdle(sumMinimumIdle);
+        }
+
+        var sumMaximumPoolSize = members.stream().mapToInt(HikariDataSource::getMaximumPoolSize).filter(i -> i >= 0).sum();
+
+        if (sumMaximumPoolSize > 0) {
+            ds.setMaximumPoolSize(sumMaximumPoolSize);
+        }
 
         // Must use lambda expressions for methods with primitive arguments or return values
         // since the functional interface does not support them all (boolean).
