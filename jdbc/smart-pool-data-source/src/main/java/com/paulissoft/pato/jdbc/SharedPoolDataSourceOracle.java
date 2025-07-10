@@ -47,8 +47,6 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
             ds.setMaxPoolSize(members.stream().mapToInt(PoolDataSourceImpl::getMaxPoolSize).sum());
 
 	    /*
-	    //  String getURL();
-	    //
 	    //  String getUser();
 	    //
 	    //  String getConnectionPoolName();
@@ -77,6 +75,9 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
 	    //
 	    */  
             // properties that may NOT differ, i.e. must be common
+
+	    checkStringProperty(PoolDataSourceImpl::getUser, "username");
+
 	    configureStringProperty(PoolDataSourceImpl::getURL,
 				    (ds, value) -> { try { ds.setURL(value); } catch (SQLException ex) { throw new RuntimeException(ex); } },
 				    "JDBC URL");
