@@ -1,26 +1,26 @@
 package com.paulissoft.pato.jdbc;
 
-import com.zaxxer.hikari.HikariConfigMXBean;
-import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.HikariPoolMXBean;
-import com.zaxxer.hikari.metrics.MetricsTrackerFactory;
 import java.io.Closeable;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.logging.Logger;
+import java.util.Properties;
+import oracle.ucp.jdbc.PoolDataSourceImpl;
 
 
-public class SmartPoolDataSourceHikari extends HikariDataSource implements ConnectInfo, Closeable {
+public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements ConnectInfo, Closeable {
 
+    private static final long serialVersionUID = 1L;
+	
     // this delegate will do the actual work
-    private static final SharedPoolDataSourceHikari delegate = new SharedPoolDataSourceHikari();
+    private static final SharedPoolDataSourceOracle delegate = new SharedPoolDataSourceOracle();
     
     private volatile String currentSchema = null;
 
     /*
-    // overridden methods from HikariDataSource
+    // overridden methods from PoolDataSourceImpl
     */
     
     @Override
@@ -29,8 +29,26 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     }
 
     @Override
+    public Connection getConnection(Properties labels) throws SQLException {
+	try {
+            throw new SQLFeatureNotSupportedException("getConnection");            
+	} catch (Exception ex) {
+	    throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+	}
+    }
+
+    @Override
     public Connection getConnection(String username, String password) throws SQLException {
         return delegate.getConnection(username, password);
+    }
+
+    @Override
+    public Connection getConnection(String username, String password, Properties labels) throws SQLException {
+	try {
+            throw new SQLFeatureNotSupportedException("getConnection");            
+	} catch (Exception ex) {
+	    throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+	}
     }
     
     @Override
@@ -44,18 +62,12 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     }
 
     @Override
-    public void setLoginTimeout(int seconds) throws SQLException {
-        delegate.setLoginTimeout(seconds);
-    }
-
-    @Override
-    public int getLoginTimeout() throws SQLException {
-        return delegate.getLoginTimeout();
-    }
-
-    @Override
-    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        return delegate.getParentLogger();
+    public Logger getParentLogger() {
+	try {
+	    return delegate.getParentLogger();
+	} catch (Exception ex) {
+	    throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+	}
     }
 
     @Override
@@ -69,71 +81,22 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     }
 
     @Override
-    public void setMetricRegistry(Object metricRegistry) {
-        delegate.setMetricRegistry(metricRegistry);
-    }
-    
-    @Override
-    public void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
-        delegate.setMetricsTrackerFactory(metricsTrackerFactory);
-    }
-
-    @Override
-    public void setHealthCheckRegistry(Object healthCheckRegistry) {
-        delegate.setHealthCheckRegistry(healthCheckRegistry);
-    }
-
-    @Override
-    public boolean isRunning() {
-        return delegate.isRunning();
-    }
-
-    @Override
-    public HikariPoolMXBean getHikariPoolMXBean() {
-        return delegate.getHikariPoolMXBean();
-    }
-
-    @Override
-    public HikariConfigMXBean getHikariConfigMXBean() {
-        return delegate.getHikariConfigMXBean();
-    }
-
-    @Override
-    public void evictConnection(Connection connection) {
-        delegate.evictConnection(connection);
-    }
-    
-    @Override
-    public void close() {
-        delegate.remove(this);
-    }
-
-    @Override
-    public boolean isClosed() {
-        return !delegate.contains(this);
-    }
-
-    /*
-    // overridden methods from HikariConfig
-    */
-
-    @Override
-    public String getConnectionTestQuery() {
+    public String getSQLForValidateConnection() {
         return getSQLAlterSessionSetCurrentSchema();
     }
-    
+
     @Override
-    public void setConnectionTestQuery(String connectionTestQuery) {
+    public void setSQLForValidateConnection(String SQLstring) {
         try {
-            // since getConnectionTestQuery is overridden it does not make sense to set it
-            throw new SQLFeatureNotSupportedException("setConnectionTestQuery");            
+            // since getSQLForValidateConnection is overridden it does not make sense to set it
+            throw new SQLFeatureNotSupportedException("setSQLForValidateConnection");            
         } catch (Exception ex) {
             throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
         }
     }
-
+    
     @Override
-    public void setPassword(String password) {
+    public void setPassword(String password) throws SQLException {
         // Here we will set both the super and the delegate password so that the overridden getConnection() will always use
         // the same password no matter where it comes from.
 
@@ -142,7 +105,7 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     }
 
     @Override
-    public void setUsername(String username) {
+    public void setUser(String username) throws SQLException {
         // Here we will set both the super and the delegate username so that the overridden getConnection() will always use
         // the same password no matter where it comes from.
 	var connectInfo = determineProxyUsernameAndCurrentDSchema(username);
@@ -151,7 +114,7 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
 	    currentSchema = connectInfo[1];
         }
 
-        super.setUsername(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
+        super.setUser(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
         delegate.setUsername(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
 
         // Add this object here (setUsername() should always be called) and
@@ -165,4 +128,18 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     public String getCurrentSchema() {
 	return currentSchema;
     }
+
+    /*
+    // Interface Closeable
+    */
+    public void close() {
+        delegate.remove(this);
+    }
+
+    // extra
+    
+    public boolean isClosed() {
+        return !delegate.contains(this);
+    }
+
 }

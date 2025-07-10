@@ -27,7 +27,7 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
     
     void setUsername(String username) {
         if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only issue setUsername() while initializing.");
+            throw new IllegalStateException("You can only issue setUser() while initializing.");
         }
         try {
             ds.setUser(username);
