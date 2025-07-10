@@ -21,7 +21,7 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
         try {
             ds.setPassword(password);
         } catch (Exception ex) {
-            throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+            throw new RuntimeException(ex);
         }
     }
     
@@ -32,7 +32,7 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
         try {
             ds.setUser(username);
         } catch (Exception ex) {
-            throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+            throw new RuntimeException(ex);
         }
     }
 
@@ -78,7 +78,7 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
             // properties that may NOT differ, i.e. must be common
 
         } catch (Exception ex) {
-            throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+            throw new RuntimeException(ex);
         }
     }
 

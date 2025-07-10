@@ -118,7 +118,7 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
             // since getConnectionTestQuery is overridden it does not make sense to set it
             throw new SQLFeatureNotSupportedException("setConnectionTestQuery");            
         } catch (Exception ex) {
-            throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+            throw new RuntimeException(ex);
         }
     }
 

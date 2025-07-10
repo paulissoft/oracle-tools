@@ -33,7 +33,7 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
         try {
             throw new SQLFeatureNotSupportedException("getConnection");            
         } catch (Exception ex) {
-            throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+            throw new RuntimeException(ex);
         }
     }
 
@@ -47,7 +47,7 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
         try {
             throw new SQLFeatureNotSupportedException("getConnection");            
         } catch (Exception ex) {
-            throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+            throw new RuntimeException(ex);
         }
     }
     
@@ -66,7 +66,7 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
         try {
             return delegate.getParentLogger();
         } catch (Exception ex) {
-            throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+            throw new RuntimeException(ex);
         }
     }
 
@@ -91,7 +91,7 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
             // since getSQLForValidateConnection is overridden it does not make sense to set it
             throw new SQLFeatureNotSupportedException("setSQLForValidateConnection");            
         } catch (Exception ex) {
-            throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+            throw new RuntimeException(ex);
         }
     }
     
