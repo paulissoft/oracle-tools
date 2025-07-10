@@ -44,16 +44,6 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     }
 
     @Override
-    public void setLoginTimeout(int seconds) throws SQLException {
-        delegate.setLoginTimeout(seconds);
-    }
-
-    @Override
-    public int getLoginTimeout() throws SQLException {
-        return delegate.getLoginTimeout();
-    }
-
-    @Override
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
         return delegate.getParentLogger();
     }
