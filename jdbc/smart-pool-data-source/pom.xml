@@ -13,7 +13,7 @@
 
   <properties>
     <test>
-      CheckConnectionHikariUnitTest#testConnection,
+      CheckCreationHikariUnitTest#testCreation,
     </test>
   </properties>
 
