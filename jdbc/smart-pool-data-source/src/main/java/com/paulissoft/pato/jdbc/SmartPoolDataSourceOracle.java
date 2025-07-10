@@ -105,6 +105,18 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
     }
 
     @Override
+    public void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws SQLException {
+        try {
+            if (!validateConnectionOnBorrow) {
+                throw new SQLFeatureNotSupportedException("setValidateConnectionOnBorrow(false)");            
+            }
+            super.setValidateConnectionOnBorrow(validateConnectionOnBorrow);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+        
+    @Override
     public void setUser(String username) throws SQLException {
         // Here we will set both the super and the delegate username so that the overridden getConnection() will always use
         // the same password no matter where it comes from.
@@ -114,6 +126,8 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
             currentSchema = connectInfo[1];
         }
 
+        setValidateConnectionOnBorrow(true); // must be used in combination with setSQLForValidateConnection()
+            
         super.setUser(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
         delegate.setUsername(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
 
