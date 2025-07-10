@@ -12,11 +12,9 @@
   <description>JDBC pool of pool data sources</description>
 
   <properties>
-    <!--test>
-      CheckConfigurationHikariUnitTest#testPoolDataSourceConfigurationDomain,
-      CheckConfigurationHikariUnitTest#testPoolDataSource,
-      CheckConnectionHikariUnitTest#testConnectionHikari,
-    </test-->
+    <test>
+      CheckConnectionHikariUnitTest#testConnection,
+    </test>
   </properties>
 
   <build>
