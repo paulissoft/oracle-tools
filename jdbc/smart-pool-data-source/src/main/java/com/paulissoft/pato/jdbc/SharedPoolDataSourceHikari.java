@@ -80,7 +80,7 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
         
         // properties that may NOT differ, i.e. must be common
 
-        // just a check: no need to invoke ds.setUsername() since that has been done already in SmartPoolDataSourceHikari
+        // just a check: no need to invoke ds.setUsername() since that has been done already via SmartPoolDataSourceHikari.setUsername().
         checkStringProperty(HikariDataSource::getUsername, "username");
 
         configureStringProperty(HikariDataSource::getCatalog, HikariDataSource::setCatalog, "catalog");

@@ -46,41 +46,95 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
             ds.setMinPoolSize(members.stream().mapToInt(PoolDataSourceImpl::getMinPoolSize).sum());
             ds.setMaxPoolSize(members.stream().mapToInt(PoolDataSourceImpl::getMaxPoolSize).sum());
 
-	    /*
-	    //  String getUser();
-	    //
-	    //  String getConnectionPoolName();
-	    //
-	    //  String getConnectionFactoryClassName();
-	    //
-	    //  boolean getValidateConnectionOnBorrow();
-	    //
-	    //  int getAbandonedConnectionTimeout();
-	    //
-	    //  int getTimeToLiveConnectionTimeout();
-	    //
-	    //  int getInactiveConnectionTimeout();
-	    //
-	    //  int getTimeoutCheckInterval();
-	    //
-	    //  int getMaxStatements();
-	    //
-	    //  long getConnectionWaitDurationInMillis();
-	    //
-	    //  long getMaxConnectionReuseTime();
-	    //
-	    //  int getSecondsToTrustIdleConnection();
-	    //
-	    //  int getConnectionValidationTimeout();
-	    //
-	    */  
+            /*
+            //  long getConnectionWaitDurationInMillis();
+            //
+            //  long getMaxConnectionReuseTime();
+            //
+            //  int getSecondsToTrustIdleConnection();
+            //
+            //  int getConnectionValidationTimeout();
+            //
+            */
+            
             // properties that may NOT differ, i.e. must be common
 
-	    checkStringProperty(PoolDataSourceImpl::getUser, "username");
+            // just a check: no need to invoke ds.setUser() since that has been done already via SmartPoolDataSourceOracle.setUser().
+            checkStringProperty(PoolDataSourceImpl::getUser, "username");
 
-	    configureStringProperty(PoolDataSourceImpl::getURL,
-				    (ds, value) -> { try { ds.setURL(value); } catch (SQLException ex) { throw new RuntimeException(ex); } },
-				    "JDBC URL");
+            configureStringProperty(PoolDataSourceImpl::getURL,
+                                    (ds, value) -> { try { ds.setURL(value); } catch (SQLException ex) { throw new RuntimeException(ex); } },
+                                    "JDBC URL");
+
+            configureStringProperty(PoolDataSourceImpl::getConnectionFactoryClassName,
+                                    (ds, value) -> {
+                                        try {
+                                            ds.setConnectionFactoryClassName(value);
+                                        } catch (SQLException ex) {
+                                            throw new RuntimeException(ex);
+                                        }
+                                    },
+                                    "connection factory class name");
+
+            configureBooleanProperty(PoolDataSourceImpl::getValidateConnectionOnBorrow,
+                                     (ds, value) -> {
+                                        try {
+                                            ds.setValidateConnectionOnBorrow(value);
+                                        } catch (SQLException ex) {
+                                            throw new RuntimeException(ex);
+                                        }
+                                     },
+                                     "validate connection on borrow");
+
+            configureIntegerProperty(PoolDataSourceImpl::getAbandonedConnectionTimeout,
+                                     (ds, value) -> {
+                                        try {
+                                            ds.setAbandonedConnectionTimeout(value);
+                                        } catch (SQLException ex) {
+                                            throw new RuntimeException(ex);
+                                        }
+                                     },
+                                     "abandoned connection timeout");
+
+            configureIntegerProperty(PoolDataSourceImpl::getTimeToLiveConnectionTimeout,
+                                     (ds, value) -> {
+                                        try {
+                                            ds.setTimeToLiveConnectionTimeout(value);
+                                        } catch (SQLException ex) {
+                                            throw new RuntimeException(ex);
+                                        }
+                                     },
+                                     "time to live connection timeout");
+
+            configureIntegerProperty(PoolDataSourceImpl::getInactiveConnectionTimeout,
+                                     (ds, value) -> {
+                                        try {
+                                            ds.setInactiveConnectionTimeout(value);
+                                        } catch (SQLException ex) {
+                                            throw new RuntimeException(ex);
+                                        }
+                                     },
+                                     "inactive connection timeout");
+
+            configureIntegerProperty(PoolDataSourceImpl::getTimeoutCheckInterval,
+                                     (ds, value) -> {
+                                        try {
+                                            ds.setTimeoutCheckInterval(value);
+                                        } catch (SQLException ex) {
+                                            throw new RuntimeException(ex);
+                                        }
+                                     },
+                                     "timeout check interval");
+
+            configureIntegerProperty(PoolDataSourceImpl::getMaxStatements,
+                                     (ds, value) -> {
+                                        try {
+                                            ds.setMaxStatements(value);
+                                        } catch (SQLException ex) {
+                                            throw new RuntimeException(ex);
+                                        }
+                                     },
+                                     "max statements");
 
         } catch (Exception ex) {
             throw new RuntimeException(ex);
