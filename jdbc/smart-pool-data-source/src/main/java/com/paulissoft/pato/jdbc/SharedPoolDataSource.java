@@ -122,7 +122,7 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
         }
     }
 
-    void checkStringProperty(Function<T, String> getProperty,
+    void checkObjectProperty(Function<T, Object> getProperty,
                              String description) {
         var stream = members.stream().map(getProperty);
 
@@ -136,12 +136,25 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
         }
     }
 
+    void checkStringProperty(Function<T, String> getProperty,
+                             String description) {
+	checkObjectProperty(e -> getProperty.apply(e), description);
+    }
+
+    void configureObjectProperty(Function<T, Object> getProperty,
+                                 BiConsumer<T, Object> setProperty,
+                                 String description) {
+        checkObjectProperty(getProperty, description);
+
+        setProperty.accept(ds, getProperty.apply(members.get(0)));
+    }
+
     void configureStringProperty(Function<T, String> getProperty,
                                  BiConsumer<T, String> setProperty,
                                  String description) {
-        checkStringProperty(getProperty, description);
-
-        setProperty.accept(ds, getProperty.apply(members.get(0)));
+	configureObjectProperty(e -> getProperty.apply(e),
+				(e, value) -> setProperty.accept(e, value.toString()),
+				description);
     }
 
     void configureIntegerProperty(Function<T, Integer> getProperty,

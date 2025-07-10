@@ -80,33 +80,22 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
 
         // private String username;
         // just a check: no need to invoke ds.setUsername() since that has been done already in SmartPoolDataSourceHikari
-        checkStringProperty((ds) -> ds.getUsername(),
-                            "username");
+        checkStringProperty(HikariDataSource::getUsername, "username");
 
         // private String catalog;
-        configureStringProperty((ds) -> ds.getCatalog(),
-                                (ds, value) -> ds.setCatalog(value),
-                                "catalog");
+        configureStringProperty(HikariDataSource::getCatalog, HikariDataSource::setCatalog, "catalog");
 
         // private String connectionInitSql;
-        configureStringProperty((ds) -> ds.getConnectionInitSql(),
-                                (ds, value) -> ds.setConnectionInitSql(value),
-                                "connection init sql");
+        configureStringProperty(HikariDataSource::getConnectionInitSql, HikariDataSource::setConnectionInitSql, "connection init sql");
 
         // private String dataSourceClassName;
-        configureStringProperty((ds) -> ds.getDataSourceClassName(),
-                                (ds, value) -> ds.setDataSourceClassName(value),
-                                "data source class name");
+        configureStringProperty(HikariDataSource::getDataSourceClassName, HikariDataSource::setDataSourceClassName, "data source class name");
 
         // private String dataSourceJNDI;
-        configureStringProperty((ds) -> ds.getDataSourceJNDI(),
-                                (ds, value) -> ds.setDataSourceJNDI(value),
-                                "data source JNDI");
+        configureStringProperty(HikariDataSource::getDataSourceJNDI, HikariDataSource::setDataSourceJNDI, "data source JNDI");
 
         // private String driverClassName;
-        configureStringProperty((ds) -> ds.getDriverClassName(),
-                                (ds, value) -> ds.setDriverClassName(value),
-                                "driver class name");
+        configureStringProperty(HikariDataSource::getDriverClassName, HikariDataSource::setDriverClassName, "driver class name");
 
         // private boolean allowPoolSuspension;
         configureBooleanProperty((ds) -> ds.isAllowPoolSuspension(),
@@ -134,9 +123,7 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
                               "initialization fail timeout");
 
         // private String jdbcUrl;
-        configureStringProperty((ds) -> ds.getJdbcUrl(),
-                              (ds, value) -> ds.setJdbcUrl(value),
-                              "JDBC URL");
+        configureStringProperty(HikariDataSource::getJdbcUrl, HikariDataSource::setJdbcUrl, "JDBC URL");
 
         // private long maxLifetime;
         configureLongProperty((ds) -> ds.getMaxLifetime(),
@@ -159,14 +146,10 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
                                  "register Mbeans");
 
         // private String schema;
-        configureStringProperty((ds) -> ds.getSchema(),
-                              (ds, value) -> ds.setSchema(value),
-                              "schema");
+        configureStringProperty(HikariDataSource::getSchema, HikariDataSource::setSchema, "schema");
 
         // private String transactionIsolation;
-        configureStringProperty((ds) -> ds.getTransactionIsolation(),
-                              (ds, value) -> ds.setTransactionIsolation(value),
-                              "transaction isolation");
+        configureStringProperty(HikariDataSource::getTransactionIsolation, HikariDataSource::setTransactionIsolation, "transaction isolation");
 
         // private long validationTimeout;
         configureLongProperty((ds) -> ds.getValidationTimeout(),

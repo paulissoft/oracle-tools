@@ -11,14 +11,12 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.logging.Logger;
 
 
-public class SmartPoolDataSourceHikari extends HikariDataSource {
+public class SmartPoolDataSourceHikari extends HikariDataSource implements ConnectInfo {
 
     // this delegate will do the actual work
     private static final SharedPoolDataSourceHikari delegate = new SharedPoolDataSourceHikari();
     
-    private volatile String schema = null;
-
-    private volatile String proxyUsername = null;
+    private volatile String currentSchema = null;
 
     /*
     // overridden methods from HikariDataSource
@@ -146,7 +144,7 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
     
     @Override
     public String getConnectionTestQuery() {
-        return "alter session set current_schema = " + schema;
+        return getSQLAlterSessionSetCurrentSchema();
     }
 
     /*
@@ -376,28 +374,14 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
     public void setUsername(String username) {
         // Here we will set both the super and the delegate username so that the overridden getConnection() will always use
         // the same password no matter where it comes from.
-
+	var connectInfo = determineProxyUsernameAndCurrentDSchema(username);
+	
         synchronized(this) {
-            if (username == null) {
-                proxyUsername = schema = null;
-            } else {
-                final int pos1 = username.indexOf("[");
-                final int pos2 = ( username.endsWith("]") ? username.length() - 1 : -1 );
-      
-                if (pos1 >= 0 && pos2 >= pos1) {
-                    // a username like bc_proxy[bodomain]
-                    proxyUsername = username.substring(0, pos1);
-                    schema = username.substring(pos1+1, pos2);
-                } else {
-                    // a username like bodomain
-                    proxyUsername = null;
-                    schema = username;
-                }
-            }
+	    currentSchema = connectInfo[1];
         }
 
-        super.setUsername(proxyUsername != null ? proxyUsername : schema);
-        delegate.setUsername(proxyUsername != null ? proxyUsername : schema);
+        super.setUsername(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
+        delegate.setUsername(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
 
         // Add this object here (setUsername() should always be called) and
         // not in the constructor to prevent a this escape warning in the constructor.
@@ -411,4 +395,11 @@ public class SmartPoolDataSourceHikari extends HikariDataSource {
     @Override
     public void validate();
     */
+
+    /*
+    // Interface ConnectInfo
+    */
+    public String getCurrentSchema() {
+	return currentSchema;
+    }
 }
