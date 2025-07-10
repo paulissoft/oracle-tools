@@ -107,26 +107,32 @@ Based on the `PoolDataSourceImpl` class.
 
 The following properties can be set for the (virtual) pool data sources and will be consolidated into the shared pool data source.
 
-| Property                     | Operation | Remark                                                                                                                                 |
-|:-----------------------------|:----------|----------------------------------------------------------------------------------------------------------------------------------------|
-| initialPoolSize              | SUM       |                                                                                                                                        |
-| maxPoolSize                  | SUM       |                                                                                                                                        |
-| minPoolSize                  | SUM       |                                                                                                                                        |
-| user                         | CHECK     | When a virtual pool user is set, the shared pool user is set too (splitting username into a login user and a current schema).          |
-| URL                          | SET       |                                                                                                                                        |
-| abandonedConnectionTimeout   | SET       |                                                                                                                                        |
-| connectionFactoryClassName   | SET       |                                                                                                                                        |
-| connectionValidationTimeout  | SET       |                                                                                                                                        |
-| inactiveConnectionTimeout    | SET       |                                                                                                                                        |
-| maxConnectionReuseTime       | SET       |                                                                                                                                        |
-| maxStatements                | SET       |                                                                                                                                        |
-| secondsToTrustIdleConnection | SET       |                                                                                                                                        |
-| timeToLiveConnectionTimeout  | SET       |                                                                                                                                        |
-| timeoutCheckInterval         | SET       |                                                                                                                                        |
-| validateConnectionOnBorrow   | SET       | Property validateConnectionOnBorrow will be set to true for each virtual pool (used in conjunction with SQLForValidateConnection).     |
-| SQLForValidateConnection     | -         | Each virtual pool will have a `getSQLForValidateConnection` method that returns `alter session set current_schema = <current_schema>`. |
-| connectionPoolName           | -         | The shared pool name will not be set.                                                                                                  |
-| connectionWaitTimeout        | -         | Deprecated. To be replaced by connectionWaitDurationInMillis.                                                                          |
+| Property                      | Operation | Remark                                                                                                                                 |
+|:------------------------------|:----------|----------------------------------------------------------------------------------------------------------------------------------------|
+| initialPoolSize               | SUM       |                                                                                                                                        |
+| maxPoolSize                   | SUM       |                                                                                                                                        |
+| minPoolSize                   | SUM       |                                                                                                                                        |
+| user                          | CHECK     | When a virtual pool user is set, the shared pool user is set too (splitting username into a login user and a current schema).          |
+| ONSConfiguration              | SET       |                                                                                                                                        |
+| URL                           | SET       |                                                                                                                                        |
+| abandonedConnectionTimeout    | SET       |                                                                                                                                        |
+| connectionFactoryClassName    | SET       |                                                                                                                                        |
+| connectionValidationTimeout   | SET       |                                                                                                                                        |
+| dataSourceName                | SET       |                                                                                                                                        |
+| fastConnectionFailoverEnabled | SET       |                                                                                                                                        |
+| inactiveConnectionTimeout     | SET       |                                                                                                                                        |
+| maxConnectionReuseCount       | SET       |                                                                                                                                        |
+| maxConnectionReuseTime        | SET       |                                                                                                                                        |
+| maxIdleTime                   | SET       |                                                                                                                                        |
+| maxStatements                 | SET       |                                                                                                                                        |
+| queryTimeout                  | SET       |                                                                                                                                        |
+| secondsToTrustIdleConnection  | SET       |                                                                                                                                        |
+| timeToLiveConnectionTimeout   | SET       |                                                                                                                                        |
+| timeoutCheckInterval          | SET       |                                                                                                                                        |
+| validateConnectionOnBorrow    | SET       | Property validateConnectionOnBorrow will be set to true for each virtual pool (used in conjunction with SQLForValidateConnection).     |
+| SQLForValidateConnection      | -         | Each virtual pool will have a `getSQLForValidateConnection` method that returns `alter session set current_schema = <current_schema>`. |
+| connectionPoolName            | -         | The shared pool name will not be set.                                                                                                  |
+| connectionWaitTimeout         | -         | Deprecated. To be replaced by connectionWaitDurationInMillis.                                                                          |
 
 ### Other operations
 
