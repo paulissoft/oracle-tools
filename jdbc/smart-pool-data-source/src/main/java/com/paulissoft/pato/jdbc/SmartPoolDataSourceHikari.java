@@ -145,10 +145,10 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     public void setUsername(String username) {
         // Here we will set both the super and the delegate username so that the overridden getConnection() will always use
         // the same password no matter where it comes from.
-	var connectInfo = determineProxyUsernameAndCurrentDSchema(username);
-	
+        var connectInfo = determineProxyUsernameAndCurrentDSchema(username);
+        
         synchronized(this) {
-	    currentSchema = connectInfo[1];
+            currentSchema = connectInfo[1];
         }
 
         super.setUsername(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
@@ -163,6 +163,6 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     // Interface ConnectInfo
     */
     public String getCurrentSchema() {
-	return currentSchema;
+        return currentSchema;
     }
 }

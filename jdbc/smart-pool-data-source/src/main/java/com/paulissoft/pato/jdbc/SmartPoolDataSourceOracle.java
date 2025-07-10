@@ -13,7 +13,7 @@ import oracle.ucp.jdbc.PoolDataSourceImpl;
 public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements ConnectInfo, Closeable {
 
     private static final long serialVersionUID = 1L;
-	
+        
     // this delegate will do the actual work
     private static final SharedPoolDataSourceOracle delegate = new SharedPoolDataSourceOracle();
     
@@ -30,11 +30,11 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
 
     @Override
     public Connection getConnection(Properties labels) throws SQLException {
-	try {
+        try {
             throw new SQLFeatureNotSupportedException("getConnection");            
-	} catch (Exception ex) {
-	    throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
-	}
+        } catch (Exception ex) {
+            throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+        }
     }
 
     @Override
@@ -44,11 +44,11 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
 
     @Override
     public Connection getConnection(String username, String password, Properties labels) throws SQLException {
-	try {
+        try {
             throw new SQLFeatureNotSupportedException("getConnection");            
-	} catch (Exception ex) {
-	    throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
-	}
+        } catch (Exception ex) {
+            throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+        }
     }
     
     @Override
@@ -63,11 +63,11 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
 
     @Override
     public Logger getParentLogger() {
-	try {
-	    return delegate.getParentLogger();
-	} catch (Exception ex) {
-	    throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
-	}
+        try {
+            return delegate.getParentLogger();
+        } catch (Exception ex) {
+            throw new RuntimeException(String.format("%s: %s", ex.getClass().getName(), ex.getMessage()));
+        }
     }
 
     @Override
@@ -108,10 +108,10 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
     public void setUser(String username) throws SQLException {
         // Here we will set both the super and the delegate username so that the overridden getConnection() will always use
         // the same password no matter where it comes from.
-	var connectInfo = determineProxyUsernameAndCurrentDSchema(username);
-	
+        var connectInfo = determineProxyUsernameAndCurrentDSchema(username);
+        
         synchronized(this) {
-	    currentSchema = connectInfo[1];
+            currentSchema = connectInfo[1];
         }
 
         super.setUser(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
@@ -126,7 +126,7 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
     // Interface ConnectInfo
     */
     public String getCurrentSchema() {
-	return currentSchema;
+        return currentSchema;
     }
 
     /*
