@@ -10,7 +10,8 @@
    2. [Hikari pool data source properties](#hikari-pool-data-source-properties)
    3. [Oracle pool data source properties](#oracle-pool-data-source-properties)
    4. [Other operations](#other-operations)
-3. [Conclusion](#conclusion)
+3. [Pitfalls](#pitfalls)
+4. [Conclusion](#conclusion)
 
 ## Introduction
 
@@ -29,7 +30,7 @@ Blue Current uses a Java Spring Boot application called Motown from [Infuse](htt
 So how can we decrease the number of connections and thus costs?
 1. by creating virtual pools that delegate the work to a shared pool.
 2. since the maximum for each (virtual) pool is usually (too) high, the shared pool will probably need a smaller maximum.
-3. by having just one large shared pool you have just one set of credentials (i.e. one user to connect to) and hence that user must be given all the rights to do the work (DML or even DDL). Please note that the user to connect to need **not** be one of the schema to switch to.
+3. by having just one large shared pool you have just one set of credentials (i.e. one user to connect to) and hence that user must be given all the rights to do the work (DML or even DDL). Please note that the user to connect to, need **not** be the schema to switch to.
 
 The username property must be either `proxy_user[schema]` or `schema`. The library will split `proxy_user[schema]` into a login user and a current schema. For `schema` both login user and current schema will be the same. Please note that we do not need a real Oracle proxy account, this notation `proxy_user[schema]` just resembles logging in via a proxy account.
 
@@ -73,8 +74,8 @@ The following properties can be set for the (virtual) pool data sources and will
 
 | Property                  | Operation | Remark                                                                                                                                |
 |:--------------------------|:----------|---------------------------------------------------------------------------------------------------------------------------------------|
-| minimumIdle               | SUM       |                                                                                                                                       |
 | maximumPoolSize           | SUM       |                                                                                                                                       |
+| minimumIdle               | SUM       |                                                                                                                                       |
 | username                  | CHECK     | When a virtual pool username is set, the shared pool username is set too (splitting username into a login user and a current schema). |
 | allowPoolSuspension       | SET       |                                                                                                                                       |
 | autoCommit                | SET       |                                                                                                                                       |
@@ -102,38 +103,73 @@ The following properties can be set for the (virtual) pool data sources and will
 
 ### Oracle pool data source properties
 
-These are the properties defined in class `PoolDataSourceConfigurationOracle`:
-- String connectionPoolName
-- int initialPoolSize
-- int minPoolSize
-- int maxPoolSize
-- String connectionFactoryClassName
-- boolean validateConnectionOnBorrow
-- int abandonedConnectionTimeout
-- int timeToLiveConnectionTimeout
-- int inactiveConnectionTimeout
-- int timeoutCheckInterval
-- int maxStatements
-- int connectionWaitTimeout
-- long maxConnectionReuseTime
-- int secondsToTrustIdleConnection
-- int connectionValidationTimeout
+Based on the `PoolDataSourceImpl` class.
+
+The following properties can be set for the (virtual) pool data sources and will be consolidated into the shared pool data source.
+
+| Property                     | Operation | Remark                                                                                                                                 |
+|:-----------------------------|:----------|----------------------------------------------------------------------------------------------------------------------------------------|
+| initialPoolSize              | SUM       |                                                                                                                                        |
+| maxPoolSize                  | SUM       |                                                                                                                                        |
+| minPoolSize                  | SUM       |                                                                                                                                        |
+| user                         | CHECK     | When a virtual pool user is set, the shared pool user is set too (splitting username into a login user and a current schema).          |
+| URL                          | SET       |                                                                                                                                        |
+| abandonedConnectionTimeout   | SET       |                                                                                                                                        |
+| connectionFactoryClassName   | SET       |                                                                                                                                        |
+| connectionValidationTimeout  | SET       |                                                                                                                                        |
+| inactiveConnectionTimeout    | SET       |                                                                                                                                        |
+| maxConnectionReuseTime       | SET       |                                                                                                                                        |
+| maxStatements                | SET       |                                                                                                                                        |
+| secondsToTrustIdleConnection | SET       |                                                                                                                                        |
+| timeToLiveConnectionTimeout  | SET       |                                                                                                                                        |
+| timeoutCheckInterval         | SET       |                                                                                                                                        |
+| validateConnectionOnBorrow   | SET       | Property validateConnectionOnBorrow will be set to true for each virtual pool (used in conjunction with SQLForValidateConnection).     |
+| SQLForValidateConnection     | -         | Each virtual pool will have a `getSQLForValidateConnection` method that returns `alter session set current_schema = <current_schema>`. |
+| connectionPoolName           | -         | The shared pool name will not be set.                                                                                                  |
+| connectionWaitTimeout        | -         | Deprecated. To be replaced by connectionWaitDurationInMillis.                                                                          |
 
 ### Other operations
 
 All other operations excluding getting/setting properties as mentioned above will be delegated **except** these that will raise a `SQLFeatureNotSupportedException` exception:
 - `Connection getConnection(String username, String password) throws SQLException`
-- `void setConnectionTestQuery(String connectionTestQuery)`
 - `Connection getConnection(Properties labels) throws SQLException` (Oracle only)
 - `Connection getConnection(String username, String password, Properties labels) throws SQLException` (Oracle only)
+- `void setConnectionTestQuery(String connectionTestQuery)` (Hikari only)
 - `void setSQLForValidateConnection(String SQLstring)` (Oracle only)
 - `void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws SQLException` (Only for Oracle and when `validateConnectionOnBorrow` is false, meaning property `SQLForValidateConnection` will not be used)
 
+So this library will only support the `getConnection()` method and it will **not** allow setting connection test statements (since that will be done by the library).
+
+## Pitfalls
+
+Due to the fact that the login user may not be able to issue DDL in other schemas, you must take care of Hibernate settings for DDL/DML operations. In Oracle 23ai you can do something like `grant select any table on schema testuser1 to testuser2;`. See also [Grant Schema Privileges, Oracle 23ai](https://oracle-base.com/articles/23/schema-privileges-23#grant-schema-privileges). That may work also for `grant create any table on schema testuser1 to testuser2;` (test!).
+
+Here an example of a Spring Boot `application.yaml`:
+
+```
+# ===
+# Hibernate
+# ===
+
+# possible values for hibernate.hbm2ddl.auto:
+# - validate: validate the schema, makes no changes to the database.
+# - create-only: database creation will be generated.
+# - drop: database dropping will be generated.
+# - update: update the schema.
+# - create: creates the schema, destroying previous data.
+# - create-drop: drop the schema when the SessionFactory is closed explicitly, typically when the application is stopped.
+# - none: does nothing with the schema, makes no changes to the database
+
+hibernate.hbm2ddl.auto=none
+```
+
+So when the login user has no rights to create, alter or destroy objects (DDL) in one of the current schemas used, the `hibernate.hbm2ddl.auto` property should be 'none' or 'validate'. In this situation you may need to manually update the objects (or use once the original Hikari/Oracle data sources to update).
+
 ## Conclusion
 
-The Smart Pool Data Source library allows you to combine several virtual pool data sources in Java JDBC applications like Spring Boot. The virtual pools are just used to configure the properties. The real work is delegated to a shared pool data source. This can reduce the number of connections (provided you limit the combined maximum pool size for the shared pool). In an Oracle Cloud environment this may reduce costs also since they are related to the number of CPUs where each CPU has a limit to the maximum number of connections.
+The Smart Pool Data Source library is meant for Oracle databases and it allows you to combine several virtual pool data sources in Java JDBC applications like Spring Boot. The virtual pools are just used to configure the properties. The real work is delegated to a shared pool data source whose properties are either summed up (virtual pool sizes) or set to a virtual property. This can reduce the number of connections (provided you limit the combined maximum pool size for the shared pool). In an Oracle Cloud environment this may reduce costs since they are related to the number of CPUs where each CPU has a limit to the maximum number of connections.
 
-The usage of this smart pool is transparent in a Spring Boot environment. Just the type of the data source needs to change.
+The usage of this smart pool is transparent in a Spring Boot environment. Just the type of the data source needs to change and you must include the current schema in the user(name) property.
 
 ## Links
 
