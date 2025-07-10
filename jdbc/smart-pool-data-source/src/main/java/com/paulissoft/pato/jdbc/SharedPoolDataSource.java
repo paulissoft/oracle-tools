@@ -212,6 +212,10 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
         }
     }
 
+    boolean isOpen() {
+        return state == State.OPEN;
+    }
+    
     abstract void close();
 
     abstract void setPassword(String password);

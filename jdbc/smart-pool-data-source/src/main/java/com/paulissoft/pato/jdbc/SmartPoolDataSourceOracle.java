@@ -171,6 +171,10 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
         return !delegate.contains(this);
     }
 
+    public boolean isOpen() {
+        return delegate.isOpen() && !isClosed();
+    }
+
     /*
     // unsupported operations
     */

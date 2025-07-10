@@ -146,6 +146,13 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     }
 
     /*
+    // Extra.
+    */
+    public boolean isOpen() {
+        return delegate.isOpen() && !isClosed();
+    }    
+
+    /*
     // Unsupported methods from interface HikariConfig
     */
   

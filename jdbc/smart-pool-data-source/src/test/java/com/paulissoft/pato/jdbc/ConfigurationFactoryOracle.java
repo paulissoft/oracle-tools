@@ -7,10 +7,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.beans.factory.annotation.Qualifier;
 
-import lombok.extern.slf4j.Slf4j;
-
-
-@Slf4j
 @Configuration
 public class ConfigurationFactoryOracle {
 
@@ -79,18 +75,18 @@ public class ConfigurationFactoryOracle {
 
     @Primary
     @ConfigurationProperties(prefix = "app.domain.datasource.oracleucp")
-    public MyDomainDataSourceOracle domainDataSourceOracle(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle domainDataSourceOracle(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
-            .type(MyDomainDataSourceOracle.class)
+            .type(SmartPoolDataSourceOracle.class)
             .build();
     } 
 
     @ConfigurationProperties(prefix = "app.operator.datasource.oracleucp")
-    public MyOperatorDataSourceOracle operatorDataSourceOracle(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceOracle operatorDataSourceOracle(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
-            .type(MyOperatorDataSourceOracle.class)
+            .type(SmartPoolDataSourceOracle.class)
             .build();
     } 
 }

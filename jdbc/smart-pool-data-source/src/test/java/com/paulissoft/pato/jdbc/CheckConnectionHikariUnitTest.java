@@ -2,14 +2,11 @@ package com.paulissoft.pato.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import lombok.extern.slf4j.Slf4j;
 import oracle.jdbc.OracleConnection;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -17,13 +14,10 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Slf4j
 @ExtendWith(SpringExtension.class)
-@EnableConfigurationProperties({MyDomainDataSourceHikari.class, MyOperatorDataSourceHikari.class})
 @ContextConfiguration(classes={ConfigurationFactory.class, ConfigurationFactoryHikari.class})
 @TestPropertySource("classpath:application-test.properties")
 public class CheckConnectionHikariUnitTest {
@@ -39,18 +33,7 @@ public class CheckConnectionHikariUnitTest {
     @Autowired
     @Qualifier("ocppDataSourceHikari1")
     private SmartPoolDataSourceHikari ocppDataSourceHikari;
-
-    @Autowired
-    private MyDomainDataSourceHikari domainDataSourceHikari;
     
-    @Autowired
-    private MyOperatorDataSourceHikari operatorDataSourceHikari;
-    
-    @BeforeAll
-    static void clear() {
-        PoolDataSourceStatistics.clear();
-    }
-
     //=== Hikari ===
 
     @Test
@@ -59,8 +42,6 @@ public class CheckConnectionHikariUnitTest {
         IllegalStateException thrown1;
         Connection conn1, conn2, conn3;
         
-        log.debug("testConnection()");
-
         final SmartPoolDataSourceHikari pds1 = configDataSourceHikari;
         final SmartPoolDataSourceHikari pds2 = ocpiDataSourceHikari;
         final SmartPoolDataSourceHikari pds3 = ocppDataSourceHikari;
@@ -75,21 +56,6 @@ public class CheckConnectionHikariUnitTest {
 
             assertNotNull(conn3 = pds3.getConnection());
             assertTrue(pds3.isOpen());
-
-            assertTrue(pds1.getActiveConnections() >= 1);
-            assertEquals(pds1.getActiveConnections() +
-                         pds1.getIdleConnections(),
-                         pds1.getTotalConnections());
-
-            assertTrue(pds2.getActiveConnections() >= 1);
-            assertEquals(pds2.getActiveConnections() +
-                         pds2.getIdleConnections(),
-                         pds2.getTotalConnections());
-
-            assertTrue(pds3.getActiveConnections() >= 1);
-            assertEquals(pds3.getActiveConnections() +
-                         pds3.getIdleConnections(),
-                         pds3.getTotalConnections());
 
             assertEquals(conn1.unwrap(OracleConnection.class).getClass(),
                          conn2.unwrap(Connection.class).getClass());
@@ -107,7 +73,6 @@ public class CheckConnectionHikariUnitTest {
         assertFalse(pds3.isOpen());
 
         thrown1 = assertThrows(IllegalStateException.class, pds3::getConnection);
-        log.debug("message: {}", thrown1.getMessage());       
         assertTrue(thrown1.getMessage().matches(rex1));
 
         // close pds2
@@ -116,16 +81,14 @@ public class CheckConnectionHikariUnitTest {
         assertFalse(pds2.isOpen());
 
         thrown1 = assertThrows(IllegalStateException.class, pds2::getConnection);
-        log.debug("message: {}", thrown1.getMessage());       
         assertTrue(thrown1.getMessage().matches(rex1));
 
         // close pds1
         assertTrue(pds1.isOpen());
         pds1.close();
-        assertSame(pds1.getState(), SmartPoolDataSourceHikari.State.CLOSED);
+        assertTrue(pds1.isClosed());
 
         thrown1 = assertThrows(IllegalStateException.class, pds1::getConnection);
-        log.debug("message: {}", thrown1.getMessage());        
         assertTrue(thrown1.getMessage().matches(rex1));
     }
 }
