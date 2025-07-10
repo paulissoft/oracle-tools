@@ -62,23 +62,6 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
         return delegate.isWrapperFor(iface);
     }
 
-    /*
-    @Override
-    public void setMetricRegistry(Object metricRegistry) {
-        delegate.setMetricRegistry(metricRegistry);
-    }
-    
-    @Override
-    public void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
-        delegate.setMetricsTrackerFactory(metricsTrackerFactory);
-    }
-
-    @Override
-    public void setHealthCheckRegistry(Object healthCheckRegistry) {
-        delegate.setHealthCheckRegistry(healthCheckRegistry);
-    }
-    */
-
     @Override
     public boolean isRunning() {
         return delegate.isRunning();
@@ -163,7 +146,7 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     }
 
     /*
-    // Interface HikariConfig
+    // Unsupported methods from interface HikariConfig
     */
   
     @Override

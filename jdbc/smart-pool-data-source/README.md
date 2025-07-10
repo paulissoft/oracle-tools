@@ -8,9 +8,12 @@
 2. [High Level Design](#high-level-design)
    1. [Operations on the pool data sources](#operations-on-the-pool-data-sources)
    2. [Hikari pool data source properties](#hikari-pool-data-source-properties)
-   3. [Oracle pool data source properties](#oracle-pool-data-source-properties)
-   4. [Other operations](#other-operations)
-3. [Pitfalls](#pitfalls)
+   3. [Other Hikari pool data source methods](#other-hikari-pool-data-source-methods)
+   4. [Oracle pool data source properties](#oracle-pool-data-source-properties)
+   5. [Other Oracle pool data source methods](#other-oracle-pool-data-source-methods)
+3. [Spring Boot configuration](#spring-boot-configuration)
+   1. [Specifying the pool data source type](#specifying-the-pool-data-source-type)
+   2. [Hibernate](#hibernate)
 4. [Conclusion](#conclusion)
 
 ## Introduction
@@ -59,12 +62,13 @@ There are two pool data sources, each with a default constructor:
 
 ### Operations on the pool data sources
 
-| Operation | Remark                                                                                                                                      |
-|:----------|:--------------------------------------------------------------------------------------------------------------------------------------------|
-| CHECK     | All virtual pool property values must be equal (if not an exception is raised).                                                             |
-| DELEGATE  | Delegate an operation on a virtual pool data source to the shared pool data source.                                                         |
-| SET       | All virtual pool property values must be equal (if not an exception is raised) and the first value is assigned to the shared pool property. |
-| SUM       | All virtual pool property values are summed up and the total is assigned to the shared pool property.                                       |
+| Operation   | Remark                                                                                                                                      |
+|:------------|:--------------------------------------------------------------------------------------------------------------------------------------------|
+| CHECK       | All virtual pool property values must be equal (if not an exception is raised).                                                             |
+| DELEGATE    | Delegate an operation on a virtual pool data source to the shared pool data source.                                                         |
+| SET         | All virtual pool property values must be equal (if not an exception is raised) and the first value is assigned to the shared pool property. |
+| SUM         | All virtual pool property values are summed up and the total is assigned to the shared pool property.                                       |
+| UNSUPPORTED | The method is not supported.                                                                                                                |
 
 ### Hikari pool data source properties
 
@@ -101,6 +105,45 @@ The following properties can be set for the (virtual) pool data sources and will
 | password                  | -         | When a virtual pool password is set, the shared pool password is set too. Passwords will not be checked since the `getPassword` method may raise an exception (not secure). |
 | poolName                  | -         | The shared pool name will not be set.                                                                                                 |
 
+### Other Hikari pool data source methods
+
+| Method                                                                | Operation   | Remark |
+|:----------------------------------------------------------------------|:------------|--------|
+| getConnection()                                                       | DELEGATE    |        |
+| getConnection(String username, String password)                       | UNSUPPORTED |        |
+| getLogWriter()                                                        | DELEGATE    |        |
+| setLogWriter(PrintWriter out)                                         | DELEGATE    |        |
+| getParentLogger()                                                     | DELEGATE    |        |
+| unwrap(Class<T> iface)                                                | DELEGATE    |        |
+| isWrapperFor(Class<?> iface)                                          | DELEGATE    |        |
+| isRunning()                                                           | DELEGATE    |        |
+| getHikariPoolMXBean()                                                 | DELEGATE    |        |
+| getHikariConfigMXBean()                                               | DELEGATE    |        |
+| evictConnection(Connection connection)                                | DELEGATE    |        |
+| close()                                                               | DELEGATE    |        |
+| isClosed()                                                            | DELEGATE    |        |
+| getDataSource()                                                       | UNSUPPORTED |        |
+| setDataSource(DataSource dataSource)                                  | UNSUPPORTED |        |
+| addDataSourceProperty(String propertyName, Object value)              | UNSUPPORTED |        |
+| getDataSourceProperties()                                             | UNSUPPORTED |        |
+| setDataSourceProperties(Properties dsProperties)                      | UNSUPPORTED |        |
+| getMetricsTrackerFactory()                                            | UNSUPPORTED |        |
+| setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) | UNSUPPORTED |        |
+| getMetricRegistry()                                                   | UNSUPPORTED |        |
+| setMetricRegistry(Object metricRegistry)                              | UNSUPPORTED |        |
+| getHealthCheckRegistry()                                              | UNSUPPORTED |        |
+| setHealthCheckRegistry(Object healthCheckRegistry)                    | UNSUPPORTED |        |
+| getHealthCheckProperties()                                            | UNSUPPORTED |        |
+| setHealthCheckProperties(Properties healthCheckProperties)            | UNSUPPORTED |        |
+| addHealthCheckProperty(String key, String value)                      | UNSUPPORTED |        |
+| getScheduledExecutor()                                                | UNSUPPORTED |        |
+| setScheduledExecutor(ScheduledExecutorService executor)               | UNSUPPORTED |        |
+| getThreadFactory()                                                    | UNSUPPORTED |        |
+| setThreadFactory(ThreadFactory threadFactory)                         | UNSUPPORTED |        |
+| copyStateTo(HikariConfig other)                                       | UNSUPPORTED |        |
+
+As you can see a lot of methods are unsupported, mainly because they do not make sense for the business case.
+
 ### Oracle pool data source properties
 
 Based on the `PoolDataSourceImpl` class.
@@ -134,19 +177,99 @@ The following properties can be set for the (virtual) pool data sources and will
 | connectionPoolName            | -         | The shared pool name will not be set.                                                                                                  |
 | connectionWaitTimeout         | -         | Deprecated. To be replaced by connectionWaitDurationInMillis.                                                                          |
 
-### Other operations
+### Other Oracle pool data source methods
 
-All other operations excluding getting/setting properties as mentioned above will be delegated **except** these that will raise a `SQLFeatureNotSupportedException` exception:
-- `Connection getConnection(String username, String password) throws SQLException`
-- `Connection getConnection(Properties labels) throws SQLException` (Oracle only)
-- `Connection getConnection(String username, String password, Properties labels) throws SQLException` (Oracle only)
-- `void setConnectionTestQuery(String connectionTestQuery)` (Hikari only)
-- `void setSQLForValidateConnection(String SQLstring)` (Oracle only)
-- `void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws SQLException` (Only for Oracle and when `validateConnectionOnBorrow` is false, meaning property `SQLForValidateConnection` will not be used)
+| Method                                                                                                           | Operation              | Remark              |
+|:-----------------------------------------------------------------------------------------------------------------|:-----------------------|---------------------|
+| getConnection()                                                                                                  | DELEGATE               |                     |
+| getConnection(Properties labels)                                                                                 | UNSUPPORTED            |                     |
+| getConnection(String username, String password)                                                                  | UNSUPPORTED            |                     |
+| getConnection(String username, String password, Properties labels)                                               | UNSUPPORTED            |                     |
+| getLogWriter()                                                                                                   | DELEGATE               |                     |
+| setLogWriter(PrintWriter out)                                                                                    | DELEGATE               |                     |
+| getParentLogger()                                                                                                | UNSUPPORTED            |                     |
+| unwrap(Class<T> iface)                                                                                           | DELEGATE               |                     |
+| isWrapperFor(Class<?> iface)                                                                                     | DELEGATE               |                     |
+| getSQLForValidateConnection()                                                                                    | UNSUPPORTED            |                     |
+| setSQLForValidateConnection(String SQLstring)                                                                    | UNSUPPORTED            |                     |
+| setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow)                                                | DELEGATE / UNSUPPORTED | Depends on argument |
+| registerConnectionCreationConsumer(Consumer<ConnectionCreationInformation> consumer)                             | UNSUPPORTED            |                     |
+| unregisterConnectionCreationConsumer()                                                                           | UNSUPPORTED            |                     |
+| getConnectionCreationConsumer()                                                                                  | UNSUPPORTED            |                     |
+| createShardingKeyBuilder()                                                                                       | UNSUPPORTED            |                     |
+| setPropertyCycle(int paramInt)                                                                                   | UNSUPPORTED            |                     |
+| getPropertyCycle()                                                                                               | UNSUPPORTED            |                     |
+| setServerName(String paramString)                                                                                | UNSUPPORTED            |                     |
+| getServerName()                                                                                                  | UNSUPPORTED            |                     |
+| setPortNumber(int paramInt)                                                                                      | UNSUPPORTED            |                     |
+| getPortNumber()                                                                                                  | UNSUPPORTED            |                     |
+| setDatabaseName(String paramString)                                                                              | UNSUPPORTED            |                     |
+| getDatabaseName()                                                                                                | UNSUPPORTED            |                     |
+| setDescription(String paramString)                                                                               | UNSUPPORTED            |                     |
+| getDescription()                                                                                                 | UNSUPPORTED            |                     |
+| setNetworkProtocol(String paramString)                                                                           | UNSUPPORTED            |                     |
+| getNetworkProtocol()                                                                                             | UNSUPPORTED            |                     |
+| setRoleName(String paramString)                                                                                  | UNSUPPORTED            |                     |
+| getRoleName()                                                                                                    | UNSUPPORTED            |                     |
+| getConnectionHarvestTriggerCount()                                                                               | UNSUPPORTED            |                     |
+| setConnectionHarvestTriggerCount(int paramInt)                                                                   | UNSUPPORTED            |                     |
+| getConnectionHarvestMaxCount()                                                                                   | UNSUPPORTED            |                     |
+| setConnectionHarvestMaxCount(int paramInt)                                                                       | UNSUPPORTED            |                     |
+| getAvailableConnectionsCount()                                                                                   | UNSUPPORTED            |                     |
+| getBorrowedConnectionsCount()                                                                                    | UNSUPPORTED            |                     |
+| registerConnectionLabelingCallback(ConnectionLabelingCallback paramConnectionLabelingCallback)                   | UNSUPPORTED            |                     |
+| removeConnectionLabelingCallback()                                                                               | UNSUPPORTED            |                     |
+| registerConnectionAffinityCallback(ConnectionAffinityCallback paramConnectionAffinityCallback)                   | UNSUPPORTED            |                     |
+| removeConnectionAffinityCallback()                                                                               | UNSUPPORTED            |                     |
+| getConnectionProperties()                                                                                        | UNSUPPORTED            |                     |
+| getConnectionProperty(String paramString)                                                                        | UNSUPPORTED            |                     |
+| setConnectionProperty(String paramString1, String paramString2)                                                  | UNSUPPORTED            |                     |
+| setConnectionProperties(Properties paramProperties)                                                              | UNSUPPORTED            |                     |
+| getConnectionFactoryProperties()                                                                                 | UNSUPPORTED            |                     |
+| getConnectionFactoryProperty(String paramString)                                                                 | UNSUPPORTED            |                     |
+| setConnectionFactoryProperty(String paramString1, String paramString2)                                           | UNSUPPORTED            |                     |
+| setConnectionFactoryProperties(Properties paramProperties)                                                       | UNSUPPORTED            |                     |
+| getStatistics()                                                                                                  | UNSUPPORTED            |                     |
+| registerConnectionInitializationCallback(ConnectionInitializationCallback paramConnectionInitializationCallback) | UNSUPPORTED            |                     |
+| unregisterConnectionInitializationCallback()                                                                     | UNSUPPORTED            |                     |
+| getConnectionInitializationCallback()                                                                            | UNSUPPORTED            |                     |
+| getConnectionLabelingHighCost()                                                                                  | UNSUPPORTED            |                     |
+| setConnectionLabelingHighCost(int paramInt)                                                                      | UNSUPPORTED            |                     |
+| getHighCostConnectionReuseThreshold()                                                                            | UNSUPPORTED            |                     |
+| setHighCostConnectionReuseThreshold(int paramInt)                                                                | UNSUPPORTED            |                     |
+| createConnectionBuilder()                                                                                        | UNSUPPORTED            |                     |
+| getConnectionRepurposeThreshold()                                                                                | UNSUPPORTED            |                     |
+| setConnectionRepurposeThreshold(int paramInt)                                                                    | UNSUPPORTED            |                     |
+| getPdbRoles()                                                                                                    | UNSUPPORTED            |                     |
+| getServiceName()                                                                                                 | UNSUPPORTED            |                     |
+| reconfigureDataSource(Properties paramProperties)                                                                | UNSUPPORTED            |                     |
+| getMaxConnectionsPerService()                                                                                    | UNSUPPORTED            |                     |
+| getMaxConnectionsPerShard()                                                                                      | UNSUPPORTED            |                     |
+| setMaxConnectionsPerShard(int paramInt)                                                                          | UNSUPPORTED            |                     |
+| setShardingMode(boolean paramBoolean)                                                                            | UNSUPPORTED            |                     |
+| getShardingMode()                                                                                                | UNSUPPORTED            |                     |
+| setSSLContext(SSLContext paramSSLContext)                                                                        | UNSUPPORTED            |                     |
+| setHostnameResolver(HostnameResolver paramHostnameResolver)                                                      | UNSUPPORTED            |                     |
 
-So this library will only support the `getConnection()` method and it will **not** allow setting connection test statements (since that will be done by the library).
+As you can see a lot of methods are unsupported, mainly because they do not make sense for the business case.
 
-## Pitfalls
+## Spring Boot configuration
+
+### Specifying the pool data source type
+
+Hikari:
+
+```application-hikari-defaults.properties
+spring.datasource.type=com.paulissoft.pato.jdbc.SmartPoolDataSourceHikari
+```
+
+Oracle:
+
+```application-ucp-defaults.properties
+spring.datasource.type=com.paulissoft.pato.jdbc.SmartPoolDataSourceOracle
+```
+
+### Hibernate
 
 Due to the fact that the login user may not be able to issue DDL in other schemas, you must take care of Hibernate settings for DDL/DML operations. In Oracle 23ai you can do something like `grant select any table on schema testuser1 to testuser2;`. See also [Grant Schema Privileges, Oracle 23ai](https://oracle-base.com/articles/23/schema-privileges-23#grant-schema-privileges). That may work also for `grant create any table on schema testuser1 to testuser2;` (test!).
 
