@@ -23,7 +23,9 @@ import oracle.ucp.jdbc.JDBCConnectionPoolStatistics;
 import oracle.ucp.jdbc.ConnectionInitializationCallback;
 import oracle.ucp.jdbc.UCPConnectionBuilder;
 
-public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements ConnectInfo, Closeable, StatePoolDataSource {
+public class SmartPoolDataSourceOracle
+    extends PoolDataSourceImpl
+    implements ConnectInfo, Closeable, StatePoolDataSource, StatisticsPoolDataSource {
 
     private static final long serialVersionUID = 1L;
         
@@ -66,7 +68,7 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
     
     @Override
     public PrintWriter getLogWriter() throws SQLException {
-        return delegate.getLogWriter();
+        return delegate.ds.getLogWriter();
     }
 
     @Override
@@ -77,7 +79,7 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
     @Override
     public Logger getParentLogger() {
         try {
-            return delegate.getParentLogger();
+            return delegate.ds.getParentLogger();
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
@@ -85,12 +87,12 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
-        return delegate.unwrap(iface);
+        return delegate.ds.unwrap(iface);
     }
 
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return delegate.isWrapperFor(iface);
+        return delegate.ds.isWrapperFor(iface);
     }
 
     @Override
@@ -187,6 +189,28 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
     // End of interface StatePoolDataSource
     */
 
+    /*
+    // Interface StatisticsPoolDataSource
+    */
+
+    @Override
+    public int getBorrowedConnectionsCount() /*throws SQLException*/ {
+        return delegate.ds.getBorrowedConnectionsCount();
+    }
+
+    public int getActiveConnections() {
+        return getBorrowedConnectionsCount();
+    }
+    
+    @Override
+    public int getAvailableConnectionsCount() /*throws SQLException*/ {
+        return delegate.ds.getAvailableConnectionsCount();
+    }
+
+    public int getIdleConnections() {
+        return getAvailableConnectionsCount();
+    }
+    
     /*
     // unsupported operations
     */
@@ -355,24 +379,6 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
     @Override
     public void setConnectionHarvestMaxCount(int paramInt) throws SQLException {
         throw new SQLFeatureNotSupportedException("setConnectionHarvestMaxCount");
-    }
-
-    @Override
-    public int getAvailableConnectionsCount() /*throws SQLException*/ {
-        try {
-            throw new SQLFeatureNotSupportedException("getAvailableConnectionsCount");
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
-    @Override
-    public int getBorrowedConnectionsCount() /*throws SQLException*/ {
-        try {
-            throw new SQLFeatureNotSupportedException("getBorrowedConnectionsCount");
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
     }
 
     @Override

@@ -141,6 +141,9 @@ The following properties can be set for the (virtual) pool data sources and will
 | getThreadFactory()                                                    | UNSUPPORTED |        |
 | setThreadFactory(ThreadFactory threadFactory)                         | UNSUPPORTED |        |
 | copyStateTo(HikariConfig other)                                       | UNSUPPORTED |        |
+| getActiveConnections()                                                | DELEGATE    |        |
+| getIdleConnections()                                                  | DELEGATE    |        |
+| getTotalConnections()                                                 | DELEGATE    |        |
 
 As you can see a lot of methods are unsupported, mainly because they do not make sense for the business case.
 
@@ -215,8 +218,8 @@ The following properties can be set for the (virtual) pool data sources and will
 | setConnectionHarvestTriggerCount(int paramInt)                                                                   | UNSUPPORTED            |                     |
 | getConnectionHarvestMaxCount()                                                                                   | UNSUPPORTED            |                     |
 | setConnectionHarvestMaxCount(int paramInt)                                                                       | UNSUPPORTED            |                     |
-| getAvailableConnectionsCount()                                                                                   | UNSUPPORTED            |                     |
-| getBorrowedConnectionsCount()                                                                                    | UNSUPPORTED            |                     |
+| getAvailableConnectionsCount()                                                                                   | DELEGATE               |                     |
+| getBorrowedConnectionsCount()                                                                                    | DELEGATE               |                     |
 | registerConnectionLabelingCallback(ConnectionLabelingCallback paramConnectionLabelingCallback)                   | UNSUPPORTED            |                     |
 | removeConnectionLabelingCallback()                                                                               | UNSUPPORTED            |                     |
 | registerConnectionAffinityCallback(ConnectionAffinityCallback paramConnectionAffinityCallback)                   | UNSUPPORTED            |                     |

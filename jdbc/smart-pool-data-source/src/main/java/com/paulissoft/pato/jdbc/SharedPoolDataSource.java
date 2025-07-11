@@ -91,10 +91,6 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
         throw new SQLFeatureNotSupportedException("getConnection");
     }
 
-    PrintWriter getLogWriter() throws SQLException {
-        return ds.getLogWriter();
-    }
-
     void setLogWriter(PrintWriter out) throws SQLException {
         if (state != State.INITIALIZING) {
             throw new IllegalStateException("You can only issue setLogWriter() while initializing.");
@@ -107,22 +103,6 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
             throw new IllegalStateException("You can only issue setLoginTimeout() while initializing.");
         }
         ds.setLoginTimeout(seconds);
-    }
-
-    int getLoginTimeout() throws SQLException {
-        return ds.getLoginTimeout();
-    }
-
-    Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        return ds.getParentLogger();
-    }
-
-    <U> U unwrap(Class<U> iface) throws SQLException {
-        return ds.unwrap(iface);
-    }
-
-    boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return ds.isWrapperFor(iface);
     }
 
     void configure() {

@@ -16,7 +16,9 @@ import javax.sql.DataSource;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 
-public class SmartPoolDataSourceHikari extends HikariDataSource implements ConnectInfo, Closeable, StatePoolDataSource {
+public class SmartPoolDataSourceHikari
+    extends HikariDataSource
+    implements ConnectInfo, Closeable, StatePoolDataSource, StatisticsPoolDataSource {
 
     // this delegate will do the actual work
     private static final SharedPoolDataSourceHikari delegate = new SharedPoolDataSourceHikari();
@@ -39,7 +41,7 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     
     @Override
     public PrintWriter getLogWriter() throws SQLException {
-        return delegate.getLogWriter();
+        return delegate.ds.getLogWriter();
     }
 
     @Override
@@ -49,17 +51,17 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
 
     @Override
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        return delegate.getParentLogger();
+        return delegate.ds.getParentLogger();
     }
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
-        return delegate.unwrap(iface);
+        return delegate.ds.unwrap(iface);
     }
 
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return delegate.isWrapperFor(iface);
+        return delegate.ds.isWrapperFor(iface);
     }
 
     @Override
@@ -166,6 +168,30 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     /*
     // End of interface StatePoolDataSource
     */
+
+    public int getActiveConnections() {
+        try {
+            return getHikariPoolMXBean().getActiveConnections();
+        } catch (NullPointerException ex) {
+            return -1;
+        }
+    }
+
+    public int getIdleConnections() {
+        try {
+            return getHikariPoolMXBean().getIdleConnections();
+        } catch (NullPointerException ex) {
+            return -1;
+        }
+    }
+
+    public int getTotalConnections() {
+        try {
+            return getHikariPoolMXBean().getTotalConnections();
+        } catch (NullPointerException ex) {
+            return -1;
+        }
+    }
 
     /*
     // Unsupported methods from interface HikariConfig
