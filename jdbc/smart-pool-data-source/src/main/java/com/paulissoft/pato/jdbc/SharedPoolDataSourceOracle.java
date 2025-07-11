@@ -92,55 +92,55 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
                                  },
                                  "validate connection on borrow");
 
-        configureIntegerProperty(PoolDataSourceImpl::getAbandonedConnectionTimeout,
-                                 (ds, value) -> {
-                                     try {
-                                         ds.setAbandonedConnectionTimeout(value);
-                                     } catch (SQLException ex) {
-                                         throw new RuntimeException(ex);
-                                     }
-                                 },
-                                 "abandoned connection timeout");
+        configureIntProperty(PoolDataSourceImpl::getAbandonedConnectionTimeout,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setAbandonedConnectionTimeout(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "abandoned connection timeout");
 
-        configureIntegerProperty(PoolDataSourceImpl::getTimeToLiveConnectionTimeout,
-                                 (ds, value) -> {
-                                     try {
-                                         ds.setTimeToLiveConnectionTimeout(value);
-                                     } catch (SQLException ex) {
-                                         throw new RuntimeException(ex);
-                                     }
-                                 },
-                                 "time to live connection timeout");
+        configureIntProperty(PoolDataSourceImpl::getTimeToLiveConnectionTimeout,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setTimeToLiveConnectionTimeout(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "time to live connection timeout");
 
-        configureIntegerProperty(PoolDataSourceImpl::getInactiveConnectionTimeout,
-                                 (ds, value) -> {
-                                     try {
-                                         ds.setInactiveConnectionTimeout(value);
-                                     } catch (SQLException ex) {
-                                         throw new RuntimeException(ex);
-                                     }
-                                 },
-                                 "inactive connection timeout");
+        configureIntProperty(PoolDataSourceImpl::getInactiveConnectionTimeout,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setInactiveConnectionTimeout(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "inactive connection timeout");
 
-        configureIntegerProperty(PoolDataSourceImpl::getTimeoutCheckInterval,
-                                 (ds, value) -> {
-                                     try {
-                                         ds.setTimeoutCheckInterval(value);
-                                     } catch (SQLException ex) {
-                                         throw new RuntimeException(ex);
-                                     }
-                                 },
-                                 "timeout check interval");
+        configureIntProperty(PoolDataSourceImpl::getTimeoutCheckInterval,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setTimeoutCheckInterval(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "timeout check interval");
 
-        configureIntegerProperty(PoolDataSourceImpl::getMaxStatements,
-                                 (ds, value) -> {
-                                     try {
-                                         ds.setMaxStatements(value);
-                                     } catch (SQLException ex) {
-                                         throw new RuntimeException(ex);
-                                     }
-                                 },
-                                 "max statements");
+        configureIntProperty(PoolDataSourceImpl::getMaxStatements,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setMaxStatements(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "max statements");
 
         /*
           configureLongProperty(PoolDataSourceImpl::getConnectionWaitDurationInMillis,
@@ -164,25 +164,25 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
                               },
                               "max connection reuse time");
 
-        configureIntegerProperty(PoolDataSourceImpl::getSecondsToTrustIdleConnection,
-                                 (ds, value) -> {
-                                     try {
-                                         ds.setSecondsToTrustIdleConnection(value);
-                                     } catch (SQLException ex) {
-                                         throw new RuntimeException(ex);
-                                     }
-                                 },
-                                 "seconds to trust idle connection");
+        configureIntProperty(PoolDataSourceImpl::getSecondsToTrustIdleConnection,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setSecondsToTrustIdleConnection(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "seconds to trust idle connection");
 
-        configureIntegerProperty(PoolDataSourceImpl::getConnectionValidationTimeout,
-                                 (ds, value) -> {
-                                     try {
-                                         ds.setConnectionValidationTimeout(value);
-                                     } catch (SQLException ex) {
-                                         throw new RuntimeException(ex);
-                                     }
-                                 },
-                                 "connection validation timeout");
+        configureIntProperty(PoolDataSourceImpl::getConnectionValidationTimeout,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setConnectionValidationTimeout(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "connection validation timeout");
         
         configureBooleanProperty(PoolDataSourceImpl::getFastConnectionFailoverEnabled,
                                  (ds, value) -> {
@@ -194,15 +194,15 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
                                  },
                                  "fast connection failover enabled");
 
-        configureIntegerProperty(PoolDataSourceImpl::getMaxIdleTime,
-                                 (ds, value) -> {
-                                  try {
-                                      ds.setMaxIdleTime(value);
-                                  } catch (SQLException ex) {
-                                      throw new RuntimeException(ex);
-                                  }
-                                 },
-                                 "max idle time");
+        configureIntProperty(PoolDataSourceImpl::getMaxIdleTime,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setMaxIdleTime(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "max idle time");
 
         configureStringProperty(PoolDataSourceImpl::getDataSourceName,
                                 (ds, value) -> {
@@ -214,15 +214,15 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
                                 },
                                 "data source name");
 
-        configureIntegerProperty(PoolDataSourceImpl::getQueryTimeout,
-                                 (ds, value) -> {
-                                  try {
-                                      ds.setQueryTimeout(value);
-                                  } catch (SQLException ex) {
-                                      throw new RuntimeException(ex);
-                                  }
-                                 },
-                                 "query timeout");
+        configureIntProperty(PoolDataSourceImpl::getQueryTimeout,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setQueryTimeout(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "query timeout");
 
         /*
         configureBooleanProperty(PoolDataSourceImpl::getReadOnlyInstanceAllowed,
@@ -240,15 +240,15 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
                                 PoolDataSourceImpl::setONSConfiguration,
                                 "ONS configuration");
 
-        configureIntegerProperty(PoolDataSourceImpl::getMaxConnectionReuseCount,
-                                 (ds, value) -> {
-                                     try {
-                                         ds.setMaxConnectionReuseCount(value);
-                                     } catch (SQLException ex) {
-                                         throw new RuntimeException(ex);
-                                     }
-                                 },
-                                 "max connection reuse count");
+        configureIntProperty(PoolDataSourceImpl::getMaxConnectionReuseCount,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setMaxConnectionReuseCount(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "max connection reuse count");
 
     }
 

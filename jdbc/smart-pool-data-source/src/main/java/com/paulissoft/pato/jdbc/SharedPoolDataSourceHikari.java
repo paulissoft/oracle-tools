@@ -125,9 +125,9 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
         configureStringProperty(HikariDataSource::getJdbcUrl, HikariDataSource::setJdbcUrl, "JDBC URL");
 
         // The functional interface does not allow checked exceptions so convert them into a RuntimeException (unchecked).
-        configureIntegerProperty((ds) -> { try { return ds.getLoginTimeout(); } catch (SQLException ex) { throw new RuntimeException(ex); } },
-                                 (ds, value) -> { try { ds.setLoginTimeout(value); } catch (SQLException ex) { throw new RuntimeException(ex); } },
-                                 "login timeout");
+        configureIntProperty((ds) -> { try { return ds.getLoginTimeout(); } catch (SQLException ex) { throw new RuntimeException(ex); } },
+                             (ds, value) -> { try { ds.setLoginTimeout(value); } catch (SQLException ex) { throw new RuntimeException(ex); } },
+                             "login timeout");
 
         configureLongProperty((ds) -> ds.getMaxLifetime(),
                               (ds, value) -> ds.setMaxLifetime(value),

@@ -7,10 +7,19 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.ToIntFunction;
+import java.util.function.ToLongFunction;
+import java.util.function.ObjIntConsumer;
+import java.util.function.ObjLongConsumer;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.Objects;
 import javax.sql.DataSource;
+import java.util.IntSummaryStatistics;
+import java.util.LongSummaryStatistics;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 // a package accessible class
 abstract class SharedPoolDataSource<T extends DataSource>  {
@@ -168,64 +177,93 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
                                 description);
     }
 
-    void configureIntegerProperty(Function<T, Integer> getProperty,
-                                  BiConsumer<T, Integer> setProperty,
-                                  String description) {
-        var stream1 = members.stream().map(getProperty);
-        var stream2 = members.stream().map(getProperty);
+    IntSummaryStatistics checkIntProperty(ToIntFunction<T> getProperty,
+                                          String description,
+                                          boolean sumAllMembers) {
+        // the default value for this property since ds should not have been set
+        final var defaultValue = getProperty.applyAsInt(ds);
+        // a supplier to get different values
+        final Supplier<IntStream> stream = () -> members.stream().mapToInt(getProperty).filter(value -> value != defaultValue);
+        final IntSummaryStatistics summary = stream.get().summaryStatistics();
 
-        if (stream1.distinct().count() == 1) {
-            /* all the same */
-            var oldValue = getProperty.apply(ds);
-            var newValue = getProperty.apply(members.get(0));
-
-            // old and new value not null
-            if (!oldValue.equals(newValue)) {
-                setProperty.accept(ds, newValue);
+        if (summary.getCount() == 0L) {
+            // all members still have the default, no need to set anything
+            return null;
+        } else if (summary.getCount() == members.size()) {
+            // all members have a different value than the default: check they are all the same when NOT summing
+            if (sumAllMembers || summary.getMin() == summary.getMax()) {
+                return summary;
             }
-        } else {
-            throw new IllegalStateException(String.format(VALUES_ERROR, description, stream2.collect(Collectors.toList()).toString()));
+        }
+
+        // error
+        throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.get().boxed().collect(Collectors.toList()).toString()));
+    }
+
+    void configureIntProperty(ToIntFunction<T> getProperty,
+                              ObjIntConsumer<T> setProperty,
+                              String description) {
+        configureIntProperty(getProperty, setProperty, description, false);
+    }
+
+    void configureIntProperty(ToIntFunction<T> getProperty,
+                              ObjIntConsumer<T> setProperty,
+                              String description,
+                              boolean sumAllMembers) {
+        final IntSummaryStatistics summary = checkIntProperty(getProperty, description, sumAllMembers);
+
+        if (summary != null) {
+            setProperty.accept(ds, (sumAllMembers ? (int) summary.getSum() : summary.getMin()));
         }
     }
-    
-    void configureLongProperty(Function<T, Long> getProperty,
-                               BiConsumer<T, Long> setProperty,
-                               String description) {
-        var stream1 = members.stream().map(getProperty);
-        var stream2 = members.stream().map(getProperty);
 
-        if (stream1.distinct().count() == 1) {
-            /* all the same */
-            var oldValue = getProperty.apply(ds);
-            var newValue = getProperty.apply(members.get(0));
+    LongSummaryStatistics checkLongProperty(ToLongFunction<T> getProperty,
+                                            String description,
+                                            boolean sumAllMembers) {
+        // the default value for this property since ds should not have been set
+        final var defaultValue = getProperty.applyAsLong(ds);
+        // a supplier to get different values
+        final Supplier<LongStream> stream = () -> members.stream().mapToLong(getProperty).filter(value -> value != defaultValue);
+        final LongSummaryStatistics summary = stream.get().summaryStatistics();
 
-            // old and new value not null
-            if (!oldValue.equals(newValue)) {
-                setProperty.accept(ds, newValue);
+        if (summary.getCount() == 0L) {
+            // all members still have the default, no need to set anything
+            return null;
+        } else if (summary.getCount() == members.size()) {
+            // all members have a different value than the default: check they are all the same when NOT summing
+            if (sumAllMembers || summary.getMin() == summary.getMax()) {
+                return summary;
             }
-        } else {
-            throw new IllegalStateException(String.format(VALUES_ERROR, description, stream2.collect(Collectors.toList()).toString()));
+        }
+
+        // error
+        throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.get().boxed().collect(Collectors.toList()).toString()));
+    }
+
+    void configureLongProperty(ToLongFunction<T> getProperty,
+                               ObjLongConsumer<T> setProperty,
+                               String description) {
+        configureLongProperty(getProperty, setProperty, description, false);
+    }
+
+    void configureLongProperty(ToLongFunction<T> getProperty,
+                               ObjLongConsumer<T> setProperty,
+                               String description,
+                               boolean sumAllMembers) {
+        final LongSummaryStatistics summary = checkLongProperty(getProperty, description, sumAllMembers);
+
+        if (summary != null) {
+            setProperty.accept(ds, (sumAllMembers ? summary.getSum() : summary.getMin()));
         }
     }
     
     void configureBooleanProperty(Function<T, Boolean> getProperty,
                                   BiConsumer<T, Boolean> setProperty,
                                   String description) {
-        var stream1 = members.stream().map(getProperty);
-        var stream2 = members.stream().map(getProperty);
-
-        if (stream1.distinct().count() == 1) {
-            /* all the same */
-            var oldValue = getProperty.apply(ds);
-            var newValue = getProperty.apply(members.get(0));
-
-            // old and new value not null
-            if (!oldValue.equals(newValue)) {
-                setProperty.accept(ds, newValue);
-            }
-        } else {
-            throw new IllegalStateException(String.format(VALUES_ERROR, description, stream2.collect(Collectors.toList()).toString()));
-        }
+        // convert to int first
+        configureIntProperty((ds) -> (getProperty.apply(ds) ? 1 : 0),
+                             (ds, value) -> setProperty.accept(ds, value != 0),
+                             description);
     }
 
     void open() {
