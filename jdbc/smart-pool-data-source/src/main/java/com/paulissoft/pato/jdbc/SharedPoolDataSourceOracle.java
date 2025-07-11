@@ -41,27 +41,38 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
     void configure() {
         super.configure();
 
-        try {
-            var sumInitialPoolSize = members.stream().mapToInt(PoolDataSourceImpl::getInitialPoolSize).filter(i -> i >= 0).sum();
+        configureIntProperty(PoolDataSourceImpl::getInitialPoolSize,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setInitialPoolSize(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "initial pool size",
+                             true);
 
-            if (sumInitialPoolSize >= 0) {
-                ds.setInitialPoolSize(sumInitialPoolSize);
-            }
+        configureIntProperty(PoolDataSourceImpl::getMinPoolSize,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setMinPoolSize(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "min pool size",
+                             true);
 
-            var sumMinPoolSize = members.stream().mapToInt(PoolDataSourceImpl::getMinPoolSize).filter(i -> i >= 0).sum();
-
-            if (sumMinPoolSize >= 0) {
-                ds.setMinPoolSize(sumMinPoolSize);
-            }
-
-            var sumMaxPoolSize = members.stream().mapToInt(PoolDataSourceImpl::getMaxPoolSize).filter(i -> i >= 0).sum();
-
-            if (sumMaxPoolSize >= 0) {
-                ds.setMaxPoolSize(sumMaxPoolSize);
-            }
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
+        configureIntProperty(PoolDataSourceImpl::getMaxPoolSize,
+                             (ds, value) -> {
+                                 try {
+                                     ds.setMaxPoolSize(value);
+                                 } catch (SQLException ex) {
+                                     throw new RuntimeException(ex);
+                                 }
+                             },
+                             "max pool size",
+                             true);
 
         // properties that may NOT differ, i.e. must be common
 
@@ -69,7 +80,13 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
         checkStringProperty(PoolDataSourceImpl::getUser, "username");
 
         configureStringProperty(PoolDataSourceImpl::getURL,
-                                (ds, value) -> { try { ds.setURL(value); } catch (SQLException ex) { throw new RuntimeException(ex); } },
+                                (ds, value) -> {
+                                    try {
+                                        ds.setURL(value);
+                                    } catch (SQLException ex) {
+                                        throw new RuntimeException(ex);
+                                    }
+                                },
                                 "URL");
 
         configureStringProperty(PoolDataSourceImpl::getConnectionFactoryClassName,
@@ -249,7 +266,6 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
                                  }
                              },
                              "max connection reuse count");
-
     }
 
     void close() {
