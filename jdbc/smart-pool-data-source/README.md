@@ -62,13 +62,13 @@ There are two pool data sources, each with a default constructor:
 
 ### Operations on the pool data sources
 
-| Operation   | Remark                                                                                                                                      |
-|:------------|:--------------------------------------------------------------------------------------------------------------------------------------------|
-| CHECK       | All virtual pool property values must be equal (if not an exception is raised).                                                             |
-| DELEGATE    | Delegate an operation on a virtual pool data source to the shared pool data source.                                                         |
-| SET         | All virtual pool property values must be equal (if not an exception is raised) and the first value is assigned to the shared pool property. |
-| SUM         | All virtual pool property values are summed up and the total is assigned to the shared pool property.                                       |
-| UNSUPPORTED | The method is not supported.                                                                                                                |
+| Operation   | Remark                                                                                                                                                                          |
+|:------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| CHECK       | All virtual pool property values must be equal (if not an exception is raised).                                                                                                 |
+| DELEGATE    | Delegate an operation on a virtual pool data source to the shared pool data source.                                                                                             |
+| SET         | All virtual pool property values must be equal (if not an exception is raised) and different from the default and then the first value is assigned to the shared pool property. |
+| SUM         | All virtual pool property values are summed up and the total is assigned to the shared pool property but only when every virtual value is different than the default.           |
+| UNSUPPORTED | The method is not supported.                                                                                                                                                    |
 
 ### Hikari pool data source properties
 
@@ -108,7 +108,8 @@ The following properties can be set for the (virtual) pool data sources and will
 ### Other Hikari pool data source methods
 
 | Method                                                                | Operation   | Remark |
-|:----------------------------------------------------------------------|:------------|--------|
+|:----------------------------------------------------------------------|:------------|:-------|
+| -- javax.sql.Datasource methods --                                    |             |        |
 | getConnection()                                                       | DELEGATE    |        |
 | getConnection(String username, String password)                       | UNSUPPORTED |        |
 | getLogWriter()                                                        | DELEGATE    |        |
@@ -116,6 +117,7 @@ The following properties can be set for the (virtual) pool data sources and will
 | getParentLogger()                                                     | DELEGATE    |        |
 | unwrap(Class<T> iface)                                                | DELEGATE    |        |
 | isWrapperFor(Class<?> iface)                                          | DELEGATE    |        |
+| -- com.zaxxer.hikari.HikariDataSource methods --                      |             |        |
 | isRunning()                                                           | DELEGATE    |        |
 | getHikariPoolMXBean()                                                 | DELEGATE    |        |
 | getHikariConfigMXBean()                                               | DELEGATE    |        |
@@ -141,6 +143,7 @@ The following properties can be set for the (virtual) pool data sources and will
 | getThreadFactory()                                                    | UNSUPPORTED |        |
 | setThreadFactory(ThreadFactory threadFactory)                         | UNSUPPORTED |        |
 | copyStateTo(HikariConfig other)                                       | UNSUPPORTED |        |
+| -- statistics --                                                      |             |        |
 | getActiveConnections()                                                | DELEGATE    |        |
 | getIdleConnections()                                                  | DELEGATE    |        |
 | getTotalConnections()                                                 | DELEGATE    |        |
@@ -184,15 +187,17 @@ The following properties can be set for the (virtual) pool data sources and will
 
 | Method                                                                                                           | Operation              | Remark              |
 |:-----------------------------------------------------------------------------------------------------------------|:-----------------------|---------------------|
+| -- javax.sql.Datasource methods --                                                                               |                        |                     |
 | getConnection()                                                                                                  | DELEGATE               |                     |
-| getConnection(Properties labels)                                                                                 | UNSUPPORTED            |                     |
 | getConnection(String username, String password)                                                                  | UNSUPPORTED            |                     |
-| getConnection(String username, String password, Properties labels)                                               | UNSUPPORTED            |                     |
 | getLogWriter()                                                                                                   | DELEGATE               |                     |
 | setLogWriter(PrintWriter out)                                                                                    | DELEGATE               |                     |
-| getParentLogger()                                                                                                | UNSUPPORTED            |                     |
+| getParentLogger()                                                                                                | DELEGATE               |                     |
 | unwrap(Class<T> iface)                                                                                           | DELEGATE               |                     |
 | isWrapperFor(Class<?> iface)                                                                                     | DELEGATE               |                     |
+| -- oracle.ucp.jdbc.PoolDataSourceImpl methods --                                                                 |                        |                     |
+| getConnection(Properties labels)                                                                                 | UNSUPPORTED            |                     |
+| getConnection(String username, String password, Properties labels)                                               | UNSUPPORTED            |                     |
 | getSQLForValidateConnection()                                                                                    | UNSUPPORTED            |                     |
 | setSQLForValidateConnection(String SQLstring)                                                                    | UNSUPPORTED            |                     |
 | setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow)                                                | DELEGATE / UNSUPPORTED | Depends on argument |
@@ -218,8 +223,6 @@ The following properties can be set for the (virtual) pool data sources and will
 | setConnectionHarvestTriggerCount(int paramInt)                                                                   | UNSUPPORTED            |                     |
 | getConnectionHarvestMaxCount()                                                                                   | UNSUPPORTED            |                     |
 | setConnectionHarvestMaxCount(int paramInt)                                                                       | UNSUPPORTED            |                     |
-| getAvailableConnectionsCount()                                                                                   | DELEGATE               |                     |
-| getBorrowedConnectionsCount()                                                                                    | DELEGATE               |                     |
 | registerConnectionLabelingCallback(ConnectionLabelingCallback paramConnectionLabelingCallback)                   | UNSUPPORTED            |                     |
 | removeConnectionLabelingCallback()                                                                               | UNSUPPORTED            |                     |
 | registerConnectionAffinityCallback(ConnectionAffinityCallback paramConnectionAffinityCallback)                   | UNSUPPORTED            |                     |
@@ -253,6 +256,9 @@ The following properties can be set for the (virtual) pool data sources and will
 | getShardingMode()                                                                                                | UNSUPPORTED            |                     |
 | setSSLContext(SSLContext paramSSLContext)                                                                        | UNSUPPORTED            |                     |
 | setHostnameResolver(HostnameResolver paramHostnameResolver)                                                      | UNSUPPORTED            |                     |
+| -- statistics --                                                                                                 |                        |                     |
+| getAvailableConnectionsCount()                                                                                   | DELEGATE               |                     |
+| getBorrowedConnectionsCount()                                                                                    | DELEGATE               |                     |
 
 As you can see a lot of methods are unsupported, mainly because they do not make sense for the business case.
 
