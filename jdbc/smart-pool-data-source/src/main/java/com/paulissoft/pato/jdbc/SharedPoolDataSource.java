@@ -4,22 +4,22 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.util.IntSummaryStatistics;
+import java.util.LongSummaryStatistics;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.ObjIntConsumer;
+import java.util.function.ObjLongConsumer;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.function.ToLongFunction;
-import java.util.function.ObjIntConsumer;
-import java.util.function.ObjLongConsumer;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.util.Objects;
-import javax.sql.DataSource;
-import java.util.IntSummaryStatistics;
-import java.util.LongSummaryStatistics;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
+import javax.sql.DataSource;
 
 // a package accessible class
 abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDataSource {
@@ -131,40 +131,44 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
         }
     }
 
-    void checkObjectProperty(Function<T, Object> getProperty,
-                             String description) {
-        var stream1 = members.stream().map(getProperty);
-        var stream2 = members.stream().map(getProperty);
-        var stream3 = members.stream().map(getProperty);
-        var stream4 = members.stream().map(getProperty);
+    private static boolean eq(Object obj1, Object obj2) {
+        return ((obj1 == null && obj2 == null) ||
+                (obj1 != null && obj2 != null && obj1.equals(obj2)));
+    }
 
-        if (stream1.filter(Objects::isNull).count() == members.size()) {
-            // all null: OK
-        } else if (stream2.filter(Objects::nonNull).count() == members.size() &&
-                   stream3.filter(Objects::nonNull).distinct().count() == 1) {
-            // all not null and the same
-        } else {
-            throw new IllegalStateException(String.format(VALUES_ERROR, stream4.collect(Collectors.toList()).toString()));
+    boolean mustSetObjectProperty(Function<T, Object> getProperty,
+                                  String description) {
+        // the default value for this property since ds should not have been set
+        final var defaultValue = getProperty.apply(ds);
+        // a supplier to get different values (including null)
+        final Supplier<Stream<Object>> stream = () -> members.stream().map(getProperty).filter(value -> !eq(value, defaultValue));
+
+        if (stream.get().count() == 0L) {
+            // all members still have the default, no need to set anything
+            return false;
+        } else if (stream.get().count() == members.size()) {
+            // all members have a different value than the default: check they are all the same
+            if (stream.get().distinct().count() == 1L) {
+                return true;
+            }
         }
+
+        // error
+        throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.get().collect(Collectors.toList()).toString()));        
     }
 
     void checkStringProperty(Function<T, String> getProperty,
                              String description) {
-        checkObjectProperty(e -> getProperty.apply(e), description);
+        // ignore return value
+        mustSetObjectProperty(e -> getProperty.apply(e), description);
     }
 
     void configureObjectProperty(Function<T, Object> getProperty,
                                  BiConsumer<T, Object> setProperty,
                                  String description) {
-        checkObjectProperty(getProperty, description);
+        if (mustSetObjectProperty(getProperty, description)) {
+            var newValue = getProperty.apply(members.get(0));
 
-        var oldValue = getProperty.apply(ds);
-        var newValue = getProperty.apply(members.get(0));
-
-        if ((oldValue == null && newValue == null) ||
-            (oldValue != null && newValue != null && oldValue.equals(newValue))) {
-            // old and new value the same
-        } else {
             setProperty.accept(ds, newValue);
         }
     }
