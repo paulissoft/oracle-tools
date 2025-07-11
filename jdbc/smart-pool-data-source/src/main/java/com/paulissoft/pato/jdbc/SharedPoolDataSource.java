@@ -22,7 +22,7 @@ import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 // a package accessible class
-abstract class SharedPoolDataSource<T extends DataSource>  {
+abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDataSource {
     private final String VALUES_ERROR = "Not all %s values are the same: %s.";
     
     final T ds;
@@ -30,9 +30,9 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
     final CopyOnWriteArrayList<T> members = new CopyOnWriteArrayList<>();
 
     enum State {
-        INITIALIZING, // a start state; next possible states: ERROR, OPEN or CLOSED
-        ERROR,        // INITIALIZATING error; next possible states: CLOSED
-        OPEN,         // next possible states: CLOSED
+        INITIALIZING,               // a start state; next possible states: NOT_INITIALIZED_CORRECTLY, OPEN or CLOSED
+        NOT_INITIALIZED_CORRECTLY,  // INITIALIZATING error; next possible states: CLOSED
+        OPEN,                       // next possible states: CLOSED
         CLOSED
     }
 
@@ -274,7 +274,7 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
                         configure();
                         state = State.OPEN;                
                     } catch (Exception ex) {
-                        state = State.ERROR;
+                        state = State.NOT_INITIALIZED_CORRECTLY;
                         throw ex;
                     }
                 }
@@ -282,10 +282,30 @@ abstract class SharedPoolDataSource<T extends DataSource>  {
         }
     }
 
-    boolean isOpen() {
-        return state == State.OPEN;
+    /*
+    // Start of interface StatePoolDataSource
+    */
+
+    public boolean isInitializing() {
+        return state == State.INITIALIZING;
+    }
+
+    public boolean isNotInitializedCorrectly() {
+        return state == State.NOT_INITIALIZED_CORRECTLY;
     }
     
+    public boolean isOpen() {
+        return state == State.OPEN;
+    }
+
+    public boolean isClosed() {
+        return state == State.CLOSED;
+    }
+
+    /*
+    // End of interface StatePoolDataSource
+    */
+
     abstract void close();
 
     abstract void setPassword(String password);

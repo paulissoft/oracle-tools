@@ -16,7 +16,7 @@ import javax.sql.DataSource;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 
-public class SmartPoolDataSourceHikari extends HikariDataSource implements ConnectInfo, Closeable {
+public class SmartPoolDataSourceHikari extends HikariDataSource implements ConnectInfo, Closeable, StatePoolDataSource {
 
     // this delegate will do the actual work
     private static final SharedPoolDataSourceHikari delegate = new SharedPoolDataSourceHikari();
@@ -89,7 +89,7 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
 
     @Override
     public boolean isClosed() {
-        return !delegate.contains(this);
+        return delegate.isClosed() || !delegate.contains(this);
     }
 
     /*
@@ -146,11 +146,26 @@ public class SmartPoolDataSourceHikari extends HikariDataSource implements Conne
     }
 
     /*
-    // Extra.
+    // Start of interface StatePoolDataSource
     */
+    
+    public boolean isInitializing() {
+        return delegate.isInitializing();
+    }
+
+    public boolean isNotInitializedCorrectly() {
+        return delegate.isNotInitializedCorrectly();
+    }    
+    
     public boolean isOpen() {
         return delegate.isOpen() && !isClosed();
-    }    
+    }
+
+    // isClosed: see above
+    
+    /*
+    // End of interface StatePoolDataSource
+    */
 
     /*
     // Unsupported methods from interface HikariConfig

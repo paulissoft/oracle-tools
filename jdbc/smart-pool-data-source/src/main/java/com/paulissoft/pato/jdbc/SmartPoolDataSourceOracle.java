@@ -23,7 +23,7 @@ import oracle.ucp.jdbc.JDBCConnectionPoolStatistics;
 import oracle.ucp.jdbc.ConnectionInitializationCallback;
 import oracle.ucp.jdbc.UCPConnectionBuilder;
 
-public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements ConnectInfo, Closeable {
+public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements ConnectInfo, Closeable, StatePoolDataSource {
 
     private static final long serialVersionUID = 1L;
         
@@ -164,16 +164,28 @@ public class SmartPoolDataSourceOracle extends PoolDataSourceImpl implements Con
     }
 
     /*
-    // Extra (like in SmartPoolDataSourceHikari)
+    // Start of interface StatePoolDataSource
     */
     
-    public boolean isClosed() {
-        return !delegate.contains(this);
+    public boolean isInitializing() {
+        return delegate.isInitializing();
     }
 
+    public boolean isNotInitializedCorrectly() {
+        return delegate.isNotInitializedCorrectly();
+    }    
+    
     public boolean isOpen() {
         return delegate.isOpen() && !isClosed();
     }
+
+    public boolean isClosed() {
+        return delegate.isClosed() || !delegate.contains(this);
+    }
+
+    /*
+    // End of interface StatePoolDataSource
+    */
 
     /*
     // unsupported operations
