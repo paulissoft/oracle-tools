@@ -29,9 +29,10 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
     final CopyOnWriteArrayList<T> members = new CopyOnWriteArrayList<>();
 
     enum State {
-        INITIALIZING,               // a start state; next possible states: NOT_INITIALIZED_CORRECTLY, OPEN or CLOSED
-        NOT_INITIALIZED_CORRECTLY,  // INITIALIZATING error; next possible states: CLOSED
-        OPEN,                       // next possible states: CLOSED
+        INITIALIZING,          // a start state; next possible states: INITIALIZATION_ERROR, OPEN or CLOSED
+        INITIALIZATION_ERROR,  // INITIALIZATION error; next possible states: CLOSED
+        OPEN,                  // next possible states: CLOSING, CLOSED
+        CLOSING,               // at least one of the members has closed but not all
         CLOSED
     }
 
@@ -55,10 +56,16 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
     }
 
     void remove(T member) {
-        members.remove(member);
-
-        if (members.size() == 0) {
-            close();
+        if (members.remove(member)) {
+            if (members.isEmpty()) {
+                close();
+            } else if (state == State.OPEN) {
+                synchronized(this) {
+                    if (state == State.OPEN) {
+                        state = State.CLOSING;
+                    }
+                }
+            }
         }
     }
 
@@ -77,9 +84,10 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
 
             /* FALLTHROUGH */
         case OPEN:
+        case CLOSING:
             break;
         default:
-            throw new IllegalStateException(String.format("You can only get a connection when the pool state is OPEN but it is %s.",
+            throw new IllegalStateException(String.format("You can only get a connection when the pool state is OPEN (or CLOSING) but it is %s.",
                                                           state));
         }
 
@@ -104,7 +112,7 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
         ds.setLoginTimeout(seconds);
     }
 
-    void configure() {
+    void initialize() {
         if (members.isEmpty()) {
             throw new IllegalStateException("Members should have been added before you can configure.");
         }
@@ -254,10 +262,10 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
             synchronized(this) {
                 if (state == State.INITIALIZING) {
                     try {
-                        configure();
+                        initialize();
                         state = State.OPEN;                
                     } catch (Exception ex) {
-                        state = State.NOT_INITIALIZED_CORRECTLY;
+                        state = State.INITIALIZATION_ERROR;
                         throw ex;
                     }
                 }
@@ -273,12 +281,16 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
         return state == State.INITIALIZING;
     }
 
-    public boolean isNotInitializedCorrectly() {
-        return state == State.NOT_INITIALIZED_CORRECTLY;
+    public boolean hasInitializationError() {
+        return state == State.INITIALIZATION_ERROR;
     }
     
     public boolean isOpen() {
         return state == State.OPEN;
+    }
+
+    public boolean isClosing() {
+        return state == State.CLOSING;
     }
 
     public boolean isClosed() {

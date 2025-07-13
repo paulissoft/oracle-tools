@@ -173,8 +173,8 @@ public class SmartPoolDataSourceOracle
         return delegate.isInitializing();
     }
 
-    public boolean isNotInitializedCorrectly() {
-        return delegate.isNotInitializedCorrectly();
+    public boolean hasInitializationError() {
+        return delegate.hasInitializationError();
     }    
     
     public boolean isOpen() {

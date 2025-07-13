@@ -38,8 +38,8 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
     }
 
     @Override
-    void configure() {
-        super.configure();
+    void initialize() {
+        super.initialize();
 
         configureIntProperty(PoolDataSourceImpl::getInitialPoolSize,
                              (ds, value) -> {

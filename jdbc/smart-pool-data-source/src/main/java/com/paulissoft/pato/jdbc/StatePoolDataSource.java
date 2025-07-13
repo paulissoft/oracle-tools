@@ -5,7 +5,7 @@ interface StatePoolDataSource {
 
     boolean isInitializing();
     
-    boolean isNotInitializedCorrectly();
+    boolean hasInitializationError();
 
     boolean isOpen();
 

@@ -68,8 +68,8 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
     }
 
     @Override
-    void configure() {
-        super.configure();
+    void initialize() {
+        super.initialize();
 
         configureIntProperty(HikariDataSource::getMinimumIdle,
                              HikariDataSource::setMinimumIdle,

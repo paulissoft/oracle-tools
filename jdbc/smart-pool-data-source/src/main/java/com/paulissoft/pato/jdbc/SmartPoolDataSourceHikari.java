@@ -91,7 +91,7 @@ public class SmartPoolDataSourceHikari
 
     @Override
     public boolean isClosed() {
-        return delegate.isClosed() || !delegate.contains(this);
+        return !delegate.contains(this) && ( delegate.isClosing() || delegate.isClosed() );
     }
 
     /*
@@ -155,12 +155,12 @@ public class SmartPoolDataSourceHikari
         return delegate.isInitializing();
     }
 
-    public boolean isNotInitializedCorrectly() {
-        return delegate.isNotInitializedCorrectly();
+    public boolean hasInitializationError() {
+        return delegate.hasInitializationError();
     }    
     
     public boolean isOpen() {
-        return delegate.isOpen() && !isClosed();
+        return delegate.contains(this) && ( delegate.isOpen() || delegate.isClosing() );
     }
 
     // isClosed: see above
