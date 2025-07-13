@@ -6,9 +6,12 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.IntSummaryStatistics;
 import java.util.LongSummaryStatistics;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.IntPredicate;
+import java.util.function.LongPredicate;
 import java.util.function.ObjIntConsumer;
 import java.util.function.ObjLongConsumer;
 import java.util.function.Supplier;
@@ -168,22 +171,22 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
                                 description);
     }
 
-    IntSummaryStatistics checkIntProperty(ToIntFunction<T> getProperty,
-                                          String description,
-                                          boolean sumAllMembers) {
-        // the default value for this property since ds should not have been set
-        final var defaultValue = getProperty.applyAsInt(ds);
+    Optional<Integer> checkIntProperty(ToIntFunction<T> getProperty,
+                                       String description,
+                                       boolean sumAllMembers) {
+        final var lastValue = getProperty.applyAsInt(ds);
         // a supplier to get different values
-        final Supplier<IntStream> stream = () -> members.stream().mapToInt(getProperty).filter(value -> value != defaultValue);
+        final IntPredicate isCandidate = value -> (sumAllMembers ? value >= 0 && value != Integer.MAX_VALUE : value != lastValue);
+        final Supplier<IntStream> stream = () -> members.stream().mapToInt(getProperty).filter(isCandidate);
         final IntSummaryStatistics summary = stream.get().summaryStatistics();
 
         if (summary.getCount() == 0L) {
-            // all members still have the default, no need to set anything
+            // all members still have the last, no need to set anything
             return null;
         } else if (summary.getCount() == members.size()) {
-            // all members have a different value than the default: check they are all the same when NOT summing
+            // all members have a different value than the last: check they are all the same when NOT summing
             if (sumAllMembers || summary.getMin() == summary.getMax()) {
-                return summary;
+                return Optional.of(sumAllMembers ? (int) summary.getSum() : summary.getMin());
             }
         }
 
@@ -201,29 +204,29 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
                               ObjIntConsumer<T> setProperty,
                               String description,
                               boolean sumAllMembers) {
-        final IntSummaryStatistics summary = checkIntProperty(getProperty, description, sumAllMembers);
+        var result = checkIntProperty(getProperty, description, sumAllMembers);
 
-        if (summary != null) {
-            setProperty.accept(ds, (sumAllMembers ? (int) summary.getSum() : summary.getMin()));
+        if (result != null) {
+            setProperty.accept(ds, result.get());
         }
     }
 
-    LongSummaryStatistics checkLongProperty(ToLongFunction<T> getProperty,
-                                            String description,
-                                            boolean sumAllMembers) {
-        // the default value for this property since ds should not have been set
-        final var defaultValue = getProperty.applyAsLong(ds);
+    Optional<Long> checkLongProperty(ToLongFunction<T> getProperty,
+                                     String description,
+                                     boolean sumAllMembers) {
+        final var lastValue = getProperty.applyAsLong(ds);
         // a supplier to get different values
-        final Supplier<LongStream> stream = () -> members.stream().mapToLong(getProperty).filter(value -> value != defaultValue);
+        final LongPredicate isCandidate = value -> (sumAllMembers ? value >= 0L && value != Long.MAX_VALUE : value != lastValue);
+        final Supplier<LongStream> stream = () -> members.stream().mapToLong(getProperty).filter(isCandidate);
         final LongSummaryStatistics summary = stream.get().summaryStatistics();
 
         if (summary.getCount() == 0L) {
-            // all members still have the default, no need to set anything
+            // all members still have the last, no need to set anything
             return null;
         } else if (summary.getCount() == members.size()) {
-            // all members have a different value than the default: check they are all the same when NOT summing
+            // all members have a different value than the last: check they are all the same when NOT summing
             if (sumAllMembers || summary.getMin() == summary.getMax()) {
-                return summary;
+                return Optional.of(sumAllMembers ? summary.getSum() : summary.getMin());
             }
         }
 
@@ -241,10 +244,10 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
                                ObjLongConsumer<T> setProperty,
                                String description,
                                boolean sumAllMembers) {
-        final LongSummaryStatistics summary = checkLongProperty(getProperty, description, sumAllMembers);
+        var result = checkLongProperty(getProperty, description, sumAllMembers);
 
-        if (summary != null) {
-            setProperty.accept(ds, (sumAllMembers ? summary.getSum() : summary.getMin()));
+        if (result != null) {
+            setProperty.accept(ds, result.get());
         }
     }
     
