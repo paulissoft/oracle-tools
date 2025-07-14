@@ -41,35 +41,37 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
     void initialize() {
         super.initialize();
 
+        // Can not use initialize<type>Property since the UCP setter raises an SQLException.
+        
         try {
-            var initialPoolSize = determineIntProperty(PoolDataSourceImpl::getInitialPoolSize,
-                                                       "initial pool size",
-                                                       true);
+            var valueInitialPoolSize = determineIntProperty(PoolDataSourceImpl::getInitialPoolSize,
+                                                            "initial pool size",
+                                                            true);
 
-            if (initialPoolSize != null) {
-                ds.setInitialPoolSize(initialPoolSize.get());
+            if (valueInitialPoolSize != null) {
+                ds.setInitialPoolSize(valueInitialPoolSize.get());
             }
 
-            var minPoolSize = determineIntProperty(PoolDataSourceImpl::getMinPoolSize,
-                                                   "min pool size",
-                                                   true);
+            var valueMinPoolSize = determineIntProperty(PoolDataSourceImpl::getMinPoolSize,
+                                                        "min pool size",
+                                                        true);
 
-            if (minPoolSize != null) {
-                ds.setMinPoolSize(minPoolSize.get());
+            if (valueMinPoolSize != null) {
+                ds.setMinPoolSize(valueMinPoolSize.get());
             }
 
-            var maxPoolSize = determineIntProperty(PoolDataSourceImpl::getMaxPoolSize,
-                                                   "max pool size",
-                                                   true);
+            var valueMaxPoolSize = determineIntProperty(PoolDataSourceImpl::getMaxPoolSize,
+                                                        "max pool size",
+                                                        true);
 
-            if (maxPoolSize != null) {
-                ds.setMaxPoolSize(maxPoolSize.get());
+            if (valueMaxPoolSize != null) {
+                ds.setMaxPoolSize(valueMaxPoolSize.get());
             }
             
             // properties that may NOT differ, i.e. must be common
 
             // just a check: no need to invoke ds.setUser() since that has been done already via SmartPoolDataSourceOracle.setUser().
-            determineStringProperty(PoolDataSourceImpl::getUser, "username");
+            checkStringProperty(PoolDataSourceImpl::getUser, "username");
 
             var valueURL = determineStringProperty(PoolDataSourceImpl::getURL,
                                                    "URL");
@@ -86,91 +88,91 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
             }
 
             var valueValidateConnectionOnBorrow = determineBooleanProperty(PoolDataSourceImpl::getValidateConnectionOnBorrow,
-                                      "validate connection on borrow");
+                                                                           "validate connection on borrow");
 
             if (valueValidateConnectionOnBorrow != null) {
                 ds.setValidateConnectionOnBorrow(valueValidateConnectionOnBorrow.isPresent() ? valueValidateConnectionOnBorrow.get() : null);
             }
 
             var valueAbandonedConnectionTimeout = determineIntProperty(PoolDataSourceImpl::getAbandonedConnectionTimeout,
-                                  "abandoned connection timeout");
+                                                                       "abandoned connection timeout");
 
             if (valueAbandonedConnectionTimeout != null) {
                 ds.setAbandonedConnectionTimeout(valueAbandonedConnectionTimeout.isPresent() ? valueAbandonedConnectionTimeout.get() : null);
             }
 
             var valueTimeToLiveConnectionTimeout = determineIntProperty(PoolDataSourceImpl::getTimeToLiveConnectionTimeout,
-                                  "time to live connection timeout");
+                                                                        "time to live connection timeout");
 
             if (valueTimeToLiveConnectionTimeout != null) {
                 ds.setTimeToLiveConnectionTimeout(valueTimeToLiveConnectionTimeout.isPresent() ? valueTimeToLiveConnectionTimeout.get() : null);
             }
 
             var valueInactiveConnectionTimeout = determineIntProperty(PoolDataSourceImpl::getInactiveConnectionTimeout,
-                                  "inactive connection timeout");
+                                                                      "inactive connection timeout");
 
             if (valueInactiveConnectionTimeout != null) {
                 ds.setInactiveConnectionTimeout(valueInactiveConnectionTimeout.isPresent() ? valueInactiveConnectionTimeout.get() : null);
             }
 
             var valueTimeoutCheckInterval = determineIntProperty(PoolDataSourceImpl::getTimeoutCheckInterval,
-                                  "timeout check interval");
+                                                                 "timeout check interval");
 
             if (valueTimeoutCheckInterval != null) {
                 ds.setTimeoutCheckInterval(valueTimeoutCheckInterval.isPresent() ? valueTimeoutCheckInterval.get() : null);
             }
 
             var valueMaxStatements = determineIntProperty(PoolDataSourceImpl::getMaxStatements,
-                                  "max statements");
+                                                          "max statements");
 
             if (valueMaxStatements != null) {
                 ds.setMaxStatements(valueMaxStatements.isPresent() ? valueMaxStatements.get() : null);
             }
 
             var valueMaxConnectionReuseTime = determineLongProperty(PoolDataSourceImpl::getMaxConnectionReuseTime,
-                                   "max connection reuse time");
+                                                                    "max connection reuse time");
 
             if (valueMaxConnectionReuseTime != null) {
                 ds.setMaxConnectionReuseTime(valueMaxConnectionReuseTime.isPresent() ? valueMaxConnectionReuseTime.get() : null);
             }
 
             var valueSecondsToTrustIdleConnection = determineIntProperty(PoolDataSourceImpl::getSecondsToTrustIdleConnection,
-                                  "seconds to trust idle connection");
+                                                                         "seconds to trust idle connection");
 
             if (valueSecondsToTrustIdleConnection != null) {
                 ds.setSecondsToTrustIdleConnection(valueSecondsToTrustIdleConnection.isPresent() ? valueSecondsToTrustIdleConnection.get() : null);
             }
 
             var valueConnectionValidationTimeout = determineIntProperty(PoolDataSourceImpl::getConnectionValidationTimeout,
-                                  "connection validation timeout");
+                                                                        "connection validation timeout");
 
             if (valueConnectionValidationTimeout != null) {
                 ds.setConnectionValidationTimeout(valueConnectionValidationTimeout.isPresent() ? valueConnectionValidationTimeout.get() : null);
             }
 
             var valueFastConnectionFailoverEnabled = determineBooleanProperty(PoolDataSourceImpl::getFastConnectionFailoverEnabled,
-                                      "fast connection failover enabled");
+                                                                              "fast connection failover enabled");
 
             if (valueFastConnectionFailoverEnabled != null) {
                 ds.setFastConnectionFailoverEnabled(valueFastConnectionFailoverEnabled.isPresent() ? valueFastConnectionFailoverEnabled.get() : null);
             }
 
             var valueMaxIdleTime = determineIntProperty(PoolDataSourceImpl::getMaxIdleTime,
-                                  "max idle time");
+                                                        "max idle time");
 
             if (valueMaxIdleTime != null) {
                 ds.setMaxIdleTime(valueMaxIdleTime.isPresent() ? valueMaxIdleTime.get() : null);
             }
 
             var valueDataSourceName = determineStringProperty(PoolDataSourceImpl::getDataSourceName,
-                                     "data source name");
+                                                              "data source name");
 
             if (valueDataSourceName != null) {
                 ds.setDataSourceName(valueDataSourceName.isPresent() ? valueDataSourceName.get() : null);
             }
 
             var valueQueryTimeout = determineIntProperty(PoolDataSourceImpl::getQueryTimeout,
-                                  "query timeout");
+                                                         "query timeout");
 
             if (valueQueryTimeout != null) {
                 ds.setQueryTimeout(valueQueryTimeout.isPresent() ? valueQueryTimeout.get() : null);
@@ -181,7 +183,7 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
                                      "ONS configuration");
 
             var valueMaxConnectionReuseCount = determineIntProperty(PoolDataSourceImpl::getMaxConnectionReuseCount,
-                                  "max connection reuse count");
+                                                                    "max connection reuse count");
 
             if (valueMaxConnectionReuseCount != null) {
                 ds.setMaxConnectionReuseCount(valueMaxConnectionReuseCount.isPresent() ? valueMaxConnectionReuseCount.get() : null);

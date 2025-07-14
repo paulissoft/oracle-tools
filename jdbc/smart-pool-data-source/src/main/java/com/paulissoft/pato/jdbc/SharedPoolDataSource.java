@@ -147,6 +147,12 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
         throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.get().collect(Collectors.toList()).toString()));        
     }
 
+    void checkStringProperty(Function<T, String> getProperty,
+                             String description) {
+        // ignore result but just raise an exception in case of errors
+        determineStringProperty(getProperty, description);
+    }
+
     void initializeStringProperty(Function<T, String> getProperty,
                                   BiConsumer<T, String> setProperty,
                                   String description) {
