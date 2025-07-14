@@ -14,6 +14,7 @@ import java.util.function.IntPredicate;
 import java.util.function.LongPredicate;
 import java.util.function.ObjIntConsumer;
 import java.util.function.ObjLongConsumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 import java.util.function.ToLongFunction;
@@ -126,11 +127,11 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
                 (obj1 != null && obj2 != null && obj1.equals(obj2)));
     }
 
-    Optional<Object> determineObjectProperty(Function<T, Object> getProperty,
+    Optional<String> determineStringProperty(Function<T, String> getProperty,
                                              String description) {
         final var lastValue = getProperty.apply(ds);
         // a supplier to get different values (including null)
-        final Supplier<Stream<Object>> stream = () -> members.stream().map(getProperty).filter(value -> !eq(value, lastValue));
+        final Supplier<Stream<String>> stream = () -> members.stream().map(getProperty).filter(value -> !eq(value, lastValue));
 
         if (stream.get().count() == 0L) {
             // all members still have the default, no need to set anything
@@ -146,30 +147,21 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
         throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.get().collect(Collectors.toList()).toString()));        
     }
 
-    void determineStringProperty(Function<T, String> getProperty,
-                                 String description) {
-        // ignore return value
-        determineObjectProperty(e -> getProperty.apply(e), description);
-    }
-
-    void initializeObjectProperty(Function<T, Object> getProperty,
-                                  BiConsumer<T, Object> setProperty,
+    void initializeStringProperty(Function<T, String> getProperty,
+                                  BiConsumer<T, String> setProperty,
                                   String description) {
-        var result = determineObjectProperty(getProperty, description);
+        var result = determineStringProperty(getProperty, description);
 
         if (result != null) {
             setProperty.accept(ds, result.isPresent() ? result.get() : null);
         }
     }
 
-    void initializeStringProperty(Function<T, String> getProperty,
-                                  BiConsumer<T, String> setProperty,
-                                  String description) {
-        initializeObjectProperty(e -> getProperty.apply(e),
-                                 (e, value) -> setProperty.accept(e, value.toString()),
-                                 description);
+    Optional<Integer> determineIntProperty(ToIntFunction<T> getProperty,
+                                           String description) {
+        return determineIntProperty(getProperty, description, false);
     }
-
+    
     Optional<Integer> determineIntProperty(ToIntFunction<T> getProperty,
                                            String description,
                                            boolean sumAllMembers) {
@@ -211,6 +203,11 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
     }
 
     Optional<Long> determineLongProperty(ToLongFunction<T> getProperty,
+                                         String description) {
+        return determineLongProperty(getProperty, description, false);
+    }
+    
+    Optional<Long> determineLongProperty(ToLongFunction<T> getProperty,
                                          String description,
                                          boolean sumAllMembers) {
         final var lastValue = getProperty.applyAsLong(ds);
@@ -250,13 +247,25 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
         }
     }
     
-    void initializeBooleanProperty(Function<T, Boolean> getProperty,
+    Optional<Boolean> determineBooleanProperty(Predicate<T> getProperty,
+                                               String description) {
+        // convert to int first
+        var result = determineIntProperty((ds) -> (getProperty.test(ds) ? 1 : 0), description);
+
+        if (result != null) {
+            return Optional.of(result.get() != 0 ? true : false);
+        }
+        return null;
+    }
+
+    void initializeBooleanProperty(Predicate<T> getProperty,
                                    BiConsumer<T, Boolean> setProperty,
                                    String description) {
-        // convert to int first
-        initializeIntProperty((ds) -> (getProperty.apply(ds) ? 1 : 0),
-                              (ds, value) -> setProperty.accept(ds, value != 0),
-                              description);
+        var result = determineBooleanProperty(getProperty, description);
+
+        if (result != null) {
+            setProperty.accept(ds, result.get());
+        }
     }
 
     void open() {
