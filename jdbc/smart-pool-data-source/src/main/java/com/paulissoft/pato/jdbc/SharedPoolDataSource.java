@@ -126,20 +126,19 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
                 (obj1 != null && obj2 != null && obj1.equals(obj2)));
     }
 
-    boolean mustSetObjectProperty(Function<T, Object> getProperty,
-                                  String description) {
-        // the default value for this property since ds should not have been set
-        final var defaultValue = getProperty.apply(ds);
+    Optional<Object> determineObjectProperty(Function<T, Object> getProperty,
+                                             String description) {
+        final var lastValue = getProperty.apply(ds);
         // a supplier to get different values (including null)
-        final Supplier<Stream<Object>> stream = () -> members.stream().map(getProperty).filter(value -> !eq(value, defaultValue));
+        final Supplier<Stream<Object>> stream = () -> members.stream().map(getProperty).filter(value -> !eq(value, lastValue));
 
         if (stream.get().count() == 0L) {
             // all members still have the default, no need to set anything
-            return false;
+            return null;
         } else if (stream.get().count() == members.size()) {
             // all members have a different value than the default: check they are all the same
             if (stream.get().distinct().count() == 1L) {
-                return true;
+                return Optional.ofNullable(getProperty.apply(members.get(0)));
             }
         }
 
@@ -147,33 +146,33 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
         throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.get().collect(Collectors.toList()).toString()));        
     }
 
-    void checkStringProperty(Function<T, String> getProperty,
-                             String description) {
+    void determineStringProperty(Function<T, String> getProperty,
+                                 String description) {
         // ignore return value
-        mustSetObjectProperty(e -> getProperty.apply(e), description);
+        determineObjectProperty(e -> getProperty.apply(e), description);
     }
 
-    void configureObjectProperty(Function<T, Object> getProperty,
-                                 BiConsumer<T, Object> setProperty,
-                                 String description) {
-        if (mustSetObjectProperty(getProperty, description)) {
-            var newValue = getProperty.apply(members.get(0));
+    void initializeObjectProperty(Function<T, Object> getProperty,
+                                  BiConsumer<T, Object> setProperty,
+                                  String description) {
+        var result = determineObjectProperty(getProperty, description);
 
-            setProperty.accept(ds, newValue);
+        if (result != null) {
+            setProperty.accept(ds, result.isPresent() ? result.get() : null);
         }
     }
 
-    void configureStringProperty(Function<T, String> getProperty,
-                                 BiConsumer<T, String> setProperty,
-                                 String description) {
-        configureObjectProperty(e -> getProperty.apply(e),
-                                (e, value) -> setProperty.accept(e, value.toString()),
-                                description);
+    void initializeStringProperty(Function<T, String> getProperty,
+                                  BiConsumer<T, String> setProperty,
+                                  String description) {
+        initializeObjectProperty(e -> getProperty.apply(e),
+                                 (e, value) -> setProperty.accept(e, value.toString()),
+                                 description);
     }
 
-    Optional<Integer> checkIntProperty(ToIntFunction<T> getProperty,
-                                       String description,
-                                       boolean sumAllMembers) {
+    Optional<Integer> determineIntProperty(ToIntFunction<T> getProperty,
+                                           String description,
+                                           boolean sumAllMembers) {
         final var lastValue = getProperty.applyAsInt(ds);
         // a supplier to get different values
         final IntPredicate isCandidate = value -> (sumAllMembers ? value >= 0 && value != Integer.MAX_VALUE : value != lastValue);
@@ -194,26 +193,26 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
         throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.get().boxed().collect(Collectors.toList()).toString()));
     }
 
-    void configureIntProperty(ToIntFunction<T> getProperty,
-                              ObjIntConsumer<T> setProperty,
-                              String description) {
-        configureIntProperty(getProperty, setProperty, description, false);
+    void initializeIntProperty(ToIntFunction<T> getProperty,
+                               ObjIntConsumer<T> setProperty,
+                               String description) {
+        initializeIntProperty(getProperty, setProperty, description, false);
     }
 
-    void configureIntProperty(ToIntFunction<T> getProperty,
-                              ObjIntConsumer<T> setProperty,
-                              String description,
-                              boolean sumAllMembers) {
-        var result = checkIntProperty(getProperty, description, sumAllMembers);
+    void initializeIntProperty(ToIntFunction<T> getProperty,
+                               ObjIntConsumer<T> setProperty,
+                               String description,
+                               boolean sumAllMembers) {
+        var result = determineIntProperty(getProperty, description, sumAllMembers);
 
         if (result != null) {
             setProperty.accept(ds, result.get());
         }
     }
 
-    Optional<Long> checkLongProperty(ToLongFunction<T> getProperty,
-                                     String description,
-                                     boolean sumAllMembers) {
+    Optional<Long> determineLongProperty(ToLongFunction<T> getProperty,
+                                         String description,
+                                         boolean sumAllMembers) {
         final var lastValue = getProperty.applyAsLong(ds);
         // a supplier to get different values
         final LongPredicate isCandidate = value -> (sumAllMembers ? value >= 0L && value != Long.MAX_VALUE : value != lastValue);
@@ -234,30 +233,30 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
         throw new IllegalStateException(String.format(VALUES_ERROR, description, stream.get().boxed().collect(Collectors.toList()).toString()));
     }
 
-    void configureLongProperty(ToLongFunction<T> getProperty,
-                               ObjLongConsumer<T> setProperty,
-                               String description) {
-        configureLongProperty(getProperty, setProperty, description, false);
+    void initializeLongProperty(ToLongFunction<T> getProperty,
+                                ObjLongConsumer<T> setProperty,
+                                String description) {
+        initializeLongProperty(getProperty, setProperty, description, false);
     }
 
-    void configureLongProperty(ToLongFunction<T> getProperty,
-                               ObjLongConsumer<T> setProperty,
-                               String description,
-                               boolean sumAllMembers) {
-        var result = checkLongProperty(getProperty, description, sumAllMembers);
+    void initializeLongProperty(ToLongFunction<T> getProperty,
+                                ObjLongConsumer<T> setProperty,
+                                String description,
+                                boolean sumAllMembers) {
+        var result = determineLongProperty(getProperty, description, sumAllMembers);
 
         if (result != null) {
             setProperty.accept(ds, result.get());
         }
     }
     
-    void configureBooleanProperty(Function<T, Boolean> getProperty,
-                                  BiConsumer<T, Boolean> setProperty,
-                                  String description) {
+    void initializeBooleanProperty(Function<T, Boolean> getProperty,
+                                   BiConsumer<T, Boolean> setProperty,
+                                   String description) {
         // convert to int first
-        configureIntProperty((ds) -> (getProperty.apply(ds) ? 1 : 0),
-                             (ds, value) -> setProperty.accept(ds, value != 0),
-                             description);
+        initializeIntProperty((ds) -> (getProperty.apply(ds) ? 1 : 0),
+                              (ds, value) -> setProperty.accept(ds, value != 0),
+                              description);
     }
 
     void open() {
@@ -309,5 +308,4 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
     abstract void setPassword(String password);
 
     abstract void setUsername(String username);
-
 }    
