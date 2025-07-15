@@ -35,7 +35,262 @@ public class SmartPoolDataSourceOracle
     private volatile String currentSchema = null;
 
     /*
-    // overridden methods from PoolDataSourceImpl
+    // Overridden property setter/getter methods from PoolDataSource/PoolDataSourceImpl/HikariDataSource used in SharedPoolDataSourceOracle.initialize()
+    */
+
+    @Override
+    public int getInitialPoolSize() {
+        return isInitializing() ? super.getInitialPoolSize() : delegate.ds.getInitialPoolSize();
+    }
+
+    @Override
+    public void setInitialPoolSize​(int initialPoolSize) throws SQLException {
+        checkInitializing("setInitialPoolSize​");
+        super.setInitialPoolSize​(initialPoolSize);
+    }
+
+    @Override
+    public int getMinPoolSize() {
+        return isInitializing() ? super.getMinPoolSize() : delegate.ds.getMinPoolSize();
+    }
+    
+    @Override
+    public void setMinPoolSize​(int minPoolSize) throws SQLException {
+        checkInitializing("setMinPoolSize​");
+        super.setMinPoolSize​(minPoolSize);
+    }
+
+    @Override
+    public int getMaxPoolSize() {
+        return isInitializing() ? super.getMaxPoolSize() : delegate.ds.getMaxPoolSize();
+    }
+    
+    @Override
+    public void setMaxPoolSize​(int maxPoolSize) throws SQLException {
+        checkInitializing("setMaxPoolSize​");
+        super.setMaxPoolSize​(maxPoolSize);
+    }
+
+    @Override
+    public String getUser() {
+        return isInitializing() ? super.getUser() : delegate.ds.getUser();
+    }
+
+    @Override
+    public String getURL() {
+        return isInitializing() ? super.getURL() : delegate.ds.getURL();
+    }
+
+    @Override
+    public void setURL​(String url) throws SQLException {
+        checkInitializing("setURL​");
+        super.setURL​(url);
+    }
+
+    @Override
+    public String getConnectionFactoryClassName() {
+        return isInitializing() ? super.getConnectionFactoryClassName() : delegate.ds.getConnectionFactoryClassName();
+    }
+    
+    @Override
+    public void setConnectionFactoryClassName​(String factoryClassName) throws SQLException {
+        checkInitializing("setConnectionFactoryClassName​");
+        super.setConnectionFactoryClassName​(factoryClassName);
+    }
+
+    @Override
+    public boolean getValidateConnectionOnBorrow() {
+        return isInitializing() ? super.getValidateConnectionOnBorrow() : delegate.ds.getValidateConnectionOnBorrow();
+    }
+
+    @Override
+    public void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws SQLException {
+        checkInitializing("setValidateConnectionOnBorrow");
+        
+        try {
+            // setValidateConnectionOnBorrow(false) is impossible otherwise we cannot use getSQLForValidateConnection/setSQLForValidateConnection
+            if (!validateConnectionOnBorrow) {
+                throw new SQLFeatureNotSupportedException("setValidateConnectionOnBorrow(false)");            
+            }
+            super.setValidateConnectionOnBorrow(validateConnectionOnBorrow);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }        
+
+    @Override
+    public int getAbandonedConnectionTimeout() {
+        return isInitializing() ? super.getAbandonedConnectionTimeout() : delegate.ds.getAbandonedConnectionTimeout();
+    }
+
+    @Override
+    public void setAbandonedConnectionTimeout​(int abandonedConnectionTimeout) throws SQLException {
+        checkInitializing("setAbandonedConnectionTimeout​");
+        super.setAbandonedConnectionTimeout​(abandonedConnectionTimeout);
+    }
+
+    @Override
+    public int getTimeToLiveConnectionTimeout() {
+        return isInitializing() ? super.getTimeToLiveConnectionTimeout() : delegate.ds.getTimeToLiveConnectionTimeout();
+    }
+    
+    @Override
+    public void setTimeToLiveConnectionTimeout​(int timeToLiveConnectionTimeout) throws SQLException {
+        checkInitializing("setTimeToLiveConnectionTimeout​");
+        super.setTimeToLiveConnectionTimeout​(timeToLiveConnectionTimeout);
+    }
+
+    @Override
+    public int getInactiveConnectionTimeout() {
+        return isInitializing() ? super.getInactiveConnectionTimeout() : delegate.ds.getInactiveConnectionTimeout();
+    }
+
+    @Override
+    public void setInactiveConnectionTimeout​(int inactivityTimeout) throws SQLException {
+        checkInitializing("setInactiveConnectionTimeout​");
+        super.setInactiveConnectionTimeout​(inactivityTimeout);
+    }
+
+    /*
+    @Deprecated
+    @Override
+    public int getConnectionWaitTimeout​() {
+        return isInitializing() ? super.getConnectionWaitTimeout​() : delegate.ds.getConnectionWaitTimeout​();
+    }
+    */
+
+    /*
+    @Deprecated
+    @Override
+    public void setConnectionWaitTimeout​(int waitTimeout) throws SQLException {
+        checkInitializing("setConnectionWaitTimeout​");
+        super.setConnectionWaitTimeout​(waitTimeout);
+    }
+    */
+
+    @Override
+    public int getTimeoutCheckInterval() {
+        return isInitializing() ? super.getTimeoutCheckInterval() : delegate.ds.getTimeoutCheckInterval();
+    }
+
+    @Override
+    public void setTimeoutCheckInterval​(int timeInterval) throws SQLException {
+        checkInitializing("setTimeoutCheckInterval​");
+        super.setTimeoutCheckInterval​(timeInterval);
+    }
+
+    @Override
+    public int getMaxStatements() {
+        return isInitializing() ? super.getMaxStatements() : delegate.ds.getMaxStatements();
+    }
+    
+    @Override
+    public void setMaxStatements​(int maxStatements) throws SQLException {
+        checkInitializing("setMaxStatements​");
+        super.setMaxStatements​(maxStatements);
+    }
+
+    @Override
+    public long getMaxConnectionReuseTime() {
+        return isInitializing() ? super.getMaxConnectionReuseTime() : delegate.ds.getMaxConnectionReuseTime();
+    }
+
+    @Override
+    public void setMaxConnectionReuseTime​(long maxConnectionReuseTime) throws SQLException {
+        checkInitializing("setMaxConnectionReuseTime​");
+        super.setMaxConnectionReuseTime​(maxConnectionReuseTime);
+    }
+
+    @Override
+    public int getSecondsToTrustIdleConnection() {
+        return isInitializing() ? super.getSecondsToTrustIdleConnection() : delegate.ds.getSecondsToTrustIdleConnection();
+    }
+
+    @Override
+    public void setSecondsToTrustIdleConnection​(int secondsToTrustIdleConnection) throws SQLException {
+        checkInitializing("setSecondsToTrustIdleConnection​");
+        super.setSecondsToTrustIdleConnection​(secondsToTrustIdleConnection);
+    }
+
+    @Override
+    public int getConnectionValidationTimeout() {
+        return isInitializing() ? super.getConnectionValidationTimeout() : delegate.ds.getConnectionValidationTimeout();
+    }
+
+    @Override
+    public void setConnectionValidationTimeout​(int connectionValidationTimeout) throws SQLException {
+        checkInitializing("setConnectionValidationTimeout​");
+        super.setConnectionValidationTimeout​(connectionValidationTimeout);
+    }
+
+    @Override
+    public boolean getFastConnectionFailoverEnabled() {
+        return isInitializing() ? super.getFastConnectionFailoverEnabled() : delegate.ds.getFastConnectionFailoverEnabled();
+    }
+
+    @Override
+    public void setFastConnectionFailoverEnabled​(boolean failoverEnabled) throws SQLException {
+        checkInitializing("setFastConnectionFailoverEnabled​");
+        super.setFastConnectionFailoverEnabled​(failoverEnabled);
+    }
+
+    @Override
+    public int getMaxIdleTime() {
+        return isInitializing() ? super.getMaxIdleTime() : delegate.ds.getMaxIdleTime();
+    }
+
+    @Override
+    public void setMaxIdleTime​(int idleTime) throws SQLException {
+        checkInitializing("setMaxIdleTime​");
+        super.setMaxIdleTime​(idleTime);
+    }
+
+    @Override
+    public void setDataSourceName​(String dataSourceName) throws SQLException {
+        checkInitializing("setDataSourceName​");
+        super.setDataSourceName​(dataSourceName);
+    }
+
+    @Override
+    public String getDataSourceName() {
+        return isInitializing() ? super.getDataSourceName() : delegate.ds.getDataSourceName();
+    }
+
+    @Override
+    public int getQueryTimeout() {
+        return isInitializing() ? super.getQueryTimeout() : delegate.ds.getQueryTimeout();
+    }
+    
+    @Override
+    public void setQueryTimeout​(int queryTimeout) throws SQLException {
+        checkInitializing("setQueryTimeout​");
+        super.setQueryTimeout​(queryTimeout);
+    }
+
+    @Override
+    public String getONSConfiguration() {
+        return isInitializing() ? super.getONSConfiguration() : delegate.ds.getONSConfiguration();
+    }
+    
+    @Override
+    public void setONSConfiguration​(String onsConfigStr) {
+        checkInitializing("setONSConfiguration​");
+        super.setONSConfiguration​(onsConfigStr);
+    }
+
+    @Override
+    public int getMaxConnectionReuseCount() {
+        return isInitializing() ? super.getMaxConnectionReuseCount() : delegate.ds.getMaxConnectionReuseCount();
+    }
+
+    @Override
+    public void setMaxConnectionReuseCount​(int maxConnectionReuseCount) throws SQLException {
+        checkInitializing("setMaxConnectionReuseCount​");
+        super.setMaxConnectionReuseCount​(maxConnectionReuseCount);
+    }
+    
+    /*
+    // Other overridden methods from PoolDataSourceImpl
     */
     
     @Override
@@ -112,21 +367,7 @@ public class SmartPoolDataSourceOracle
             throw new RuntimeException(ex);
         }
     }
-    
-    @Override
-    public void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws SQLException {
-        checkInitializing("setValidateConnectionOnBorrow");
-        
-        try {
-            if (!validateConnectionOnBorrow) {
-                throw new SQLFeatureNotSupportedException("setValidateConnectionOnBorrow(false)");            
-            }
-            super.setValidateConnectionOnBorrow(validateConnectionOnBorrow);
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-        
+
     @Override
     public void setPassword(String password) throws SQLException {
         checkInitializing("setPassword");

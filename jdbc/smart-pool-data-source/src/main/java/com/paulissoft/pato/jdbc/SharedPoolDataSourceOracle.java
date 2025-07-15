@@ -166,6 +166,16 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
             if (valueMaxConnectionReuseCount != null) {
                 ds.setMaxConnectionReuseCount(valueMaxConnectionReuseCount.isPresent() ? valueMaxConnectionReuseCount.get() : null);
             }
+
+            // Deprecated
+            /*
+            var valueConnectionWaitTimeout = determineIntProperty(PoolDataSourceImpl::getConnectionWaitTimeout,
+                                                                  "connection wait timeout");
+
+            if (valueConnectionWaitTimeout != null) {
+                ds.setConnectionWaitTimeout(valueConnectionWaitTimeout.isPresent() ? valueConnectionWaitTimeout.get() : null);
+            }
+            */
         } catch (SQLException ex) {
             throw new RuntimeException(ex);
         }
