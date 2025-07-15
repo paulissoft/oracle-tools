@@ -5,23 +5,19 @@ import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
-import java.util.logging.Logger;
-import java.util.Properties;
-import oracle.ucp.jdbc.PoolDataSourceImpl;
-
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.Properties;
 import java.util.function.Consumer;
+import java.util.logging.Logger;
 import javax.net.ssl.SSLContext;
 import oracle.jdbc.OracleShardingKeyBuilder;
 import oracle.ucp.ConnectionAffinityCallback;
 import oracle.ucp.ConnectionCreationInformation;
 import oracle.ucp.ConnectionLabelingCallback;
-
-import oracle.ucp.jdbc.JDBCConnectionPoolStatistics;
 import oracle.ucp.jdbc.ConnectionInitializationCallback;
+import oracle.ucp.jdbc.JDBCConnectionPoolStatistics;
+import oracle.ucp.jdbc.PoolDataSourceImpl;
 import oracle.ucp.jdbc.UCPConnectionBuilder;
+
 
 public class SmartPoolDataSourceOracle
     extends PoolDataSourceImpl
@@ -401,6 +397,10 @@ public class SmartPoolDataSourceOracle
         delegate.add(this);
     }
 
+    /*
+      public final void setTokenSupplier​(Supplier<? extends AccessToken> tokenSupplier) throws SQLException;
+    */
+    
     /*
     // Interface ConnectInfo
     */

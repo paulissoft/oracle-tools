@@ -397,6 +397,17 @@ public class SmartPoolDataSourceHikari
         delegate.add(this);
     }
 
+    @Override
+    public String getPoolName() {
+        return isInitializing() ? super.getPoolName() : delegate.ds.getPoolName();
+    }
+    
+    @Override
+    public void setPoolName(String schema) {
+        checkInitializing("setPoolName");
+        super.setPoolName(schema);
+    }
+
     /*
     // Interface ConnectInfo
     */
