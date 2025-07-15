@@ -1,10 +1,6 @@
 package com.paulissoft.pato.jdbc;
 
-import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.HikariPoolMXBean;
-import com.zaxxer.hikari.metrics.MetricsTrackerFactory;
-import java.sql.Connection;
 import java.sql.SQLException;
 
 
@@ -14,57 +10,6 @@ class SharedPoolDataSourceHikari extends SharedPoolDataSource<HikariDataSource> 
     // constructor
     SharedPoolDataSourceHikari() {
         super(new HikariDataSource());
-    }
-
-    void setMetricRegistry(Object metricRegistry) {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only issue setMetricRegistry() while initializing.");
-        }
-        ds.setMetricRegistry(metricRegistry);
-    }
-    
-    void setMetricsTrackerFactory(MetricsTrackerFactory metricsTrackerFactory) {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only issue setMetricsTrackerFactory() while initializing.");
-        }
-        ds.setMetricsTrackerFactory(metricsTrackerFactory);
-    }
-
-    void setHealthCheckRegistry(Object healthCheckRegistry) {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only issue setHealthCheckRegistry() while initializing.");
-        }
-        ds.setHealthCheckRegistry(healthCheckRegistry);
-    }
-
-    boolean isRunning() {
-        return ds.isRunning();
-    }
-
-    HikariPoolMXBean getHikariPoolMXBean() {
-        return ds.getHikariPoolMXBean();
-    }
-
-    HikariConfigMXBean getHikariConfigMXBean() {
-        return ds.getHikariConfigMXBean();
-    }
-
-    void evictConnection(Connection connection) {
-        ds.evictConnection(connection);
-    }
-
-    void setPassword(String password) {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only issue setPassword() while initializing.");
-        }
-        ds.setPassword(password);
-    }
-    
-    void setUsername(String username) {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only issue setUsername() while initializing.");
-        }
-        ds.setUsername(username);
     }
 
     @Override

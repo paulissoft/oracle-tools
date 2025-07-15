@@ -68,18 +68,19 @@ public class SmartPoolDataSourceOracle
     
     @Override
     public PrintWriter getLogWriter() throws SQLException {
-        return delegate.ds.getLogWriter();
+        return isInitializing() ? super.getLogWriter() : delegate.ds.getLogWriter();
     }
 
     @Override
     public void setLogWriter(PrintWriter out) throws SQLException {
-        delegate.setLogWriter(out);
+        checkInitializing("setLogWriter");
+        super.setLogWriter(out);
     }
 
     @Override
     public Logger getParentLogger() {
         try {
-            return delegate.ds.getParentLogger();
+            return isInitializing() ? super.getParentLogger() : delegate.ds.getParentLogger();
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
@@ -87,12 +88,12 @@ public class SmartPoolDataSourceOracle
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
-        return delegate.ds.unwrap(iface);
+        return isInitializing() ? super.unwrap(iface) : delegate.ds.unwrap(iface);
     }
 
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return delegate.ds.isWrapperFor(iface);
+        return isInitializing() ? super.isWrapperFor(iface) : delegate.ds.isWrapperFor(iface);
     }
 
     @Override
@@ -102,6 +103,8 @@ public class SmartPoolDataSourceOracle
 
     @Override
     public void setSQLForValidateConnection(String SQLstring) {
+        checkInitializing("setSQLForValidateConnection");
+        
         try {
             // since getSQLForValidateConnection is overridden it does not make sense to set it
             throw new SQLFeatureNotSupportedException("setSQLForValidateConnection");            
@@ -111,16 +114,9 @@ public class SmartPoolDataSourceOracle
     }
     
     @Override
-    public void setPassword(String password) throws SQLException {
-        // Here we will set both the super and the delegate password so that the overridden getConnection() will always use
-        // the same password no matter where it comes from.
-
-        super.setPassword(password);
-        delegate.setPassword(password);
-    }
-
-    @Override
     public void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws SQLException {
+        checkInitializing("setValidateConnectionOnBorrow");
+        
         try {
             if (!validateConnectionOnBorrow) {
                 throw new SQLFeatureNotSupportedException("setValidateConnectionOnBorrow(false)");            
@@ -132,7 +128,20 @@ public class SmartPoolDataSourceOracle
     }
         
     @Override
+    public void setPassword(String password) throws SQLException {
+        checkInitializing("setPassword");
+
+        // Here we will set both the super and the delegate password so that the overridden getConnection() will always use
+        // the same password no matter where it comes from.
+
+        super.setPassword(password);
+        delegate.ds.setPassword(password);
+    }
+
+    @Override
     public void setUser(String username) throws SQLException {
+        checkInitializing("setUser");
+
         // Here we will set both the super and the delegate username so that the overridden getConnection() will always use
         // the same password no matter where it comes from.
         var connectInfo = determineProxyUsernameAndCurrentDSchema(username);
@@ -144,7 +153,7 @@ public class SmartPoolDataSourceOracle
         setValidateConnectionOnBorrow(true); // must be used in combination with setSQLForValidateConnection()
             
         super.setUser(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
-        delegate.setUsername(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
+        delegate.ds.setUser(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
 
         // Add this object here (setUsername() should always be called) and
         // not in the constructor to prevent a this escape warning in the constructor.
@@ -178,11 +187,11 @@ public class SmartPoolDataSourceOracle
     }    
     
     public boolean isOpen() {
-        return delegate.isOpen() && !isClosed();
+        return delegate.members.contains(this) && ( delegate.isOpen() || delegate.isClosing() );
     }
 
     public boolean isClosed() {
-        return delegate.isClosed() || !delegate.contains(this);
+        return !delegate.members.contains(this) && ( delegate.isClosing() || delegate.isClosed() );
     }
 
     /*
@@ -212,7 +221,7 @@ public class SmartPoolDataSourceOracle
     }
     
     /*
-    // unsupported operations
+    // Unsupported operations
     */
     
     @Override

@@ -1,6 +1,5 @@
 package com.paulissoft.pato.jdbc;
 
-import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -52,10 +51,7 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
     }
 
     void add(T member) {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only add a member to the shared pool while initializing.");
-        }
-
+        checkInitializing("add");
         members.add(member);
     }
 
@@ -71,10 +67,6 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
                 }
             }
         }
-    }
-
-    Boolean contains(T member) {
-        return members.contains(member);
     }
 
     @SuppressWarnings("fallthrough")
@@ -100,20 +92,6 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
 
     Connection getConnection(String username, String password) throws SQLException {
         throw new SQLFeatureNotSupportedException("getConnection");
-    }
-
-    void setLogWriter(PrintWriter out) throws SQLException {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only issue setLogWriter() while initializing.");
-        }
-        ds.setLogWriter(out);
-    }
-
-    void setLoginTimeout(int seconds) throws SQLException {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only issue setLoginTimeout() while initializing.");
-        }
-        ds.setLoginTimeout(seconds);
     }
 
     void initialize() {
@@ -319,8 +297,4 @@ abstract class SharedPoolDataSource<T extends DataSource> implements StatePoolDa
     */
 
     abstract void close();
-
-    abstract void setPassword(String password);
-
-    abstract void setUsername(String username);
 }    

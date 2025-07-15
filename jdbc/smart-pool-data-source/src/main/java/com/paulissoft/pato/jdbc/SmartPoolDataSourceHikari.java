@@ -41,47 +41,49 @@ public class SmartPoolDataSourceHikari
     
     @Override
     public PrintWriter getLogWriter() throws SQLException {
-        return delegate.ds.getLogWriter();
+        return isInitializing() ? super.getLogWriter() : delegate.ds.getLogWriter();
     }
 
     @Override
     public void setLogWriter(PrintWriter out) throws SQLException {
-        delegate.setLogWriter(out);
+        checkInitializing("setLogWriter");
+        super.setLogWriter(out);
     }
 
     @Override
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        return delegate.ds.getParentLogger();
+        return isInitializing() ? super.getParentLogger() : delegate.ds.getParentLogger();
     }
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
-        return delegate.ds.unwrap(iface);
+        return isInitializing() ? super.unwrap(iface) : delegate.ds.unwrap(iface);
     }
 
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
-        return delegate.ds.isWrapperFor(iface);
+        return isInitializing() ? super.isWrapperFor(iface) : delegate.ds.isWrapperFor(iface);
     }
 
     @Override
     public boolean isRunning() {
-        return delegate.isRunning();
+        return isInitializing() ? super.isRunning() : delegate.ds.isRunning();
     }
 
     @Override
     public HikariPoolMXBean getHikariPoolMXBean() {
-        return delegate.getHikariPoolMXBean();
+        return delegate.ds.getHikariPoolMXBean();
     }
 
     @Override
     public HikariConfigMXBean getHikariConfigMXBean() {
-        return delegate.getHikariConfigMXBean();
+        return delegate.ds.getHikariConfigMXBean();
     }
 
     @Override
     public void evictConnection(Connection connection) {
-        delegate.evictConnection(connection);
+        checkNotInitializing("evictConnection");
+        delegate.ds.evictConnection(connection);
     }
     
     @Override
@@ -91,7 +93,7 @@ public class SmartPoolDataSourceHikari
 
     @Override
     public boolean isClosed() {
-        return !delegate.contains(this) && ( delegate.isClosing() || delegate.isClosed() );
+        return !delegate.members.contains(this) && ( delegate.isClosing() || delegate.isClosed() );
     }
 
     /*
@@ -115,15 +117,19 @@ public class SmartPoolDataSourceHikari
 
     @Override
     public void setPassword(String password) {
+        checkInitializing("setPassword");
+
         // Here we will set both the super and the delegate password so that the overridden getConnection() will always use
         // the same password no matter where it comes from.
 
         super.setPassword(password);
-        delegate.setPassword(password);
+        delegate.ds.setPassword(password);
     }
 
     @Override
     public void setUsername(String username) {
+        checkInitializing("setUsername");
+        
         // Here we will set both the super and the delegate username so that the overridden getConnection() will always use
         // the same password no matter where it comes from.
         var connectInfo = determineProxyUsernameAndCurrentDSchema(username);
@@ -133,7 +139,7 @@ public class SmartPoolDataSourceHikari
         }
 
         super.setUsername(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
-        delegate.setUsername(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
+        delegate.ds.setUsername(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
 
         // Add this object here (setUsername() should always be called) and
         // not in the constructor to prevent a this escape warning in the constructor.
@@ -160,7 +166,7 @@ public class SmartPoolDataSourceHikari
     }    
     
     public boolean isOpen() {
-        return delegate.contains(this) && ( delegate.isOpen() || delegate.isClosing() );
+        return delegate.members.contains(this) && ( delegate.isOpen() || delegate.isClosing() );
     }
 
     // isClosed: see above

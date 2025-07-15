@@ -15,28 +15,6 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
         super(new PoolDataSourceImpl());
     }
 
-    void setPassword(String password) {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only issue setPassword() while initializing.");
-        }
-        try {
-            ds.setPassword(password);
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-    
-    void setUsername(String username) {
-        if (state != State.INITIALIZING) {
-            throw new IllegalStateException("You can only issue setUser() while initializing.");
-        }
-        try {
-            ds.setUser(username);
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
     @Override
     void initialize() {
         super.initialize();
