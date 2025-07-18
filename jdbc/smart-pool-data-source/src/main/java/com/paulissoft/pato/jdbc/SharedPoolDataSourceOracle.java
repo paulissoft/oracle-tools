@@ -10,6 +10,8 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
 
     private static final String DATA_SOURCE_CLASS_NAMES_ERROR = "Not all data source class names are the same: %s.";
 
+    private static final boolean useConnectionLabelingCallback = Boolean.valueOf(System.getProperty("oracle.ConnectionLabelingCallback"));    
+
     // constructor
     SharedPoolDataSourceOracle() {
         super(new PoolDataSourceImpl());
