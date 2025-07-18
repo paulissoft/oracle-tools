@@ -33,7 +33,7 @@ class SmartConnectionLabelingCallbackOracle implements ConnectionLabelingCallbac
             final var cKeys = currentLabels.keySet();
         
             if (match && rKeys.containsAll(cKeys)) {
-                // Case 2: some labels match with no unmatched labels
+                // Case 2: current schema label matches and no unmatched labels
                 result = 1;
             }
         }
