@@ -10,7 +10,7 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
 
     private static final String DATA_SOURCE_CLASS_NAMES_ERROR = "Not all data source class names are the same: %s.";
 
-    private static final boolean useConnectionLabelingCallback = Boolean.valueOf(System.getProperty("SmartConnectionLabelingCallbackOracle"));    
+    static final boolean useConnectionLabelingCallback = Boolean.valueOf(System.getProperty("SmartConnectionLabelingCallbackOracle", "false"));    
 
     // constructor
     SharedPoolDataSourceOracle() {
@@ -72,6 +72,15 @@ class SharedPoolDataSourceOracle extends SharedPoolDataSource<PoolDataSourceImpl
 
             if (valueValidateConnectionOnBorrow != null) {
                 ds.setValidateConnectionOnBorrow(valueValidateConnectionOnBorrow.isPresent() ? valueValidateConnectionOnBorrow.get() : null);
+            }
+
+            if (SharedPoolDataSourceOracle.useConnectionLabelingCallback) {
+                var valueSQLForValidateConnection = determineStringProperty(PoolDataSourceImpl::getSQLForValidateConnection,
+                                                                            "SQL for validate connection");
+                
+                if (valueSQLForValidateConnection != null) {
+                    ds.setSQLForValidateConnection(valueSQLForValidateConnection.isPresent() ? valueSQLForValidateConnection.get() : null);
+                }
             }
 
             var valueAbandonedConnectionTimeout = determineIntProperty(PoolDataSourceImpl::getAbandonedConnectionTimeout,

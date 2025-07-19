@@ -102,15 +102,19 @@ public class SmartPoolDataSourceOracle
     @Override
     public void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws SQLException {
         checkInitializing("setValidateConnectionOnBorrow");
-        
-        try {
-            // setValidateConnectionOnBorrow(false) is impossible otherwise we cannot use getSQLForValidateConnection/setSQLForValidateConnection
-            if (!validateConnectionOnBorrow) {
-                throw new SQLFeatureNotSupportedException("setValidateConnectionOnBorrow(false)");            
-            }
+
+        if (SharedPoolDataSourceOracle.useConnectionLabelingCallback) {
             super.setValidateConnectionOnBorrow(validateConnectionOnBorrow);
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+        } else {
+            try {
+                // setValidateConnectionOnBorrow(false) is impossible otherwise we cannot use getSQLForValidateConnection/setSQLForValidateConnection
+                if (!validateConnectionOnBorrow) {
+                    throw new SQLFeatureNotSupportedException("setValidateConnectionOnBorrow(false)");            
+                }
+                super.setValidateConnectionOnBorrow(validateConnectionOnBorrow);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
         }
     }        
 
@@ -349,18 +353,26 @@ public class SmartPoolDataSourceOracle
 
     @Override
     public String getSQLForValidateConnection() {
-        return getSQLAlterSessionSetCurrentSchema();
+        if (SharedPoolDataSourceOracle.useConnectionLabelingCallback) {
+            return isInitializing() ? super.getSQLForValidateConnection() : delegate.ds.getSQLForValidateConnection();
+        } else {
+            return getSQLAlterSessionSetCurrentSchema();
+        }
     }
 
     @Override
-    public void setSQLForValidateConnection(String SQLstring) {
+    public void setSQLForValidateConnection(String SQLstring) throws SQLException {
         checkInitializing("setSQLForValidateConnection");
-        
-        try {
-            // since getSQLForValidateConnection is overridden it does not make sense to set it
-            throw new SQLFeatureNotSupportedException("setSQLForValidateConnection");            
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+
+        if (SharedPoolDataSourceOracle.useConnectionLabelingCallback) {
+            super.setSQLForValidateConnection(SQLstring);
+        } else {
+            try {
+                // since getSQLForValidateConnection is overridden it does not make sense to set it
+                throw new SQLFeatureNotSupportedException("setSQLForValidateConnection");            
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
         }
     }
 
@@ -387,7 +399,9 @@ public class SmartPoolDataSourceOracle
             currentSchema = connectInfo[1];
         }
 
-        setValidateConnectionOnBorrow(true); // must be used in combination with setSQLForValidateConnection()
+        if (!SharedPoolDataSourceOracle.useConnectionLabelingCallback) {
+            setValidateConnectionOnBorrow(true); // must be used in combination with setSQLForValidateConnection()
+        }
             
         super.setUser(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
         delegate.ds.setUser(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
