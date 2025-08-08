@@ -581,7 +581,7 @@ procedure copy_parameters
 ( p_parm_names in vc_arr2
 , p_parm_values in vc_arr2
 , p_url_encode in boolean
-, p_body_clob in out nocopy clob
+, p_body_clob out nocopy clob
 )
 is
   function url_encode2
@@ -651,7 +651,7 @@ procedure copy_parameters
 , p_name_05 in varchar2
 , p_value_05 in varchar2
 , p_url_encode in boolean
-, p_body_clob in out nocopy clob
+, p_body_clob out nocopy clob
 )
 is
   l_parm_names vc_arr2;

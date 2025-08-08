@@ -111,7 +111,7 @@ procedure copy_parameters
 ( p_parm_names in vc_arr2
 , p_parm_values in vc_arr2
 , p_url_encode in boolean
-, p_body_clob in out nocopy clob
+, p_body_clob out nocopy clob
 );
 /** Create a name1=value1&name2=value2&... list where valueN may be URL encoded. **/
 
@@ -127,9 +127,9 @@ procedure copy_parameters
 , p_name_05 in varchar2 default null
 , p_value_05 in varchar2 default null
 , p_url_encode in boolean
-, p_body_clob in out nocopy clob
+, p_body_clob out nocopy clob
 );
-/** Create a p_name_01=p_value_01&p_name_02=p_value_02&... list where valueN may be URL encoded. **/
+/** Create a p_name_01=p_value_01&p_name_02=p_value_02&... list where p_value_N may be URL encoded. **/
 
 function make_rest_request
 ( p_request in rest_web_service_request_typ -- The request
