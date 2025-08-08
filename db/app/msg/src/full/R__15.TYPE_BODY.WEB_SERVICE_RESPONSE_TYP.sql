@@ -12,6 +12,7 @@ constructor function web_service_response_typ
 , p_body_blob in blob
 , p_cookies_clob in clob
 , p_http_headers_clob in clob
+, p_http_reason_phrase in varchar2
 )
 return self as result
 is
@@ -27,6 +28,7 @@ begin
   , p_body_blob => p_body_blob
   , p_cookies_clob => p_cookies_clob
   , p_http_headers_clob => p_http_headers_clob
+  , p_http_reason_phrase => p_http_reason_phrase
   );
   return;
 end web_service_response_typ;
@@ -48,6 +50,7 @@ begin
   , p_body_blob => null
   , p_cookies_clob => null
   , p_http_headers_clob => null
+  , p_http_reason_phrase in varchar2 => null
   );
   return;
 end web_service_response_typ;
@@ -64,6 +67,7 @@ final member procedure construct
 , p_body_blob in blob
 , p_cookies_clob in clob
 , p_http_headers_clob in clob
+, p_http_reason_phrase in varchar2
 )
 is
 begin
@@ -76,6 +80,7 @@ begin
   msg_pkg.data2msg(p_body_blob, self.body_raw, self.body_blob);
   msg_pkg.data2msg(p_cookies_clob, self.cookies_vc, self.cookies_clob);
   msg_pkg.data2msg(p_http_headers_clob, self.http_headers_vc, self.http_headers_clob);
+  self.http_reason_phrase := p_http_reason_phrase;
 end construct;
 
 overriding
@@ -226,6 +231,7 @@ begin
   then
     p_json_object.put('HTTP_HEADERS_CLOB', l_http_headers_clob);
   end if;
+  p_json_object.put('HTTP_REASON_PHRASE', self.http_reason_phrase);
 end serialize;
 
 overriding

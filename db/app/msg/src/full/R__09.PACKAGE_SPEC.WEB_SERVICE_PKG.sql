@@ -102,7 +102,7 @@ function make_rest_request
 , p_wallet_pwd in varchar2 default null -- The password to access the wallet
 )
 return web_service_response_typ;
-/** Make a REST request and return the reponse object. **/
+/** Make a REST request and return the response object. **/
 
 function make_rest_request
 ( p_url in varchar2 -- The url endpoint of the Web service
@@ -115,7 +115,7 @@ function make_rest_request
 , p_body in clob default empty_clob() -- The HTTP payload to be sent as clob
 , p_body_blob in blob default empty_blob() -- The HTTP payload to be sent as binary blob (ex., posting a file)
 , p_parm_name in vc_arr2 default empty_vc_arr -- The name of the parameters to be used in name/value pairs
-, p_parm_value in vc_arr2 default empty_vc_arr -- The value of the paramters to be used in name/value pairs
+, p_parm_value in vc_arr2 default empty_vc_arr -- The value of the parameters to be used in name/value pairs
 , p_wallet_path in varchar2 default null -- The filesystem path to a wallet if request is https, ex., file:/usr/home/oracle/WALLETS
 , p_wallet_pwd in varchar2 default null -- The password to access the wallet
 , p_https_host in varchar2 default null -- The host name to be matched against the common name (CN) of the remote server's certificate for an HTTPS request
@@ -124,6 +124,25 @@ function make_rest_request
 )
 return web_service_response_typ;
 /** See apex_web_service.make_rest_request. */
+
+subtype http_status_code_t is positive;
+subtype http_status_code_nn_t is positiven;
+subtype http_status_description_t is varchar2(100 byte) not null;
+subtype http_reason_phrase_t is varchar2(4000 byte);
+
+procedure handle_response
+( p_response in web_service_response_typ -- The REST request response
+, p_http_status_code out nocopy http_status_code_nn_t
+, p_http_status_description out nocopy http_status_description_t
+, p_http_reason_phrase out nocopy http_reason_phrase_t
+);
+/**
+
+Handles the REST request response:
+
+- handle X-RateLimit header parameters, i.e. waiting more till the rate limit reset
+- raise an exception in the range -20XYZ where XYZ is the HTML status code returned unless X = 2 since that means success
+*/
 
 $if msg_aq_pkg.c_testing $then
 

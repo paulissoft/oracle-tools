@@ -19,7 +19,8 @@ g_response_cookies         sys.utl_http.cookie_table;
 g_headers                  header_table;
 g_request_headers          header_table;
 
-g_status_code              pls_integer;
+g_status_code              http_status_code_t;
+g_reason_phrase            http_reason_phrase_t;
 
 $end
 
@@ -68,7 +69,8 @@ procedure utl_http_request
 , p_request_headers in header_table
 , p_response_cookies out nocopy sys.utl_http.cookie_table
 , p_response_headers out nocopy header_table
-, p_status_code out nocopy pls_integer
+, p_status_code out nocopy http_status_code_t
+, p_reason_phrase out nocopy http_reason_phrase_t
 )
 is
   l_http_request utl_http.req;
@@ -200,6 +202,7 @@ begin
   l_http_response := utl_http.get_response(l_http_request);
 
   p_status_code := l_http_response.status_code;
+  p_reason_phrase := l_http_response.reason_phrase;
 
   begin
     if p_request.binary_response = 0
@@ -721,6 +724,7 @@ $end
       , p_response_cookies => apex_web_service.g_response_cookies
       , p_response_headers => apex_web_service.g_headers
       , p_status_code => apex_web_service.g_status_code
+      , p_reason_phrase => apex_web_service.g_reason_phrase
       );
 $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
       
@@ -791,6 +795,7 @@ $end
     , p_body_blob => l_body_blob
     , p_cookies_clob => case when l_cookies is not null then l_cookies.to_clob() end
     , p_http_headers_clob => case when l_http_headers is not null then l_http_headers.to_clob() end
+    , p_http_reason_phrase => substrb(apex_web_service.g_reason_phrase, 1, 4000)
     );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -816,6 +821,7 @@ $end
            , p_body_blob => null
            , p_cookies_clob => null
            , p_http_headers_clob => null
+           , p_http_reason_phrase => null
            );
 end make_rest_request;
 
@@ -922,6 +928,7 @@ $end
     , p_response_cookies => g_response_cookies
     , p_response_headers => g_headers
     , p_status_code => g_status_code
+    , p_reason_phrase => g_reason_phrase
     );
   else
     raise_application_error(-20000, 'The request is not simple enough and should be executed by APEX_WEB_SERVICE but APEX is not installed.');
@@ -948,6 +955,7 @@ $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
     , p_body_blob => l_body_blob
     , p_cookies_clob => case when l_cookies is not null then l_cookies.to_clob() end
     , p_http_headers_clob => case when l_http_headers is not null then l_http_headers.to_clob() end
+    , p_http_reason_phrase => g_reason_phrase
     );
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -973,6 +981,7 @@ $end
            , p_body_blob => null
            , p_cookies_clob => null
            , p_http_headers_clob => null
+           , p_http_reason_phrase => null
            );
 end make_rest_request;
 
@@ -1039,6 +1048,131 @@ begin
     
   return l_web_service_response;
 end make_rest_request;
+
+procedure handle_response
+( p_response in web_service_response_typ -- The REST request response
+, p_http_status_code out nocopy http_status_code_nn_t
+, p_http_status_description out nocopy http_status_description_t
+, p_http_reason_phrase out nocopy http_reason_phrase_t
+)
+is
+begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.HANDLE_RESPONSE');
+  p_response.print;
+$end
+
+  p_http_status_code := p_response.http_status_code;
+  p_http_reason_phrase := p_response.http_reason_phrase;
+
+  -- From https://www.oxitsolutions.co.uk/blog/http-status-code-cheat-sheet-infographic
+  p_http_status_description :=
+    case p_http_status_code
+      -- 1XX - Information
+
+      when 100 then 'Continue'
+      when 101 then 'Switching Protocols'
+      when 102 then 'Processing'
+      when 103 then 'Early Hints'
+
+      -- 2XX - Success
+
+      when 200 then 'OK'
+      when 201 then 'Created'
+      when 202 then 'Accepted'
+      when 203 then 'Non-authoritative Information'
+      when 205 then 'Reset Content'
+      when 206 then 'Partial Content'
+      when 207 then 'Multi-status (WebDAV)'
+      when 208 then 'Already Reported (WebDAV)'
+      when 226 then 'IM Used (HTTP Delta Encoding)'
+
+      -- 3XX - Redirection
+
+      when 300 then 'Multiple Choices'
+      when 301 then 'Moved Permanently'
+      when 302 then 'Found'
+      when 303 then 'See Other'
+      when 304 then 'Not Modified'
+      when 304 then 'Use Proxy'
+      when 306 then 'Unused'
+      when 307 then 'Temporary Redirect'
+      when 308 then 'Permanent Redirect'
+
+      -- 4XX - Client Error
+
+      when 400 then 'Bad Request'
+      when 401 then 'Unauthorised'
+      when 402 then 'Payment Required'
+      when 403 then 'Forbidden'
+      when 404 then 'Not Found'
+      when 405 then 'Method Not Allowed'
+      when 406 then 'Not Acceptable'
+      when 407 then 'Proxy Authentication Required'
+      when 408 then 'Request Timeout'
+      when 409 then 'Conflict'
+      when 410 then 'Gone'
+      when 411 then 'Length Required'
+      when 412 then 'Precondition Failed'
+      when 413 then 'Payload Too Large'
+      when 414 then 'URI Too Large'
+      when 415 then 'Unsupported Media Type'
+      when 416 then 'Range Not Satisfiable'
+      when 417 then 'Exception Failed'
+      when 418 then 'I’m a Teapot'
+      when 421 then 'Misdirected Request'
+      when 422 then 'Unpossessable Entity (WebDAV)'
+      when 423 then 'Locked (WebDAV)'
+      when 424 then 'Failed '
+      when 425 then 'Too Early'
+      when 426 then 'Upgrade Required'
+      when 428 then 'Precondition Required'
+      when 429 then 'Too Many Requests'
+      when 431 then 'Request Header Fields too Large'
+      when 451 then 'Unavailable for Legal Reasons'
+      when 499 then 'Client Closed Request'
+
+      -- 5XX - Server Error Responses
+
+      when 500 then 'Internal Server Error'
+      when 501 then 'Not Implemented'
+      when 502 then 'Bad Gateway'
+      when 503 then 'Service Unavailable'
+      when 504 then 'Gateway Timeout'
+      when 505 then 'HTTP Version Not Supported'
+      when 507 then 'Insufficient Storage (WebDAV)'
+      when 508 then 'Loop Detected (WebDAV)'
+      when 510 then 'Not Extended'
+      when 511 then 'Network Authentication Required'
+      when 599 then 'Network Connection Timeout Error'
+
+      else 'Unknown HTTP status code ' || to_char(p_http_status_code);
+    end;
+
+  if not(p_http_status_code between 200 and 299)
+  then
+    raise_application_error
+    ( -20000 + -1 * p_http_status_code
+    , utl_lms.format_message('HTTP status description: %s; HTTP reason phrase: %s', p_http_status_description, p_http_reason_phrase)
+    );
+  end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."output"
+  , 'p_http_status_code: %s; p_http_status_description: %s; p_http_reason_phrase: %s'
+  , p_http_status_code
+  , p_http_status_description
+  , p_http_reason_phrase
+  );
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
+end handle_response;
 
 $if msg_aq_pkg.c_testing $then
 

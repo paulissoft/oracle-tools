@@ -15,6 +15,11 @@ create or replace type web_service_response_typ under msg_typ
   -- JSON constructed from apex_web_service.g_headers, a table of name/value pairs.
 , http_headers_vc varchar2(4000 byte)
 , http_headers_clob clob
+, http_reason_phrase varchar2(4000 byte)
+  -- No real maximum size, see https://stackoverflow.com/questions/9513447/http-response-status-line-maximum-size.
+  -- So we use 4000 byte as a compromise between
+  -- a) utl_http.resp.reason_phrase (varchar2(256)) and
+  -- b) apex_web_service.g_reason_phrase (can store sqlerrm)
 /**
 
 This type stores the response of a web service request.
@@ -32,6 +37,7 @@ This type stores the response of a web service request.
   , p_body_blob in blob default null
   , p_cookies_clob in clob default null
   , p_http_headers_clob in clob default null
+  , p_http_reason_phrase in varchar2 default null
   )
   return self as result
 
@@ -52,6 +58,7 @@ This type stores the response of a web service request.
   , p_body_blob in blob
   , p_cookies_clob in clob
   , p_http_headers_clob in clob
+  , p_http_reason_phrase in varchar2
   )
 
 , overriding
