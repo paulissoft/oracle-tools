@@ -20,6 +20,7 @@ Types of changes:
 - [Add script with OCI filesystem operations.](https://github.com/paulissoft/oracle-tools/issues/210)
 - [The message subsystem needs to handle HTTP responses with respect to HTTP rate limits.](https://github.com/paulissoft/oracle-tools/issues/211)
 - [Base the smart pool data source directly on the Hikari and Oracle UCP pool data sources.](https://github.com/paulissoft/oracle-tools/issues/212)
+- [Some unit tests for web_service_pkg fail.](https://github.com/paulissoft/oracle-tools/issues/213)
 
 ## [4.4.2] - 2025-04-17
 

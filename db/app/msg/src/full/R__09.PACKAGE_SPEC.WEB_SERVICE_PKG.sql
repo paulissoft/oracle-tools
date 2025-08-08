@@ -14,6 +14,8 @@ The usual way of invoking a web service:
 4. invoke make_rest_request
 5. invoke handle_response and if there is an exception (for instance HTTP status code not 2XX) you may need to retry return to point 3
 
+See also [APEX_WEB_SERVICE The Definitive Guide](https://blog.cloudnueva.com/apexwebservice-the-definitive-guide).
+
 **/
 
 c_prefer_to_use_utl_http constant boolean := false;
@@ -148,10 +150,10 @@ function make_rest_request
 , p_scheme in varchar2 default 'Basic' -- The authentication scheme, Basic (default), OAUTH_CLIENT_CRED or AWS
 , p_proxy_override in varchar2 default null -- The proxy to use for the request
 , p_transfer_timeout in number default 180 -- The amount of time in seconds to wait for a response
-, p_body in clob default empty_clob() -- The HTTP payload to be sent as clob
+, p_body in clob default empty_clob() -- The HTTP payload to be sent as clob (but maybe used as query parameters for GET)
 , p_body_blob in blob default empty_blob() -- The HTTP payload to be sent as binary blob (ex., posting a file)
-, p_parm_name in vc_arr2 default empty_vc_arr -- The name of the parameters to be used in name/value pairs
-, p_parm_value in vc_arr2 default empty_vc_arr -- The value of the parameters to be used in name/value pairs
+, p_parm_name in vc_arr2 default empty_vc_arr -- The name of the parameters to be used in name/value pairs (maybe used as query parameters for GET)
+, p_parm_value in vc_arr2 default empty_vc_arr -- The value of the parameters to be used in name/value pairs (maybe used as query parameters for GET)
 , p_wallet_path in varchar2 default null -- The filesystem path to a wallet if request is https, ex., file:/usr/home/oracle/WALLETS
 , p_wallet_pwd in varchar2 default null -- The password to access the wallet
 , p_https_host in varchar2 default null -- The host name to be matched against the common name (CN) of the remote server's certificate for an HTTPS request
@@ -163,7 +165,9 @@ return web_service_response_typ;
 
 See apex_web_service.make_rest_request.
 
-When the body is empty (both p_body and p_body_blob empty), the body is constructed from p_parm_name/p_parm_value.
+When p_body is empty, the info from p_parm_name/p_parm_value will be copied to p_body.
+
+For a GET operation, a non-empty p_body will be treated as URL query parameters.
 
 */
 
@@ -173,9 +177,18 @@ subtype http_reason_phrase_t is varchar2(4000 byte);
 
 procedure handle_response
 ( p_response in web_service_response_typ -- The REST request response
-, p_http_status_code out nocopy http_status_code_t
-, p_http_status_description out nocopy http_status_description_t
-, p_http_reason_phrase out nocopy http_reason_phrase_t
+, p_http_status_code out nocopy http_status_code_t -- The HTTP status code
+, p_http_status_description out nocopy http_status_description_t -- The HTTP status description
+, p_http_reason_phrase out nocopy http_reason_phrase_t -- The HTTP reason phrase
+, p_body_clob out nocopy clob -- The HTTP character body
+);
+
+procedure handle_response
+( p_response in web_service_response_typ -- The REST request response
+, p_http_status_code out nocopy http_status_code_t -- The HTTP status code
+, p_http_status_description out nocopy http_status_description_t -- The HTTP status description
+, p_http_reason_phrase out nocopy http_reason_phrase_t -- The HTTP reason phrase
+, p_body_blob out nocopy blob -- The HTTP binary body
 );
 /**
 
