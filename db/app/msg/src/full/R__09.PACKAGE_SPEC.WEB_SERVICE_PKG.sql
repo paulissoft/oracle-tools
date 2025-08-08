@@ -1,7 +1,18 @@
 CREATE OR REPLACE PACKAGE "WEB_SERVICE_PKG" AUTHID DEFINER AS 
 
 /**
+Invoke web services
+===================
+
 A package with some functions and procedures for web services.
+
+The usual way of invoking a web service:
+
+1. invoke clear_request_headers
+2. invoke set_request_headers
+3. invoke make_rest_request
+4. invoke handle_response and if there is an exception (for instance HTTP status code not 2XX) you may need to retry return to point 3
+
 **/
 
 c_prefer_to_use_utl_http constant boolean := false;
@@ -123,7 +134,13 @@ function make_rest_request
 , p_token_url in varchar2 default null -- For token-based authentication flows: The URL where to get the token from.
 )
 return web_service_response_typ;
-/** See apex_web_service.make_rest_request. */
+/**
+
+See apex_web_service.make_rest_request.
+
+When the body is empty (both p_body and p_body_blob empty), the body is constructed from p_parm_name/p_parm_value.
+
+*/
 
 subtype http_status_code_t is positive;
 subtype http_status_code_nn_t is positiven;
