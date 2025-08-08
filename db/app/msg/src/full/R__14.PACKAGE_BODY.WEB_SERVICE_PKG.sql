@@ -152,7 +152,7 @@ begin
 
   while l_nr_bytes_to_write > 0
   loop
-    l_raw := dbms_lob.substr(lob_loc => p_body_blob, amount => c_max_raw_size, offset => l_offset);     
+    l_raw := dbms_lob.substr(lob_loc => p_body_blob, amount => c_max_raw_size, offset => l_offset);
     utl_http.write_raw(l_http_request, l_raw);
     l_nr_bytes_to_write := l_nr_bytes_to_write - c_max_raw_size; -- may be too much if l_raw is not fully filled but that does not hurt
     l_offset := l_offset + c_max_raw_size;
@@ -1131,6 +1131,9 @@ procedure handle_response
 , p_http_reason_phrase out nocopy http_reason_phrase_t
 )
 is
+$if oracle_tools.cfg_pkg.c_debugging $then
+  l_clob clob;
+$end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.HANDLE_RESPONSE');
@@ -1248,7 +1251,28 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 exception
   when others
   then
-    p_response.print;
+    l_clob :=
+      case
+        when p_response.cookies_vc is not null
+        then to_clob(p_response.cookies_vc)
+        else p_response.cookies_clob
+      end;
+    dbug.print
+    ( dbug."error"
+    , 'cookies: %s'
+    , dbms_lob.substr(lob_loc => l_clob, amount => 2000)
+    );
+    l_clob :=
+      case
+        when p_response.http_headers_vc is not null
+        then to_clob(p_response.http_headers_vc)
+        else p_response.http_headers_clob
+      end;
+    dbug.print
+    ( dbug."error"
+    , 'HTTP headers: %s'
+    , dbms_lob.substr(lob_loc => l_clob, amount => 2000)
+    );
     dbug.leave_on_error;
     raise;
 $end
