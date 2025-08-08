@@ -10,8 +10,9 @@ The usual way of invoking a web service:
 
 1. invoke clear_request_headers
 2. invoke set_request_headers
-3. invoke make_rest_request
-4. invoke handle_response and if there is an exception (for instance HTTP status code not 2XX) you may need to retry return to point 3
+3. invoke copy_parameters
+4. invoke make_rest_request
+5. invoke handle_response and if there is an exception (for instance HTTP status code not 2XX) you may need to retry return to point 3
 
 **/
 
@@ -105,6 +106,30 @@ procedure remove_request_header
 
 procedure clear_request_headers;
 /** See apex_web_service.clear_request_headers. */
+
+procedure copy_parameters
+( p_parm_names in vc_arr2
+, p_parm_values in vc_arr2
+, p_url_encode in boolean
+, p_body_clob in out nocopy clob
+);
+/** Create a name1=value1&name2=value2&... list where valueN may be URL encoded. **/
+
+procedure copy_parameters
+( p_name_01 in varchar2 default null
+, p_value_01 in varchar2 default null
+, p_name_02 in varchar2 default null
+, p_value_02 in varchar2 default null
+, p_name_03 in varchar2 default null
+, p_value_03 in varchar2 default null
+, p_name_04 in varchar2 default null
+, p_value_04 in varchar2 default null
+, p_name_05 in varchar2 default null
+, p_value_05 in varchar2 default null
+, p_url_encode in boolean
+, p_body_clob in out nocopy clob
+);
+/** Create a p_name_01=p_value_01&p_name_02=p_value_02&... list where valueN may be URL encoded. **/
 
 function make_rest_request
 ( p_request in rest_web_service_request_typ -- The request

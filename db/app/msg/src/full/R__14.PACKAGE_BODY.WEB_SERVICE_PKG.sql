@@ -53,7 +53,7 @@ $end
 
   return l_simple_request;
 end simple_request;
-  
+
 procedure utl_http_request
 ( p_request in rest_web_service_request_typ
 , p_body_clob in out nocopy clob -- on input the request body, on output the response body
@@ -87,56 +87,15 @@ is
   l_src_offset integer := 1;
   l_lang number := dbms_lob.default_lang_ctx;
   l_warning integer;
-
-  function url_encode2
-  ( p_str in varchar2
-  )
-  return varchar2
-  as
-    x varchar2(32767);
-  begin
-    x := replace(p_str, '%', '%25');
-    x := replace(x,     '+', '%2B');
-    x := replace(x,     ' ', '+'  );
-    x := replace(x,     '.', '%2E');
-    x := replace(x,     '*', '%2A');
-    x := replace(x,     '?', '%3F');
-    x := replace(x,     '\', '%5C');
-    x := replace(x,     '/', '%2F');
-    x := replace(x,     '>', '%3E');
-    x := replace(x,     '<', '%3C');
-    x := replace(x,     '{', '%7B');
-    x := replace(x,     '}', '%7D');
-    x := replace(x,     '~', '%7E');
-    x := replace(x,     '[', '%5B');
-    x := replace(x,     ']', '%5D');
-    x := replace(x,     '`', '%60');
-    x := replace(x,     ';', '%3B');
-    x := replace(x,     '?', '%3F');
-    x := replace(x,     '@', '%40');
-    x := replace(x,     '&', '%26');
-    x := replace(x,     '#', '%23');
-    x := replace(x,     '|', '%7C');
-    x := replace(x,     '^', '%5E');
-    x := replace(x,     ':', '%3A');
-    x := replace(x,     '=', '%3D');
-    x := replace(x,     '$', '%24');
-    return x;
-  end url_encode2;
 begin
   if p_body_clob is null or dbms_lob.getlength(p_body_clob) = 0
   then
-    if p_parm_names.count > 0
-    then
-      for i_idx in p_parm_names.first .. p_parm_names.last
-      loop
-        p_body_clob :=
-          case
-            when i_idx > 1 then p_body_clob||'&'
-          end ||
-          p_parm_names(i_idx) || '=' || url_encode2(p_parm_values(i_idx));
-      end loop;
-    end if;
+    copy_parameters
+    ( p_parm_names => p_parm_names
+    , p_parm_values => p_parm_values
+    , p_url_encode => true
+    , p_body_clob => p_body_clob
+    );
   end if;
   
   if p_body_clob is not null
@@ -618,6 +577,112 @@ begin
   );
 end clear_request_headers;
 
+procedure copy_parameters
+( p_parm_names in vc_arr2
+, p_parm_values in vc_arr2
+, p_url_encode in boolean
+, p_body_clob in out nocopy clob
+)
+is
+  function url_encode2
+  ( p_str in varchar2
+  )
+  return varchar2
+  as
+    x varchar2(32767);
+  begin
+    x := replace(p_str, '%', '%25');
+    x := replace(x,     '+', '%2B');
+    x := replace(x,     ' ', '+'  );
+    x := replace(x,     '.', '%2E');
+    x := replace(x,     '*', '%2A');
+    x := replace(x,     '?', '%3F');
+    x := replace(x,     '\', '%5C');
+    x := replace(x,     '/', '%2F');
+    x := replace(x,     '>', '%3E');
+    x := replace(x,     '<', '%3C');
+    x := replace(x,     '{', '%7B');
+    x := replace(x,     '}', '%7D');
+    x := replace(x,     '~', '%7E');
+    x := replace(x,     '[', '%5B');
+    x := replace(x,     ']', '%5D');
+    x := replace(x,     '`', '%60');
+    x := replace(x,     ';', '%3B');
+    x := replace(x,     '?', '%3F');
+    x := replace(x,     '@', '%40');
+    x := replace(x,     '&', '%26');
+    x := replace(x,     '#', '%23');
+    x := replace(x,     '|', '%7C');
+    x := replace(x,     '^', '%5E');
+    x := replace(x,     ':', '%3A');
+    x := replace(x,     '=', '%3D');
+    x := replace(x,     '$', '%24');
+    return x;
+  end url_encode2;
+begin
+  if p_parm_names.count > 0
+  then
+    for i_idx in p_parm_names.first .. p_parm_names.last
+    loop
+      p_body_clob :=
+        case
+          when i_idx > 1 then p_body_clob || '&'
+        end ||
+        p_parm_names(i_idx) ||
+        '=' ||
+        case
+          when p_url_encode
+          then url_encode2(p_parm_values(i_idx))
+          else p_parm_values(i_idx)
+        end;
+    end loop;
+  end if;
+end copy_parameters;
+
+procedure copy_parameters
+( p_name_01 in varchar2
+, p_value_01 in varchar2
+, p_name_02 in varchar2
+, p_value_02 in varchar2
+, p_name_03 in varchar2
+, p_value_03 in varchar2
+, p_name_04 in varchar2
+, p_value_04 in varchar2
+, p_name_05 in varchar2
+, p_value_05 in varchar2
+, p_url_encode in boolean
+, p_body_clob in out nocopy clob
+)
+is
+  l_parm_names vc_arr2;
+  l_parm_values vc_arr2;
+
+  procedure do_set_parameter
+  ( p_name  in varchar2
+  , p_value in varchar2
+  )
+  is
+  begin
+    if p_name is null then return; end if;
+
+    l_parm_names(l_parm_names.count+1) := p_name;
+    l_parm_values(l_parm_values.count+1) := p_value;
+  end do_set_parameter;
+begin
+  do_set_parameter( p_name_01, p_value_01 );
+  do_set_parameter( p_name_02, p_value_02 );
+  do_set_parameter( p_name_03, p_value_03 );
+  do_set_parameter( p_name_04, p_value_04 );
+  do_set_parameter( p_name_05, p_value_05 );
+
+  copy_parameters
+  ( p_parm_names => l_parm_names 
+  , p_parm_values => l_parm_values 
+  , p_url_encode => p_url_encode 
+  , p_body_clob => p_body_clob
+  );
+end copy_parameters;
+
 $if oracle_tools.cfg_pkg.c_apex_installed $then
 
 function make_rest_request
@@ -732,6 +797,24 @@ $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
     then
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print(dbug."info", 'Using APEX_WEB_SERVICE.MAKE_REST_REQUEST to issue the REST webservice');
+      dbug.print
+      ( dbug."info"
+      , 'body: %s'
+      , case when l_body_clob is not null then dbms_lob.substr(lob_loc => l_body_clob, amount => 2000) end
+      );
+      if l_parm_names.count > 0
+      then
+        for i_idx in l_parm_names.first .. l_parm_names.last
+        loop
+          dbug.print
+          ( dbug."info"
+          , 'parameter %s; name: %s; value: %s'
+          , i_idx
+          , l_parm_names(i_idx)
+          , l_parm_values(i_idx)
+          );
+        end loop;
+      end if;
 $end
 
       l_body_clob := apex_web_service.make_rest_request
@@ -911,6 +994,16 @@ $if web_service_pkg.c_prefer_to_use_utl_http $then
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'Using UTL_HTTP.BEGIN_REQUEST to issue the REST webservice');
 $end
+
+    if l_body_clob is null or dbms_lob.getlength(l_body_clob) = 0
+    then
+      copy_parameters
+      ( p_parm_names => l_parm_names
+      , p_parm_values => l_parm_values
+      , p_url_encode => true
+      , p_body_clob => l_body_clob
+      );
+    end if;
 
     utl_http_request
     ( p_request => p_request
