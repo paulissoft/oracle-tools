@@ -797,24 +797,6 @@ $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
     then
 $if oracle_tools.cfg_pkg.c_debugging $then
       dbug.print(dbug."info", 'Using APEX_WEB_SERVICE.MAKE_REST_REQUEST to issue the REST webservice');
-      dbug.print
-      ( dbug."info"
-      , 'body: %s'
-      , case when l_body_clob is not null then dbms_lob.substr(lob_loc => l_body_clob, amount => 2000) end
-      );
-      if l_parm_names.count > 0
-      then
-        for i_idx in l_parm_names.first .. l_parm_names.last
-        loop
-          dbug.print
-          ( dbug."info"
-          , 'parameter %s; name: %s; value: %s'
-          , i_idx
-          , l_parm_names(i_idx)
-          , l_parm_values(i_idx)
-          );
-        end loop;
-      end if;
 $end
 
       l_body_clob := apex_web_service.make_rest_request
@@ -1152,7 +1134,6 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.HANDLE_RESPONSE');
-  p_response.print;
 $end
 
   p_http_status_code := p_response.http_status_code;
@@ -1267,6 +1248,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 exception
   when others
   then
+    p_response.print;
     dbug.leave_on_error;
     raise;
 $end
