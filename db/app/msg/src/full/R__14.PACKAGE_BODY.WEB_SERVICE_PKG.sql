@@ -1051,7 +1051,7 @@ end make_rest_request;
 
 procedure handle_response
 ( p_response in web_service_response_typ -- The REST request response
-, p_http_status_code out nocopy http_status_code_nn_t
+, p_http_status_code out nocopy http_status_code_t
 , p_http_status_description out nocopy http_status_description_t
 , p_http_reason_phrase out nocopy http_reason_phrase_t
 )
@@ -1063,6 +1063,11 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   p_http_status_code := p_response.http_status_code;
+  if p_http_status_code is null
+  then
+    raise value_error;
+  end if;
+  
   p_http_reason_phrase := p_response.http_reason_phrase;
 
   -- From https://www.oxitsolutions.co.uk/blog/http-status-code-cheat-sheet-infographic

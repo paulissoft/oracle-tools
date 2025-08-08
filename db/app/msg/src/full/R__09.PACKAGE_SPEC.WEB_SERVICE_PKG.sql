@@ -143,13 +143,12 @@ When the body is empty (both p_body and p_body_blob empty), the body is construc
 */
 
 subtype http_status_code_t is positive;
-subtype http_status_code_nn_t is positiven;
-subtype http_status_description_t is varchar2(100 byte) not null;
+subtype http_status_description_t is varchar2(100 byte);
 subtype http_reason_phrase_t is varchar2(4000 byte);
 
 procedure handle_response
 ( p_response in web_service_response_typ -- The REST request response
-, p_http_status_code out nocopy http_status_code_nn_t
+, p_http_status_code out nocopy http_status_code_t
 , p_http_status_description out nocopy http_status_description_t
 , p_http_reason_phrase out nocopy http_reason_phrase_t
 );
