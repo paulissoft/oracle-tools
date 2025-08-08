@@ -25,7 +25,7 @@ declare
   l_nr_objects_dropped pls_integer;
 
   procedure execute_immediate
-  ( p_cmd in varhar2
+  ( p_cmd in varchar2
   )
   is
   begin
