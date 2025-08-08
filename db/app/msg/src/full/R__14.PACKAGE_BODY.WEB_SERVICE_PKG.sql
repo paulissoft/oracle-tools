@@ -1146,7 +1146,7 @@ $end
       when 511 then 'Network Authentication Required'
       when 599 then 'Network Connection Timeout Error'
 
-      else 'Unknown HTTP status code ' || to_char(p_http_status_code);
+      else 'Unknown HTTP status code ' || to_char(p_http_status_code)
     end;
 
   if not(p_http_status_code between 200 and 299)

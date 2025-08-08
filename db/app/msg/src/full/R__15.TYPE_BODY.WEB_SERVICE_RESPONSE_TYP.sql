@@ -50,7 +50,7 @@ begin
   , p_body_blob => null
   , p_cookies_clob => null
   , p_http_headers_clob => null
-  , p_http_reason_phrase in varchar2 => null
+  , p_http_reason_phrase => null
   );
   return;
 end web_service_response_typ;
