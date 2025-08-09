@@ -3,19 +3,21 @@ whenever oserror exit failure
 
 set serveroutput on size unlimited
 
-delete from "schema_version_tools_msg";
-commit;
-
 declare
   l_type_tab sys.odcivarchar2list :=
     sys.odcivarchar2list
     ( -- collections
       'MSG_TAB_TYP'
+    , 'HTTP_COOKIE_TAB_TYP'
+    , 'HTTP_HEADER_TAB_TYP'
       -- object types
     , 'REST_WEB_SERVICE_REQUEST_TYP'
     , 'WEB_SERVICE_RESPONSE_TYP'
     , 'WEB_SERVICE_REQUEST_TYP'
+    , 'HTTP_REQUEST_RESPONSE_TYP'
     , 'MSG_TYP'
+    , 'HTTP_COOKIE_TYP'
+    , 'HTTP_HEADER_TYP'
     );
   l_sequence_tab sys.odcivarchar2list :=
     sys.odcivarchar2list
@@ -23,6 +25,11 @@ declare
     );
   l_count pls_integer;
   l_nr_objects_dropped pls_integer;
+  l_start constant date := sysdate;
+
+  -- ORA-00942: table or view does not exist
+  e_table_or_view_does_not_exist exception;
+  pragma exception_init(e_table_or_view_does_not_exist, -942);
 
   procedure execute_immediate
   ( p_cmd in varchar2
@@ -31,30 +38,41 @@ declare
   begin
     dbms_output.put_line(p_cmd);
     execute immediate p_cmd;
-    l_nr_objects_dropped := l_nr_objects_dropped + 1;
   exception
     when others
     then
       dbms_output.put_line(sqlerrm);
-      null;
+      raise;
   end execute_immediate;
+  
+  procedure drop_object
+  ( p_cmd in varchar2
+  )
+  is
+  begin
+    execute_immediate(p_cmd);
+    l_nr_objects_dropped := l_nr_objects_dropped + 1;
+  exception
+    when others
+    then null;
+  end drop_object;
 begin
-  select  count(*)
-  into    l_count
-  from    "schema_version_tools_msg";
-
-  if l_count <> 0
-  then
-    raise_application_error(-20000, 'Please clean up Flyway cache by: delete from "schema_version_tools_msg"');
-  end if;
+  begin
+    execute_immediate('delete from "schema_version_tools_msg"');
+    commit;
+  exception
+    when e_table_or_view_does_not_exist
+    then null;
+  end;
 
   <<while_objects_dropped_loop>>
+  while (sysdate - l_start) * 24 * 60 * 60 <= 60
   loop
     l_nr_objects_dropped := 0;
     
     for i_idx in l_sequence_tab.first .. l_sequence_tab.last
     loop
-      execute_immediate('drop sequence ' || l_sequence_tab(i_idx));
+      drop_object('drop sequence ' || l_sequence_tab(i_idx));
     end loop;
 
     for i_idx in l_type_tab.first .. l_type_tab.last
@@ -70,7 +88,7 @@ begin
                 level desc
       )
       loop
-        execute_immediate(r.cmd);
+        drop_object(r.cmd);
       end loop;
     end loop;
     
