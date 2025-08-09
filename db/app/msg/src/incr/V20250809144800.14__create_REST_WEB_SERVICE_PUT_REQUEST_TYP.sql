@@ -1,4 +1,4 @@
-create or replace type rest_web_service_put_request_typ under web_service_request_typ
+create or replace type rest_web_service_put_request_typ under rest_web_service_request_typ
 ( /**
   -- REST_WEB_SERVICE_PUT_REQUEST_TYP
   -- ================================

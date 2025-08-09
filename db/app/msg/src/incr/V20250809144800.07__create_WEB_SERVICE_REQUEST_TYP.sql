@@ -1,4 +1,4 @@
-create or replace type web_service_request_typ under http_request_reponse_typ
+create or replace type web_service_request_typ under http_request_response_typ
 ( /**
   -- WEB_SERVICE_REQUEST_TYP
   -- =======================
@@ -26,7 +26,7 @@ This allows for asynchronuous processing but retrieving the result later via a q
     -- from MSG_TYP
   , p_group$ in varchar2 default null -- use default_group() from below
   , p_context$ in varchar2 default null -- you may use generate_unique_id() to generate an AQ correlation id
-    -- from HTTP_REQUEST_REPONSE_TYP
+    -- from HTTP_REQUEST_RESPONSE_TYP
   , p_cookies in http_cookie_tab_typ default null       -- request/response cookies
   , p_http_headers in http_header_tab_typ default null  -- request/response headers
   , p_body_vc in varchar2 default null                  -- empty for GET request (envelope for a SOAP request)
@@ -50,7 +50,7 @@ This allows for asynchronuous processing but retrieving the result later via a q
     -- from MSG_TYP
   , p_group$ in varchar2
   , p_context$ in varchar2
-    -- from HTTP_REQUEST_REPONSE_TYP
+    -- from HTTP_REQUEST_RESPONSE_TYP
   , p_cookies in http_cookie_tab_typ       -- request/response cookies
   , p_http_headers in http_header_tab_typ  -- request/response headers
   , p_body_vc in varchar2                  -- empty for GET request (envelope for a SOAP request)

@@ -29,7 +29,7 @@ This allows for asynchronuous processing but retrieving the result later via a q
     -- from MSG_TYP
   , p_group$ in varchar2 default null -- use default_group() from below
   , p_context$ in varchar2 default null -- you may use generate_unique_id() to generate an AQ correlation id
-    -- from HTTP_REQUEST_REPONSE_TYP
+    -- from HTTP_REQUEST_RESPONSE_TYP
   , p_cookies in http_cookie_tab_typ default null
   , p_http_headers http_header_tab_typ default null
   , p_body_vc in varchar2 default null
@@ -44,7 +44,7 @@ This allows for asynchronuous processing but retrieving the result later via a q
     -- from MSG_TYP
   , p_group$ in varchar2
   , p_context$ in varchar2
-    -- from HTTP_REQUEST_REPONSE_TYP
+    -- from HTTP_REQUEST_RESPONSE_TYP
   , p_cookies in http_cookie_tab_typ
   , p_http_headers http_header_tab_typ
   , p_body_vc in varchar2

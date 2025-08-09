@@ -1,4 +1,4 @@
-create or replace type web_service_response_typ under http_request_reponse_typ
+create or replace type web_service_response_typ under http_request_response_typ
 ( -- The attributes are common for SOAP (APEX_WEB_SERVICE.MAKE_RESPONSE) and REST (APEX_WEB_SERVICE.MAKE_REST_RESPONSE[_B]).
   -- However, no sensitive information like username or password is stored.
   web_service_request web_service_request_typ
@@ -20,7 +20,7 @@ This type stores the response of a web service request.
     -- from MSG_TYP
   , p_group$ in varchar2 default null -- use default_group() from below
   , p_context$ in varchar2 default null
-    -- from HTTP_REQUEST_REPONSE_TYP
+    -- from HTTP_REQUEST_RESPONSE_TYP
   , p_cookies in http_cookie_tab_typ default null       -- request/response cookies
   , p_http_headers in http_header_tab_typ default null  -- request/response headers
   , p_body_vc in varchar2 default null                  -- empty for GET request (envelope for a SOAP request)
@@ -46,7 +46,7 @@ This type stores the response of a web service request.
     -- from MSG_TYP
   , p_group$ in varchar2
   , p_context$ in varchar2
-    -- from HTTP_REQUEST_REPONSE_TYP
+    -- from HTTP_REQUEST_RESPONSE_TYP
   , p_cookies in http_cookie_tab_typ default null       -- request/response cookies
   , p_http_headers in http_header_tab_typ default null  -- request/response headers
   , p_body_vc in varchar2 default null                  -- empty for GET request (envelope for a SOAP request)

@@ -4,7 +4,7 @@ create or replace type rest_web_service_request_typ under web_service_request_ty
   -- ============================
   -- parameter name/value pairs like in apex_web_service.make_rest_request(..., parm_name, parm_value, ...)
   **/
-  parms http_header_tab_type
+  parms http_header_tab_typ
 , binary_response integer -- do we invoke APEX_WEB_SERVICE.MAKE_REST_REQUEST (binary_response = 0) or APEX_WEB_SERVICE.MAKE_REST_REQUEST_B (binary_response = 1)?
 /**
 
@@ -26,7 +26,7 @@ buffered messages if it has a non null LOB).
     -- from MSG_TYP
   , p_group$ in varchar2 default null -- use web_service_request_typ.default_group()
   , p_context$ in varchar2 default null -- you may use web_service_request_typ.generate_unique_id() to generate an AQ correlation id
-    -- from HTTP_REQUEST_REPONSE_TYP
+    -- from HTTP_REQUEST_RESPONSE_TYP
   , p_cookies in http_cookie_tab_typ default null       -- request/response cookies
   , p_http_headers in http_header_tab_typ default null  -- request/response headers
   , p_body_vc in varchar2 default null                  -- empty for GET request (envelope for a SOAP request)
@@ -43,7 +43,7 @@ buffered messages if it has a non null LOB).
   , p_credential_static_id in varchar2 default null
   , p_token_url in varchar2 default null
     -- from REST_WEB_SERVICE_REQUEST_TYP
-  , p_parms in http_header_tab_type default null
+  , p_parms in http_header_tab_typ default null
   , p_binary_response in integer default 0
   )
   return self as result
@@ -58,7 +58,7 @@ buffered messages if it has a non null LOB).
     -- from MSG_TYP
   , p_group$ in varchar2
   , p_context$ in varchar2
-    -- from HTTP_REQUEST_REPONSE_TYP
+    -- from HTTP_REQUEST_RESPONSE_TYP
   , p_cookies in http_cookie_tab_typ -- default null       -- request/response cookies
   , p_http_headers in http_header_tab_typ -- default null  -- request/response headers
   , p_body_vc in varchar2 -- default null                  -- empty for GET request (envelope for a SOAP request)
