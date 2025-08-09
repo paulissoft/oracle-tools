@@ -25,7 +25,6 @@ declare
     );
   l_count pls_integer;
   l_nr_objects_dropped pls_integer;
-  l_start constant date := sysdate;
 
   -- ORA-00942: table or view does not exist
   e_table_or_view_does_not_exist exception;
@@ -66,7 +65,6 @@ begin
   end;
 
   <<while_objects_dropped_loop>>
-  while (sysdate - l_start) * 24 * 60 * 60 <= 60
   loop
     l_nr_objects_dropped := 0;
     
