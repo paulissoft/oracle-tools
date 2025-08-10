@@ -2,25 +2,26 @@ CREATE OR REPLACE TYPE BODY "REST_WEB_SERVICE_REQUEST_TYP" AS
 
 constructor function rest_web_service_request_typ
 ( self in out nocopy rest_web_service_request_typ
-  -- from web_service_request_typ
-, p_group$ in varchar2
-, p_context$ in varchar2
-, p_url in varchar2
-, p_scheme in varchar2
-, p_proxy_override in varchar2
-, p_transfer_timeout in number
-, p_wallet_path in varchar2
-, p_https_host in varchar2
-, p_credential_static_id in varchar2
-, p_token_url in varchar2
-, p_cookies_clob in clob
-, p_http_headers_clob in clob
-  -- this type
-, p_http_method in varchar2
-, p_body_clob in clob
-, p_body_blob in blob
-, p_parms_clob in clob
-, p_binary_response in integer
+  -- from MSG_TYP
+, p_group$ in varchar2 default null -- use web_service_request_typ.default_group()
+, p_context$ in varchar2 default null -- you may use web_service_request_typ.generate_unique_id() to generate an AQ correlation id
+  -- from HTTP_REQUEST_RESPONSE_TYP
+, p_cookies in http_cookie_tab_typ default null       -- request/response cookies
+, p_http_headers in property_tab_typ default null     -- request/response headers
+, p_body_clob in clob default null                    -- empty for GET request (envelope for a SOAP request)
+, p_body_blob in blob default null                    -- empty for GET request (empty for a SOAP request)
+  -- from WEB_SERVICE_REQUEST_TYP
+, p_url in varchar2 default null
+, p_scheme in varchar2 default null -- 'Basic'
+, p_proxy_override in varchar2 default null
+, p_transfer_timeout in number default 180
+, p_wallet_path in varchar2 default null
+, p_https_host in varchar2 default null
+, p_credential_static_id in varchar2 default null
+, p_token_url in varchar2 default null
+  -- from REST_WEB_SERVICE_REQUEST_TYP
+, p_parms in property_tab_typ default null
+, p_binary_response in integer default 0
 )
 return self as result
 is
@@ -28,6 +29,10 @@ begin
   self.construct
   ( p_group$ => p_group$
   , p_context$ => p_context$
+  , p_cookies => p_cookies
+  , p_http_headers => p_http_headers
+  , p_body_clob => p_body_clob
+  , p_body_blob => p_body_blob
   , p_url => p_url
   , p_scheme => p_scheme
   , p_proxy_override => p_proxy_override
@@ -36,12 +41,7 @@ begin
   , p_https_host => p_https_host
   , p_credential_static_id => p_credential_static_id
   , p_token_url => p_token_url
-  , p_cookies_clob => p_cookies_clob
-  , p_http_headers_clob => p_http_headers_clob
-  , p_http_method => p_http_method
-  , p_body_clob => p_body_clob
-  , p_body_blob => p_body_blob
-  , p_parms_clob => p_parms_clob
+  , p_parms => p_parms
   , p_binary_response => p_binary_response
   );
   return;
@@ -56,6 +56,10 @@ begin
   self.construct
   ( p_group$ => null
   , p_context$ => null
+  , p_cookies => null
+  , p_http_headers => null
+  , p_body_clob => null
+  , p_body_blob => null
   , p_url => null
   , p_scheme => null
   , p_proxy_override => null
@@ -64,12 +68,7 @@ begin
   , p_https_host => null
   , p_credential_static_id => null
   , p_token_url => null
-  , p_cookies_clob => null
-  , p_http_headers_clob => null
-  , p_http_method => null
-  , p_body_clob => null
-  , p_body_blob => null
-  , p_parms_clob => null
+  , p_parms => null
   , p_binary_response => null
   );
   return;
@@ -77,25 +76,26 @@ end rest_web_service_request_typ;
 
 final member procedure construct
 ( self in out nocopy rest_web_service_request_typ
-  -- from web_service_request_typ
+  -- from MSG_TYP
 , p_group$ in varchar2
 , p_context$ in varchar2
+  -- from HTTP_REQUEST_RESPONSE_TYP
+, p_cookies in http_cookie_tab_typ -- default null    -- request/response cookies
+, p_http_headers in property_tab_typ -- default null  -- request/response headers
+, p_body_clob in clob                                 -- empty for GET request (envelope for a SOAP request)
+, p_body_blob in blob                                 -- empty for GET request (empty for a SOAP request)
+  -- from WEB_SERVICE_REQUEST_TYP
 , p_url in varchar2
-, p_scheme in varchar2
-, p_proxy_override in varchar2
-, p_transfer_timeout in number
-, p_wallet_path in varchar2
-, p_https_host in varchar2
-, p_credential_static_id in varchar2
-, p_token_url in varchar2
-, p_cookies_clob in clob
-, p_http_headers_clob in clob
-  -- this type
-, p_http_method in varchar2
-, p_body_clob in clob
-, p_body_blob in blob
-, p_parms_clob in clob
-, p_binary_response in integer
+, p_scheme in varchar2 -- default null -- 'Basic'
+, p_proxy_override in varchar2 -- default null
+, p_transfer_timeout in number -- default 180
+, p_wallet_path in varchar2 -- default null
+, p_https_host in varchar2 -- default null
+, p_credential_static_id in varchar2 -- default null
+, p_token_url in varchar2 -- default null
+  -- from REST_WEB_SERVICE_REQUEST_TYP
+, p_parms in property_tab_typ default null
+, p_binary_response in integer -- default 0
 )
 is
 begin
@@ -106,6 +106,10 @@ $end
   (self as web_service_request_typ).construct
   ( p_group$ => p_group$
   , p_context$ => p_context$
+  , p_cookies => p_cookies
+  , p_http_headers => p_http_headers
+  , p_body_clob => p_body_clob
+  , p_body_blob => p_body_blob
   , p_url => p_url
   , p_scheme => p_scheme
   , p_proxy_override => p_proxy_override
@@ -114,13 +118,8 @@ $end
   , p_https_host => p_https_host
   , p_credential_static_id => p_credential_static_id
   , p_token_url => p_token_url
-  , p_cookies_clob => p_cookies_clob
-  , p_http_headers_clob => p_http_headers_clob
   );
-  self.http_method := p_http_method;
-  msg_pkg.data2msg(p_body_clob, self.body_vc, self.body_clob);
-  msg_pkg.data2msg(p_body_blob, self.body_raw, self.body_blob);
-  msg_pkg.data2msg(p_parms_clob, self.parms_vc, self.parms_clob);
+  self.parms := p_parms;
   self.binary_response := p_binary_response;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -129,7 +128,7 @@ $end
 end construct;
 
 overriding
-member function must_be_processed
+final member function must_be_processed
 ( self in rest_web_service_request_typ
 , p_maybe_later in integer -- True (1) or false (0)
 )
@@ -151,7 +150,7 @@ $end
 end must_be_processed;
 
 overriding
-member procedure process$now
+final member procedure process$now
 ( self in rest_web_service_request_typ
 )
 is
@@ -168,71 +167,23 @@ $end
 end process$now;
 
 overriding
-member procedure serialize
+final member procedure serialize
 ( self in rest_web_service_request_typ
 , p_json_object in out nocopy json_object_t
 )
 is
-  l_parms_vc constant json_object_t := 
-    case
-      when self.parms_vc is not null
-      then json_object_t(self.parms_vc)
-      else null
-    end;
-  l_parms_clob constant json_object_t := 
-    case
-      when self.parms_clob is not null
-      then json_object_t(self.parms_clob)
-      else null
-    end;
+  l_json_array json_array_t;
 begin
   (self as web_service_request_typ).serialize(p_json_object);
-  p_json_object.put('HTTP_METHOD', self.http_method);
-  if self.body_vc is not null
+  if self.parms is not null
   then
-    p_json_object.put('BODY_VC', self.body_vc);
-  end if;
-  if self.body_clob is not null
-  then
-    p_json_object.put('BODY_CLOB', self.body_clob);
-  end if;
-  if self.body_raw is not null
-  then
-    p_json_object.put('BODY_RAW', self.body_raw);
-  end if;
-  if self.body_blob is not null
-  then
-    p_json_object.put('BODY_BLOB', self.body_blob);
-  end if;
-  if l_parms_vc is not null
-  then
-    p_json_object.put('PARMS_VC', l_parms_vc);
-  end if;
-  if l_parms_clob is not null
-  then
-    p_json_object.put('PARMS_CLOB', l_parms_clob);
+    web_service_pkg.data2json(self.parms, l_json_array);
+    p_json_object.put('PARMS', l_json_array);
   end if;
   p_json_object.put('BINARY_RESPONSE', self.binary_response);
 end serialize;
 
-overriding
-member function has_not_null_lob
-( self in rest_web_service_request_typ
-)
-return integer
-is
-begin
-  return
-    case
-      when (self as web_service_request_typ).has_not_null_lob = 1 then 1
-      when self.body_clob is not null then 1
-      when self.body_blob is not null then 1
-      when self.parms_clob is not null then 1
-      else 0
-    end;
-end has_not_null_lob;
-
-member function response
+final member function response
 return web_service_response_typ
 is
   l_web_service_response web_service_response_typ;
@@ -249,6 +200,14 @@ $end
 
   return l_web_service_response;
 end response;
+
+member function http_method
+return varchar2
+is
+begin
+  -- must be overridden by a final function
+  raise program_error;
+end http_method;
 
 end;
 /
