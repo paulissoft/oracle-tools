@@ -471,32 +471,65 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 exception
   when others
   then
-    l_clob :=
-      case
-        when p_response.cookies_vc is not null
-        then to_clob(p_response.cookies_vc)
-        else p_response.cookies_clob
-      end;
-    dbug.print
-    ( dbug."error"
-    , 'cookies: %s'
-    , dbms_lob.substr(lob_loc => l_clob, amount => 2000)
-    );
-    l_clob :=
-      case
-        when p_response.http_headers_vc is not null
-        then to_clob(p_response.http_headers_vc)
-        else p_response.http_headers_clob
-      end;
-    dbug.print
-    ( dbug."error"
-    , 'HTTP headers: %s'
-    , dbms_lob.substr(lob_loc => l_clob, amount => 2000)
-    );
     dbug.leave_on_error;
     raise;
 $end
 end handle_response;
+
+function data2json
+( p_property_tab in property_tab_typ
+)
+return json_object_t
+is
+  l_json_object json_object_t := json_object_t();
+begin
+  if p_property_tab is not null and p_property_tab.count > 0
+  then
+    for i_idx in p_property_tab.first .. p_property_tab.last
+    loop
+      l_json_object.put(p_property_tab(i_idx).name, p_property_tab(i_idx).value);
+    end loop;
+  end if;
+  return l_json_object;
+end data2json;
+
+procedure json2data
+( p_cookie_in_tab in http_cookie_tab_typ
+, p_cookie_out_tab out nocopy sys.utl_http.cookie_table
+)
+is
+begin
+  if p_cookie_in_tab is not null and p_cookie_in_tab.count > 0
+  then
+    for i_idx in p_cookie_in_tab.first .. p_cookie_in_tab.last
+    loop
+      /*
+      -- A PL/SQL record type that represents a HTTP cookie
+      TYPE cookie IS RECORD (
+        name     VARCHAR2(4096),  -- Cookie name
+        value    VARCHAR2(4096),  -- Cookie value
+        domain   VARCHAR2(256),   -- Domain for which the cookie applies
+        expire   TIMESTAMP WITH TIME ZONE,  -- When should the cookie expire ?
+        path     VARCHAR2(1024),  -- Virtual path for which the cookie applies
+        secure   BOOLEAN,         -- Should the cookie be transferred by HTTPS only
+        version  PLS_INTEGER,     -- Cookie specification version
+        comment  VARCHAR2(1024)   -- Comments about this cookie
+      );
+      -- A PL/SQL table of cookies
+      TYPE cookie_table IS TABLE OF cookie INDEX BY BINARY_INTEGER;
+      */
+      
+      p_cookie_out_tab(i_idx).name := p_cookie_in_tab(i_idx).name;
+      p_cookie_out_tab(i_idx).value := p_cookie_in_tab(i_idx).value;
+      p_cookie_out_tab(i_idx).domain := p_cookie_in_tab(i_idx).domain;
+      p_cookie_out_tab(i_idx).expire := p_cookie_in_tab(i_idx).expire;
+      p_cookie_out_tab(i_idx).path := p_cookie_in_tab(i_idx).path;
+      p_cookie_out_tab(i_idx).secure := p_cookie_in_tab(i_idx).secure = 1;
+      p_cookie_out_tab(i_idx).version := p_cookie_in_tab(i_idx).version;
+      p_cookie_out_tab(i_idx).comment := p_cookie_in_tab(i_idx).comment;
+    end loop;
+  end if;  
+end json2data;
 
 -- PUBLIC
 
@@ -580,6 +613,37 @@ begin
       l_cookie.put('expire', to_timestamp(p_cookie_tab(i_idx).expire, c_timestamp_format));
       l_cookie.put('path', p_cookie_tab(i_idx).path);
       l_cookie.put('secure', p_cookie_tab(i_idx).secure);
+      l_cookie.put('version', p_cookie_tab(i_idx).version);
+      l_cookie.put('comment', p_cookie_tab(i_idx).comment);
+
+      p_cookies.append(l_cookie);
+    end loop;
+  end if;
+end data2json;
+
+procedure data2json
+( p_cookie_tab in http_cookie_tab_typ
+, p_cookies out nocopy json_array_t
+)
+is
+  l_cookie json_object_t;
+begin
+  if p_cookie_tab is null or p_cookie_tab.count = 0
+  then
+    p_cookies := null;
+  else
+    p_cookies := json_array_t();
+    
+    for i_idx in p_cookie_tab.first .. p_cookie_tab.last
+    loop
+      l_cookie := json_object_t();
+      
+      l_cookie.put('name', p_cookie_tab(i_idx).name);
+      l_cookie.put('value', p_cookie_tab(i_idx).value);
+      l_cookie.put('domain', p_cookie_tab(i_idx).domain);
+      l_cookie.put('expire', to_timestamp(p_cookie_tab(i_idx).expire, c_timestamp_format));
+      l_cookie.put('path', p_cookie_tab(i_idx).path);
+      l_cookie.put('secure', case p_cookie_tab(i_idx).secure when 0 then false when 1 then true end);
       l_cookie.put('version', p_cookie_tab(i_idx).version);
       l_cookie.put('comment', p_cookie_tab(i_idx).comment);
 
@@ -867,34 +931,11 @@ return web_service_response_typ
 is
   l_parm_names vc_arr2 := empty_vc_arr;
   l_parm_values vc_arr2 := empty_vc_arr;
-  l_parms constant json_object_t := 
-    case
-      when p_request.parms_vc is not null
-      then json_object_t(p_request.parms_vc)
-      when p_request.parms_clob is not null
-      then json_object_t(p_request.parms_clob)
-      else null
-    end;
+  l_parms constant json_object_t := data2json(p_request.parms);
   l_parms_keys constant json_key_list :=
     case
       when l_parms is not null
       then l_parms.get_keys
-      else null
-    end;
-  l_cookies json_array_t := 
-    case
-      when p_request.cookies_vc is not null
-      then json_array_t(p_request.cookies_vc)
-      when p_request.cookies_clob is not null
-      then json_array_t(p_request.cookies_clob)
-      else null
-    end;
-  l_http_headers json_array_t := 
-    case
-      when p_request.http_headers_vc is not null
-      then json_array_t(p_request.http_headers_vc)
-      when p_request.http_headers_clob is not null
-      then json_array_t(p_request.http_headers_clob)
       else null
     end;
   l_body_clob clob :=
@@ -930,9 +971,9 @@ $end
   end if;
 
   pragma inline (json2data, 'YES');
-  json2data(l_cookies, apex_web_service.g_request_cookies);
+  json2data(p_request.cookies, apex_web_service.g_request_cookies);
   pragma inline (json2data, 'YES');
-  json2data(l_http_headers, apex_web_service.g_request_headers);
+  json2data(p_request.http_headers, apex_web_service.g_request_headers);
 
   -- Do we prefer utl_http over apex_web_service since it is more performant?
   -- But only for simple calls.
@@ -1018,9 +1059,9 @@ $end
   end case;
 
   pragma inline (data2json, 'YES');
-  data2json(apex_web_service.g_response_cookies, l_cookies);
+  data2json(apex_web_service.g_response_cookies, p_request.cookies);
   pragma inline (data2json, 'YES');
-  data2json(apex_web_service.g_headers, l_http_headers);
+  data2json(apex_web_service.g_headers, p_request.http_headers);
 
   l_web_service_response :=
     web_service_response_typ
@@ -1030,8 +1071,8 @@ $end
     , p_http_status_code => apex_web_service.g_status_code
     , p_body_clob => l_body_clob
     , p_body_blob => l_body_blob
-    , p_cookies_clob => case when l_cookies is not null then l_cookies.to_clob() end
-    , p_http_headers_clob => case when l_http_headers is not null then l_http_headers.to_clob() end
+    , p_cookies => p_request.cookies
+    , p_http_headers => p_request.http_headers
     , p_http_reason_phrase => substrb(apex_web_service.g_reason_phrase, 1, 4000)
     );
 
@@ -1088,22 +1129,6 @@ is
       then l_parms.get_keys
       else null
     end;
-  l_cookies json_array_t := 
-    case
-      when p_request.cookies_vc is not null
-      then json_array_t(p_request.cookies_vc)
-      when p_request.cookies_clob is not null
-      then json_array_t(p_request.cookies_clob)
-      else null
-    end;
-  l_http_headers json_array_t := 
-    case
-      when p_request.http_headers_vc is not null
-      then json_array_t(p_request.http_headers_vc)
-      when p_request.http_headers_clob is not null
-      then json_array_t(p_request.http_headers_clob)
-      else null
-    end;
   l_body_clob clob :=
     case
       when p_request.body_vc is not null
@@ -1139,9 +1164,9 @@ $if web_service_pkg.c_prefer_to_use_utl_http $then
   end if;
 
   pragma inline (json2data, 'YES');
-  json2data(l_cookies, g_request_cookies);
+  json2data(p_request.cookies, g_request_cookies);
   pragma inline (json2data, 'YES');
-  json2data(l_http_headers, g_request_headers);
+  json2data(p_request.http_headers, g_request_headers);
   
   if simple_request(p_request)
   then
@@ -1188,9 +1213,9 @@ $else -- $if web_service_pkg.c_prefer_to_use_utl_http $then
 $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
 
   pragma inline (data2json, 'YES');
-  data2json(g_response_cookies, l_cookies);
+  data2json(g_response_cookies, p_request.cookies);
   pragma inline (data2json, 'YES');
-  data2json(g_headers, l_http_headers);
+  data2json(g_headers, p_request.http_headers);
 
   l_web_service_response :=
     web_service_response_typ
@@ -1200,8 +1225,8 @@ $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
     , p_http_status_code => g_status_code
     , p_body_clob => l_body_clob
     , p_body_blob => l_body_blob
-    , p_cookies_clob => case when l_cookies is not null then l_cookies.to_clob() end
-    , p_http_headers_clob => case when l_http_headers is not null then l_http_headers.to_clob() end
+    , p_cookies_clob => p_request.cookies
+    , p_http_headers => p_request.http_headers
     , p_http_reason_phrase => g_reason_phrase
     );
 
