@@ -14,6 +14,8 @@ declare
     , 'HTTP_REQUEST_RESPONSE_TYP'
     , 'HTTP_HEADER_TAB_TYP'
     , 'HTTP_HEADER_TYP'
+    , 'PROPERTY_TAB_TYP'
+    , 'PROPERTY_TYP'
     , 'HTTP_COOKIE_TAB_TYP'
     , 'HTTP_COOKIE_TYP'
     , 'MSG_TYP'

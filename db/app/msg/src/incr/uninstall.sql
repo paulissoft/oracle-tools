@@ -10,6 +10,7 @@ declare
       'MSG_TAB_TYP'
     , 'HTTP_COOKIE_TAB_TYP'
     , 'HTTP_HEADER_TAB_TYP'
+    , 'PROPERTY_TAB_TYP'
       -- object types
     , 'REST_WEB_SERVICE_REQUEST_TYP'
     , 'WEB_SERVICE_RESPONSE_TYP'
@@ -18,6 +19,7 @@ declare
     , 'MSG_TYP'
     , 'HTTP_COOKIE_TYP'
     , 'HTTP_HEADER_TYP'
+    , 'PROPERTY_TYP'
     );
   l_sequence_tab sys.odcivarchar2list :=
     sys.odcivarchar2list

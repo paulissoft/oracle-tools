@@ -11,7 +11,7 @@ create or replace type http_request_response_typ under msg_typ
   -- - APEX_WEB_SERVICE.MAKE_REST_REQUEST_B
   **/
   cookies http_cookie_tab_typ       -- request/response cookies
-, http_headers http_header_tab_typ  -- request/response headers
+, http_headers property_tab_typ  -- request/response headers
 , body_vc varchar2(4000 byte)       -- empty for GET request (envelope for a SOAP request)
 , body_clob clob                    -- idem
 , body_raw raw(2000)                -- empty for GET request (empty for a SOAP request)
@@ -27,15 +27,13 @@ This allows for asynchronuous processing but retrieving the result later via a q
 , constructor function http_request_response_typ
   ( self in out nocopy http_request_response_typ
     -- from MSG_TYP
-  , p_group$ in varchar2 default null -- use default_group() from below
-  , p_context$ in varchar2 default null -- you may use generate_unique_id() to generate an AQ correlation id
+  , p_group$ in varchar2
+  , p_context$ in varchar2
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ default null
-  , p_http_headers http_header_tab_typ default null
-  , p_body_vc in varchar2 default null
-  , p_body_clob in clob default null
-  , p_body_raw in raw default null
-  , p_body_blob in blob default null
+  , p_cookies in http_cookie_tab_typ
+  , p_http_headers property_tab_typ
+  , p_body_clob in clob
+  , p_body_blob in blob
   )
   return self as result
 
@@ -46,10 +44,8 @@ This allows for asynchronuous processing but retrieving the result later via a q
   , p_context$ in varchar2
     -- from HTTP_REQUEST_RESPONSE_TYP
   , p_cookies in http_cookie_tab_typ
-  , p_http_headers http_header_tab_typ
-  , p_body_vc in varchar2
+  , p_http_headers property_tab_typ
   , p_body_clob in clob
-  , p_body_raw in raw
   , p_body_blob in blob
   )
 
@@ -64,14 +60,6 @@ This allows for asynchronuous processing but retrieving the result later via a q
   ( self in http_request_response_typ
   )
   return integer
-
-, static function default_group
-  return varchar2
-/** All sub types share the same request queue, this function. **/  
-
-, static function generate_unique_id
-  return varchar2
-/** return WEB_SERVICE_REQUEST_SEQ.NEXTVAL **/  
 
 , final member function body_c return clob
 /** Get the character body. **/

@@ -18,15 +18,13 @@ This type stores the response of a web service request.
 , constructor function web_service_response_typ
   ( self in out nocopy web_service_response_typ
     -- from MSG_TYP
-  , p_group$ in varchar2 default null -- use default_group() from below
+  , p_group$ in varchar2 default null                -- use default_group() from below
   , p_context$ in varchar2 default null
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ default null       -- request/response cookies
-  , p_http_headers in http_header_tab_typ default null  -- request/response headers
-  , p_body_vc in varchar2 default null                  -- empty for GET request (envelope for a SOAP request)
-  , p_body_clob in clob default null                    -- idem
-  , p_body_raw in raw default null                      -- empty for GET request (empty for a SOAP request)
-  , p_body_blob in blob default null                    -- idem
+  , p_cookies in http_cookie_tab_typ default null    -- request/response cookies
+  , p_http_headers in property_tab_typ default null  -- request/response headers
+  , p_body_clob in clob default null                 -- empty for GET request (envelope for a SOAP request)
+  , p_body_blob in blob default null                 -- empty for GET request (empty for a SOAP request)
     -- from WEB_SERVICE_RESPONSE_TYP
   , p_web_service_request in web_service_request_typ
   , p_sql_code in integer
@@ -47,12 +45,10 @@ This type stores the response of a web service request.
   , p_group$ in varchar2
   , p_context$ in varchar2
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ default null       -- request/response cookies
-  , p_http_headers in http_header_tab_typ default null  -- request/response headers
-  , p_body_vc in varchar2 default null                  -- empty for GET request (envelope for a SOAP request)
-  , p_body_clob in clob default null                    -- idem
-  , p_body_raw in raw default null                      -- empty for GET request (empty for a SOAP request)
-  , p_body_blob in blob default null                    -- idem
+  , p_cookies in http_cookie_tab_typ                 -- request/response cookies
+  , p_http_headers in property_tab_typ               -- request/response headers
+  , p_body_clob in clob                              -- empty for GET request (envelope for a SOAP request)
+  , p_body_blob in blob                              -- empty for GET request (empty for a SOAP request)
     -- from WEB_SERVICE_RESPONSE_TYP
   , p_web_service_request in web_service_request_typ
   , p_sql_code in integer

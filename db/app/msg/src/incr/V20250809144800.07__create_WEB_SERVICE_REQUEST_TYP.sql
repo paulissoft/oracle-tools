@@ -28,11 +28,9 @@ This allows for asynchronuous processing but retrieving the result later via a q
   , p_context$ in varchar2 default null -- you may use generate_unique_id() to generate an AQ correlation id
     -- from HTTP_REQUEST_RESPONSE_TYP
   , p_cookies in http_cookie_tab_typ default null       -- request/response cookies
-  , p_http_headers in http_header_tab_typ default null  -- request/response headers
-  , p_body_vc in varchar2 default null                  -- empty for GET request (envelope for a SOAP request)
-  , p_body_clob in clob default null                    -- idem
-  , p_body_raw in raw default null                      -- empty for GET request (empty for a SOAP request)
-  , p_body_blob in blob default null                    -- idem
+  , p_http_headers in property_tab_typ default null  -- request/response headers
+  , p_body_clob in clob default null                    -- empty for GET request (envelope for a SOAP request)
+  , p_body_blob in blob default null                    -- empty for GET request (empty for a SOAP request)
     -- from WEB_SERVICE_REQUEST_TYP
   , p_url in varchar2 default null
   , p_scheme in varchar2 default null -- 'Basic'
@@ -52,11 +50,9 @@ This allows for asynchronuous processing but retrieving the result later via a q
   , p_context$ in varchar2
     -- from HTTP_REQUEST_RESPONSE_TYP
   , p_cookies in http_cookie_tab_typ       -- request/response cookies
-  , p_http_headers in http_header_tab_typ  -- request/response headers
-  , p_body_vc in varchar2                  -- empty for GET request (envelope for a SOAP request)
-  , p_body_clob in clob                    -- idem
-  , p_body_raw in raw                      -- empty for GET request (empty for a SOAP request)
-  , p_body_blob in blob                    -- idem
+  , p_http_headers in property_tab_typ  -- request/response headers
+  , p_body_clob in clob                    -- empty for GET request (envelope for a SOAP request)
+  , p_body_blob in blob                    -- empty for GET request (empty for a SOAP request)
     -- from WEB_SERVICE_REQUEST_TYP  
   , p_url in varchar2
   , p_scheme in varchar2
