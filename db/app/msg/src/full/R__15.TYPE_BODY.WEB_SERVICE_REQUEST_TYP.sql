@@ -52,7 +52,7 @@ final member procedure construct
 )
 is
 begin
-  (self as msg_typ).construct(nvl(p_group$, web_service_request_typ.default_group()), p_context$);
+  (self as http_request_response_typ).construct(nvl(p_group$, web_service_request_typ.default_group()), p_context$);
   self.url := p_url;
   self.scheme := p_scheme;
   self.proxy_override := p_proxy_override;
@@ -97,7 +97,7 @@ is
     end;
 begin
   -- every sub type must first start with (self as <super type>).serialize(p_json_object)
-  (self as msg_typ).serialize(p_json_object);
+  (self as http_request_response_typ).serialize(p_json_object);
 
   p_json_object.put('URL', self.url);
   p_json_object.put('SCHEME', self.scheme);

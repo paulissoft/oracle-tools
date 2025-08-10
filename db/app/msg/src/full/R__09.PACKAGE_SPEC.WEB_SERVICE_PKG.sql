@@ -52,6 +52,12 @@ procedure data2json
 );
 /** Convert a HTTP cookie table to a JSON array. **/
 
+procedure data2json
+( p_cookie_tab in http_cookie_tab_typ
+, p_cookies out nocopy json_array_t
+);
+/** Convert a HTTP cookie table to a JSON array. **/
+
 function data2json
 ( p_cookie_tab in sys.utl_http.cookie_table
 )
@@ -66,6 +72,12 @@ procedure json2data
 
 procedure data2json
 ( p_http_header_tab in header_table
+, p_http_headers out nocopy json_array_t
+);
+/** Convert a HTTP header table to a JSON array. **/
+
+procedure data2json
+( p_http_header_tab in property_tab_typ
 , p_http_headers out nocopy json_array_t
 );
 /** Convert a HTTP header table to a JSON array. **/

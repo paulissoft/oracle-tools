@@ -52,8 +52,35 @@ member procedure serialize
 , p_json_object in out nocopy json_object_t
 )
 is
+  l_json_array json_array_t;
 begin
-  null;
+  (self as msg_typ).serialize(p_json_object);
+  if self.cookies is not null
+  then
+    web_service_pkg.data2json(self.cookies, l_json_array);
+    p_json_object.put('COOKIES', l_json_array);
+  end if;
+  if self.http_headers is not null
+  then
+    web_service_pkg.data2json(self.http_headers, l_json_array);
+    p_json_object.put('HTTP_HEADERS', l_json_array);
+  end if;
+  if self.body_vc is not null
+  then
+    p_json_object.put('BODY_VC', self.body_vc);
+  end if;
+  if self.body_clob is not null
+  then
+    p_json_object.put('BODY_CLOB', self.body_clob);
+  end if;
+  if self.body_raw is not null
+  then
+    p_json_object.put('BODY_RAW', self.body_raw);
+  end if;
+  if self.body_blob is not null
+  then
+    p_json_object.put('BODY_BLOB', self.body_blob);
+  end if;
 end serialize;
 
 overriding
