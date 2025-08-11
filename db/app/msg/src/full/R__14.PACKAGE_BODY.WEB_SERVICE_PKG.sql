@@ -22,7 +22,7 @@ g_request_headers          header_table;
 g_status_code              http_status_code_t;
 g_reason_phrase            http_reason_phrase_t;
 
-$end
+$end -- $if not(oracle_tools.cfg_pkg.c_apex_installed) $then
 
 -- LOCAL
 
@@ -53,6 +53,8 @@ $end
 
   return l_simple_request;
 end simple_request;
+
+$end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
 
 /** Create a name=value list (separated by ampersans) where value may be URL encoded. **/
 procedure copy_parameters
@@ -130,10 +132,12 @@ begin
   );
 end copy_parameters;
 
+$if web_service_pkg.c_prefer_to_use_utl_http $then
+
 procedure utl_http_request
 ( p_request in rest_web_service_request_typ
 , p_url in varchar2
-, p_body_blob in nocopy blob -- on input the request body, on output the response body
+, p_body_blob in blob
 , p_parm_names in vc_arr2
 , p_parm_values in vc_arr2
 , p_username in varchar2
@@ -314,7 +318,7 @@ begin
     if p_request.http_method = 'GET'
     then
       l_url := l_url || '?' || l_parameters;
-    else if p_body_clob is null or dbms_lob.getlength(p_body_clob) = 0
+    elsif p_body_clob is null or dbms_lob.getlength(p_body_clob) = 0
     then
       p_body_clob := to_clob(l_parameters);
     end if;
@@ -890,8 +894,6 @@ begin
   );
 end clear_request_headers;
 
-$if oracle_tools.cfg_pkg.c_apex_installed $then
-
 function make_rest_request
 ( p_request in rest_web_service_request_typ
 , p_username in varchar2
@@ -915,10 +917,17 @@ $end
 
   pragma inline (convert_to_parms_tables, 'YES');
   convert_to_parms_tables(p_request.parms, l_parm_names, l_parm_values);
+$if oracle_tools.cfg_pkg.c_apex_installed $then  
   pragma inline (convert_to_cookie_table, 'YES');
   convert_to_cookie_table(p_request.cookies, apex_web_service.g_request_cookies);
   pragma inline (convert_to_header_table, 'YES');
   convert_to_header_table(p_request.http_headers, apex_web_service.g_request_headers);
+$else
+  pragma inline (convert_to_cookie_table, 'YES');
+  convert_to_cookie_table(p_request.cookies, g_request_cookies);
+  pragma inline (convert_to_header_table, 'YES');
+  convert_to_header_table(p_request.http_headers, g_request_headers);
+$end
 
   -- Do we prefer utl_http over apex_web_service since it is more performant?
   -- But only for simple calls.
@@ -942,15 +951,24 @@ $end
       , p_scheme => p_request.scheme
       , p_wallet_path => p_request.wallet_path
       , p_wallet_pwd => p_wallet_pwd
+$if oracle_tools.cfg_pkg.c_apex_installed $then      
       , p_request_cookies => apex_web_service.g_request_cookies
       , p_request_headers => apex_web_service.g_request_headers
       , p_response_cookies => apex_web_service.g_response_cookies
       , p_response_headers => apex_web_service.g_headers
+$else
+      , p_request_cookies => g_request_cookies
+      , p_request_headers => g_request_headers
+      , p_response_cookies => g_response_cookies
+      , p_response_headers => g_headers
+$end
       , p_status_code => apex_web_service.g_status_code
       , p_reason_phrase => apex_web_service.g_reason_phrase
       );
 $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
-      
+
+$if oracle_tools.cfg_pkg.c_apex_installed $then
+
     when p_request.binary_response = 0
     then
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -1001,6 +1019,17 @@ $end
 /*APEX*/             , p_token_url => p_request.token_url
                      );
       l_body_clob := null;
+
+$else -- $if oracle_tools.cfg_pkg.c_apex_installed $then
+
+    when false
+    then
+      null;
+      
+    else
+      raise_application_error(-20000, 'APEX is not installed.');
+
+$end -- $if oracle_tools.cfg_pkg.c_apex_installed $then
   end case;
 
   l_web_service_response :=
@@ -1018,10 +1047,17 @@ $end
     , p_http_reason_phrase => substrb(apex_web_service.g_reason_phrase, 1, 4000)
     );
 
+$if oracle_tools.cfg_pkg.c_apex_installed $then
   pragma inline (convert_from_cookie_table, 'YES');
   convert_from_cookie_table(apex_web_service.g_response_cookies, l_web_service_response.cookies);
   pragma inline (convert_from_header_table, 'YES');
   convert_from_header_table(apex_web_service.g_headers, l_web_service_response.http_headers);
+$else
+  pragma inline (convert_from_cookie_table, 'YES');
+  convert_from_cookie_table(g_response_cookies, l_web_service_response.cookies);
+  pragma inline (convert_from_header_table, 'YES');
+  convert_from_header_table(g_headers, l_web_service_response.http_headers);
+$end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', (dbms_utility.get_time - l_start) * 10);
@@ -1049,129 +1085,6 @@ $end
            , p_http_reason_phrase => null
            );
 end make_rest_request;
-
-$else -- $if oracle_tools.cfg_pkg.c_apex_installed $then
-
-function make_rest_request
-( p_request in rest_web_service_request_typ
-, p_username in varchar2
-, p_password in varchar2
-, p_wallet_pwd in varchar2
-)
-return web_service_response_typ
-is
-  l_parm_names vc_arr2 := empty_vc_arr;
-  l_parm_values vc_arr2 := empty_vc_arr;
-  l_body_clob clob := p_request.body_c;
-  l_body_blob blob := p_request.body_b;
-  l_web_service_response web_service_response_typ := null;
-$if oracle_tools.cfg_pkg.c_debugging $then
-  l_start constant number := dbms_utility.get_time;
-$end  
-begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
-$end
-
-$if web_service_pkg.c_prefer_to_use_utl_http $then
-
-  pragma inline (convert_to_parms_tables, 'YES');
-  convert_to_parms_tables(p_request.parms, l_parm_names, l_parm_values);
-  pragma inline (convert_to_cookie_table, 'YES');
-  convert_to_cookie_table(p_request.cookies, g_request_cookies);
-  pragma inline (convert_to_header_table, 'YES');
-  convert_to_header_table(p_request.http_headers, g_request_headers);
-  
-  if simple_request(p_request)
-  then
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'Using UTL_HTTP.BEGIN_REQUEST to issue the REST webservice');
-$end
-
-    if l_body_clob is null or dbms_lob.getlength(l_body_clob) = 0
-    then
-      copy_parameters
-      ( p_parm_names => l_parm_names
-      , p_parm_values => l_parm_values
-      , p_url_encode => true
-      , p_body_clob => l_body_clob
-      );
-    end if;
-
-    utl_http_request
-    ( p_request => p_request
-    , p_body_clob => l_body_clob
-    , p_body_blob => l_body_blob
-    , p_parm_names => l_parm_names
-    , p_parm_values => l_parm_values
-    , p_username => p_username
-    , p_password => p_password
-    , p_scheme => p_request.scheme
-    , p_wallet_path => p_request.wallet_path
-    , p_wallet_pwd => p_wallet_pwd
-    , p_request_cookies => g_request_cookies
-    , p_request_headers => g_request_headers
-    , p_response_cookies => g_response_cookies
-    , p_response_headers => g_headers
-    , p_status_code => g_status_code
-    , p_reason_phrase => g_reason_phrase
-    );
-  else
-    raise_application_error(-20000, 'The request is not simple enough and should be executed by APEX_WEB_SERVICE but APEX is not installed.');
-  end if;
-
-$else -- $if web_service_pkg.c_prefer_to_use_utl_http $then
-
-  raise_application_error(-20000, 'APEX is not installed.');
-
-$end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
-
-  l_web_service_response :=
-    web_service_response_typ
-    ( p_web_service_request => p_request
-    , p_sql_code => sqlcode -- 0
-    , p_sql_error_message => sqlerrm -- null
-    , p_http_status_code => g_status_code
-    , p_body_clob => l_body_clob
-    , p_body_blob => l_body_blob
-    , p_cookies => null
-    , p_http_headers => null
-    , p_http_reason_phrase => g_reason_phrase
-    );
-    
-  pragma inline (convert_from_cookie_table, 'YES');
-  convert_from_cookie_table(g_response_cookies, l_web_service_response.cookies);
-  pragma inline (convert_from_header_table, 'YES');
-  convert_from_header_table(g_headers, l_web_service_response.http_headers);
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', (dbms_utility.get_time - l_start) * 10);
-  dbug.leave;
-$end
-
-  return l_web_service_response;
-exception
-  when others
-  then
-$if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', (dbms_utility.get_time - l_start) * 10);
-    dbug.leave_on_error;
-$end
-
-    return web_service_response_typ
-           ( p_web_service_request => p_request
-           , p_sql_code => sqlcode
-           , p_sql_error_message => sqlerrm
-           , p_http_status_code => null
-           , p_body_clob => null
-           , p_body_blob => null
-           , p_cookies => null
-           , p_http_headers => null
-           , p_http_reason_phrase => null
-           );
-end make_rest_request;
-
-$end -- $if oracle_tools.cfg_pkg.c_apex_installed $then
 
 function make_rest_request
 ( p_url in varchar2
