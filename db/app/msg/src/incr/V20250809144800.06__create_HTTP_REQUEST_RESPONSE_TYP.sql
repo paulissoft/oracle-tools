@@ -24,6 +24,7 @@ When the context$ attribute is not null, the sub type is obliged to enqueue the 
 This allows for asynchronuous processing but retrieving the result later via a queue.
 
 **/
+/*
 , constructor function http_request_response_typ
   ( self in out nocopy http_request_response_typ
     -- from MSG_TYP
@@ -36,6 +37,7 @@ This allows for asynchronuous processing but retrieving the result later via a q
   , p_body_blob in blob
   )
   return self as result
+*/
 
 , final member procedure construct
   ( self in out nocopy http_request_response_typ

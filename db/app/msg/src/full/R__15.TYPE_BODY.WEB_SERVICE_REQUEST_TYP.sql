@@ -1,5 +1,6 @@
 CREATE OR REPLACE TYPE BODY "WEB_SERVICE_REQUEST_TYP" AS
 
+/*
 constructor function web_service_request_typ
 ( self in out nocopy web_service_request_typ
   -- from MSG_TYP
@@ -41,7 +42,8 @@ begin
   );
   return;
 end;
-  
+*/
+
 final member procedure construct
 ( self in out nocopy web_service_request_typ
 , p_group$ in varchar2

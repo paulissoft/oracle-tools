@@ -1,5 +1,5 @@
 CREATE OR REPLACE TYPE BODY "REST_WEB_SERVICE_REQUEST_TYP" AS
-
+/*
 constructor function rest_web_service_request_typ
 ( self in out nocopy rest_web_service_request_typ
   -- from MSG_TYP
@@ -73,7 +73,7 @@ begin
   );
   return;
 end rest_web_service_request_typ;
-
+*/
 final member procedure construct
 ( self in out nocopy rest_web_service_request_typ
   -- from MSG_TYP
@@ -129,7 +129,7 @@ end construct;
 
 static procedure construct
 ( p_http_method in varchar2
-, -- from MSG_TYP
+  -- from MSG_TYP
 , p_group$ in varchar2 default null
 , p_context$ in varchar2 default null
   -- from HTTP_REQUEST_RESPONSE_TYP

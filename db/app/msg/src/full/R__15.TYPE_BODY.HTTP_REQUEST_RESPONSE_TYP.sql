@@ -1,6 +1,6 @@
 create or replace type body http_request_response_typ
 is
-
+/*
 constructor function http_request_response_typ
 ( self in out nocopy http_request_response_typ
   -- from MSG_TYP
@@ -25,7 +25,7 @@ begin
   );
   return;
 end;
-
+*/
 final member procedure construct
 ( self in out nocopy http_request_response_typ
   -- from MSG_TYP

@@ -21,6 +21,7 @@ When the context$ attribute is not null, the sub type is obliged to enqueue the 
 This allows for asynchronuous processing but retrieving the result later via a queue.
 
 **/
+/*
 , constructor function web_service_request_typ
   ( self in out nocopy web_service_request_typ
     -- from MSG_TYP
@@ -42,6 +43,7 @@ This allows for asynchronuous processing but retrieving the result later via a q
   , p_token_url in varchar2 default null
   )
   return self as result
+*/
 
 , final member procedure construct
   ( self in out nocopy web_service_request_typ

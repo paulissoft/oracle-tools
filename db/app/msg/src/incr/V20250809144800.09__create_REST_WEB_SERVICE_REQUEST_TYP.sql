@@ -21,6 +21,7 @@ otherwise the LOB variant with suffix _clob/_blob (meaning we can not use
 buffered messages if it has a non null LOB).
 
 **/
+/*
 , constructor function rest_web_service_request_typ
   ( self in out nocopy rest_web_service_request_typ
     -- from MSG_TYP
@@ -45,11 +46,12 @@ buffered messages if it has a non null LOB).
   , p_binary_response in integer default 0
   )
   return self as result
-
+  
 , constructor function rest_web_service_request_typ
   ( self in out nocopy rest_web_service_request_typ
   )
   return self as result
+*/
 
 , final member procedure construct
   ( self in out nocopy rest_web_service_request_typ
@@ -77,7 +79,7 @@ buffered messages if it has a non null LOB).
 
 , static procedure construct
   ( p_http_method in varchar2
-  , -- from MSG_TYP
+    -- from MSG_TYP
   , p_group$ in varchar2 default null
   , p_context$ in varchar2 default null
     -- from HTTP_REQUEST_RESPONSE_TYP
