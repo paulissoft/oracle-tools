@@ -435,21 +435,8 @@ $end
 
   p_http_reason_phrase := p_response.http_reason_phrase;
 
-  p_body_clob :=
-    case
-      when p_response.body_vc is not null
-      then to_clob(p_response.body_vc)
-      when p_response.body_clob is not null
-      then p_response.body_clob
-    end;
-    
-  p_body_blob := 
-    case
-      when p_response.body_raw is not null
-      then to_blob(p_response.body_raw)
-      when p_response.body_blob is not null
-      then p_response.body_blob
-    end;
+  p_body_clob := p_response.body_c;    
+  p_body_blob := p_response.body_b;
 
   if not(p_http_status_code between 200 and 299)
   then
@@ -593,22 +580,52 @@ begin
   end if;  
 end convert_from_header_table;
 
-function data2json
-( p_property_tab in property_tab_typ
+procedure convert_to_parms_tables
+( p_parms in property_tab_typ
+, p_parm_names out nocopy vc_arr2
+, p_parm_values out nocopy vc_arr2
 )
-return json_object_t
 is
-  l_json_object json_object_t := json_object_t();
 begin
-  if p_property_tab is not null and p_property_tab.count > 0
+  p_parm_names := empty_vc_arr;
+  p_parm_values := empty_vc_arr;
+
+  if p_parms is not null and p_parms.count > 0
   then
-    for i_idx in p_property_tab.first .. p_property_tab.last
+    for i_idx in p_parms.first .. p_parms.last
     loop
-      l_json_object.put(p_property_tab(i_idx).name, p_property_tab(i_idx).value);
+      if p_parms(i_idx).name is not null and p_parms(i_idx).value is not null
+      then
+        p_parm_names(p_parm_names.count+1) := p_parms(i_idx).name;
+        p_parm_values(p_parm_values.count+1) := p_parms(i_idx).value;
+      end if;
     end loop;
   end if;
-  return l_json_object;
-end data2json;
+end convert_to_parms_tables;
+
+procedure convert_from_parms_tables
+( p_parm_names in vc_arr2
+, p_parm_values in vc_arr2
+, p_parms out nocopy property_tab_typ
+)
+is
+begin
+  if p_parm_names.count = 0
+  then
+    p_parms := null;
+  else
+    p_parms := property_tab_typ();
+    
+    for i_idx in p_parm_names.first .. p_parm_names.last
+    loop
+      if p_parm_names(i_idx) is not null and p_parm_values(i_idx) is not null
+      then
+        p_parms.extend(1);
+        p_parms(p_parms.last) := property_typ(p_parm_names(i_idx), p_parm_values(i_idx));
+      end if;
+    end loop;
+  end if;
+end convert_from_parms_tables;
 
 -- PUBLIC
 
@@ -845,27 +862,8 @@ return web_service_response_typ
 is
   l_parm_names vc_arr2 := empty_vc_arr;
   l_parm_values vc_arr2 := empty_vc_arr;
-  l_parms constant json_object_t := data2json(p_request.parms);
-  l_parms_keys constant json_key_list :=
-    case
-      when l_parms is not null
-      then l_parms.get_keys
-      else null
-    end;
-  l_body_clob clob :=
-    case
-      when p_request.body_vc is not null
-      then to_clob(p_request.body_vc)
-      when p_request.body_clob is not null
-      then p_request.body_clob
-    end;
-  l_body_blob blob := 
-    case
-      when p_request.body_raw is not null
-      then to_blob(p_request.body_raw)
-      when p_request.body_blob is not null
-      then p_request.body_blob
-    end;
+  l_body_clob clob := p_request.body_c;
+  l_body_blob blob := p_request.body_b;
   l_web_service_response web_service_response_typ := null;
 $if oracle_tools.cfg_pkg.c_debugging $then
   l_start constant number := dbms_utility.get_time;
@@ -875,15 +873,8 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
 $end
 
-  if l_parms is not null and l_parms_keys.count > 0
-  then
-    for i_idx in l_parms_keys.first .. l_parms_keys.last
-    loop
-      l_parm_names(l_parm_names.count+1) := l_parms_keys(i_idx);
-      l_parm_values(l_parm_values.count+1) := l_parms.get(l_parms_keys(i_idx)).stringify;
-    end loop;
-  end if;
-
+  pragma inline (convert_to_parms_tables, 'YES');
+  convert_to_parms_tables(p_request.parms, l_parm_names, l_parm_values);
   pragma inline (convert_to_cookie_table, 'YES');
   convert_to_cookie_table(p_request.cookies, apex_web_service.g_request_cookies);
   pragma inline (convert_to_header_table, 'YES');
@@ -1031,34 +1022,8 @@ return web_service_response_typ
 is
   l_parm_names vc_arr2 := empty_vc_arr;
   l_parm_values vc_arr2 := empty_vc_arr;
-  l_parms constant json_object_t := 
-    case
-      when p_request.parms_vc is not null
-      then json_object_t(p_request.parms_vc)
-      when p_request.parms_clob is not null
-      then json_object_t(p_request.parms_clob)
-      else null
-    end;
-  l_parms_keys constant json_key_list :=
-    case
-      when l_parms is not null
-      then l_parms.get_keys
-      else null
-    end;
-  l_body_clob clob :=
-    case
-      when p_request.body_vc is not null
-      then to_clob(p_request.body_vc)
-      when p_request.body_clob is not null
-      then p_request.body_clob
-    end;
-  l_body_blob blob := 
-    case
-      when p_request.body_raw is not null
-      then to_blob(p_request.body_raw)
-      when p_request.body_blob is not null
-      then p_request.body_blob
-    end;
+  l_body_clob clob := p_request.body_c;
+  l_body_blob blob := p_request.body_b;
   l_web_service_response web_service_response_typ := null;
 $if oracle_tools.cfg_pkg.c_debugging $then
   l_start constant number := dbms_utility.get_time;
@@ -1070,15 +1035,8 @@ $end
 
 $if web_service_pkg.c_prefer_to_use_utl_http $then
 
-  if l_parms is not null and l_parms_keys.count > 0
-  then
-    for i_idx in l_parms_keys.first .. l_parms_keys.last
-    loop
-      l_parm_names(l_parm_names.count+1) := l_parms_keys(i_idx);
-      l_parm_values(l_parm_values.count+1) := l_parms.get(l_parms_keys(i_idx)).stringify;
-    end loop;
-  end if;
-
+  pragma inline (convert_to_parms_tables, 'YES');
+  convert_to_parms_tables(p_request.parms, l_parm_names, l_parm_values);
   pragma inline (convert_to_cookie_table, 'YES');
   convert_to_cookie_table(p_request.cookies, g_request_cookies);
   pragma inline (convert_to_header_table, 'YES');
@@ -1128,11 +1086,6 @@ $else -- $if web_service_pkg.c_prefer_to_use_utl_http $then
 
 $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
 
-  pragma inline (convert_from_cookie_table, 'YES');
-  convert_from_cookie_table(g_response_cookies, p_request.cookies);
-  pragma inline (convert_from_header_table, 'YES');
-  convert_from_header_table(g_headers, p_request.http_headers);
-
   l_web_service_response :=
     web_service_response_typ
     ( p_web_service_request => p_request
@@ -1141,10 +1094,14 @@ $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
     , p_http_status_code => g_status_code
     , p_body_clob => l_body_clob
     , p_body_blob => l_body_blob
-    , p_cookies_clob => p_request.cookies
-    , p_http_headers => p_request.http_headers
+    , p_cookies => null
+    , p_http_headers => null
     , p_http_reason_phrase => g_reason_phrase
     );
+  pragma inline (convert_from_cookie_table, 'YES');
+  convert_from_cookie_table(g_response_cookies, l_web_service_response.cookies);
+  pragma inline (convert_from_header_table, 'YES');
+  convert_from_header_table(g_headers, l_web_service_response.http_headers);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', (dbms_utility.get_time - l_start) * 10);
@@ -1167,8 +1124,8 @@ $end
            , p_http_status_code => null
            , p_body_clob => null
            , p_body_blob => null
-           , p_cookies_clob => null
-           , p_http_headers_clob => null
+           , p_cookies => null
+           , p_http_headers => null
            , p_http_reason_phrase => null
            );
 end make_rest_request;
