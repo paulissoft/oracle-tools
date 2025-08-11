@@ -1405,18 +1405,35 @@ procedure ut_setup
 is
   pragma autonomous_transaction;
 
+  l_plsql_callback varchar2(100 byte) := replace(msg_constants_pkg.get_default_processing_method, 'plsql://' || $$PLSQL_UNIT_OWNER || '.');
   l_queue_name constant user_queues.name%type := msg_aq_pkg.get_queue_name(web_service_request_typ.default_group());
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_SETUP');
 $end
+
+  begin
+    select  owner || '.' || object_name
+    into    l_plsql_callback
+    from    all_objects o
+    where   o.owner = user
+    and     o.object_type = 'PROCEDURE'
+    and     object_name = l_plsql_callback;
+  exception
+    when no_data_found
+    then
+      raise_application_error(-20000, 'Could not find PROCEDURE "' || l_plsql_callback || '"', true);
+  end;
   for i_try in 1..2
   loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print(dbug."info", 'try %s to register callback %s for queue %s', i_try, l_plsql_callback, l_queue_name);
+$end
     begin
       msg_aq_pkg.register
       ( p_queue_name => l_queue_name
       , p_subscriber => null
-      , p_plsql_callback => $$PLSQL_UNIT_OWNER || '.' || 'MSG_NOTIFICATION_PRC'
+      , p_plsql_callback => l_plsql_callback
       );
       exit;
     exception
@@ -1427,6 +1444,9 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
         if i_try != 2
         then
+$if oracle_tools.cfg_pkg.c_debugging $then
+          dbug.print(dbug."info", 'create queue', l_queue_name);
+$end
           msg_aq_pkg.create_queue
           ( p_queue_name => l_queue_name
           , p_comment => 'Queue for table ' || replace(l_queue_name, '$', '.')
