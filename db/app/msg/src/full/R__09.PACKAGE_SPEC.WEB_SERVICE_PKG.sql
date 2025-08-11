@@ -40,74 +40,17 @@ type header_table is table of header index by binary_integer;
 
 $end -- $if oracle_tools.cfg_pkg.c_apex_installed $then
 
-$if false $then -- OBSOLETE
-
-procedure json2data
-( p_cookies in json_array_t
-, p_cookie_tab out nocopy sys.utl_http.cookie_table
-);
-/** Convert a JSON array to a HTTP cookie table. **/
-
-procedure data2json
-( p_cookie_tab in sys.utl_http.cookie_table
-, p_cookies out nocopy json_array_t
-);
-/** Convert a HTTP cookie table to a JSON array. **/
-
-$end -- $if false $then -- OBSOLETE
-
 procedure to_json
 ( p_cookie_tab in http_cookie_tab_typ
 , p_cookies out nocopy json_array_t
 );
 /** Convert a HTTP cookie table to a JSON array. **/
 
-$if false $then -- OBSOLETE
-
-function data2json
-( p_cookie_tab in sys.utl_http.cookie_table
-)
-return clob;
-/** Convert a HTTP cookie table to a JSON array (as a CLOB). **/
-
-procedure json2data
-( p_http_headers in json_array_t
-, p_http_header_tab out nocopy header_table
-);
-/** Convert a JSON array to a HTTP header table. **/
-
-procedure data2json
-( p_http_header_tab in header_table
-, p_http_headers out nocopy json_array_t
-);
-/** Convert a HTTP header table to a JSON array. **/
-
-$end -- $if false $then -- OBSOLETE
-
 procedure to_json
 ( p_http_header_tab in property_tab_typ
 , p_http_headers out nocopy json_array_t
 );
 /** Convert a HTTP header table to a JSON array. **/
-
-$if false $then -- OBSOLETE
-
-procedure data2json
-( p_http_headers out nocopy json_array_t
-);
-/** Convert a HTTP header table to a JSON array but use the request header table set by set_request_headers/remove_request_header/clear_request_headers. */
-
-function data2json
-( p_http_header_tab in header_table
-)
-return clob;
-/** Convert a HTTP header table to a JSON array (as a CLOB). **/
-
-function data2json
-return clob;
-/** Convert a HTTP header table to a JSON array (as a CLOB) but use the request header table set by set_request_headers/remove_request_header/clear_request_headers. **/
-
-$end -- $if false $then -- OBSOLETE
 
 procedure set_request_headers
 ( p_name_01 in varchar2 default null

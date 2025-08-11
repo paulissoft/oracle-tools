@@ -149,13 +149,13 @@ static procedure construct
   -- from REST_WEB_SERVICE_REQUEST_TYP
 , p_parms in property_tab_typ default null
 , p_binary_response in integer default 0
-, p_rest_web_service_request_typ out nocopy rest_web_service_request_typ -- any of the rest_web_service_<HTTP_METHOD>_request_typ types
+, p_rest_web_service_request out nocopy rest_web_service_request_typ -- any of the rest_web_service_<HTTP_METHOD>_request_typ types
 )
 is
 begin
   case upper(p_http_method)
     when 'DELETE'
-    then p_rest_web_service_request_typ :=
+    then p_rest_web_service_request :=
            new rest_web_service_delete_request_typ
                ( p_group$ => p_group$
                , p_context$ => p_context$
@@ -175,7 +175,7 @@ begin
                , p_binary_response => p_binary_response
                );
     when 'GET'
-    then p_rest_web_service_request_typ :=
+    then p_rest_web_service_request :=
            new rest_web_service_get_request_typ
                ( p_group$ => p_group$
                , p_context$ => p_context$
@@ -193,7 +193,7 @@ begin
                , p_binary_response => p_binary_response
                );
     when 'PATCH'
-    then p_rest_web_service_request_typ :=
+    then p_rest_web_service_request :=
            new rest_web_service_patch_request_typ
                ( p_group$ => p_group$
                , p_context$ => p_context$
@@ -213,7 +213,7 @@ begin
                , p_binary_response => p_binary_response
                );
     when 'POST'
-    then p_rest_web_service_request_typ :=
+    then p_rest_web_service_request :=
            new rest_web_service_post_request_typ
                ( p_group$ => p_group$
                , p_context$ => p_context$
@@ -233,7 +233,7 @@ begin
                , p_binary_response => p_binary_response
                );
     when 'PUT'
-    then p_rest_web_service_request_typ :=
+    then p_rest_web_service_request :=
            new rest_web_service_put_request_typ
                ( p_group$ => p_group$
                , p_context$ => p_context$

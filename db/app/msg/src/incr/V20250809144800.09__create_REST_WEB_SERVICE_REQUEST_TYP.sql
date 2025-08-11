@@ -99,7 +99,7 @@ buffered messages if it has a non null LOB).
     -- from REST_WEB_SERVICE_REQUEST_TYP
   , p_parms in property_tab_typ default null
   , p_binary_response in integer default 0
-  , p_rest_web_service_request_typ out nocopy rest_web_service_request_typ -- any of the rest_web_service_<HTTP_METHOD>_request_typ types
+  , p_rest_web_service_request out nocopy rest_web_service_request_typ -- any of the rest_web_service_<HTTP_METHOD>_request_typ types
   )
 
 , overriding
