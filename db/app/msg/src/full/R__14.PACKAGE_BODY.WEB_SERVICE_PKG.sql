@@ -751,41 +751,6 @@ procedure copy_parameters
 , p_body_clob out nocopy clob
 )
 is
-  function url_encode2
-  ( p_str in varchar2
-  )
-  return varchar2
-  as
-    x varchar2(32767);
-  begin
-    x := replace(p_str, '%', '%25');
-    x := replace(x,     '+', '%2B');
-    x := replace(x,     ' ', '+'  );
-    x := replace(x,     '.', '%2E');
-    x := replace(x,     '*', '%2A');
-    x := replace(x,     '?', '%3F');
-    x := replace(x,     '\', '%5C');
-    x := replace(x,     '/', '%2F');
-    x := replace(x,     '>', '%3E');
-    x := replace(x,     '<', '%3C');
-    x := replace(x,     '{', '%7B');
-    x := replace(x,     '}', '%7D');
-    x := replace(x,     '~', '%7E');
-    x := replace(x,     '[', '%5B');
-    x := replace(x,     ']', '%5D');
-    x := replace(x,     '`', '%60');
-    x := replace(x,     ';', '%3B');
-    x := replace(x,     '?', '%3F');
-    x := replace(x,     '@', '%40');
-    x := replace(x,     '&', '%26');
-    x := replace(x,     '#', '%23');
-    x := replace(x,     '|', '%7C');
-    x := replace(x,     '^', '%5E');
-    x := replace(x,     ':', '%3A');
-    x := replace(x,     '=', '%3D');
-    x := replace(x,     '$', '%24');
-    return x;
-  end url_encode2;
 begin
   if p_parm_names.count > 0
   then
@@ -799,7 +764,7 @@ begin
         '=' ||
         case
           when p_url_encode
-          then url_encode2(p_parm_values(i_idx))
+          then utl_url.escape(url => p_parm_values(i_idx), escape_reserved_chars => true)
           else p_parm_values(i_idx)
         end;
     end loop;
@@ -1098,6 +1063,7 @@ $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
     , p_http_headers => null
     , p_http_reason_phrase => g_reason_phrase
     );
+    
   pragma inline (convert_from_cookie_table, 'YES');
   convert_from_cookie_table(g_response_cookies, l_web_service_response.cookies);
   pragma inline (convert_from_header_table, 'YES');
