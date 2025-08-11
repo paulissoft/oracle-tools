@@ -476,24 +476,7 @@ exception
 $end
 end handle_response;
 
-function data2json
-( p_property_tab in property_tab_typ
-)
-return json_object_t
-is
-  l_json_object json_object_t := json_object_t();
-begin
-  if p_property_tab is not null and p_property_tab.count > 0
-  then
-    for i_idx in p_property_tab.first .. p_property_tab.last
-    loop
-      l_json_object.put(p_property_tab(i_idx).name, p_property_tab(i_idx).value);
-    end loop;
-  end if;
-  return l_json_object;
-end data2json;
-
-procedure json2data
+procedure convert_to_cookie_table
 ( p_cookie_in_tab in http_cookie_tab_typ
 , p_cookie_out_tab out nocopy sys.utl_http.cookie_table
 )
@@ -518,20 +501,118 @@ begin
       -- A PL/SQL table of cookies
       TYPE cookie_table IS TABLE OF cookie INDEX BY BINARY_INTEGER;
       */
-      
-      p_cookie_out_tab(i_idx).name := p_cookie_in_tab(i_idx).name;
-      p_cookie_out_tab(i_idx).value := p_cookie_in_tab(i_idx).value;
-      p_cookie_out_tab(i_idx).domain := p_cookie_in_tab(i_idx).domain;
-      p_cookie_out_tab(i_idx).expire := p_cookie_in_tab(i_idx).expire;
-      p_cookie_out_tab(i_idx).path := p_cookie_in_tab(i_idx).path;
-      p_cookie_out_tab(i_idx).secure := p_cookie_in_tab(i_idx).secure = 1;
-      p_cookie_out_tab(i_idx).version := p_cookie_in_tab(i_idx).version;
-      p_cookie_out_tab(i_idx).comment := p_cookie_in_tab(i_idx).comment;
+      if p_cookie_in_tab(i_idx).name is not null and p_cookie_in_tab(i_idx).value is not null
+      then
+        p_cookie_out_tab(p_cookie_out_tab.count+1).name := p_cookie_in_tab(i_idx).name;
+        p_cookie_out_tab(p_cookie_out_tab.count+0).value := p_cookie_in_tab(i_idx).value;
+        p_cookie_out_tab(p_cookie_out_tab.count+0).domain := p_cookie_in_tab(i_idx).domain;
+        p_cookie_out_tab(p_cookie_out_tab.count+0).expire := p_cookie_in_tab(i_idx).expire;
+        p_cookie_out_tab(p_cookie_out_tab.count+0).path := p_cookie_in_tab(i_idx).path;
+        p_cookie_out_tab(p_cookie_out_tab.count+0).secure := p_cookie_in_tab(i_idx).secure = 1;
+        p_cookie_out_tab(p_cookie_out_tab.count+0).version := p_cookie_in_tab(i_idx).version;
+        p_cookie_out_tab(p_cookie_out_tab.count+0).comment := p_cookie_in_tab(i_idx).comment;
+      end if;
     end loop;
   end if;  
-end json2data;
+end convert_to_cookie_table;
+
+procedure convert_from_cookie_table
+( p_cookie_in_tab in sys.utl_http.cookie_table
+, p_cookie_out_tab out nocopy http_cookie_tab_typ
+)
+is
+begin
+  if p_cookie_in_tab.count = 0
+  then
+    p_cookie_out_tab := null;
+  else
+    p_cookie_out_tab := http_cookie_tab_typ();
+    for i_idx in p_cookie_in_tab.first .. p_cookie_in_tab.last
+    loop
+      if p_cookie_in_tab(i_idx).name is not null and p_cookie_in_tab(i_idx).value is not null
+      then
+        p_cookie_out_tab.extend(1);
+        p_cookie_out_tab(p_cookie_out_tab.last) :=
+          http_cookie_typ
+          ( p_cookie_in_tab(i_idx).name
+          , p_cookie_in_tab(i_idx).value
+          , p_cookie_in_tab(i_idx).domain
+          , p_cookie_in_tab(i_idx).expire
+          , p_cookie_in_tab(i_idx).path
+          , case p_cookie_in_tab(i_idx).secure when true then 1 when false then 0 else null end
+          , p_cookie_in_tab(i_idx).version
+          , p_cookie_in_tab(i_idx).comment
+          );
+      end if;
+    end loop;
+  end if;  
+end convert_from_cookie_table;
+
+procedure convert_to_header_table
+( p_http_header_in_tab in property_tab_typ
+, p_http_header_out_tab out nocopy header_table
+)
+is
+begin
+  if p_http_header_in_tab is not null and p_http_header_in_tab.count > 0
+  then
+    for i_idx in p_http_header_in_tab.first .. p_http_header_in_tab.last
+    loop
+      if p_http_header_in_tab(i_idx).name is not null and p_http_header_in_tab(i_idx).value is not null
+      then
+        p_http_header_out_tab(p_http_header_out_tab.count+1).name := p_http_header_in_tab(i_idx).name;
+        p_http_header_out_tab(p_http_header_out_tab.count+0).value := p_http_header_in_tab(i_idx).value;
+      end if;
+    end loop;
+  end if;  
+end convert_to_header_table;
+
+procedure convert_from_header_table
+( p_http_header_in_tab in header_table
+, p_http_header_out_tab out nocopy property_tab_typ
+)
+is
+begin
+  if p_http_header_in_tab.count = 0
+  then
+    p_http_header_out_tab := null;
+  else
+    p_http_header_out_tab := property_tab_typ();
+    for i_idx in p_http_header_in_tab.first .. p_http_header_in_tab.last
+    loop
+      if p_http_header_in_tab(i_idx).name is not null and p_http_header_in_tab(i_idx).value is not null
+      then
+        p_http_header_out_tab.extend(1);
+        p_http_header_out_tab(p_http_header_out_tab.last) :=
+          property_typ
+          ( p_http_header_in_tab(i_idx).name
+          , p_http_header_in_tab(i_idx).value
+          );
+      end if;
+    end loop;
+  end if;  
+end convert_from_header_table;
+
+function data2json
+( p_property_tab in property_tab_typ
+)
+return json_object_t
+is
+  l_json_object json_object_t := json_object_t();
+begin
+  if p_property_tab is not null and p_property_tab.count > 0
+  then
+    for i_idx in p_property_tab.first .. p_property_tab.last
+    loop
+      l_json_object.put(p_property_tab(i_idx).name, p_property_tab(i_idx).value);
+    end loop;
+  end if;
+  return l_json_object;
+end data2json;
 
 -- PUBLIC
+
+$if false $then -- OBSOLETE
 
 procedure json2data
 ( p_cookies in json_array_t
@@ -621,7 +702,9 @@ begin
   end if;
 end data2json;
 
-procedure data2json
+$end -- $if false $then -- OBSOLETE
+
+procedure to_json
 ( p_cookie_tab in http_cookie_tab_typ
 , p_cookies out nocopy json_array_t
 )
@@ -650,7 +733,9 @@ begin
       p_cookies.append(l_cookie);
     end loop;
   end if;
-end data2json;
+end to_json;
+
+$if false $then -- OBSOLETE
 
 function data2json
 ( p_cookie_tab in sys.utl_http.cookie_table
@@ -700,8 +785,10 @@ begin
   end if;
 end json2data;
 
-procedure data2json
-( p_http_header_tab in header_table
+$end -- $if false $then -- OBSOLETE
+
+procedure to_json
+( p_http_header_tab in property_tab_typ
 , p_http_headers out nocopy json_array_t
 )
 is
@@ -730,7 +817,9 @@ begin
       p_http_headers.append(l_http_header);
     end loop;
   end if;
-end data2json;
+end to_json;
+
+$if false $then -- OBSOLETE
 
 procedure data2json
 ( p_http_headers out nocopy json_array_t
@@ -760,6 +849,8 @@ is
 begin
   return data2json(p_http_header_tab => $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end);
 end data2json;
+
+$end -- $if false $then -- OBSOLETE
 
 procedure set_request_headers
 ( p_name_01 in varchar2
@@ -970,10 +1061,10 @@ $end
     end loop;
   end if;
 
-  pragma inline (json2data, 'YES');
-  json2data(p_request.cookies, apex_web_service.g_request_cookies);
-  pragma inline (json2data, 'YES');
-  json2data(p_request.http_headers, apex_web_service.g_request_headers);
+  pragma inline (convert_to_cookie_table, 'YES');
+  convert_to_cookie_table(p_request.cookies, apex_web_service.g_request_cookies);
+  pragma inline (convert_to_header_table, 'YES');
+  convert_to_header_table(p_request.http_headers, apex_web_service.g_request_headers);
 
   -- Do we prefer utl_http over apex_web_service since it is more performant?
   -- But only for simple calls.
@@ -1058,23 +1149,25 @@ $end
       l_body_clob := null;
   end case;
 
-  pragma inline (data2json, 'YES');
-  data2json(apex_web_service.g_response_cookies, p_request.cookies);
-  pragma inline (data2json, 'YES');
-  data2json(apex_web_service.g_headers, p_request.http_headers);
-
   l_web_service_response :=
     web_service_response_typ
-    ( p_web_service_request => p_request
+    ( p_group$ => null
+    , p_context$ => null
+    , p_cookies => null
+    , p_http_headers => null
+    , p_body_clob => l_body_clob
+    , p_body_blob => l_body_blob
+    , p_web_service_request => p_request
     , p_sql_code => sqlcode -- 0
     , p_sql_error_message => sqlerrm -- null
     , p_http_status_code => apex_web_service.g_status_code
-    , p_body_clob => l_body_clob
-    , p_body_blob => l_body_blob
-    , p_cookies => p_request.cookies
-    , p_http_headers => p_request.http_headers
     , p_http_reason_phrase => substrb(apex_web_service.g_reason_phrase, 1, 4000)
     );
+
+  pragma inline (convert_from_cookie_table, 'YES');
+  convert_from_cookie_table(apex_web_service.g_response_cookies, l_web_service_response.cookies);
+  pragma inline (convert_from_header_table, 'YES');
+  convert_from_header_table(apex_web_service.g_headers, l_web_service_response.http_headers);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', (dbms_utility.get_time - l_start) * 10);
@@ -1091,14 +1184,14 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
     return web_service_response_typ
-           ( p_web_service_request => p_request
+           ( p_cookies => null
+           , p_http_headers => null
+           , p_body_clob => null
+           , p_body_blob => null
+           , p_web_service_request => p_request
            , p_sql_code => sqlcode
            , p_sql_error_message => sqlerrm
            , p_http_status_code => null
-           , p_body_clob => null
-           , p_body_blob => null
-           , p_cookies_clob => null
-           , p_http_headers_clob => null
            , p_http_reason_phrase => null
            );
 end make_rest_request;
@@ -1163,10 +1256,10 @@ $if web_service_pkg.c_prefer_to_use_utl_http $then
     end loop;
   end if;
 
-  pragma inline (json2data, 'YES');
-  json2data(p_request.cookies, g_request_cookies);
-  pragma inline (json2data, 'YES');
-  json2data(p_request.http_headers, g_request_headers);
+  pragma inline (convert_to_cookie_table, 'YES');
+  convert_to_cookie_table(p_request.cookies, g_request_cookies);
+  pragma inline (convert_to_header_table, 'YES');
+  convert_to_header_table(p_request.http_headers, g_request_headers);
   
   if simple_request(p_request)
   then
@@ -1212,10 +1305,10 @@ $else -- $if web_service_pkg.c_prefer_to_use_utl_http $then
 
 $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
 
-  pragma inline (data2json, 'YES');
-  data2json(g_response_cookies, p_request.cookies);
-  pragma inline (data2json, 'YES');
-  data2json(g_headers, p_request.http_headers);
+  pragma inline (convert_from_cookie_table, 'YES');
+  convert_from_cookie_table(g_response_cookies, p_request.cookies);
+  pragma inline (convert_from_header_table, 'YES');
+  convert_from_header_table(g_headers, p_request.http_headers);
 
   l_web_service_response :=
     web_service_response_typ
@@ -1281,35 +1374,52 @@ return web_service_response_typ
 is
   l_rest_web_service_request rest_web_service_request_typ;
   l_web_service_response web_service_response_typ;
-  l_parms json_object_t := json_object_t();
+  l_parms property_tab_typ := null;
+  l_cookie_tab http_cookie_tab_typ;
+  l_http_header_tab property_tab_typ;
 begin
   if p_parm_name.count > 0
   then
+    l_parms := property_tab_typ();
     for i_idx in p_parm_name.first .. p_parm_name.last
-    loop
-      l_parms.put(key => p_parm_name(i_idx), val => p_parm_value(i_idx));
+    loop      
+      if p_parm_name(i_idx) is not null and p_parm_value(i_idx) is not null
+      then
+        l_parms.extend(1);
+        l_parms(l_parms.last) := property_typ(p_parm_name(i_idx), p_parm_value(i_idx));
+      end if;
     end loop;
   end if;
 
-  l_rest_web_service_request :=
-    new rest_web_service_request_typ
-        ( p_context$ => null
-        , p_url => p_url
-        , p_scheme => p_scheme
-        , p_proxy_override => p_proxy_override
-        , p_transfer_timeout => p_transfer_timeout
-        , p_wallet_path => p_wallet_path
-        , p_https_host => p_https_host
-        , p_credential_static_id => p_credential_static_id
-        , p_token_url => p_token_url
-        , p_cookies_clob => web_service_pkg.data2json($if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_cookies $else g_request_cookies $end)
-        , p_http_headers_clob => web_service_pkg.data2json($if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end)        
-        , p_http_method => p_http_method
-        , p_body_clob => p_body
-        , p_body_blob => p_body_blob
-        , p_parms_clob => l_parms.stringify
-        , p_binary_response => 0        
-        );
+  pragma inline (convert_from_cookie_table, 'YES');
+  convert_from_cookie_table
+  ( $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_cookies $else g_request_cookies $end
+  , l_cookie_tab
+  );
+  pragma inline (convert_from_header_table, 'YES');
+  convert_from_header_table
+  ( $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end
+  , l_http_header_tab
+  );
+
+  rest_web_service_request_typ.construct
+  ( p_http_method => p_http_method
+  , p_cookies => l_cookie_tab
+  , p_http_headers => l_http_header_tab
+  , p_body_clob => p_body
+  , p_body_blob => p_body_blob
+  , p_url => p_url
+  , p_scheme => p_scheme
+  , p_proxy_override => p_proxy_override
+  , p_transfer_timeout => p_transfer_timeout
+  , p_wallet_path => p_wallet_path
+  , p_https_host => p_https_host
+  , p_credential_static_id => p_credential_static_id
+  , p_token_url => p_token_url
+  , p_parms => l_parms
+  , p_binary_response => 0
+  , p_rest_web_service_request => l_rest_web_service_request
+  );
   l_web_service_response :=
     web_service_pkg.make_rest_request
     ( p_request => l_rest_web_service_request
