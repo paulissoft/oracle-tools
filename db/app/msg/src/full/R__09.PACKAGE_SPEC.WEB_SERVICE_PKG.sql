@@ -4,15 +4,31 @@ CREATE OR REPLACE PACKAGE "WEB_SERVICE_PKG" AUTHID DEFINER AS
 Invoke web services
 ===================
 
-A package with some functions and procedures for web services.
+A package introduced to prive backwards compability with APEX_WEB_SERVICE, i.e. functions and procedures for web services.
 
-The usual way of invoking a web service:
+The usual way of invoking a web service via APEX_WEB_SERVICE (procedure names are the same for this package and APEX_WEB_SERVICE):
 
-1. invoke clear_request_headers
-2. invoke set_request_headers
-3. invoke copy_parameters
-4. invoke make_rest_request
-5. invoke handle_response and if there is an exception (for instance HTTP status code not 2XX) you may need to retry return to point 3
+1. invoke `clear_request_headers`
+2. invoke `set_request_headers`
+3. invoke `make_rest_request`
+
+New in this package is:
+
+4. invoke handle_response and if there is an exception (for instance HTTP status code not 2XX) you may need to retry, i.e. return to point 3
+
+But in order to use just one `make_rest_request` call the function below where there is no need to invoke `set_request_headers`:
+
+```
+function make_rest_request
+( p_request in rest_web_service_request_typ -- The request
+, p_username in varchar2 default null -- The username if basic authentication is required for this service
+, p_password in varchar2 default null -- The password if basic authentication is required for this service
+, p_wallet_pwd in varchar2 default null -- The password to access the wallet
+)
+return web_service_response_typ;
+```
+
+The response to a `make_rest_request` is an object with all the data from the HTTP response.
 
 See also [APEX_WEB_SERVICE The Definitive Guide](https://blog.cloudnueva.com/apexwebservice-the-definitive-guide).
 
@@ -66,39 +82,15 @@ procedure set_request_headers
 , p_reset in boolean default true
 , p_skip_if_exists in boolean default false
 );
-/** See apex_web_service.set_request_headers. */
+/** See APEX_WEB_SERVICE.SET_REQUEST_HEADERS. */
 
 procedure remove_request_header
 ( p_name in varchar2
 );
-/** See apex_web_service.remove_request_header. */
+/** See APEX_WEB_SERVICE.REMOVE_REQUEST_HEADER. */
 
 procedure clear_request_headers;
-/** See apex_web_service.clear_request_headers. */
-
-procedure copy_parameters
-( p_parm_names in vc_arr2
-, p_parm_values in vc_arr2
-, p_url_encode in boolean
-, p_body_clob out nocopy clob
-);
-/** Create a name1=value1&name2=value2&... list where valueN may be URL encoded. **/
-
-procedure copy_parameters
-( p_name_01 in varchar2 default null
-, p_value_01 in varchar2 default null
-, p_name_02 in varchar2 default null
-, p_value_02 in varchar2 default null
-, p_name_03 in varchar2 default null
-, p_value_03 in varchar2 default null
-, p_name_04 in varchar2 default null
-, p_value_04 in varchar2 default null
-, p_name_05 in varchar2 default null
-, p_value_05 in varchar2 default null
-, p_url_encode in boolean
-, p_body_clob out nocopy clob
-);
-/** Create a p_name_01=p_value_01&p_name_02=p_value_02&... list where p_value_N may be URL encoded. **/
+/** See APEX_WEB_SERVICE.CLEAR_REQUEST_HEADERS. */
 
 function make_rest_request
 ( p_request in rest_web_service_request_typ -- The request
@@ -130,7 +122,7 @@ function make_rest_request
 return web_service_response_typ;
 /**
 
-See apex_web_service.make_rest_request.
+See APEX_WEB_SERVICE.MAKE_REST_REQUEST.
 
 When p_body is empty, the info from p_parm_name/p_parm_value will be copied to p_body.
 

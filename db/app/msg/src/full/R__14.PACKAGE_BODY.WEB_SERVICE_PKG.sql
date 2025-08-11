@@ -54,10 +54,86 @@ $end
   return l_simple_request;
 end simple_request;
 
+/** Create a name=value list (separated by ampersans) where value may be URL encoded. **/
+procedure copy_parameters
+( p_parm_names in vc_arr2
+, p_parm_values in vc_arr2
+, p_url_encode in boolean
+, p_parameters out nocopy varchar2
+)
+is
+begin
+  if p_parm_names.count > 0
+  then
+    for i_idx in p_parm_names.first .. p_parm_names.last
+    loop
+      if p_parm_names(i_idx) is not null and p_parm_values(i_idx) is not null
+      then
+        p_parameters :=
+          case
+            when i_idx > 1 then p_parameters || '&'
+          end ||
+          p_parm_names(i_idx) ||
+          '=' ||
+          case
+            when p_url_encode
+            then utl_url.escape(url => p_parm_values(i_idx), escape_reserved_chars => true)
+            else p_parm_values(i_idx)
+          end;
+      end if;
+    end loop;
+  end if;
+end copy_parameters;
+
+/** Create a name=value list (separated by ampersans) where value may be URL encoded. **/
+procedure copy_parameters
+( p_name_01 in varchar2
+, p_value_01 in varchar2
+, p_name_02 in varchar2
+, p_value_02 in varchar2
+, p_name_03 in varchar2
+, p_value_03 in varchar2
+, p_name_04 in varchar2
+, p_value_04 in varchar2
+, p_name_05 in varchar2
+, p_value_05 in varchar2
+, p_url_encode in boolean
+, p_parameters out nocopy varchar2
+)
+is
+  l_parm_names vc_arr2;
+  l_parm_values vc_arr2;
+
+  procedure do_set_parameter
+  ( p_name  in varchar2
+  , p_value in varchar2
+  )
+  is
+  begin
+    if p_name is null or p_value is null then return; end if;
+
+    l_parm_names(l_parm_names.count+1) := p_name;
+    l_parm_values(l_parm_values.count+1) := p_value;
+  end do_set_parameter;
+begin
+  do_set_parameter( p_name_01, p_value_01 );
+  do_set_parameter( p_name_02, p_value_02 );
+  do_set_parameter( p_name_03, p_value_03 );
+  do_set_parameter( p_name_04, p_value_04 );
+  do_set_parameter( p_name_05, p_value_05 );
+
+  copy_parameters
+  ( p_parm_names => l_parm_names 
+  , p_parm_values => l_parm_values 
+  , p_url_encode => p_url_encode 
+  , p_parameters => p_parameters
+  );
+end copy_parameters;
+
 procedure utl_http_request
 ( p_request in rest_web_service_request_typ
-, p_body_clob in out nocopy clob -- on input the request body, on output the response body
-, p_body_blob in out nocopy blob -- on input the request body, on output the response body
+, p_url in varchar2
+, p_body_blob in nocopy blob -- on input the request body, on output the response body
 , p_parm_names in vc_arr2
 , p_parm_values in vc_arr2
 , p_username in varchar2
@@ -82,46 +158,13 @@ is
   l_text varchar2(2000 char);
   c_max_text_size constant positiven := 2000;
   l_header_count pls_integer;
-  -- for dbms_lob.converttoblob
-  l_dest_offset integer := 1;
-  l_src_offset integer := 1;
-  l_lang number := dbms_lob.default_lang_ctx;
-  l_warning integer;
 begin
-  if p_body_clob is null or dbms_lob.getlength(p_body_clob) = 0
-  then
-    copy_parameters
-    ( p_parm_names => p_parm_names
-    , p_parm_values => p_parm_values
-    , p_url_encode => true
-    , p_body_clob => p_body_clob
-    );
-  end if;
-  
-  if p_body_clob is not null
-  then
-    dbms_lob.trim(g_body_blob, 0);
-    dbms_lob.converttoblob
-    ( /*dest_lob => */g_body_blob
-    , /*src_lob => */p_body_clob
-    , /*amount => */dbms_lob.getlength(p_body_clob)
-    , /*dest_offset => */l_dest_offset
-    , /*src_offset => */l_src_offset
-    , /*blob_csid => */dbms_lob.default_csid
-    , /*lang_context => */l_lang
-    , /*warning => */l_warning
-    );
-    p_body_clob := null;
-    p_body_blob := g_body_blob;
-  end if;
-  -- request body is in p_body_blob, if any
-
   utl_http.set_wallet(p_wallet_path, p_wallet_pwd);
   utl_http.set_transfer_timeout(p_request.transfer_timeout);
   utl_http.clear_cookies;
   utl_http.add_cookies(p_request_cookies);
 
-  l_http_request := utl_http.begin_request(p_request.url, p_request.http_method);
+  l_http_request := utl_http.begin_request(p_url, p_request.http_method);
 
   if p_username is not null
   then
@@ -212,6 +255,108 @@ begin
 
       utl_http.end_response(l_http_response);
   end;
+end utl_http_request;
+
+procedure utl_http_request
+( p_request in rest_web_service_request_typ
+, p_body_clob in out nocopy clob -- on input the request body, on output the response body
+, p_body_blob in out nocopy blob -- on input the request body, on output the response body
+, p_parm_names in vc_arr2
+, p_parm_values in vc_arr2
+, p_username in varchar2
+, p_password in varchar2
+, p_scheme in varchar2
+, p_wallet_path in varchar2
+, p_wallet_pwd in varchar2
+, p_request_cookies in sys.utl_http.cookie_table
+, p_request_headers in header_table
+, p_response_cookies out nocopy sys.utl_http.cookie_table
+, p_response_headers out nocopy header_table
+, p_status_code out nocopy http_status_code_t
+, p_reason_phrase out nocopy http_reason_phrase_t
+)
+is
+  l_url_encode boolean := (p_request.http_method = 'GET');
+  l_url varchar2(32767 byte) := p_request.url;
+  l_parameters varchar2(32767 byte);
+  -- for dbms_lob.converttoblob
+  l_dest_offset integer := 1;
+  l_src_offset integer := 1;
+  l_lang number := dbms_lob.default_lang_ctx;
+  l_warning integer;
+begin
+  if not l_url_encode
+  then
+    -- Content-Type=application/x-www-form-urlencoded?
+    if p_request_headers.count > 0
+    then
+      for i_idx in p_request_headers.first .. p_request_headers.last
+      loop
+        if p_request_headers(i_idx).name = 'Content-Type' and
+           p_request_headers(i_idx).value like 'application/x-www-form-urlencoded%'
+        then
+          l_url_encode := true;
+        end if;
+      end loop;
+    end if;
+  end if;
+  
+  copy_parameters
+  ( p_parm_names => p_parm_names
+  , p_parm_values => p_parm_values
+  , p_url_encode => l_url_encode
+  , p_parameters => l_parameters
+  );
+
+  -- Use parameters as GET query parameters or put them into an empty body (non-GET)
+  if l_parameters is not null
+  then  
+    if p_request.http_method = 'GET'
+    then
+      l_url := l_url || '?' || l_parameters;
+    else if p_body_clob is null or dbms_lob.getlength(p_body_clob) = 0
+    then
+      p_body_clob := to_clob(l_parameters);
+    end if;
+  end if;
+  
+  if p_body_clob is not null
+  then
+    dbms_lob.trim(g_body_blob, 0);
+    dbms_lob.converttoblob
+    ( /*dest_lob => */g_body_blob
+    , /*src_lob => */p_body_clob
+    , /*amount => */dbms_lob.getlength(p_body_clob)
+    , /*dest_offset => */l_dest_offset
+    , /*src_offset => */l_src_offset
+    , /*blob_csid => */dbms_lob.default_csid
+    , /*lang_context => */l_lang
+    , /*warning => */l_warning
+    );
+    p_body_clob := null;
+    p_body_blob := g_body_blob;
+  end if;
+  
+  -- request body is in p_body_blob, if any
+
+  utl_http_request
+  ( p_request => p_request
+  , p_url => l_url
+  , p_body_blob => p_body_blob
+  , p_parm_names => p_parm_names
+  , p_parm_values => p_parm_values
+  , p_username => p_username
+  , p_password => p_password
+  , p_scheme => p_scheme
+  , p_wallet_path => p_wallet_path
+  , p_wallet_pwd => p_wallet_pwd
+  , p_request_cookies => p_request_cookies
+  , p_request_headers => p_request_headers
+  , p_response_cookies => p_response_cookies
+  , p_response_headers => p_response_headers
+  , p_status_code => p_status_code
+  , p_reason_phrase => p_reason_phrase
+  );
 
   if p_request.binary_response = 0
   then
@@ -272,7 +417,7 @@ is
   is
     l_array_idx pls_integer;
   begin
-    if p_name is null then return; end if;
+    if p_name is null or p_value is null then return; end if;
 
     pragma inline(get_hdr_array_idx, 'YES');
     l_array_idx := get_hdr_array_idx(p_name, p_request_headers, p_skip_if_exists);
@@ -312,6 +457,7 @@ begin
   then
     if l_array_idx < p_request_headers.last
     then
+      -- swap l_array_idx and p_request_headers.last before the last is deleted
       p_request_headers(l_array_idx) := p_request_headers(p_request_headers.last);
     end if;
       
@@ -743,77 +889,6 @@ begin
   ( p_request_headers => $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end
   );
 end clear_request_headers;
-
-procedure copy_parameters
-( p_parm_names in vc_arr2
-, p_parm_values in vc_arr2
-, p_url_encode in boolean
-, p_body_clob out nocopy clob
-)
-is
-begin
-  if p_parm_names.count > 0
-  then
-    for i_idx in p_parm_names.first .. p_parm_names.last
-    loop
-      p_body_clob :=
-        case
-          when i_idx > 1 then p_body_clob || '&'
-        end ||
-        p_parm_names(i_idx) ||
-        '=' ||
-        case
-          when p_url_encode
-          then utl_url.escape(url => p_parm_values(i_idx), escape_reserved_chars => true)
-          else p_parm_values(i_idx)
-        end;
-    end loop;
-  end if;
-end copy_parameters;
-
-procedure copy_parameters
-( p_name_01 in varchar2
-, p_value_01 in varchar2
-, p_name_02 in varchar2
-, p_value_02 in varchar2
-, p_name_03 in varchar2
-, p_value_03 in varchar2
-, p_name_04 in varchar2
-, p_value_04 in varchar2
-, p_name_05 in varchar2
-, p_value_05 in varchar2
-, p_url_encode in boolean
-, p_body_clob out nocopy clob
-)
-is
-  l_parm_names vc_arr2;
-  l_parm_values vc_arr2;
-
-  procedure do_set_parameter
-  ( p_name  in varchar2
-  , p_value in varchar2
-  )
-  is
-  begin
-    if p_name is null then return; end if;
-
-    l_parm_names(l_parm_names.count+1) := p_name;
-    l_parm_values(l_parm_values.count+1) := p_value;
-  end do_set_parameter;
-begin
-  do_set_parameter( p_name_01, p_value_01 );
-  do_set_parameter( p_name_02, p_value_02 );
-  do_set_parameter( p_name_03, p_value_03 );
-  do_set_parameter( p_name_04, p_value_04 );
-  do_set_parameter( p_name_05, p_value_05 );
-
-  copy_parameters
-  ( p_parm_names => l_parm_names 
-  , p_parm_values => l_parm_values 
-  , p_url_encode => p_url_encode 
-  , p_body_clob => p_body_clob
-  );
-end copy_parameters;
 
 $if oracle_tools.cfg_pkg.c_apex_installed $then
 
