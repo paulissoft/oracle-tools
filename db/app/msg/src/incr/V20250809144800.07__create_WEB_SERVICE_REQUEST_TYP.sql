@@ -1,11 +1,5 @@
 create or replace type web_service_request_typ under http_request_response_typ
-( /**
-  -- WEB_SERVICE_REQUEST_TYP
-  -- =======================
-  -- The attributes are common for SOAP (APEX_WEB_SERVICE.MAKE_REQUEST) and REST (APEX_WEB_SERVICE.MAKE_REST_REQUEST[_B]).
-  -- However, no sensitive information like username or password is stored.
-  **/
-  url varchar2(32767)
+( url varchar2(32767)
 , scheme varchar2(100)
 , proxy_override varchar2(2000)
 , transfer_timeout number
@@ -15,6 +9,10 @@ create or replace type web_service_request_typ under http_request_response_typ
 , token_url varchar2(2000)
 
 /**
+WEB_SERVICE_REQUEST_TYP
+=======================
+The attributes are common for SOAP (APEX_WEB_SERVICE.MAKE_REQUEST) and REST (APEX_WEB_SERVICE.MAKE_REST_REQUEST[_B]).
+However, no sensitive information like username or password is stored.
 
 This super type allows sub types to make a web service call, either synchronous or asynchronous.
 When the context$ attribute is not null, the sub type is obliged to enqueue the web service response with that attribute as the correlation id.

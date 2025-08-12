@@ -1,16 +1,5 @@
 create or replace type http_request_response_typ under msg_typ
-( /**
-  -- HTTP_REQUEST_RESPONSE_TYP
-  -- =========================
-  -- Common attributes for SOAP/REST request/responses.
-  -- However, no sensitive information like username or password is stored.
-  -- See also:
-  --
-  -- - APEX_WEB_SERVICE.MAKE_REQUEST
-  -- - APEX_WEB_SERVICE.MAKE_REST_REQUEST
-  -- - APEX_WEB_SERVICE.MAKE_REST_REQUEST_B
-  **/
-  cookies http_cookie_tab_typ       -- request/response cookies
+( cookies http_cookie_tab_typ       -- request/response cookies
 , http_headers property_tab_typ  -- request/response headers
 , body_vc varchar2(4000 byte)       -- empty for GET request (envelope for a SOAP request)
 , body_clob clob                    -- idem
@@ -18,6 +7,15 @@ create or replace type http_request_response_typ under msg_typ
 , body_blob blob                    -- idem
 
 /**
+HTTP_REQUEST_RESPONSE_TYP
+=========================
+Common attributes for SOAP/REST request/responses.
+However, no sensitive information like username or password is stored.
+See also:
+
+- APEX_WEB_SERVICE.MAKE_REQUEST
+- APEX_WEB_SERVICE.MAKE_REST_REQUEST
+- APEX_WEB_SERVICE.MAKE_REST_REQUEST_B
 
 This super type allows sub types to make a web service call, either synchronous or asynchronous.
 When the context$ attribute is not null, the sub type is obliged to enqueue the web service response with that attribute as the correlation id.

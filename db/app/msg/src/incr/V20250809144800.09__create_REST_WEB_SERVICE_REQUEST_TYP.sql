@@ -1,13 +1,9 @@
 create or replace type rest_web_service_request_typ under web_service_request_typ
-( /**
-  -- REST_WEB_SERVICE_REQUEST_TYP
-  -- ============================
-  -- parameter name/value pairs like in apex_web_service.make_rest_request(..., parm_name, parm_value, ...)
-  **/
-  parms property_tab_typ
+( parms property_tab_typ
 , binary_response integer -- do we invoke APEX_WEB_SERVICE.MAKE_REST_REQUEST (binary_response = 0) or APEX_WEB_SERVICE.MAKE_REST_REQUEST_B (binary_response = 1)?
 /**
-
+REST_WEB_SERVICE_REQUEST_TYP
+============================
 This type allows you to make a REST web service call, either synchronous or asynchronous.
 
 The Oracle AQ documentation states this about enqueuing buffered messages: the

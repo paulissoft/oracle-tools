@@ -1,18 +1,24 @@
 create or replace type web_service_response_typ under http_request_response_typ
-( -- The attributes are common for SOAP (APEX_WEB_SERVICE.MAKE_RESPONSE) and REST (APEX_WEB_SERVICE.MAKE_REST_RESPONSE[_B]).
-  -- However, no sensitive information like username or password is stored.
-  web_service_request web_service_request_typ
+( web_service_request web_service_request_typ
 , sql_code integer -- sqlcode
 , sql_error_message varchar2(4000 byte) -- sqlerrm
 , http_status_code integer -- apex_web_service.g_status_code
 , http_reason_phrase varchar2(4000 byte)
-  -- No real maximum size, see https://stackoverflow.com/questions/9513447/http-response-status-line-maximum-size.
-  -- So we use 4000 byte as a compromise between
-  -- a) utl_http.resp.reason_phrase (varchar2(256)) and
-  -- b) apex_web_service.g_reason_phrase (can store sqlerrm)
+
 /**
+WEB_SERVICE_RESPONSE_TYP
+========================
 
 This type stores the response of a web service request.
+
+The attributes are common for SOAP (APEX_WEB_SERVICE.MAKE_RESPONSE) and REST (APEX_WEB_SERVICE.MAKE_REST_RESPONSE[_B]).
+However, no sensitive information like username or password is stored.
+
+For http_reason_phrase:
+-- No real maximum size, see [HTTP Response Status-Line maximum size](https://stackoverflow.com/questions/9513447/http-response-status-line-maximum-size).
+-- So we use 4000 byte as a compromise between
+-- a) utl_http.resp.reason_phrase (varchar2(256)) and
+-- b) apex_web_service.g_reason_phrase (can store sqlerrm)
 
 **/
 , constructor function web_service_response_typ
