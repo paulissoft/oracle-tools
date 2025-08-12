@@ -1,31 +1,6 @@
 create or replace type body http_request_response_typ
 is
-/*
-constructor function http_request_response_typ
-( self in out nocopy http_request_response_typ
-  -- from MSG_TYP
-, p_group$ in varchar2
-, p_context$ in varchar2
-  -- from HTTP_REQUEST_RESPONSE_TYP
-, p_cookies in http_cookie_tab_typ
-, p_http_headers property_tab_typ
-, p_body_clob in clob
-, p_body_blob in blob
-)
-return self as result
-is
-begin
-  self.construct
-  ( p_group$ => p_group$
-  , p_context$ => p_context$
-  , p_cookies => p_cookies
-  , p_http_headers => p_http_headers
-  , p_body_clob => p_body_clob
-  , p_body_blob => p_body_blob
-  );
-  return;
-end;
-*/
+
 final member procedure construct
 ( self in out nocopy http_request_response_typ
   -- from MSG_TYP

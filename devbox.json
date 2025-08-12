@@ -2,14 +2,18 @@
     "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.13.2/.schema/devbox.schema.json",
     "packages": {
         "sqlcl": {
-            "version": "24.4.3.070.2106",
+            "version":            "24.4.3.070.2106",
             "excluded_platforms": ["aarch64-darwin"]
         },
-        "podman": "5.4.1",
-        "podman-compose@1.2.0":                                                 "",
-        "perl":   "5.40.0",
-        "poetry": "1.8.5",
-        "maven":                                                                "3.8.6"
+        "podman":               "5.4.1",
+        "podman-compose@1.2.0": "",
+        "perl":                 "5.40.0",
+        "poetry":               "1.8.5",
+        "maven":                "3.8.6",
+        "nodejs-slim":          "24.4.1"
+    },
+    "env": {
+        "DEVBOX_COREPACK_ENABLED": "true"
     },
     "shell": {
         "init_hook": [
@@ -18,7 +22,10 @@
         "scripts": {
             "oci": [
                 "poetry run python bin/oci-do.py \"$@\""
-            ]
+            ],
+            "install": "yarn install",
+            "build-docs": "yarn run build:docs:msg",
+            "check-docs": "yarn run check:docs:msg"
         }
     }
 }
