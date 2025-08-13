@@ -18,12 +18,23 @@
     <flyway.table>schema_version_tools_msg</flyway.table>
     <db.object.names.include>1</db.object.names.include>
     <db.object.names>
+      HTTP_COOKIE_TAB_TYP,
+      HTTP_COOKIE_TYP,
+      HTTP_REQUEST_RESPONSE_PKG,
+      HTTP_REQUEST_RESPONSE_TYP,
       MSG_AQ_PKG,
       MSG_NOTIFICATION_PRC,
       MSG_PKG,
       MSG_QUEUE_INFO_V,
       MSG_SCHEDULER_PKG,
       MSG_TYP,
+      PROPERTY_TAB_TYP,
+      PROPERTY_TYP,
+      REST_WEB_SERVICE_DELETE_REQUEST_TYP,
+      REST_WEB_SERVICE_GET_REQUEST_TYP,
+      REST_WEB_SERVICE_PATCH_REQUEST_TYP,
+      REST_WEB_SERVICE_POST_REQUEST_TYP,
+      REST_WEB_SERVICE_PUT_REQUEST_TYP,
       REST_WEB_SERVICE_REQUEST_TYP,
       WEB_SERVICE_PKG,
       WEB_SERVICE_REQUEST_SEQ,

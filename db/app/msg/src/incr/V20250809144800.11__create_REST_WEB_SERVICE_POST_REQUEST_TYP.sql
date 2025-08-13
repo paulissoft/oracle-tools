@@ -1,8 +1,10 @@
 create or replace type rest_web_service_post_request_typ under rest_web_service_request_typ
-( /**
-  -- REST_WEB_SERVICE_POST_REQUEST_TYP
-  -- =================================
-  **/
+(
+/**
+REST web service POST request
+=============================
+Implement a REST POST request.
+**/
   constructor function rest_web_service_post_request_typ
   ( self in out nocopy rest_web_service_post_request_typ
     -- from MSG_TYP
@@ -27,9 +29,12 @@ create or replace type rest_web_service_post_request_typ under rest_web_service_
   , p_binary_response in integer default 0
   )
   return self as result
+/** The constructor. **/
 
 , overriding
-  final member function http_method return varchar2
+  final member function http_method
+  return varchar2
+/** The HTTP method (POST). **/
 )
 final;
 /

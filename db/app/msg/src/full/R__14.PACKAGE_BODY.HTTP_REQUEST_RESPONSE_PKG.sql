@@ -1,0 +1,154 @@
+CREATE OR REPLACE BODY PACKAGE "HTTP_REQUEST_RESPONSE_PKG" AS 
+
+function get_cookie_idx
+( p_cookies in http_cookie_tab_typ
+, p_name in varchar2
+, p_ignore_case in boolean
+)
+return positive
+is
+begin
+  if p_cookies is not null and p_cookies.count > 0
+  then
+    for i_idx in p_cookies.first .. p_cookies.last
+    loop
+      if p_ignore_case
+      then
+        if upper(p_cookies(i_idx).name) = upper(p_name)
+        then
+          return i_idx;
+        end if;
+      else
+        if p_cookies(i_idx).name = p_name
+        then
+          return i_idx;
+        end if;
+      end if;
+    end loop;
+  end if;
+  return null;
+end get_cookie_idx;
+
+function get_property_idx
+( p_properties in property_tab_typ
+, p_name in varchar2
+, p_ignore_case in boolean
+)
+return positive
+is
+begin
+  if p_properties is not null and p_properties.count > 0
+  then
+    for i_idx in p_properties.first .. p_properties.last
+    loop
+      if p_ignore_case
+      then
+        if upper(p_properties(i_idx).name) = upper(p_name)
+        then
+          return i_idx;
+        end if;
+      else
+        if p_properties(i_idx).name = p_name
+        then
+          return i_idx;
+        end if;
+      end if;
+    end loop;
+  end if;
+  return null;
+end get_property_idx;
+
+function get_http_status_descr
+( p_http_status_code in positiven -- Should be > 0
+)
+return varchar2
+deterministic
+is
+begin
+  return
+    case p_http_status_code
+      -- 1XX - Information
+
+      when 100 then 'Continue'
+      when 101 then 'Switching Protocols'
+      when 102 then 'Processing'
+      when 103 then 'Early Hints'
+
+      -- 2XX - Success
+
+      when 200 then 'OK'
+      when 201 then 'Created'
+      when 202 then 'Accepted'
+      when 203 then 'Non-authoritative Information'
+      when 205 then 'Reset Content'
+      when 206 then 'Partial Content'
+      when 207 then 'Multi-status (WebDAV)'
+      when 208 then 'Already Reported (WebDAV)'
+      when 226 then 'IM Used (HTTP Delta Encoding)'
+
+      -- 3XX - Redirection
+
+      when 300 then 'Multiple Choices'
+      when 301 then 'Moved Permanently'
+      when 302 then 'Found'
+      when 303 then 'See Other'
+      when 304 then 'Not Modified'
+      when 304 then 'Use Proxy'
+      when 306 then 'Unused'
+      when 307 then 'Temporary Redirect'
+      when 308 then 'Permanent Redirect'
+
+      -- 4XX - Client Error
+
+      when 400 then 'Bad Request'
+      when 401 then 'Unauthorised'
+      when 402 then 'Payment Required'
+      when 403 then 'Forbidden'
+      when 404 then 'Not Found'
+      when 405 then 'Method Not Allowed'
+      when 406 then 'Not Acceptable'
+      when 407 then 'Proxy Authentication Required'
+      when 408 then 'Request Timeout'
+      when 409 then 'Conflict'
+      when 410 then 'Gone'
+      when 411 then 'Length Required'
+      when 412 then 'Precondition Failed'
+      when 413 then 'Payload Too Large'
+      when 414 then 'URI Too Large'
+      when 415 then 'Unsupported Media Type'
+      when 416 then 'Range Not Satisfiable'
+      when 417 then 'Exception Failed'
+      when 418 then 'I’m a Teapot'
+      when 421 then 'Misdirected Request'
+      when 422 then 'Unpossessable Entity (WebDAV)'
+      when 423 then 'Locked (WebDAV)'
+      when 424 then 'Failed '
+      when 425 then 'Too Early'
+      when 426 then 'Upgrade Required'
+      when 428 then 'Precondition Required'
+      when 429 then 'Too Many Requests'
+      when 431 then 'Request Header Fields too Large'
+      when 451 then 'Unavailable for Legal Reasons'
+      when 499 then 'Client Closed Request'
+
+      -- 5XX - Server Error Responses
+
+      when 500 then 'Internal Server Error'
+      when 501 then 'Not Implemented'
+      when 502 then 'Bad Gateway'
+      when 503 then 'Service Unavailable'
+      when 504 then 'Gateway Timeout'
+      when 505 then 'HTTP Version Not Supported'
+      when 507 then 'Insufficient Storage (WebDAV)'
+      when 508 then 'Loop Detected (WebDAV)'
+      when 510 then 'Not Extended'
+      when 511 then 'Network Authentication Required'
+      when 599 then 'Network Connection Timeout Error'
+
+      else 'Unknown HTTP status code (' || to_char(p_http_status_code) || ')'
+    end;
+end http_status_descr;
+  
+end http_request_response_pkg;
+/
+

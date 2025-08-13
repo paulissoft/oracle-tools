@@ -1,19 +1,20 @@
 create or replace type rest_web_service_put_request_typ under rest_web_service_request_typ
-( /**
-  -- REST_WEB_SERVICE_PUT_REQUEST_TYP
-  -- ================================
-  **/
-
+(
+/**
+REST web service PUT request
+============================
+Implement a REST PUT request.
+**/
   constructor function rest_web_service_put_request_typ
   ( self in out nocopy rest_web_service_put_request_typ
     -- from MSG_TYP
-  , p_group$ in varchar2 default null -- use web_service_request_typ.default_group()
-  , p_context$ in varchar2 default null -- you may use web_service_request_typ.generate_unique_id() to generate an AQ correlation id
+  , p_group$ in varchar2 default null -- Use WEB_SERVICE_REQUEST_TYP.DEFAULT_GROUP() when null
+  , p_context$ in varchar2 default null -- You may use WEB_SERVICE_REQUEST_TYP.GENERATE_UNIQUE_ID() to generate an AQ correlation id
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ default null       -- request/response cookies
-  , p_http_headers in property_tab_typ default null     -- request/response headers
-  , p_body_clob in clob default null                    -- empty for GET request (envelope for a SOAP request)
-  , p_body_blob in blob default null                    -- empty for GET request (empty for a SOAP request)
+  , p_cookies in http_cookie_tab_typ default null
+  , p_http_headers in property_tab_typ default null
+  , p_body_clob in clob default null
+  , p_body_blob in blob default null
     -- from WEB_SERVICE_REQUEST_TYP
   , p_url in varchar2 default null
   , p_scheme in varchar2 default null -- 'Basic'
@@ -28,10 +29,11 @@ create or replace type rest_web_service_put_request_typ under rest_web_service_r
   , p_binary_response in integer default 0
   )
   return self as result
+/** The constructor. **/
 
 , overriding
   final member function http_method return varchar2
-
+/** The HTTP method (PUT). **/
 )
 final;
 /
