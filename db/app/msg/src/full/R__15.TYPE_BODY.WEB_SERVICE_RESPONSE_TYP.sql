@@ -3,19 +3,20 @@ CREATE OR REPLACE TYPE BODY "WEB_SERVICE_RESPONSE_TYP" AS
 constructor function web_service_response_typ
 ( self in out nocopy web_service_response_typ
   -- from MSG_TYP
-, p_group$ in varchar2 default null                -- use default_group() from below
-, p_context$ in varchar2 default null
+, p_group$ in varchar2
+, p_context$ in varchar2
   -- from HTTP_REQUEST_RESPONSE_TYP
-, p_cookies in http_cookie_tab_typ default null    -- request/response cookies
-, p_http_headers in property_tab_typ default null  -- request/response headers
-, p_body_clob in clob default null                 -- empty for GET request (envelope for a SOAP request)
-, p_body_blob in blob default null                 -- empty for GET request (empty for a SOAP request)
+, p_cookies in http_cookie_tab_typ
+, p_http_headers in property_tab_typ
+, p_body_clob in clob
+, p_body_blob in blob
   -- from WEB_SERVICE_RESPONSE_TYP
 , p_web_service_request in web_service_request_typ
 , p_sql_code in integer
 , p_sql_error_message in varchar2
 , p_http_status_code in integer  
-, p_http_reason_phrase in varchar2 default null
+, p_http_reason_phrase in varchar2
+, p_elapsed_time_ms in integer
 )
 return self as result
 is
@@ -32,28 +33,7 @@ begin
   , p_sql_error_message => p_sql_error_message
   , p_http_status_code => p_http_status_code
   , p_http_reason_phrase => p_http_reason_phrase
-  );
-  return;
-end web_service_response_typ;
-
-constructor function web_service_response_typ
-( self in out nocopy web_service_response_typ
-)
-return self as result
-is
-begin
-  self.construct
-  ( p_group$ => null
-  , p_context$ => null
-  , p_cookies => null
-  , p_http_headers => null
-  , p_body_clob => null
-  , p_body_blob => null
-  , p_web_service_request => null
-  , p_sql_code => null
-  , p_sql_error_message => null
-  , p_http_status_code => null
-  , p_http_reason_phrase => null
+  , p_elapsed_time_ms => p_elapsed_time_ms
   );
   return;
 end web_service_response_typ;
@@ -74,6 +54,7 @@ final member procedure construct
 , p_sql_error_message in varchar2
 , p_http_status_code in integer  
 , p_http_reason_phrase in varchar2
+, p_elapsed_time_ms in integer
 )
 is
 begin
@@ -90,6 +71,7 @@ begin
   self.sql_error_message := p_sql_error_message;
   self.http_status_code := p_http_status_code;
   self.http_reason_phrase := p_http_reason_phrase;
+  self.elapsed_time_ms := p_elapsed_time_ms;
 end construct;
 
 overriding
@@ -185,6 +167,7 @@ begin
   p_json_object.put('SQL_ERROR_MESSAGE', self.sql_error_message);
   p_json_object.put('HTTP_STATUS_CODE', self.http_status_code);
   p_json_object.put('HTTP_REASON_PHRASE', self.http_reason_phrase);
+  p_json_object.put('ELAPSED_TIME_MS', self.elapsed_time_ms);
 end serialize;
 
 overriding

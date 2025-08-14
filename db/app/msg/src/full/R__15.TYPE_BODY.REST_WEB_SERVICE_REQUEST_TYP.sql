@@ -6,10 +6,10 @@ final member procedure construct
 , p_group$ in varchar2
 , p_context$ in varchar2
   -- from HTTP_REQUEST_RESPONSE_TYP
-, p_cookies in http_cookie_tab_typ -- default null    -- request/response cookies
-, p_http_headers in property_tab_typ -- default null  -- request/response headers
-, p_body_clob in clob                                 -- empty for GET request (envelope for a SOAP request)
-, p_body_blob in blob                                 -- empty for GET request (empty for a SOAP request)
+, p_cookies in http_cookie_tab_typ
+, p_http_headers in property_tab_typ
+, p_body_clob in clob
+, p_body_blob in blob
   -- from WEB_SERVICE_REQUEST_TYP
 , p_url in varchar2
 , p_scheme in varchar2 -- default null -- 'Basic'
