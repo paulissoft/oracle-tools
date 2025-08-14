@@ -9,7 +9,6 @@ create or replace type web_service_response_typ under http_request_response_typ
 /**
 WEB service response
 ====================
-
 This type stores the response of a web service request.
 
 The attributes are common for SOAP (APEX_WEB_SERVICE.MAKE_RESPONSE) and REST (APEX_WEB_SERVICE.MAKE_REST_RESPONSE[_B]) responses.
@@ -112,6 +111,7 @@ You need to dequeue from that queue using the correlation id to get the response
 
 , final member function http_status_descr
   return varchar2
+  deterministic
 /** Returns the HTTP status code description, e.g. OK for HTTP status code 200. **/  
 )
 not final;

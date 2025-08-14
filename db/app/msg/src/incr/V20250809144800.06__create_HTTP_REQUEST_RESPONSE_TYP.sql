@@ -41,7 +41,7 @@ See also:
   member function has_not_null_lob
   ( self in http_request_response_typ
   )
-  return integer
+  return integer -- 0=false, 1=true
 /** Does the object have a non-null LOB (body_clob not null or body_blob not null)? **/
 
 , final member function body_c
@@ -56,13 +56,13 @@ See also:
   return blob
 /** Get the binary body. **/
 
-, final member function get_cookie_idx
+, final member function cookie_idx
   ( p_name in varchar2
   )
   return integer -- null when not found
 /** Get the cookie index for this name (case sensitive). **/
 
-, final member function get_http_header_idx
+, final member function http_header_idx
   ( p_name in varchar2
   )
   return integer -- null when not found

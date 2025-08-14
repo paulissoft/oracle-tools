@@ -204,6 +204,14 @@ begin
   return 'WEB_SERVICE_RESPONSE';
 end default_group;
 
+final member function http_status_descr
+return varchar2
+deterministic
+is
+begin
+  return http_request_response_pkg.get_http_status_descr(self.http_status_code);
+end http_status_descr;
+
 end;
 /
 

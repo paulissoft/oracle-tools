@@ -8,7 +8,7 @@ Implement a REST GET request.
   constructor function rest_web_service_get_request_typ
   ( self in out nocopy rest_web_service_get_request_typ
     -- from MSG_TYP
-  , p_group$ in varchar2 default null -- Use web_service_request_typ.default_group() when null
+  , p_group$ in varchar2 default null -- Use WEB_SERVICE_REQUEST_TYP.DEFAULT_GROUP() when null
   , p_context$ in varchar2 default null -- You may use WEB_SERVICE_REQUEST_TYP.GENERATE_UNIQUE_ID() to generate an AQ correlation id
     -- from HTTP_REQUEST_RESPONSE_TYP
   , p_cookies in http_cookie_tab_typ default null

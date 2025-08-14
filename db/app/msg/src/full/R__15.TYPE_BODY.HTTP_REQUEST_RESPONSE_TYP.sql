@@ -110,5 +110,23 @@ begin
     end;
 end body_b;
 
+final member function cookie_idx
+( p_name in varchar2
+)
+return integer -- null when not found
+is
+begin
+  return http_request_response_pkg.get_cookie_idx(p_name);
+end cookie_idx;
+
+final member function http_header_idx
+( p_name in varchar2
+)
+return integer -- null when not found
+is
+begin
+  return http_request_response_pkg.get_http_header_idx(p_name);
+end http_header_idx;
+
 end;
 /
