@@ -1,8 +1,27 @@
 CREATE OR REPLACE PACKAGE "HTTP_REQUEST_RESPONSE_PKG" AUTHID DEFINER AS 
 
 /**
-A package with HTTP_REQUEST_RESPONSE_TYP related functions and procedures.
+A package with HTTP request response related functions and procedures.
 **/
+
+procedure to_json
+( p_cookie_tab in http_cookie_tab_typ
+, p_cookies out nocopy json_array_t
+);
+/** Convert a HTTP cookie table to a JSON array. **/
+
+procedure to_json
+( p_http_header_tab in property_tab_typ
+, p_http_headers out nocopy json_array_t
+);
+/** Convert a HTTP header table to a JSON array. **/
+
+procedure copy_parameters
+( p_parms in property_tab_typ
+, p_url_encode in boolean
+, p_parameters out nocopy varchar2
+);
+/** Create a name=value list (separated by ampersands) where value may be URL encoded. **/
 
 function get_cookie_idx
 ( p_cookies in http_cookie_tab_typ -- The cookies

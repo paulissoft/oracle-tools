@@ -231,7 +231,7 @@ begin
   (self as web_service_request_typ).serialize(p_json_object);
   if self.parms is not null
   then
-    web_service_pkg.to_json(self.parms, l_json_array);
+    http_request_response_pkg.to_json(self.parms, l_json_array);
     p_json_object.put('PARMS', l_json_array);
   end if;
   p_json_object.put('BINARY_RESPONSE', self.binary_response);

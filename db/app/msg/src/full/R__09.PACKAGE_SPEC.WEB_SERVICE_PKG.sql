@@ -4,93 +4,25 @@ CREATE OR REPLACE PACKAGE "WEB_SERVICE_PKG" AUTHID DEFINER AS
 Invoke web services
 ===================
 
-A package introduced to prive backwards compability with APEX_WEB_SERVICE, i.e. functions and procedures for web services.
+A package introduced to provide backwards compability with APEX_WEB_SERVICE, i.e. functions and procedures for web services.
 
-The usual way of invoking a web service via APEX_WEB_SERVICE (procedure names are the same for this package and APEX_WEB_SERVICE):
+The usual way of invoking a web service via APEX_WEB_SERVICE:
 
 1. invoke `clear_request_headers`
 2. invoke `set_request_headers`
-3. invoke `make_rest_request`
+3. invoke `make_rest_request` (or `make_rest_request_b`)
 
-New in this package is:
+This package allows you to combine steps 1 and 2 and thus just invoke one routine. There is a `make_rest_request` and `make_rest_request_b` function that you can use in a SQL query.
 
-4. invoke handle_response and if there is an exception (for instance HTTP status code not 2XX) you may need to retry, i.e. return to point 3
+Furthermore, there is `handle_response` for handling the HTTP response, raising by default an exception when the HTTP status code is not 2XX.
 
-But in order to use just one `make_rest_request` call the function below where there is no need to invoke `set_request_headers`:
-
-```
-function make_rest_request
-( p_request in rest_web_service_request_typ -- The request
-, p_username in varchar2 default null -- The username if basic authentication is required for this service
-, p_password in varchar2 default null -- The password if basic authentication is required for this service
-, p_wallet_pwd in varchar2 default null -- The password to access the wallet
-)
-return web_service_response_typ;
-```
-
-The response to a `make_rest_request` is an object with all the data from the HTTP response.
+The response to the function call `make_rest_request` or `make_rest_request_b`, is an object with all the data from the HTTP response.
 
 See also [APEX_WEB_SERVICE The Definitive Guide](https://blog.cloudnueva.com/apexwebservice-the-definitive-guide).
 
 **/
 
 c_prefer_to_use_utl_http constant boolean := false;
-
-subtype vc_arr2 is sys.dbms_sql.varchar2a;
-
-empty_vc_arr vc_arr2;
-
-$if oracle_tools.cfg_pkg.c_apex_installed $then
-
-subtype header_table is apex_web_service.header_table;
-
-$else -- $if oracle_tools.cfg_pkg.c_apex_installed $then
-
--- from APEX_230200.WWV_FLOW_WEBSERVICES_API
-
-type header is record (
-    name       varchar2(256),
-    value      varchar2(32767) );
-
-type header_table is table of header index by binary_integer;
-
-$end -- $if oracle_tools.cfg_pkg.c_apex_installed $then
-
-procedure to_json
-( p_cookie_tab in http_cookie_tab_typ
-, p_cookies out nocopy json_array_t
-);
-/** Convert a HTTP cookie table to a JSON array. **/
-
-procedure to_json
-( p_http_header_tab in property_tab_typ
-, p_http_headers out nocopy json_array_t
-);
-/** Convert a HTTP header table to a JSON array. **/
-
-procedure set_request_headers
-( p_name_01 in varchar2 default null
-, p_value_01 in varchar2 default null
-, p_name_02 in varchar2 default null
-, p_value_02 in varchar2 default null
-, p_name_03 in varchar2 default null
-, p_value_03 in varchar2 default null
-, p_name_04 in varchar2 default null
-, p_value_04 in varchar2 default null
-, p_name_05 in varchar2 default null
-, p_value_05 in varchar2 default null
-, p_reset in boolean default true
-, p_skip_if_exists in boolean default false
-);
-/** See APEX_WEB_SERVICE.SET_REQUEST_HEADERS. */
-
-procedure remove_request_header
-( p_name in varchar2
-);
-/** See APEX_WEB_SERVICE.REMOVE_REQUEST_HEADER. */
-
-procedure clear_request_headers;
-/** See APEX_WEB_SERVICE.CLEAR_REQUEST_HEADERS. */
 
 function make_rest_request
 ( p_request in rest_web_service_request_typ -- The request
@@ -103,32 +35,49 @@ return web_service_response_typ;
 
 function make_rest_request
 ( p_url in varchar2 -- The url endpoint of the Web service
-, p_http_method in varchar2 -- The HTTP Method to use, PUT, POST, GET, HEAD or DELETE
-, p_username in varchar2 default null -- The username if basic authentication is required for this service
-, p_password in varchar2 default null -- The password if basic authentication is required for this service
+, p_http_method in varchar2 default 'GET' -- The HTTP Method to use, PUT, POST, GET, HEAD or DELETE
 , p_scheme in varchar2 default 'Basic' -- The authentication scheme, Basic (default), OAUTH_CLIENT_CRED or AWS
+, p_cookies in http_cookie_tab_typ default null -- The HTTP cookies
+, p_http_headers in property_tab_typ default null -- The HTTP headers
+, p_body in clob default null -- The HTTP payload to be sent as clob (but maybe used as query parameters for GET)
+, p_body_blob in blob default null -- The HTTP payload to be sent as binary blob (ex., posting a file)
 , p_proxy_override in varchar2 default null -- The proxy to use for the request
 , p_transfer_timeout in number default 180 -- The amount of time in seconds to wait for a response
-, p_body in clob default empty_clob() -- The HTTP payload to be sent as clob (but maybe used as query parameters for GET)
-, p_body_blob in blob default empty_blob() -- The HTTP payload to be sent as binary blob (ex., posting a file)
-, p_parm_name in vc_arr2 default empty_vc_arr -- The name of the parameters to be used in name/value pairs (maybe used as query parameters for GET)
-, p_parm_value in vc_arr2 default empty_vc_arr -- The value of the parameters to be used in name/value pairs (maybe used as query parameters for GET)
 , p_wallet_path in varchar2 default null -- The filesystem path to a wallet if request is https, ex., file:/usr/home/oracle/WALLETS
-, p_wallet_pwd in varchar2 default null -- The password to access the wallet
 , p_https_host in varchar2 default null -- The host name to be matched against the common name (CN) of the remote server's certificate for an HTTPS request
 , p_credential_static_id in varchar2 default null -- The name of the credential store to be used.
 , p_token_url in varchar2 default null -- For token-based authentication flows: The URL where to get the token from.
+, p_parms in property_tab_typ default null -- The query parameters (GET) or body parameters (not GET and empty body payload)
+  -- credential related parameters (not stored in REST_WEB_SERVICE_REQUEST_TYP)
+, p_username in varchar2 default null -- The username if basic authentication is required for this service
+, p_password in varchar2 default null -- The password if basic authentication is required for this service
+, p_wallet_pwd in varchar2 default null -- The password to access the wallet
 )
 return web_service_response_typ;
-/**
+/** See APEX_WEB_SERVICE.MAKE_REST_REQUEST. **/
 
-See APEX_WEB_SERVICE.MAKE_REST_REQUEST.
-
-When p_body is empty, the info from p_parm_name/p_parm_value will be copied to p_body.
-
-For a GET operation, a non-empty p_body will be treated as URL query parameters.
-
-*/
+function make_rest_request_b
+( p_url in varchar2 -- The url endpoint of the Web service
+, p_http_method in varchar2 default 'GET' -- The HTTP Method to use, PUT, POST, GET, HEAD or DELETE
+, p_scheme in varchar2 default 'Basic' -- The authentication scheme, Basic (default), OAUTH_CLIENT_CRED or AWS
+, p_cookies in http_cookie_tab_typ default null -- The HTTP cookies
+, p_http_headers in property_tab_typ default null -- The HTTP headers
+, p_body in clob default null -- The HTTP payload to be sent as clob (but maybe used as query parameters for GET)
+, p_body_blob in blob default null -- The HTTP payload to be sent as binary blob (ex., posting a file)
+, p_proxy_override in varchar2 default null -- The proxy to use for the request
+, p_transfer_timeout in number default 180 -- The amount of time in seconds to wait for a response
+, p_wallet_path in varchar2 default null -- The filesystem path to a wallet if request is https, ex., file:/usr/home/oracle/WALLETS
+, p_https_host in varchar2 default null -- The host name to be matched against the common name (CN) of the remote server's certificate for an HTTPS request
+, p_credential_static_id in varchar2 default null -- The name of the credential store to be used.
+, p_token_url in varchar2 default null -- For token-based authentication flows: The URL where to get the token from.
+, p_parms in property_tab_typ default null -- The query parameters (GET) or body parameters (not GET and empty body payload)
+  -- credential related parameters (not stored in REST_WEB_SERVICE_REQUEST_TYP)
+, p_username in varchar2 default null -- The username if basic authentication is required for this service
+, p_password in varchar2 default null -- The password if basic authentication is required for this service
+, p_wallet_pwd in varchar2 default null -- The password to access the wallet
+)
+return web_service_response_typ;
+/** See APEX_WEB_SERVICE.MAKE_REST_REQUEST_B. **/
 
 subtype http_status_code_t is positive;
 subtype http_status_description_t is varchar2(100 byte);
@@ -171,12 +120,6 @@ procedure ut_setup;
 --%aftereach
 --%rollback(manual)
 procedure ut_teardown;
-
---%test
-procedure ut_set_request_headers;
-
---%test
-procedure ut_remove_request_header;
 
 --%test
 --%rollback(manual)

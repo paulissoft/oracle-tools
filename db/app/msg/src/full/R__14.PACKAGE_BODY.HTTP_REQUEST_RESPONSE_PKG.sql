@@ -1,5 +1,97 @@
 CREATE OR REPLACE BODY PACKAGE "HTTP_REQUEST_RESPONSE_PKG" AS 
 
+procedure to_json
+( p_cookie_tab in http_cookie_tab_typ
+, p_cookies out nocopy json_array_t
+)
+is
+  l_cookie json_object_t;
+begin
+  if p_cookie_tab is null or p_cookie_tab.count = 0
+  then
+    p_cookies := null;
+  else
+    p_cookies := json_array_t();
+    
+    for i_idx in p_cookie_tab.first .. p_cookie_tab.last
+    loop
+      l_cookie := json_object_t();
+      
+      l_cookie.put('name', p_cookie_tab(i_idx).name);
+      l_cookie.put('value', p_cookie_tab(i_idx).value);
+      l_cookie.put('domain', p_cookie_tab(i_idx).domain);
+      l_cookie.put('expire', to_timestamp(p_cookie_tab(i_idx).expire, c_timestamp_format));
+      l_cookie.put('path', p_cookie_tab(i_idx).path);
+      l_cookie.put('secure', case p_cookie_tab(i_idx).secure when 0 then false when 1 then true end);
+      l_cookie.put('version', p_cookie_tab(i_idx).version);
+      l_cookie.put('comment', p_cookie_tab(i_idx).comment);
+
+      p_cookies.append(l_cookie);
+    end loop;
+  end if;
+end to_json;
+
+procedure to_json
+( p_http_header_tab in property_tab_typ
+, p_http_headers out nocopy json_array_t
+)
+is
+  l_http_header json_object_t;
+begin
+  if p_http_header_tab.count = 0
+  then
+    p_http_headers := null;
+  else
+    p_http_headers := json_array_t();
+    
+    for i_idx in p_http_header_tab.first .. p_http_header_tab.last
+    loop
+      l_http_header := json_object_t();
+      
+      /*
+      type header is record (
+        name       varchar2(256),
+        value      varchar2(32767) );
+
+      type header_table is table of header index by binary_integer;
+      */
+      
+      l_http_header.put(p_http_header_tab(i_idx).name, p_http_header_tab(i_idx).value);
+
+      p_http_headers.append(l_http_header);
+    end loop;
+  end if;
+end to_json;
+
+procedure copy_parameters
+( p_parms in property_tab_typ
+, p_url_encode in boolean
+, p_parameters out nocopy varchar2
+)
+is
+begin
+  if p_parms is not null and p_parms.count > 0
+  then
+    for i_idx in p_parms.first .. p_parms.last
+    loop
+      if p_parms(i_idx).name is not null and p_parms(i_idx).value is not null
+      then
+        p_parameters :=
+          case
+            when i_idx > 1 then p_parameters || '&'
+          end ||
+          p_parms(i_idx).name ||
+          '=' ||
+          case
+            when p_url_encode
+            then utl_url.escape(url => p_parms(i_idx).value, escape_reserved_chars => true)
+            else p_parms(i_idx).value
+          end;
+      end if;
+    end loop;
+  end if;
+end copy_parameters;
+
 function get_cookie_idx
 ( p_cookies in http_cookie_tab_typ
 , p_name in varchar2

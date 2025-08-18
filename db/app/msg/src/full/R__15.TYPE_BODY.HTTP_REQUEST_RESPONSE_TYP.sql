@@ -32,12 +32,12 @@ begin
   (self as msg_typ).serialize(p_json_object);
   if self.cookies is not null
   then
-    web_service_pkg.to_json(self.cookies, l_json_array);
+    http_request_response_pkg.to_json(self.cookies, l_json_array);
     p_json_object.put('COOKIES', l_json_array);
   end if;
   if self.http_headers is not null
   then
-    web_service_pkg.to_json(self.http_headers, l_json_array);
+    http_request_response_pkg.to_json(self.http_headers, l_json_array);
     p_json_object.put('HTTP_HEADERS', l_json_array);
   end if;
   if self.body_vc is not null
