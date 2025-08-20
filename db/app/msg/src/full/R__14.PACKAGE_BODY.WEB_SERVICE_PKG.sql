@@ -126,7 +126,7 @@ begin
   then
     for i_idx in p_request_headers.first .. p_request_headers.last
     loop
-      if p_request_headers(i_idx).name not in ('Content-Length'/*, 'Accept', 'User-Agent'*/)
+      if upper(p_request_headers(i_idx).name) not in (upper('Content-Length')/*, 'Accept', 'User-Agent'*/)
       then
         utl_http.set_header(l_http_request, p_request_headers(i_idx).name, p_request_headers(i_idx).value);
       end if;
@@ -472,73 +472,47 @@ begin
   end if;
 end convert_to_parms_tables;
 
-procedure convert_from_parms_tables
-( p_parm_names in vc_arr2
-, p_parm_values in vc_arr2
-, p_parms out nocopy property_tab_typ
-)
-is
-begin
-  if p_parm_names.count = 0
-  then
-    p_parms := null;
-  else
-    p_parms := property_tab_typ();
-    
-    for i_idx in p_parm_names.first .. p_parm_names.last
-    loop
-      if p_parm_names(i_idx) is not null and p_parm_values(i_idx) is not null
-      then
-        p_parms.extend(1);
-        p_parms(p_parms.last) := property_typ(p_parm_names(i_idx), p_parm_values(i_idx));
-      end if;
-    end loop;
-  end if;
-end convert_from_parms_tables;
+-- PUBLIC
 
 function make_rest_request
 ( p_request in rest_web_service_request_typ
-, p_parm_names in vc_arr2
-, p_parm_values in vc_arr2
 , p_username in varchar2
 , p_password in varchar2
 , p_wallet_pwd in varchar2
 )
 return web_service_response_typ
 is
+  l_parm_names vc_arr2 := empty_vc_arr;
+  l_parm_values vc_arr2 := empty_vc_arr;
   l_url_encode boolean := (p_request.http_method = 'GET');
+  l_idx positive;
   l_url varchar2(32767 byte) := p_request.url;
   l_parameters varchar2(32767 byte);
   l_body_clob clob := p_request.body_c;
   l_body_blob blob := p_request.body_b;
   l_web_service_response web_service_response_typ := null;
-$if oracle_tools.cfg_pkg.c_debugging $then
   l_start constant number := dbms_utility.get_time;
-$end  
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
 $end
 
+  pragma inline (convert_to_parms_tables, 'YES');
+  convert_to_parms_tables(p_request.parms, l_parm_names, l_parm_values);
+
   if not l_url_encode
   then
     -- Content-Type=application/x-www-form-urlencoded?
-    if p_request.http_headers is not null and p_request.http_headers.count > 0
+    l_idx := http_request_response_pkg.get_property_idx(p_request.http_headers, 'Content-Type');
+    if l_idx is not null and p_request.http_headers(l_idx).value like 'application/x-www-form-urlencoded%'
     then
-      for i_idx in p_request.http_headers.first .. p_request.http_headers.last
-      loop
-        if p_request.http_headers(i_idx).name = 'Content-Type' and
-           p_request.http_headers(i_idx).value like 'application/x-www-form-urlencoded%'
-        then
-          l_url_encode := true;
-        end if;
-      end loop;
+      l_url_encode := true;
     end if;
   end if;
   
   http_request_response_pkg.copy_parameters
-  ( p_parm_names => p_parm_names
-  , p_parm_values => p_parm_values
+  ( p_parm_names => l_parm_names
+  , p_parm_values => l_parm_values
   , p_url_encode => l_url_encode
   , p_parameters => l_parameters
   );
@@ -622,8 +596,8 @@ $end
                      , p_transfer_timeout => p_request.transfer_timeout
                      , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
                      , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
-                     , p_parm_name => p_parm_names
-                     , p_parm_value => p_parm_values
+                     , p_parm_name => l_parm_names
+                     , p_parm_value => l_parm_values
                      , p_wallet_path => p_request.wallet_path
                      , p_wallet_pwd => p_wallet_pwd
 /*APEX*/             , p_https_host => p_request.https_host
@@ -647,8 +621,8 @@ $end
                      , p_transfer_timeout => p_request.transfer_timeout
                      , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
                      , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
-                     , p_parm_name => p_parm_names
-                     , p_parm_value => p_parm_values
+                     , p_parm_name => l_parm_names
+                     , p_parm_value => l_parm_values
                      , p_wallet_path => p_request.wallet_path
                      , p_wallet_pwd => null
 /*APEX*/             , p_https_host => p_request.https_host
@@ -696,8 +670,10 @@ $else
   convert_from_header_table(g_headers, l_web_service_response.http_headers);
 $end
 
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', (dbms_utility.get_time - l_start) * 10);
+  l_web_service_response.elapsed_time_ms := (dbms_utility.get_time - l_start) * 10;
+
+$if oracle_tools.cfg_pkg.c_debugging $then  
+  dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', l_web_service_response.elapsed_time_ms);
   dbug.leave;
 $end
 
@@ -705,105 +681,56 @@ $end
 exception
   when others
   then
+    l_web_service_response :=
+      web_service_response_typ
+      ( p_cookies => null
+      , p_http_headers => null
+      , p_body_clob => null
+      , p_body_blob => null
+      , p_web_service_request => p_request
+      , p_sql_code => sqlcode
+      , p_sql_error_message => sqlerrm
+      , p_http_status_code => null
+      , p_http_reason_phrase => null
+      );
+    l_web_service_response.elapsed_time_ms := (dbms_utility.get_time - l_start) * 10;
+    
 $if oracle_tools.cfg_pkg.c_debugging $then
-    dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', (dbms_utility.get_time - l_start) * 10);
+    dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', l_web_service_response.elapsed_time_ms);
     dbug.leave_on_error;
 $end
 
-    return web_service_response_typ
-           ( p_cookies => null
-           , p_http_headers => null
-           , p_body_clob => null
-           , p_body_blob => null
-           , p_web_service_request => p_request
-           , p_sql_code => sqlcode
-           , p_sql_error_message => sqlerrm
-           , p_http_status_code => null
-           , p_http_reason_phrase => null
-           );
-end make_rest_request;
-
--- PUBLIC
-
-function make_rest_request
-( p_request in rest_web_service_request_typ
-, p_username in varchar2
-, p_password in varchar2
-, p_wallet_pwd in varchar2
-)
-return web_service_response_typ
-is
-  l_parm_names vc_arr2 := empty_vc_arr;
-  l_parm_values vc_arr2 := empty_vc_arr;
-begin
-  -- no need to go back and forth
-  pragma inline (convert_to_parms_tables, 'YES');
-  convert_to_parms_tables(p_request.parms, l_parm_names, l_parm_values);
-
-  return make_rest_request
-         ( p_request => p_request
-         , p_parm_names => l_parm_names
-         , p_parm_values => l_parm_values
-         , p_username => p_username
-         , p_password => p_password
-         , p_wallet_pwd => p_wallet_pwd
-         );
+    return l_web_service_response;
 end make_rest_request;
 
 function make_rest_request
 ( p_url in varchar2
 , p_http_method in varchar2
-, p_username in varchar2
-, p_password in varchar2
 , p_scheme in varchar2
-, p_proxy_override in varchar2
-, p_transfer_timeout in number
+, p_cookies in http_cookie_tab_typ
+, p_http_headers in property_tab_typ
 , p_body in clob
 , p_body_blob in blob
-, p_parm_name in vc_arr2
-, p_parm_value in vc_arr2
+, p_proxy_override in varchar2
+, p_transfer_timeout in number
 , p_wallet_path in varchar2
-, p_wallet_pwd in varchar2
 , p_https_host in varchar2
 , p_credential_static_id in varchar2
 , p_token_url in varchar2
+, p_parms in property_tab_typ
+, p_username in varchar2
+, p_password in varchar2
+, p_wallet_pwd in varchar2
 )
 return web_service_response_typ
 is
   l_rest_web_service_request rest_web_service_request_typ;
   l_web_service_response web_service_response_typ;
-  l_parms property_tab_typ := null;
-  l_cookie_tab http_cookie_tab_typ;
-  l_http_header_tab property_tab_typ;
 begin
-  if p_parm_name.count > 0
-  then
-    l_parms := property_tab_typ();
-    for i_idx in p_parm_name.first .. p_parm_name.last
-    loop      
-      if p_parm_name(i_idx) is not null and p_parm_value(i_idx) is not null
-      then
-        l_parms.extend(1);
-        l_parms(l_parms.last) := property_typ(p_parm_name(i_idx), p_parm_value(i_idx));
-      end if;
-    end loop;
-  end if;
-
-  pragma inline (convert_from_cookie_table, 'YES');
-  convert_from_cookie_table
-  ( $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_cookies $else g_request_cookies $end
-  , l_cookie_tab
-  );
-  pragma inline (convert_from_header_table, 'YES');
-  convert_from_header_table
-  ( $if oracle_tools.cfg_pkg.c_apex_installed $then apex_web_service.g_request_headers $else g_request_headers $end
-  , l_http_header_tab
-  );
-
   rest_web_service_request_typ.construct
   ( p_http_method => p_http_method
-  , p_cookies => l_cookie_tab
-  , p_http_headers => l_http_header_tab
+  , p_cookies => p_cookies
+  , p_http_headers => p_http_headers
   , p_body_clob => p_body
   , p_body_blob => p_body_blob
   , p_url => p_url
@@ -814,17 +741,14 @@ begin
   , p_https_host => p_https_host
   , p_credential_static_id => p_credential_static_id
   , p_token_url => p_token_url
-  , p_parms => l_parms
+  , p_parms => p_parms
   , p_binary_response => 0
   , p_rest_web_service_request => l_rest_web_service_request
   );
   
   l_web_service_response :=
-    web_service_pkg.make_rest_request
+    make_rest_request
     ( p_request => l_rest_web_service_request
-      -- no need to go back and forth
-    , p_parm_names => p_parm_name
-    , p_parm_values => p_parm_value
     , p_username => p_username
     , p_password => p_password
     , p_wallet_pwd => p_wallet_pwd
@@ -832,6 +756,60 @@ begin
     
   return l_web_service_response;
 end make_rest_request;
+
+function make_rest_request_b
+( p_url in varchar2
+, p_http_method in varchar2
+, p_scheme in varchar2
+, p_cookies in http_cookie_tab_typ
+, p_http_headers in property_tab_typ
+, p_body in clob
+, p_body_blob in blob
+, p_proxy_override in varchar2
+, p_transfer_timeout in number
+, p_wallet_path in varchar2
+, p_https_host in varchar2
+, p_credential_static_id in varchar2
+, p_token_url in varchar2
+, p_parms in property_tab_typ
+, p_username in varchar2
+, p_password in varchar2
+, p_wallet_pwd in varchar2
+)
+return web_service_response_typ
+is
+  l_rest_web_service_request rest_web_service_request_typ;
+  l_web_service_response web_service_response_typ;
+begin
+  rest_web_service_request_typ.construct
+  ( p_http_method => p_http_method
+  , p_cookies => p_cookies
+  , p_http_headers => p_http_headers
+  , p_body_clob => p_body
+  , p_body_blob => p_body_blob
+  , p_url => p_url
+  , p_scheme => p_scheme
+  , p_proxy_override => p_proxy_override
+  , p_transfer_timeout => p_transfer_timeout
+  , p_wallet_path => p_wallet_path
+  , p_https_host => p_https_host
+  , p_credential_static_id => p_credential_static_id
+  , p_token_url => p_token_url
+  , p_parms => p_parms
+  , p_binary_response => 1
+  , p_rest_web_service_request => l_rest_web_service_request
+  );
+  
+  l_web_service_response :=
+    make_rest_request
+    ( p_request => l_rest_web_service_request
+    , p_username => p_username
+    , p_password => p_password
+    , p_wallet_pwd => p_wallet_pwd
+    );
+    
+  return l_web_service_response;
+end make_rest_request_b;
 
 procedure handle_response
 ( p_response in web_service_response_typ -- The REST request response

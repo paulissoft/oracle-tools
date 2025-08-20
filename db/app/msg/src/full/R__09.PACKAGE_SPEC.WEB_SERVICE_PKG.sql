@@ -8,8 +8,8 @@ A package introduced to provide backwards compability with APEX_WEB_SERVICE, i.e
 
 The usual way of invoking a web service via APEX_WEB_SERVICE:
 
-1. invoke `clear_request_headers`
-2. invoke `set_request_headers`
+1. set request headers via `APEX_WEB_SERVICE.CLEAR_REQUEST_HEADERS` and `APEX_WEB_SERVICE.SET_REQUEST_HEADERS`
+2. clear cookies via `APEX_WEB_SERVICE.CLEAR_REQUEST_COOKIES`
 3. invoke `make_rest_request` (or `make_rest_request_b`)
 
 This package allows you to combine steps 1 and 2 and thus just invoke one routine. There is a `make_rest_request` and `make_rest_request_b` function that you can use in a SQL query.
