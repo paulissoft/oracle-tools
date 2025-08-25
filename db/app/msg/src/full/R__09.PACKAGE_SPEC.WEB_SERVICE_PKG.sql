@@ -113,11 +113,11 @@ $if msg_aq_pkg.c_testing $then
 --%suitepath(MSG)
 --%suite
 
---%beforeeach
+--%beforeall
 --%rollback(manual)
 procedure ut_setup;
 
---%aftereach
+--%afterall
 --%rollback(manual)
 procedure ut_teardown;
 
@@ -127,15 +127,7 @@ procedure ut_rest_web_service_get_cb; -- processed by callback
 
 --%test
 --%rollback(manual)
-procedure ut_rest_web_service_get_job; -- processed by job
-
---%test
---%rollback(manual)
 procedure ut_rest_web_service_post;
-
---%test
---%rollback(manual)
-procedure ut_rest_web_service_get_job_bulk; -- processed by job
 
 $end -- $if msg_aq_pkg.c_testing $then
 

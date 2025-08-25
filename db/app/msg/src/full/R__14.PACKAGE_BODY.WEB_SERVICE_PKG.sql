@@ -1046,6 +1046,7 @@ $end
     then
       raise_application_error(-20000, 'Could not find PROCEDURE "' || l_plsql_callback || '"', true);
   end;
+
   for i_try in 1..2
   loop
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -1075,25 +1076,30 @@ $end
           );
         else
           raise;
-        end if;      
+        end if;
     end;
   end loop;
+
   commit;
+
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
 end ut_setup;
-  
+
 procedure ut_teardown
 is
   pragma autonomous_transaction;
 
-  l_request_queue_name constant user_queues.name%type := msg_aq_pkg.get_queue_name(web_service_request_typ.default_group());
-  l_response_queue_name constant user_queues.name%type := msg_aq_pkg.get_queue_name(web_service_response_typ.default_group());
+  l_request_queue_name constant user_queues.name%type :=
+    msg_aq_pkg.get_queue_name(web_service_request_typ.default_group());
+  l_response_queue_name constant user_queues.name%type :=
+    msg_aq_pkg.get_queue_name(web_service_response_typ.default_group());
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_TEARDOWN');
 $end
+
   if msg_constants_pkg.get_default_processing_method like 'plsql://%'
   then
     msg_aq_pkg.register
@@ -1121,6 +1127,7 @@ $end
   end;
 
   commit;
+
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
@@ -1145,30 +1152,6 @@ exception
     raise;
 $end
 end ut_rest_web_service_get_cb;
-
-procedure ut_rest_web_service_get_job
-is
-begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_GET_JOB');
-$end
-
-  msg_aq_pkg.unregister
-  ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
-  , p_subscriber => null
-  , p_plsql_callback => '%'
-  );
-  ut_rest_web_service_get;
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.leave;
-exception
-  when others
-  then
-    dbug.leave_on_error;
-    raise;
-$end
-end ut_rest_web_service_get_job;
 
 procedure ut_rest_web_service_post
 is
@@ -1196,7 +1179,7 @@ $end
   -- See https://terminalcheatsheet.com/guides/curl-rest-api
 
   -- will just get enqueued here
-  
+
   rest_web_service_request_typ.construct
   ( p_http_method => 'POST'
   , p_context$ => l_correlation
@@ -1205,9 +1188,9 @@ $end
   , p_http_headers => property_tab_typ(property_typ('Content-Type', 'application/json'))
   , p_rest_web_service_request => l_rest_web_service_request
   );
-    
+
   l_rest_web_service_request.response().print; -- just invoke directly and print
-  
+
   l_rest_web_service_request.process; -- invoke indirectly
 
   commit;
@@ -1235,7 +1218,7 @@ $end
 
 $if msg_pkg.c_debugging >= 1 $then
   l_msg.print();
-$end  
+$end
 
   commit;
 
@@ -1245,10 +1228,10 @@ $end
 
   -- ORA-29273: HTTP request failed?
   -- In bc_dev only when web_service_pkg.c_prefer_to_use_utl_http is true, on pato never
-  
+
 $if not(web_service_pkg.c_prefer_to_use_utl_http) $then
   ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(0);
-$end  
+$end
 
   if l_web_service_response.sql_code = 0
   then
@@ -1256,7 +1239,7 @@ $end
 
     ut.expect(l_json_act, 'json').to_equal(l_json_exp);
   else
-    ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(-29273);  
+    ut.expect(l_web_service_response.sql_code, 'sql code').to_equal(-29273);
     ut.expect(l_web_service_response.sql_error_message, 'sql error message').to_equal('ORA-29273: HTTP request failed');  
   end if;
 
@@ -1269,30 +1252,6 @@ exception
     raise;
 $end
 end ut_rest_web_service_post;
-
-procedure ut_rest_web_service_get_job_bulk
-is
-begin
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.UT_REST_WEB_SERVICE_GET_JOB_BULK');
-$end
-
-  msg_aq_pkg.unregister
-  ( p_queue_name => msg_aq_pkg.get_queue_name(web_service_request_typ.default_group())
-  , p_subscriber => null
-  , p_plsql_callback => '%'
-  );
-  ut_rest_web_service_get_bulk(100, false);
-
-$if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.leave;
-exception
-  when others
-  then
-    dbug.leave_on_error;
-    raise;
-$end
-end ut_rest_web_service_get_job_bulk;
 
 $end -- $if msg_aq_pkg.c_testing $then
 
