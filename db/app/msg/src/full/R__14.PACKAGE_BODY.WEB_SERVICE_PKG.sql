@@ -282,6 +282,10 @@ procedure handle_response
 , p_http_reason_phrase out nocopy http_reason_phrase_t
 , p_body_clob out nocopy clob
 , p_body_blob out nocopy blob
+, p_retry_after out nocopy varchar2 -- Retry-After HTTP header
+, p_x_ratelimit_limit out nocopy varchar2 -- X-RateLimit-Limit HTTP header
+, p_x_ratelimit_remaining out nocopy varchar2 -- X-RateLimit-Remaining HTTP header
+, p_x_ratelimit_reset out nocopy varchar2 -- X-RateLimit-Reset HTTP header
 )
 is
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -305,6 +309,11 @@ $end
   p_body_clob := p_response.body_c;    
   p_body_blob := p_response.body_b;
 
+  p_retry_after := http_request_response_pkg.get_property(p_response.http_headers, 'Retry-After');
+  p_x_ratelimit_limit := http_request_response_pkg.get_property(p_response.http_headers, 'X-RateLimit-Limit');
+  p_x_ratelimit_remaining := http_request_response_pkg.get_property(p_response.http_headers, 'X-RateLimit-Remaining');
+  p_x_ratelimit_reset := http_request_response_pkg.get_property(p_response.http_headers, 'X-RateLimit-Reset');
+
   if not(p_http_status_code between 200 and 299)
   then
     raise_application_error
@@ -320,6 +329,14 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   , p_http_status_code
   , p_http_status_description
   , p_http_reason_phrase
+  );
+  dbug.print
+  ( dbug."output"
+  , 'p_retry_after: %s; p_x_ratelimit_limit: %s; p_x_ratelimit_remaining: %s; p_x_ratelimit_reset: %s'
+  , p_retry_after
+  , p_x_ratelimit_limit
+  , p_x_ratelimit_remaining
+  , p_x_ratelimit_reset
   );
   dbug.leave;
 exception
@@ -814,9 +831,13 @@ procedure handle_response
 , p_http_status_description out nocopy http_status_description_t -- The HTTP status description
 , p_http_reason_phrase out nocopy http_reason_phrase_t -- The HTTP reason phrase
 , p_body_clob out nocopy clob -- The HTTP character body
+, p_retry_after out nocopy varchar2 -- Retry-After HTTP header
+, p_x_ratelimit_limit out nocopy varchar2 -- X-RateLimit-Limit HTTP header
+, p_x_ratelimit_remaining out nocopy varchar2 -- X-RateLimit-Remaining HTTP header
+, p_x_ratelimit_reset out nocopy varchar2 -- X-RateLimit-Reset HTTP header
 )
 is
-  l_body_blob blob;
+  l_body_blob_dummy blob;
 begin
   handle_response
   ( p_response => p_response
@@ -824,7 +845,11 @@ begin
   , p_http_status_description => p_http_status_description
   , p_http_reason_phrase => p_http_reason_phrase
   , p_body_clob => p_body_clob
-  , p_body_blob => l_body_blob
+  , p_body_blob => l_body_blob_dummy
+  , p_retry_after => p_retry_after
+  , p_x_ratelimit_limit => p_x_ratelimit_limit
+  , p_x_ratelimit_remaining => p_x_ratelimit_remaining
+  , p_x_ratelimit_reset => p_x_ratelimit_reset
   );
 end handle_response;
 
@@ -834,17 +859,25 @@ procedure handle_response
 , p_http_status_description out nocopy http_status_description_t -- The HTTP status description
 , p_http_reason_phrase out nocopy http_reason_phrase_t -- The HTTP reason phrase
 , p_body_blob out nocopy blob -- The HTTP binary body
+, p_retry_after out nocopy varchar2 -- Retry-After HTTP header
+, p_x_ratelimit_limit out nocopy varchar2 -- X-RateLimit-Limit HTTP header
+, p_x_ratelimit_remaining out nocopy varchar2 -- X-RateLimit-Remaining HTTP header
+, p_x_ratelimit_reset out nocopy varchar2 -- X-RateLimit-Reset HTTP header
 )
 is
-  l_body_clob clob;
+  l_body_clob_dummy clob;
 begin
   handle_response
   ( p_response => p_response
   , p_http_status_code => p_http_status_code
   , p_http_status_description => p_http_status_description
   , p_http_reason_phrase => p_http_reason_phrase
-  , p_body_clob => l_body_clob
+  , p_body_clob => l_body_clob_dummy
   , p_body_blob => p_body_blob
+  , p_retry_after => p_retry_after
+  , p_x_ratelimit_limit => p_x_ratelimit_limit
+  , p_x_ratelimit_remaining => p_x_ratelimit_remaining
+  , p_x_ratelimit_reset => p_x_ratelimit_reset
   );
 end handle_response;
 

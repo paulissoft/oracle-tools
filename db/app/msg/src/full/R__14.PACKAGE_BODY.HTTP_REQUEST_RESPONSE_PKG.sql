@@ -100,6 +100,7 @@ function get_cookie_idx
 , p_ignore_case in boolean
 )
 return positive
+deterministic
 is
 begin
   if p_cookies is not null and p_cookies.count > 0
@@ -123,12 +124,31 @@ begin
   return null;
 end get_cookie_idx;
 
+function get_cookie
+( p_cookies in http_cookie_tab_typ
+, p_name in varchar2
+, p_ignore_case in boolean
+)
+return varchar2
+deterministic
+is
+  l_idx constant positive :=
+    get_cookie_idx
+    ( p_cookies => p_cookies
+    , p_name => p_name
+    , p_ignore_case => p_ignore_case
+    );
+begin    
+  return case when l_idx is not null then p_cookies(l_idx) end;
+end get_cookie;
+
 function get_property_idx
 ( p_properties in property_tab_typ
 , p_name in varchar2
 , p_ignore_case in boolean
 )
 return positive
+deterministic
 is
 begin
   if p_properties is not null and p_properties.count > 0
@@ -151,6 +171,24 @@ begin
   end if;
   return null;
 end get_property_idx;
+
+function get_property
+( p_properties in property_tab_typ
+, p_name in varchar2
+, p_ignore_case in boolean
+)
+return varchar2
+deterministic
+is
+  l_idx constant positive :=
+    get_property_idx
+    ( p_properties => p_properties
+    , p_name => p_name
+    , p_ignore_case => p_ignore_case
+    );
+begin
+  return case when l_idx is not null then p_properties(l_idx) end;  
+end get_property;
 
 function get_http_status_descr
 ( p_http_status_code in positiven -- Should be > 0

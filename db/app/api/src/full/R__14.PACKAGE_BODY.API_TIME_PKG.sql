@@ -1,5 +1,4 @@
-CREATE OR REPLACE PACKAGE BODY "API_TIME_PKG" -- -*-coding: utf-8-*-
-is
+CREATE OR REPLACE PACKAGE BODY "API_TIME_PKG" AS -- -*-coding: utf-8-*-
 
 function get_time
 return time_t
@@ -14,6 +13,18 @@ is
 begin
   return systimestamp();
 end get_timestamp;
+
+function get_milliseconds
+return milliseconds_t
+is
+begin
+  return round
+         ( elapsed_time -- returns seconds before and fraction after so milliseconds you get by multiplying by 100 and rounding
+           ( p_start => timestamp '1970-01-01 00:00:00' at time zone 'UTC'
+           , p_end => systimestamp
+           ) * 1000
+         );
+end get_milliseconds;
 
 function elapsed_time
 ( p_start in time_t
@@ -66,6 +77,27 @@ begin
   PRAGMA INLINE (elapsed_time, 'YES'); -- speed it up!
   return elapsed_time(p_start, p_end);
 end delta;
+
+function elapsed_time_ms
+( p_start in milliseconds_t -- start value returned by get_milliseconds
+, p_end in milliseconds_t -- end value returned by get_milliseconds
+)
+return milliseconds_t
+is
+begin
+  return p_end - p_start;
+end elapsed_time_ms;
+
+function delta_ms
+( p_start in milliseconds_t -- start value returned by get_milliseconds
+, p_end in milliseconds_t -- end value returned by get_milliseconds
+)
+return milliseconds_t
+is
+begin
+  PRAGMA INLINE (elapsed_time_ms, 'YES'); -- speed it up!
+  return elapsed_time_ms(p_start, p_end);
+end delta_ms;  
 
 function elapsed_time
 ( p_start in timestamp_t

@@ -89,6 +89,10 @@ procedure handle_response
 , p_http_status_description out nocopy http_status_description_t -- The HTTP status description
 , p_http_reason_phrase out nocopy http_reason_phrase_t -- The HTTP reason phrase
 , p_body_clob out nocopy clob -- The HTTP character body
+, p_retry_after out nocopy varchar2 -- Retry-After HTTP header
+, p_x_ratelimit_limit out nocopy varchar2 -- X-RateLimit-Limit HTTP header
+, p_x_ratelimit_remaining out nocopy varchar2 -- X-RateLimit-Remaining HTTP header
+, p_x_ratelimit_reset out nocopy varchar2 -- X-RateLimit-Reset HTTP header
 );
 
 procedure handle_response
@@ -97,6 +101,10 @@ procedure handle_response
 , p_http_status_description out nocopy http_status_description_t -- The HTTP status description
 , p_http_reason_phrase out nocopy http_reason_phrase_t -- The HTTP reason phrase
 , p_body_blob out nocopy blob -- The HTTP binary body
+, p_retry_after out nocopy varchar2 -- Retry-After HTTP header
+, p_x_ratelimit_limit out nocopy varchar2 -- X-RateLimit-Limit HTTP header
+, p_x_ratelimit_remaining out nocopy varchar2 -- X-RateLimit-Remaining HTTP header
+, p_x_ratelimit_reset out nocopy varchar2 -- X-RateLimit-Reset HTTP header
 );
 /**
 
