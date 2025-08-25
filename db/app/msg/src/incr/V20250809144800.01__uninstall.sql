@@ -18,7 +18,7 @@ declare
     , 'PROPERTY_TYP'
     , 'HTTP_COOKIE_TAB_TYP'
     , 'HTTP_COOKIE_TYP'
-    , -- do not drop MSG_TYP
+      -- do not drop MSG_TYP
     );
   l_nr_objects_dropped pls_integer;
   

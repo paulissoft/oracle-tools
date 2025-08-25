@@ -1,4 +1,6 @@
-CREATE OR REPLACE BODY PACKAGE "HTTP_REQUEST_RESPONSE_PKG" AS 
+CREATE OR REPLACE PACKAGE BODY "HTTP_REQUEST_RESPONSE_PKG" AS 
+
+c_timestamp_format constant varchar2(30) := 'YYYYMMDDHH24MISSXFF';
 
 procedure to_json
 ( p_cookie_tab in http_cookie_tab_typ
@@ -239,7 +241,7 @@ begin
 
       else 'Unknown HTTP status code (' || to_char(p_http_status_code) || ')'
     end;
-end http_status_descr;
+end get_http_status_descr;
   
 end http_request_response_pkg;
 /

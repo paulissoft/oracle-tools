@@ -20,8 +20,6 @@ type header_table is table of header index by binary_integer;
 
 $end -- $if oracle_tools.cfg_pkg.c_apex_installed $then
 
-c_timestamp_format constant varchar2(30) := 'YYYYMMDDHH24MISSXFF';
-
 $if msg_aq_pkg.c_testing $then
 
 c_wait_timeout constant positiven := 60;
@@ -511,8 +509,7 @@ $end
   end if;
   
   http_request_response_pkg.copy_parameters
-  ( p_parm_names => l_parm_names
-  , p_parm_values => l_parm_values
+  ( p_parms => p_request.parms
   , p_url_encode => l_url_encode
   , p_parameters => l_parameters
   );
