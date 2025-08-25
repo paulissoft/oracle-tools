@@ -116,7 +116,7 @@ final member function cookie_idx
 return integer -- null when not found
 is
 begin
-  return http_request_response_pkg.get_cookie_idx(p_name);
+  return http_request_response_pkg.get_cookie_idx(self.cookies, p_name);
 end cookie_idx;
 
 final member function http_header_idx
@@ -125,7 +125,7 @@ final member function http_header_idx
 return integer -- null when not found
 is
 begin
-  return http_request_response_pkg.get_http_header_idx(p_name);
+  return http_request_response_pkg.get_property_idx(self.http_headers, p_name);
 end http_header_idx;
 
 end;
