@@ -139,7 +139,7 @@ is
     , p_ignore_case => p_ignore_case
     );
 begin    
-  return case when l_idx is not null then p_cookies(l_idx) end;
+  return case when l_idx is not null then p_cookies(l_idx).value end;
 end get_cookie;
 
 function get_property_idx
@@ -187,7 +187,7 @@ is
     , p_ignore_case => p_ignore_case
     );
 begin
-  return case when l_idx is not null then p_properties(l_idx) end;  
+  return case when l_idx is not null then p_properties(l_idx).value end;  
 end get_property;
 
 function get_http_status_descr
