@@ -80,6 +80,8 @@ procedure utl_http_request
 ( p_request in rest_web_service_request_typ
 , p_url in varchar2
 , p_body_blob in blob
+, p_parm_names in vc_arr2
+, p_parm_values in vc_arr2
 , p_username in varchar2
 , p_password in varchar2
 , p_scheme in varchar2
@@ -512,11 +514,21 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
 $end
 
-  pragma inline (convert_to_parms_tables, 'YES');
-  convert_to_parms_tables(p_request.parms, l_parm_names, l_parm_values);
-
-  if not l_url_encode
+  if l_url_encode
   then
+    -- a GET HTTP method
+    http_request_response_pkg.copy_parameters
+    ( p_parms => p_request.parms
+    , p_url_encode => l_url_encode
+    , p_parameters => l_parameters
+    );
+    -- Use parameters as GET query parameters
+    l_url := l_url || '?' || l_parameters;    
+  else
+    -- not a GET HTTP method
+    pragma inline (convert_to_parms_tables, 'YES');
+    convert_to_parms_tables(p_request.parms, l_parm_names, l_parm_values);
+
     -- Content-Type=application/x-www-form-urlencoded?
     l_idx := http_request_response_pkg.get_property_idx(p_request.http_headers, 'Content-Type');
     if l_idx is not null and p_request.http_headers(l_idx).value like 'application/x-www-form-urlencoded%'
@@ -525,24 +537,6 @@ $end
     end if;
   end if;
   
-  http_request_response_pkg.copy_parameters
-  ( p_parms => p_request.parms
-  , p_url_encode => l_url_encode
-  , p_parameters => l_parameters
-  );
-
-  -- Use parameters as GET query parameters or put them into an empty body (non-GET)
-  if l_parameters is not null
-  then  
-    if p_request.http_method = 'GET'
-    then
-      l_url := l_url || '?' || l_parameters;
-    elsif l_body_clob is null or dbms_lob.getlength(l_body_clob) = 0
-    then
-      l_body_clob := to_clob(l_parameters);
-    end if;
-  end if;
-
 $if oracle_tools.cfg_pkg.c_apex_installed $then  
   pragma inline (convert_to_cookie_table, 'YES');
   convert_to_cookie_table(p_request.cookies, apex_web_service.g_request_cookies);
@@ -571,6 +565,8 @@ $end
       , p_url => l_url
       , p_body_clob => l_body_clob
       , p_body_blob => l_body_blob
+      , p_parm_name => l_parm_names
+      , p_parm_value => l_parm_values                     
       , p_username => p_username
       , p_password => p_password
       , p_scheme => p_request.scheme
