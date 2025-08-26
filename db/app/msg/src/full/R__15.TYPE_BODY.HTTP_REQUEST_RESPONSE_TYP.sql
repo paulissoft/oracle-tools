@@ -1,4 +1,4 @@
-create or replace type body http_request_response_typ
+CREATE OR REPLACE TYPE BODY "HTTP_REQUEST_RESPONSE_TYP" 
 is
 
 final member procedure construct
@@ -130,3 +130,4 @@ end http_header_idx;
 
 end;
 /
+
