@@ -849,7 +849,8 @@ procedure handle_response
 is
   l_body_blob_dummy blob;
 begin
-  if p_response.binary_response != 0
+  if p_response.web_service_request is of (rest_web_service_request_typ) and
+     treat(p_response.web_service_request as rest_web_service_request_typ).binary_response != 0
   then
     raise value_error;
   end if;
@@ -883,8 +884,9 @@ procedure handle_response
 is
   l_body_clob_dummy clob;
 begin
-  if p_response.binary_response = 0
-  then
+  if p_response.web_service_request is of (rest_web_service_request_typ) and
+     treat(p_response.web_service_request as rest_web_service_request_typ).binary_response != 0
+  then   
     raise value_error;
   end if;
   handle_response
