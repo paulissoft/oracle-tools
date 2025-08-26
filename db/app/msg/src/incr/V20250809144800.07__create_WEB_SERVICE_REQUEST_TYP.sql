@@ -12,7 +12,7 @@ create or replace type web_service_request_typ under http_request_response_typ
 /**
 WEB service request
 ===================
-The attributes are common for SOAP (APEX_WEB_SERVICE.MAKE_REQUEST) and REST (APEX_WEB_SERVICE.MAKE_REST_REQUEST[_B]) requests.
+The attributes are common for SOAP (`APEX_WEB_SERVICE.MAKE_REQUEST`) and REST (`APEX_WEB_SERVICE.MAKE_REST_REQUEST[_B]`) requests.
 However, no sensitive information like username or password is stored.
 
 This super type allows sub types to make a web service call, either synchronous or asynchronous.

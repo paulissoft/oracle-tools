@@ -277,6 +277,7 @@ $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
 
 procedure handle_response
 ( p_response in web_service_response_typ -- The REST request response
+, p_check_http_status_code_ok in boolean -- Check that HTTP status code is between 200 and 299
 , p_http_status_code out nocopy http_status_code_t
 , p_http_status_description out nocopy http_status_description_t
 , p_http_reason_phrase out nocopy http_reason_phrase_t
@@ -294,16 +295,21 @@ $end
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.HANDLE_RESPONSE');
+  dbug.print
+  ( dbug."input"
+  , 'p_check_http_status_code_ok: %s'
+  , p_check_http_status_code_ok
+  );
 $end
 
   p_http_status_code := p_response.http_status_code;
-  if p_http_status_code is null
+  if p_check_http_status_code_ok and p_http_status_code is null
   then
     raise value_error;
   end if;
   
   -- From https://www.oxitsolutions.co.uk/blog/http-status-code-cheat-sheet-infographic
-  p_http_status_description := http_request_response_pkg.get_http_status_descr(p_http_status_code);
+  p_http_status_description := case when p_http_status_code is not null then http_request_response_pkg.get_http_status_descr(p_http_status_code) end;
   p_http_reason_phrase := p_response.http_reason_phrase;
 
   p_body_clob := p_response.body_c;    
@@ -314,8 +320,9 @@ $end
   p_x_ratelimit_remaining := http_request_response_pkg.get_property(p_response.http_headers, 'X-RateLimit-Remaining');
   p_x_ratelimit_reset := http_request_response_pkg.get_property(p_response.http_headers, 'X-RateLimit-Reset');
 
-  if not(p_http_status_code between 200 and 299)
+  if p_check_http_status_code_ok and not(p_http_status_code between 200 and 299)
   then
+    -- p_http_status_code is not null
     raise_application_error
     ( -20000 + -1 * p_http_status_code
     , utl_lms.format_message('HTTP status description: %s; HTTP reason phrase: %s', p_http_status_description, p_http_reason_phrase)
@@ -829,6 +836,7 @@ end make_rest_request_b;
 
 procedure handle_response
 ( p_response in web_service_response_typ -- The REST request response
+, p_check_http_status_code_ok in boolean -- Check that HTTP status code is between 200 and 299
 , p_http_status_code out nocopy http_status_code_t -- The HTTP status code
 , p_http_status_description out nocopy http_status_description_t -- The HTTP status description
 , p_http_reason_phrase out nocopy http_reason_phrase_t -- The HTTP reason phrase
@@ -841,8 +849,13 @@ procedure handle_response
 is
   l_body_blob_dummy blob;
 begin
+  if p_response.binary_request != 0
+  then
+    raise value_error;
+  end if;
   handle_response
   ( p_response => p_response
+  , p_check_http_status_code_ok => p_check_http_status_code_ok
   , p_http_status_code => p_http_status_code
   , p_http_status_description => p_http_status_description
   , p_http_reason_phrase => p_http_reason_phrase
@@ -857,6 +870,7 @@ end handle_response;
 
 procedure handle_response
 ( p_response in web_service_response_typ -- The REST request response
+, p_check_http_status_code_ok in boolean -- Check that HTTP status code is between 200 and 299
 , p_http_status_code out nocopy http_status_code_t -- The HTTP status code
 , p_http_status_description out nocopy http_status_description_t -- The HTTP status description
 , p_http_reason_phrase out nocopy http_reason_phrase_t -- The HTTP reason phrase
@@ -869,8 +883,13 @@ procedure handle_response
 is
   l_body_clob_dummy clob;
 begin
+  if p_response.binary_request = 0
+  then
+    raise value_error;
+  end if;
   handle_response
   ( p_response => p_response
+  , p_check_http_status_code_ok => p_check_http_status_code_ok
   , p_http_status_code => p_http_status_code
   , p_http_status_description => p_http_status_description
   , p_http_reason_phrase => p_http_reason_phrase

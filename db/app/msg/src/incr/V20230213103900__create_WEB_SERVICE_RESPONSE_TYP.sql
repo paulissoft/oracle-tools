@@ -1,5 +1,5 @@
 create or replace type web_service_response_typ under msg_typ
-( -- The attributes are common for SOAP (APEX_WEB_SERVICE.MAKE_RESPONSE) and REST (APEX_WEB_SERVICE.MAKE_REST_RESPONSE[_B]).
+( -- The attributes are common for SOAP (APEX_WEB_SERVICE.MAKE_REQUEST) and REST (APEX_WEB_SERVICE.MAKE_REST_REQUEST[_B]).
   -- However, no sensitive information like username or password is stored.
   web_service_request web_service_request_typ
 , sql_code integer -- sqlcode

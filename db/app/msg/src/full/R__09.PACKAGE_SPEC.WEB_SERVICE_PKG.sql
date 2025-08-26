@@ -85,6 +85,7 @@ subtype http_reason_phrase_t is varchar2(4000 byte);
 
 procedure handle_response
 ( p_response in web_service_response_typ -- The REST request response
+, p_check_http_status_code_ok in boolean default true -- Check that HTTP status code is between 200 and 299
 , p_http_status_code out nocopy http_status_code_t -- The HTTP status code
 , p_http_status_description out nocopy http_status_description_t -- The HTTP status description
 , p_http_reason_phrase out nocopy http_reason_phrase_t -- The HTTP reason phrase
@@ -97,6 +98,7 @@ procedure handle_response
 
 procedure handle_response
 ( p_response in web_service_response_typ -- The REST request response
+, p_check_http_status_code_ok in boolean default true -- Check that HTTP status code is between 200 and 299
 , p_http_status_code out nocopy http_status_code_t -- The HTTP status code
 , p_http_status_description out nocopy http_status_description_t -- The HTTP status description
 , p_http_reason_phrase out nocopy http_reason_phrase_t -- The HTTP reason phrase

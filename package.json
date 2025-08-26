@@ -11,17 +11,16 @@
         "build:docs:ddl:prc": "yarn run ploc --in 'db/app/ddl/src/full/*.PROCEDURE.*.sql' --out docs/docs/plsql/ddl/{file}.md",
         "build:docs:ddl": "yarn run build:docs:ddl:pks && yarn run build:docs:ddl:fnc && yarn run build:docs:ddl:prc",
         "build:docs:ext": "yarn run ploc --in 'db/app/ext/src/full/*.*_SPEC.*.sql' --out docs/docs/plsql/ext/{file}.md",
-        "build:docs:msg:tys:incr": "yarn run ploc --in 'db/app/msg/src/incr/V*.??__create_*TYP.sql' --out docs/docs/plsql/msg/{file}.md",
         "build:docs:msg:tys": "yarn run ploc --in 'db/app/msg/src/full/*.TYPE_SPEC.*.sql' --out docs/docs/plsql/msg/{file}.md",
         "build:docs:msg:pks": "yarn run ploc --in 'db/app/msg/src/full/*.PACKAGE_SPEC.*.sql' --out docs/docs/plsql/msg/{file}.md",
-        "build:docs:msg": "yarn run build:docs:msg:tys:incr && yarn run build:docs:msg:pks",
+        "build:docs:msg": "yarn run build:docs:msg:tys && yarn run build:docs:msg:pks",
         "build:docs:ui": "yarn run ploc --in 'db/app/ui/src/full/*.*_SPEC.*.sql' --out docs/docs/plsql/ui/{file}.md",
         "build:docs": "yarn run build:docs:admin && yarn run build:docs:api && yarn run build:docs:cfg && yarn run build:docs:data && yarn run build:docs:ddl && yarn run build:docs:ext && yarn run build:docs:msg && yarn run build:docs:ui",
         "watch:docs": "chokidar package.json 'db/app/*/src/full/*.*_SPEC.*.sql' 'db/app/ddl/src/full/*.FUNCTION.*.sql' 'db/app/ddl/src/full/*.PROCEDURE.*.sql' --initial -c \"yarn run build:docs\"",
         "watch:docs:msg:tys": "chokidar 'db/app/msg/src/full/*.TYPE_SPEC.*.sql' --initial -c \"yarn run build:docs:msg:tys\"",
         "watch:docs:msg:pks": "chokidar 'db/app/msg/src/full/*.PACKAGE_SPEC.*.sql' --initial -c \"yarn run build:docs:msg:pks\"",
-        "check:docs:msg": "yarn run markdownlint-cli2 'docs/docs/plsql/msg/V*.??__create_*TYP.md'",
-        "check:docs": "yarn run check:docs:msg:tys:incr"
+        "check:docs:msg": "yarn run markdownlint-cli2 'docs/docs/plsql/msg/*.md'",
+        "check:docs": "yarn run check:docs:msg"
     },
     "dependencies": {
         "chokidar-cli": "^3.0.0",
@@ -31,6 +30,7 @@
     "markdownlint-cli2": {
         "config": {
             "MD013": false,
+            "MD041": true,
             "no-multiple-blanks": false
         }
     }

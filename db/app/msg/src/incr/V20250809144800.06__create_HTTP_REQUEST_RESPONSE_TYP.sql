@@ -12,9 +12,9 @@ HTTP request response
 Common attributes and methods for SOAP/REST requests/responses.
 See also:
 
-- APEX_WEB_SERVICE.MAKE_REQUEST
-- APEX_WEB_SERVICE.MAKE_REST_REQUEST
-- APEX_WEB_SERVICE.MAKE_REST_REQUEST_B
+- `APEX_WEB_SERVICE.MAKE_REQUEST`
+- `APEX_WEB_SERVICE.MAKE_REST_REQUEST`
+- `APEX_WEB_SERVICE.MAKE_REST_REQUEST_B`
 **/
 
 , final member procedure construct

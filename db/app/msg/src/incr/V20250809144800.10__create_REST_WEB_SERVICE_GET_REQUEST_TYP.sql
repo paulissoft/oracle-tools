@@ -1,10 +1,11 @@
 create or replace type rest_web_service_get_request_typ under rest_web_service_request_typ
-(
+( 
 /**
 REST web service GET request
 ============================
 Implement a REST GET request.
 **/
+
   constructor function rest_web_service_get_request_typ
   ( self in out nocopy rest_web_service_get_request_typ
     -- from MSG_TYP

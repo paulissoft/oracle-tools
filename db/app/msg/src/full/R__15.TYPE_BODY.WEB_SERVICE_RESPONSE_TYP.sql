@@ -195,6 +195,62 @@ begin
   return http_request_response_pkg.get_http_status_descr(self.http_status_code);
 end http_status_descr;
 
+final member procedure handle_response
+( self in web_service_response_typ -- The REST request response
+, p_check_http_status_code_ok in integer -- Check that HTTP status code is between 200 and 299
+, p_http_status_code out nocopy integer -- The HTTP status code
+, p_http_status_description out nocopy varchar2 -- The HTTP status description
+, p_http_reason_phrase out nocopy varchar2 -- The HTTP reason phrase
+, p_body_clob out nocopy clob -- The HTTP character body
+, p_retry_after out nocopy varchar2 -- Retry-After HTTP header
+, p_x_ratelimit_limit out nocopy varchar2 -- X-RateLimit-Limit HTTP header
+, p_x_ratelimit_remaining out nocopy varchar2 -- X-RateLimit-Remaining HTTP header
+, p_x_ratelimit_reset out nocopy varchar2 -- X-RateLimit-Reset HTTP header
+)
+is
+begin
+  web_service_pkg.handle_response
+  ( p_response => self
+  , p_check_http_status_code_ok => p_check_http_status_code_ok != 0
+  , p_http_status_code => p_http_status_code
+  , p_http_status_description => p_http_status_description
+  , p_http_reason_phrase => p_http_reason_phrase
+  , p_body_clob => p_body_clob
+  , p_retry_after => p_retry_after
+  , p_x_ratelimit_limit => p_x_ratelimit_limit
+  , p_x_ratelimit_remaining => p_x_ratelimit_remaining
+  , p_x_ratelimit_reset => p_x_ratelimit_reset
+  );
+end handle_response;
+
+final member procedure handle_response
+( self in web_service_response_typ -- The REST request response
+, p_check_http_status_code_ok in integer -- Check that HTTP status code is between 200 and 299
+, p_http_status_code out nocopy integer -- The HTTP status code
+, p_http_status_description out nocopy varchar2 -- The HTTP status description
+, p_http_reason_phrase out nocopy varchar2 -- The HTTP reason phrase
+, p_body_blob out nocopy blob -- The HTTP binary body
+, p_retry_after out nocopy varchar2 -- Retry-After HTTP header
+, p_x_ratelimit_limit out nocopy varchar2 -- X-RateLimit-Limit HTTP header
+, p_x_ratelimit_remaining out nocopy varchar2 -- X-RateLimit-Remaining HTTP header
+, p_x_ratelimit_reset out nocopy varchar2 -- X-RateLimit-Reset HTTP header
+)
+is
+begin
+  web_service_pkg.handle_response
+  ( p_response => self
+  , p_check_http_status_code_ok => p_check_http_status_code_ok != 0
+  , p_http_status_code => p_http_status_code
+  , p_http_status_description => p_http_status_description
+  , p_http_reason_phrase => p_http_reason_phrase
+  , p_body_blob => p_body_blob
+  , p_retry_after => p_retry_after
+  , p_x_ratelimit_limit => p_x_ratelimit_limit
+  , p_x_ratelimit_remaining => p_x_ratelimit_remaining
+  , p_x_ratelimit_reset => p_x_ratelimit_reset
+  );
+end handle_response;
+
 end;
 /
 
