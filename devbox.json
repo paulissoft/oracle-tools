@@ -24,8 +24,8 @@
                 "poetry run python bin/oci-do.py \"$@\""
             ],
             "install": "yarn install",
-            "build-docs": "yarn run build:docs:msg",
-            "check-docs": "yarn run check:docs:msg"
+            "build-docs": "yarn run build:docs",
+            "check-docs": "yarn run check:docs"
         }
     }
 }
