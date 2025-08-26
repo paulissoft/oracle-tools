@@ -73,41 +73,6 @@ $end
   begin
     if upper(substr(l_build_option_value, 1, 1)) = 'I' -- Include: True
     then
-$if cfg_pkg.c_debugging $then
-      declare
-        l_current_user_id constant number := apex_util.get_current_user_id;
-        l_user_name varchar2(4000);
-        l_first_name varchar2(4000);
-        l_last_name varchar2(4000);
-        l_email_address varchar2(4000);
-        l_groups varchar2(4000);
-        l_developer_role varchar2(4000);
-        l_description varchar2(4000);
-      begin
-        dbug.print(dbug."info", 'l_current_user_id: %s', l_current_user_id);
-        apex_util.fetch_user
-        ( p_user_id => l_current_user_id
-        , p_user_name => l_user_name
-        , p_first_name => l_first_name
-        , p_last_name => l_last_name
-        , p_email_address => l_email_address
-        , p_groups => l_groups
-        , p_developer_role => l_developer_role
-        , p_description => l_description
-        );
-        dbug.print(dbug."info", 'l_user_name: %s', l_user_name);
-        dbug.print(dbug."info", 'l_first_name: %s', l_first_name);
-        dbug.print(dbug."info", 'l_last_name: %s', l_last_name);
-        dbug.print(dbug."info", 'l_email_address: %s', l_email_address);
-        dbug.print(dbug."info", 'l_groups: %s', l_groups);
-        dbug.print(dbug."info", 'l_developer_role: %s', l_developer_role);
-        dbug.print(dbug."info", 'l_description: %s', l_description);
-      exception
-        when others
-        then dbug.on_error;
-      end;
-$end      
-      
       l_group := apex_util.get_groups_user_belongs_to(p_username => p_app_user);
 
       -- l_group can be 'Backoffice employees, PM Administrators, Portal Administrators'
