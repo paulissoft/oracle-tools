@@ -849,7 +849,7 @@ procedure handle_response
 is
   l_body_blob_dummy blob;
 begin
-  if p_response.binary_request != 0
+  if p_response.binary_response != 0
   then
     raise value_error;
   end if;
@@ -883,7 +883,7 @@ procedure handle_response
 is
   l_body_clob_dummy clob;
 begin
-  if p_response.binary_request = 0
+  if p_response.binary_response = 0
   then
     raise value_error;
   end if;
