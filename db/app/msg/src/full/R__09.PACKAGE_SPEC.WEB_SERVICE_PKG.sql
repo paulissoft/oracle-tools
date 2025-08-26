@@ -24,6 +24,14 @@ See also [APEX_WEB_SERVICE The Definitive Guide](https://blog.cloudnueva.com/ape
 
 c_prefer_to_use_utl_http constant boolean := false;
 
+procedure make_rest_request
+( p_response in out nocopy web_service_response_typ -- Use the p_response.web_service_request attribute to make a REST request
+, p_username in varchar2 default null -- The username if basic authentication is required for this service
+, p_password in varchar2 default null -- The password if basic authentication is required for this service
+, p_wallet_pwd in varchar2 default null -- The password to access the wallet
+); 
+/** Make a REST request and change the response object HTTP response attributes. **/
+
 function make_rest_request
 ( p_request in rest_web_service_request_typ -- The request
 , p_username in varchar2 default null -- The username if basic authentication is required for this service
