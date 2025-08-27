@@ -16,6 +16,7 @@
   <properties>
     <db.schema>${oracle-tools.db.schema.msg}</db.schema>
     <flyway.table>schema_version_tools_msg</flyway.table>
+    <db.full.force.view>yes</db.full.force.view>
     <db.object.names.include>1</db.object.names.include>
     <db.object.names>
       HTTP_COOKIE_TAB_TYP,
