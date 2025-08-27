@@ -81,7 +81,7 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MUST_BE_PROCESSED');
-  dbug.print(dbug."input", 'p_maybe_later: %s', p_maybe_later);
+  dbug.print(dbug."input", 'p_maybe_later: %s; self.context$: %s', p_maybe_later, self.context$);
 $end
 
   l_result :=

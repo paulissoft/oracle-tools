@@ -516,6 +516,7 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
+  dbug.print(dbug."input", 'p_request.context$: %s', p_request.context$);
 $end
 
   pragma inline (convert_to_parms_tables, 'YES');
@@ -695,6 +696,7 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then  
   dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', p_response.elapsed_time_ms);
+  dbug.print(dbug."output", 'p_response.context$: %s', p_response.context$);
   dbug.leave;
 $end
 exception
@@ -718,6 +720,7 @@ exception
     
 $if oracle_tools.cfg_pkg.c_debugging $then
     dbug.print(dbug."info", 'REST webservice issued in %s milliseconds', p_response.elapsed_time_ms);
+    dbug.print(dbug."output", 'p_response.context$: %s', p_response.context$);
     dbug.leave_on_error;
 $end
 end make_rest_request;
