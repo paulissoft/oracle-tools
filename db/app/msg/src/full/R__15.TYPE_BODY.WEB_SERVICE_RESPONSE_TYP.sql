@@ -11,7 +11,6 @@ constructor function web_service_response_typ
 , p_body_clob in clob
 , p_body_blob in blob
   -- from WEB_SERVICE_RESPONSE_TYP
-, p_web_service_request in web_service_request_typ
 , p_sql_code in integer
 , p_sql_error_message in varchar2
 , p_http_status_code in integer  
@@ -28,7 +27,6 @@ begin
   , p_http_headers => p_http_headers
   , p_body_clob => p_body_clob
   , p_body_blob => p_body_blob
-  , p_web_service_request => p_web_service_request
   , p_sql_code => p_sql_code
   , p_sql_error_message => p_sql_error_message
   , p_http_status_code => p_http_status_code
@@ -49,7 +47,6 @@ final member procedure construct
 , p_body_clob in clob
 , p_body_blob in blob
   -- from WEB_SERVICE_RESPONSE_TYP
-, p_web_service_request in web_service_request_typ
 , p_sql_code in integer
 , p_sql_error_message in varchar2
 , p_http_status_code in integer  
@@ -66,7 +63,6 @@ begin
   , p_body_clob => p_body_clob
   , p_body_blob => p_body_blob  
   );
-  self.web_service_request := p_web_service_request;
   self.sql_code := p_sql_code;
   self.sql_error_message := p_sql_error_message;
   self.http_status_code := p_http_status_code;
@@ -90,13 +86,11 @@ $end
 
   l_result :=
     case
-      when self.web_service_request is null
-      then 0
-      when self.web_service_request.context$ is null
+      when self.context$ is null
       then 0
       else 1
     end;
-
+    
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."output", 'return: %s', l_result);
   dbug.leave;
@@ -118,7 +112,7 @@ $end
 
   msg_aq_pkg.enqueue
   ( p_msg => self
-  , p_correlation => self.web_service_request.context$
+  , p_correlation => self.context$
   , p_msgid => l_msgid
   );
 
@@ -158,11 +152,6 @@ is
   l_web_service_request json_object_t := json_object_t();
 begin
   (self as http_request_response_typ).serialize(p_json_object);
-  if self.web_service_request is not null
-  then
-    self.web_service_request.serialize(l_web_service_request);
-    p_json_object.put('WEB_SERVICE_REQUEST', l_web_service_request);
-  end if;
   p_json_object.put('SQL_CODE', self.sql_code);
   p_json_object.put('SQL_ERROR_MESSAGE', self.sql_error_message);
   p_json_object.put('HTTP_STATUS_CODE', self.http_status_code);
