@@ -1,23 +1,21 @@
 create or replace type rest_web_service_typ under msg_typ
-( rest_web_service_request rest_web_service_request_typ
-, web_service_response web_service_response_typ -- When null, make_rest_request is invoked to fill this.
+( request rest_web_service_request_typ
 /**
 REST web service
 ================
-This type allows you to make a REST web service call, either synchronous or asynchronous, and store the result in the web_service_response attribute.
+This type allows you to make a REST web service call, either synchronous or asynchronous, and store the result in request queue when rest_web_service_request.context$ is not null.
 
 **/
 
 , constructor function rest_web_service_typ
   ( self in out nocopy rest_web_service_typ
-  , p_rest_web_service_request in rest_web_service_request_typ
-  , p_web_service_response in web_service_response_typ default null
+  , p_request in rest_web_service_request_typ
   )
   return self as result
 /** The constructor method. **/
 
 , overriding
-  final member function must_be_processed
+  member function must_be_processed
   ( self in rest_web_service_typ
   , p_maybe_later in integer -- True (1) or false (0)
   )
@@ -25,7 +23,7 @@ This type allows you to make a REST web service call, either synchronous or asyn
 /** Must this object be processed? True if and only if attribute web_service_response is null. **/
 
 , overriding
-  final member procedure process$now
+  member procedure process$now
   ( self in rest_web_service_typ
   )
 /**
@@ -39,11 +37,15 @@ When attribute web_service_response is NOT null, nothing happens (it is assumed 
 **/
 
 , overriding
-  final member procedure serialize
+  member procedure serialize
   ( self in rest_web_service_typ
   , p_json_object in out nocopy json_object_t
   )
 /** Serialize to JSON. **/
+
+, member function response
+  return web_service_response_typ
+/** Use the request context as correlation id to get the response from the web service response queue (BROWSE mode). **/
 
 , overriding
   member function has_not_null_lob

@@ -2,18 +2,16 @@ CREATE OR REPLACE TYPE BODY "REST_WEB_SERVICE_TYP" AS
 
 constructor function rest_web_service_typ
 ( self in out nocopy rest_web_service_typ
-, p_rest_web_service_request in rest_web_service_request_typ
-, p_web_service_response in web_service_response_typ
+, p_request in rest_web_service_request_typ
 )
 return self as result
 is
 begin
   (self as msg_typ).construct
-  ( p_group$ => p_rest_web_service_request.group$
-  , p_context$ => p_rest_web_service_request.context$
+  ( p_group$ => p_request.group$
+  , p_context$ => p_request.context$
   );
-  self.rest_web_service_request := p_rest_web_service_request;
-  self.web_service_response := p_web_service_response;
+  self.request := p_request;
   return;
 end rest_web_service_typ;
 
@@ -33,9 +31,9 @@ $end
 
   l_result :=
     case
-      when self.rest_web_service_request is null
+      when self.request is null
       then 0
-      when self.web_service_response is not null
+      when self.request.context$ is null
       then 0
       else 1
     end;
@@ -53,6 +51,7 @@ member procedure process$now
 ( self in rest_web_service_typ
 )
 is
+  l_response web_service_response_typ;
   l_msgid raw(16);
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -60,18 +59,18 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   web_service_pkg.make_rest_request
-  ( p_request => self.rest_web_service_request
+  ( p_request => self.request
   , p_username => null
   , p_password => null
   , p_wallet_pwd => null
-  , p_response => self.web_service_response
+  , p_response => l_response
   );
 
-  if self.web_service_response.context$ is not null
+  if l_response.context$ is not null
   then
     msg_aq_pkg.enqueue
-    ( p_msg => self
-    , p_correlation => self.web_service_response.context$
+    ( p_msg => l_response
+    , p_correlation => l_response.context$
     , p_msgid => l_msgid
     );
   end if;
@@ -92,21 +91,29 @@ member procedure serialize
 , p_json_object in out nocopy json_object_t
 )
 is
-  l_rest_web_service_request json_object_t := json_object_t();
-  l_web_service_response json_object_t := json_object_t();
+  l_json_request json_object_t := json_object_t();
+  l_response constant web_service_response_typ := self.response();
+  l_json_response json_object_t := json_object_t();
 begin
   (self as msg_typ).serialize(p_json_object);
-  if self.rest_web_service_request is not null
+  if self.request is not null
   then
-    self.rest_web_service_request.serialize(l_rest_web_service_request);
-    p_json_object.put('REST_WEB_SERVICE_REQUEST', l_rest_web_service_request);
+    self.request.serialize(l_json_request);
+    p_json_object.put('REQUEST', l_json_request);
   end if;
-  if self.web_service_response is not null
+  if l_response is not null
   then
-    self.web_service_response.serialize(l_web_service_response);
-    p_json_object.put('WEB_SERVICE_RESPONSE', l_web_service_response);
+    l_response.serialize(l_json_response);
+    p_json_object.put('RESPONSE', l_json_response);
   end if;
 end serialize;
+
+member function response
+return web_service_response_typ
+is
+begin
+  
+end response;
 
 overriding
 member function has_not_null_lob
@@ -115,14 +122,7 @@ member function has_not_null_lob
 return integer
 is
 begin
-  return
-    case
-      when self.rest_web_service_request.has_not_null_lob() != 0
-      then 1
-      when self.web_service_response is not null
-      then self.web_service_response.has_not_null_lob()
-      else 0
-    end;
+  return self.request.has_not_null_lob();
 end has_not_null_lob;
 
 end;
