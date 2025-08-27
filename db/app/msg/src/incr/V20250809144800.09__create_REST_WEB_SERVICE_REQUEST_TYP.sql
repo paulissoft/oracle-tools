@@ -83,9 +83,10 @@ buffered messages if it has a non null LOB).
   )
 /**
 
-Invoke the appropiate APEX_WEB_SERVICE.MAKE_REST_REQUEST call,
-store the output and response cookies and HTTP headers in a WEB_SERVICE_RESPONSE_TYP and
-enqueue (process) that if correlation is not null.
+Steps:
+1. Invoke `make_rest_request` .
+2. Store the output and response cookies and HTTP headers in a `WEB_SERVICE_RESPONSE_TYP`.
+3. Enqueue (process) that if the correlation id (attribute context$) is not null.
 
 **/
 
@@ -95,6 +96,12 @@ enqueue (process) that if correlation is not null.
   , p_json_object in out nocopy json_object_t
   )
 /** Serialize to JSON. **/
+
+, member function make_rest_request
+  ( self in rest_web_service_request_typ
+  )
+  return web_service_response_typ
+/** Make a REST request. **/
 
 , final member function response
   return web_service_response_typ

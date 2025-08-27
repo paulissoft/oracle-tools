@@ -214,7 +214,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$NOW');
 $end
 
-  l_web_service_response := web_service_pkg.make_rest_request(self);  
+  l_web_service_response := self.make_rest_request();  
   l_web_service_response.process; -- put into the queue (if correlation id is set)
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -238,6 +238,15 @@ begin
   end if;
   p_json_object.put('BINARY_RESPONSE', self.binary_response);
 end serialize;
+
+member function make_rest_request
+( self in rest_web_service_request_typ
+)
+return web_service_response_typ
+is
+begin
+  return web_service_pkg.make_rest_request(self);
+end make_rest_request;
 
 final member function response
 return web_service_response_typ
