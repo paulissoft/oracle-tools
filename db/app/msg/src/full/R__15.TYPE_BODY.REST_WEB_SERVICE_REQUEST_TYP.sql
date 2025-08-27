@@ -287,7 +287,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   return case
-           when l_msgis not null and l_msg is of (web_service_response_typ)
+           when l_msg is not null and l_msg is of (web_service_response_typ)
            then treat(l_msg as web_service_response_typ)
          end;
 end response;
