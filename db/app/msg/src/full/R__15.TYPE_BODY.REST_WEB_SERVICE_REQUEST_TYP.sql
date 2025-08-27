@@ -242,7 +242,7 @@ end serialize;
 final member function response
 return web_service_response_typ
 is
-  l_msg msg_typ;
+  l_msg msg_typ := null;
   l_msgid raw(16) := null;
   l_message_properties dbms_aq.message_properties_t;
 begin
@@ -250,28 +250,46 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.RESPONSE');
 $end
 
-  msg_aq_pkg.dequeue
-  ( p_queue_name => web_service_response_typ.default_group()
-  , p_delivery_mode => dbms_aq.persistent
-  , p_visibility => dbms_aq.immediate
-  , p_subscriber => null
-  , p_dequeue_mode => dbms_aq.browse
-  , p_navigation => dbms_aq.first_message
-  , p_wait => dbms_aq.no_wait
-  , p_correlation => self.context$
-  , p_deq_condition => null
-  , p_force => false
-  , p_msgid => l_msgid
-  , p_message_properties => l_message_properties
-  , p_msg => l_msg
-  );
+  if self.context$ is not null
+  then
+    begin
+      msg_aq_pkg.dequeue
+      ( p_queue_name => web_service_response_typ.default_group()
+      , p_delivery_mode => dbms_aq.persistent
+      , p_visibility => dbms_aq.immediate
+      , p_subscriber => null
+      , p_dequeue_mode => dbms_aq.browse
+      , p_navigation => dbms_aq.first_message
+      , p_wait => dbms_aq.no_wait
+      , p_correlation => self.context$
+      , p_deq_condition => null
+      , p_force => false
+      , p_msgid => l_msgid
+      , p_message_properties => l_message_properties
+      , p_msg => l_msg
+      );
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'l_msgid: %s', rawtohex(l_msgid));
+$end      
+    exception
+      when msg_aq_pkg.e_queue_table_does_not_exist or msg_aq_pkg.e_queue_does_not_exist
+      then
+$if oracle_tools.cfg_pkg.c_debugging $then
+        dbug.on_error;
+$end
+        l_msg := null;
+        l_msgid := null;
+    end;    
+  end if;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."info", 'l_msgid: %s', rawtohex(l_msgid));
   dbug.leave;
 $end
 
-  return case when l_msg is of (web_service_response_typ) then treat(l_msg as web_service_response_typ) end;
+  return case
+           when l_msgis not null and l_msg is of (web_service_response_typ)
+           then treat(l_msg as web_service_response_typ)
+         end;
 end response;
 
 member function http_method
