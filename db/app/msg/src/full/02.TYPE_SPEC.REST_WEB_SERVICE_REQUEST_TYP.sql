@@ -98,7 +98,10 @@ enqueue (process) that if correlation is not null.
 
 , final member function response
   return web_service_response_typ
-/** Invoke the web service and use the response (body, status, cookies, HTTP headers) to create a response object. **/
+/**
+Retrieve the response from the WEB_SERVICE_RESPONSE queue and return NULL when not found.
+When this object is processed and the CONTEXT$ is not null, the response will be put into the WEB_SERVICE_RESPONSE queue.
+**/
 
 , member function http_method return varchar2 -- must be overridden by a final function
 /** Return the HTTP method (must be overridden by the sub types). **/

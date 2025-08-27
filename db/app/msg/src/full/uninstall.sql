@@ -151,13 +151,13 @@ DROP TYPE HTTP_COOKIE_TAB_TYP FORCE;
 call dbms_application_info.set_action('SQL statement 28');
 DROP TYPE HTTP_REQUEST_RESPONSE_TYP FORCE;
 
-/* SQL statement 29 (DROP;ORACLE_TOOLS;TYPE_SPEC;WEB_SERVICE_REQUEST_TYP;;;;;;;;2) */
+/* SQL statement 29 (DROP;ORACLE_TOOLS;TYPE_SPEC;WEB_SERVICE_RESPONSE_TYP;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 29');
-DROP TYPE WEB_SERVICE_REQUEST_TYP FORCE;
-
-/* SQL statement 30 (DROP;ORACLE_TOOLS;TYPE_SPEC;WEB_SERVICE_RESPONSE_TYP;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 30');
 DROP TYPE WEB_SERVICE_RESPONSE_TYP FORCE;
+
+/* SQL statement 30 (DROP;ORACLE_TOOLS;TYPE_SPEC;WEB_SERVICE_REQUEST_TYP;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 30');
+DROP TYPE WEB_SERVICE_REQUEST_TYP FORCE;
 
 /* SQL statement 31 (DROP;ORACLE_TOOLS;TYPE_SPEC;REST_WEB_SERVICE_REQUEST_TYP;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 31');

@@ -1,6 +1,5 @@
 CREATE TYPE "WEB_SERVICE_RESPONSE_TYP" authid definer under http_request_response_typ
-( web_service_request web_service_request_typ -- The original request
-, sql_code integer -- Will store the result of PL/SQL function SQLCODE
+( sql_code integer -- Will store the result of PL/SQL function SQLCODE
 , sql_error_message varchar2(4000 byte) -- Will store the result of PL/SQL function SQLERRM
 , http_status_code integer -- May store the result of APEX_WEB_SERVICE.G_STATUS_CODE (or its UTL_HTTP equivalent)
 , http_reason_phrase varchar2(4000 byte) -- More details about the HTTP status
@@ -32,7 +31,6 @@ For http_reason_phrase:
   , p_body_clob in clob default null                 -- empty for a GET request (envelope for a SOAP request)
   , p_body_blob in blob default null                 -- empty for a GET request (empty for a SOAP request)
     -- from WEB_SERVICE_RESPONSE_TYP
-  , p_web_service_request in web_service_request_typ default null
   , p_sql_code in integer default null
   , p_sql_error_message in varchar2 default null
   , p_http_status_code in integer default null
@@ -53,7 +51,6 @@ For http_reason_phrase:
   , p_body_clob in clob
   , p_body_blob in blob
     -- from WEB_SERVICE_RESPONSE_TYP
-  , p_web_service_request in web_service_request_typ
   , p_sql_code in integer
   , p_sql_error_message in varchar2
   , p_http_status_code in integer  
