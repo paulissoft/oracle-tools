@@ -979,9 +979,9 @@ $end
     , p_rest_web_service_request => l_rest_web_service_request
     );
 
-    l_rest_web_service_request.response().print; -- just invoke directly and print
-
     l_rest_web_service_request.process; -- invoke indirectly
+
+    l_rest_web_service_request.response().print; -- just invoke directly and print
 
     commit;
 
@@ -1251,9 +1251,9 @@ $end
   , p_rest_web_service_request => l_rest_web_service_request
   );
 
-  l_rest_web_service_request.response().print; -- just invoke directly and print
-
   l_rest_web_service_request.process; -- invoke indirectly
+
+  l_rest_web_service_request.response().print; -- just invoke directly and print
 
   commit;
 
