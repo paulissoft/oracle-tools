@@ -215,7 +215,6 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   l_web_service_response := self.make_rest_request();  
-  l_web_service_response.process; -- put into the queue (if correlation id is set)
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -244,8 +243,12 @@ member function make_rest_request
 )
 return web_service_response_typ
 is
+  l_web_service_response web_service_response_typ;
 begin
-  return web_service_pkg.make_rest_request(self);
+  l_web_service_response := web_service_pkg.make_rest_request(self);
+  l_web_service_response.process; -- put into the queue (if correlation id is set)
+  
+  return l_web_service_response;
 end make_rest_request;
 
 final member function response
