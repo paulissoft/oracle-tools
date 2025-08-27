@@ -268,7 +268,7 @@ $end
       msg_aq_pkg.dequeue
       ( p_queue_name => web_service_response_typ.default_group()
       , p_delivery_mode => dbms_aq.persistent
-      , p_visibility => dbms_aq.immediate
+      , p_visibility => null -- dbms_aq.immediate
       , p_subscriber => null
       , p_dequeue_mode => dbms_aq.browse
       , p_navigation => dbms_aq.first_message
