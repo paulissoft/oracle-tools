@@ -85,7 +85,7 @@ $end
   msg_aq_pkg.enqueue(p_msg => self, p_msgid => l_msgid);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."info", 'l_msgid enqueued: %s', utl_raw.cast_to_varchar2(l_msgid));
+  dbug.print(dbug."info", 'l_msgid enqueued: %s', rawtohex(l_msgid));
   dbug.leave;
 $end
 end process$later;
