@@ -242,7 +242,7 @@ return web_service_response_typ
 is
   l_navigation binary_integer := dbms_aq.first_message;
   l_msg msg_typ := null;
-  l_msgid raw(16) := null;
+  l_msgid raw(16);
   l_message_properties dbms_aq.message_properties_t;  
   l_web_service_response web_service_response_typ := null;
 begin
@@ -255,10 +255,11 @@ $end
     <<msg_loop>>
     loop
       begin
+        l_msgid := null; -- every try a reset
         msg_aq_pkg.dequeue
         ( p_queue_name => web_service_response_typ.default_group()
         , p_delivery_mode => dbms_aq.persistent
-        , p_visibility => null -- dbms_aq.immediate
+        , p_visibility => dbms_aq.on_commit
         , p_subscriber => null
         , p_dequeue_mode => dbms_aq.browse
         , p_navigation => l_navigation
@@ -271,7 +272,15 @@ $end
         , p_msg => l_msg
         );
       exception
-        when msg_aq_pkg.e_queue_table_does_not_exist or msg_aq_pkg.e_queue_does_not_exist
+        when msg_aq_pkg.e_queue_table_does_not_exist or
+             msg_aq_pkg.e_queue_does_not_exist or
+             msg_aq_pkg.e_dequeue_timeout
+        then
+          -- normal behaviour
+          l_msg := null;
+          l_msgid := null;
+          
+        when others
         then
 $if oracle_tools.cfg_pkg.c_debugging $then
           dbug.on_error;
