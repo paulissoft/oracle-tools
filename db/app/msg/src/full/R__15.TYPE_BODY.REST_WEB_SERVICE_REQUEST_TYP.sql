@@ -208,13 +208,12 @@ final member procedure process$now
 ( self in rest_web_service_request_typ
 )
 is
-  l_web_service_response web_service_response_typ;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$NOW');
 $end
 
-  l_web_service_response := self.make_rest_request();  
+  web_service_pkg.make_rest_request(self).process(); -- put into the queue as well (if correlation id is set)
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -238,70 +237,73 @@ begin
   p_json_object.put('BINARY_RESPONSE', self.binary_response);
 end serialize;
 
-member function make_rest_request
-( self in rest_web_service_request_typ
-)
+static function response(p_context$ in varchar2)
 return web_service_response_typ
 is
-  l_web_service_response web_service_response_typ;
-begin
-  l_web_service_response := web_service_pkg.make_rest_request(self);
-  l_web_service_response.process; -- put into the queue (if correlation id is set)
-  
-  return l_web_service_response;
-end make_rest_request;
-
-final member function response
-return web_service_response_typ
-is
+  l_navigation binary_integer := dbms_aq.first_message;
   l_msg msg_typ := null;
   l_msgid raw(16) := null;
-  l_message_properties dbms_aq.message_properties_t;
+  l_message_properties dbms_aq.message_properties_t;  
+  l_web_service_response web_service_response_typ := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.RESPONSE');
 $end
 
-  if self.context$ is not null
+  if p_context$ is not null
   then
-    begin
-      msg_aq_pkg.dequeue
-      ( p_queue_name => web_service_response_typ.default_group()
-      , p_delivery_mode => dbms_aq.persistent
-      , p_visibility => null -- dbms_aq.immediate
-      , p_subscriber => null
-      , p_dequeue_mode => dbms_aq.browse
-      , p_navigation => dbms_aq.first_message
-      , p_wait => dbms_aq.no_wait
-      , p_correlation => self.context$
-      , p_deq_condition => null
-      , p_force => false
-      , p_msgid => l_msgid
-      , p_message_properties => l_message_properties
-      , p_msg => l_msg
-      );
+    <<msg_loop>>
+    loop
+      begin
+        msg_aq_pkg.dequeue
+        ( p_queue_name => web_service_response_typ.default_group()
+        , p_delivery_mode => dbms_aq.persistent
+        , p_visibility => null -- dbms_aq.immediate
+        , p_subscriber => null
+        , p_dequeue_mode => dbms_aq.browse
+        , p_navigation => l_navigation
+        , p_wait => dbms_aq.no_wait
+        , p_correlation => p_context$
+        , p_deq_condition => null
+        , p_force => false
+        , p_msgid => l_msgid
+        , p_message_properties => l_message_properties
+        , p_msg => l_msg
+        );
+      exception
+        when msg_aq_pkg.e_queue_table_does_not_exist or msg_aq_pkg.e_queue_does_not_exist
+        then
 $if oracle_tools.cfg_pkg.c_debugging $then
-      dbug.print(dbug."info", 'l_msgid: %s', rawtohex(l_msgid));
-$end      
-    exception
-      when msg_aq_pkg.e_queue_table_does_not_exist or msg_aq_pkg.e_queue_does_not_exist
-      then
-$if oracle_tools.cfg_pkg.c_debugging $then
-        dbug.on_error;
+          dbug.on_error;
 $end
-        l_msg := null;
-        l_msgid := null;
-    end;    
+          l_msg := null;
+          l_msgid := null;
+      end;
+      
+      exit msg_loop when l_msg is null;
+
+      l_web_service_response :=
+        case
+           when l_msg is not null and l_msg is of (web_service_response_typ)
+           then treat(l_msg as web_service_response_typ)
+         end;
+         
+      l_navigation := dbms_aq.next_message;
+    end loop msg_loop;
   end if;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
 
-  return case
-           when l_msg is not null and l_msg is of (web_service_response_typ)
-           then treat(l_msg as web_service_response_typ)
-         end;
+  return l_web_service_response;
+end response;
+
+final member function response
+return web_service_response_typ
+is
+begin
+  return rest_web_service_request_typ.response(self.context$);
 end response;
 
 member function http_method

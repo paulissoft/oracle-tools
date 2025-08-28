@@ -84,7 +84,7 @@ buffered messages if it has a non null LOB).
 /**
 
 Steps:
-1. Invoke `make_rest_request` .
+1. Invoke `web_service_pkg.make_rest_request` .
 2. Store the output and response cookies and HTTP headers in a `WEB_SERVICE_RESPONSE_TYP`.
 3. Enqueue (process) that if the correlation id (attribute context$) is not null.
 
@@ -97,17 +97,18 @@ Steps:
   )
 /** Serialize to JSON. **/
 
-, member function make_rest_request
-  ( self in rest_web_service_request_typ
-  )
+, static function response(p_context$ in varchar2)
   return web_service_response_typ
-/** Make a REST request. **/
+/**
+Retrieve the (last) response from the WEB_SERVICE_RESPONSE queue by its correlation id (p_context$).
+When this object is processed (ultimately via `process$now`) and the CONTEXT$ is not null,
+the response will be put into the WEB_SERVICE_RESPONSE queue.
+**/
 
 , final member function response
   return web_service_response_typ
 /**
-Retrieve the response from the WEB_SERVICE_RESPONSE queue and return NULL when not found.
-When this object is processed and the CONTEXT$ is not null, the response will be put into the WEB_SERVICE_RESPONSE queue.
+Return `rest_web_service_request_typ.response(this.context$)`.
 **/
 
 , member function http_method return varchar2 -- must be overridden by a final function
