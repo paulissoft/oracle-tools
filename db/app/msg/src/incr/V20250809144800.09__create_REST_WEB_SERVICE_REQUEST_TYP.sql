@@ -70,7 +70,7 @@ buffered messages if it has a non null LOB).
 /** A static method to create a sub type based on the HTTP method. **/
 
 , overriding
-  final member function must_be_processed
+  member function must_be_processed
   ( self in rest_web_service_request_typ
   , p_maybe_later in integer -- True (1) or false (0)
   )
@@ -78,7 +78,7 @@ buffered messages if it has a non null LOB).
 /** Must this object be processed? **/
 
 , overriding
-  final member procedure process$now
+  member procedure process$now
   ( self in rest_web_service_request_typ
   )
 /**
@@ -91,7 +91,7 @@ Steps:
 **/
 
 , overriding
-  final member procedure serialize
+  member procedure serialize
   ( self in rest_web_service_request_typ
   , p_json_object in out nocopy json_object_t
   )
