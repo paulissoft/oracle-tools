@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="windows-1252" ?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  
+  <parent>
+    <groupId>com.paulissoft.pato.db</groupId>
+    <artifactId>app</artifactId>
+    <version>${revision}</version>
+  </parent>
+
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.paulissoft.pato.db.app</groupId>
+  <artifactId>UTIL</artifactId>
+  <packaging>pom</packaging>
+  <description>Build UTIL component</description>
+  
+  <properties>
+    <flyway.table>schema_version_tools_util</flyway.table>
+    <db.include.objects>
+:OBJECT_GRANT::ORACLE_TOOLS::UTIL_*_PKG::*:*:*
+ORACLE_TOOLS:PACKAGE_BODY:UTIL_*_PKG:::::::
+ORACLE_TOOLS:PACKAGE_SPEC:UTIL_*_PKG:::::::
+    </db.include.objects>
+    <db.test.phase>test</db.test.phase>
+  </properties>
+
+  <build>
+    <resources />
+  </build>
+
+</project>
+

@@ -36,6 +36,7 @@
         <module>ddl</module>
         <module>ext</module>
         <module>ui</module>
+        <module>util</module>
       </modules>
     </profile>
     <profile>
@@ -46,6 +47,7 @@
         <module>api</module>
         <module>ddl</module>
         <module>ext</module>
+        <module>util</module>
       </modules>
     </profile>
     <profile>
