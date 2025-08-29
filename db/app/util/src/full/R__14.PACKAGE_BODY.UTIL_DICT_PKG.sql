@@ -135,7 +135,7 @@ begin
     where   col.index_name = ind.index_name
     and     col.table_name = ind.table_name
     and     col.column_position = 1
-    and     col.column_name != 'ID' -- no primary keys on ID
+    and     col.column_name not in ('ID', 'DATE_CREATED', 'TIMESTAMP_CREATED') -- no primary keys on ID nor audit columns
     and     tab.table_name != ind.table_name
     and     tab.table_name like upper(p_table_name)
     and     tab.table_name not like 'BIN$%' -- Oracle 10g Recycle Bin
@@ -167,7 +167,7 @@ begin
     where   col.index_name = ind.index_name
     and     col.table_name = ind.table_name
     and     col.column_position = 1
-    and     col.column_name != 'ID' -- no primary keys on ID
+    and     col.column_name not in ('ID', 'DATE_CREATED', 'TIMESTAMP_CREATED') -- no primary keys on ID nor audit columns
     and     tab.table_name != ind.table_name 
     and     ind.table_name like upper(p_table_name)
     and     ind.table_name not like 'BIN$%' -- Oracle 10g Recycle Bin
