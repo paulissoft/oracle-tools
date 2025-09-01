@@ -275,6 +275,29 @@ end utl_http_request;
 
 $end -- $if web_service_pkg.c_prefer_to_use_utl_http $then
 
+procedure check_http_status_code
+( p_http_status_code in http_status_code_t
+, p_http_reason_phrase in http_reason_phrase_t
+)
+is
+begin
+  if p_http_status_code is null
+  then
+    raise value_error;
+  elsif not(p_http_status_code between 200 and 299)
+  then
+    -- p_http_status_code is not null
+    raise_application_error
+    ( -20000 + -1 * p_http_status_code
+    , utl_lms.format_message
+      ( 'HTTP status description: %s; HTTP reason phrase: %s'
+      , http_request_response_pkg.get_http_status_descr(p_http_status_code)
+      , p_http_reason_phrase
+      )
+    );
+  end if;
+end check_http_status_code;
+
 procedure handle_response
 ( p_response in web_service_response_typ -- The REST request response
 , p_check_http_status_code_ok in boolean -- Check that HTTP status code is between 200 and 299
@@ -303,13 +326,13 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   p_http_status_code := p_response.http_status_code;
-  if p_check_http_status_code_ok and p_http_status_code is null
-  then
-    raise value_error;
-  end if;
   
   -- From https://www.oxitsolutions.co.uk/blog/http-status-code-cheat-sheet-infographic
-  p_http_status_description := case when p_http_status_code is not null then http_request_response_pkg.get_http_status_descr(p_http_status_code) end;
+  p_http_status_description :=
+    case
+      when p_http_status_code is not null
+      then http_request_response_pkg.get_http_status_descr(p_http_status_code)
+    end;
   p_http_reason_phrase := p_response.http_reason_phrase;
 
   p_body_clob := p_response.body_c;    
@@ -320,13 +343,12 @@ $end
   p_x_ratelimit_remaining := http_request_response_pkg.get_property(p_response.http_headers, 'X-RateLimit-Remaining');
   p_x_ratelimit_reset := http_request_response_pkg.get_property(p_response.http_headers, 'X-RateLimit-Reset');
 
-  if p_check_http_status_code_ok and not(p_http_status_code between 200 and 299)
+  if p_check_http_status_code_ok
   then
-    -- p_http_status_code is not null
-    raise_application_error
-    ( -20000 + -1 * p_http_status_code
-    , utl_lms.format_message('HTTP status description: %s; HTTP reason phrase: %s', p_http_status_description, p_http_reason_phrase)
-    );
+    check_http_status_code
+    ( p_http_status_code => p_http_status_code
+    , p_http_reason_phrase => p_http_reason_phrase
+    );    
   end if;
 
 $if oracle_tools.cfg_pkg.c_debugging $then

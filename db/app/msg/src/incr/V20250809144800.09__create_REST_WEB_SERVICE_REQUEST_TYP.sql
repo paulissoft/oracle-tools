@@ -84,10 +84,11 @@ buffered messages if it has a non null LOB).
 /**
 
 Steps:
-1. Invoke `web_service_pkg.make_rest_request` .
+1. Invoke `self.make_rest_request`.
 2. Store the output and response cookies and HTTP headers in a `WEB_SERVICE_RESPONSE_TYP`.
 3. Enqueue (process) that if the correlation id (attribute context$) is not null.
 
+Now the actual response can be retrieved by response().
 **/
 
 , overriding
@@ -97,18 +98,35 @@ Steps:
   )
 /** Serialize to JSON. **/
 
-, static function response(p_context$ in varchar2)
+, static function response
+  ( p_context$ in varchar2
+  , p_wait in integer default 0 -- The time to wait for a response (default dbms_aq.no_wait).
+  )
   return web_service_response_typ
 /**
 Retrieve the (last) response from the WEB_SERVICE_RESPONSE queue by its correlation id (p_context$).
-When this object is processed (ultimately via `process$now`) and the CONTEXT$ is not null,
+When this object is processed (by process(), process$later() or ultimately via `process$now`) and the CONTEXT$ is not null,
 the response will be put into the WEB_SERVICE_RESPONSE queue.
 **/
 
 , final member function response
+  ( p_wait in integer default 0 -- The time to wait for a response (default dbms_aq.no_wait).
+  )
   return web_service_response_typ
 /**
-Return `rest_web_service_request_typ.response(this.context$)`.
+Return `rest_web_service_request_typ.response(this.context$, p_wait)`.
+**/
+
+, member function make_rest_request
+  return web_service_response_typ
+/**
+
+Invoke `web_service_pkg.make_rest_request`.
+
+This is another (synchronous) way to make a REST request.
+
+The other (asynchronous) way is through process() and then response().
+
 **/
 
 , member function http_method return varchar2 -- must be overridden by a final function

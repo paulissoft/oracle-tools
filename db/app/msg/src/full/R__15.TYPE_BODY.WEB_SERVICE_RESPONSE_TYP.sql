@@ -184,6 +184,25 @@ begin
   return http_request_response_pkg.get_http_status_descr(self.http_status_code);
 end http_status_descr;
 
+final member procedure check_http_status_code
+( self in web_service_response_typ -- The REST request response
+)
+is
+begin
+  web_service_pkg.check_http_status_code(self.http_status_code, self.http_reason_phrase);
+end check_http_status_code;
+
+final member function is_ok
+return integer -- A numeric boolean (0=false)
+is
+begin
+  self.check_http_status_code();
+  return 1;
+exception
+  when others
+  then return 0;
+end is_ok;
+
 final member procedure handle_response
 ( self in web_service_response_typ -- The REST request response
 , p_check_http_status_code_ok in integer -- Check that HTTP status code is between 200 and 299

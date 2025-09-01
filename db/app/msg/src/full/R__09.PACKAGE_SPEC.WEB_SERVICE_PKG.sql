@@ -92,6 +92,23 @@ subtype http_status_code_t is positive;
 subtype http_status_description_t is varchar2(100 byte);
 subtype http_reason_phrase_t is varchar2(4000 byte);
 
+procedure check_http_status_code
+( p_http_status_code in http_status_code_t -- The HTTP status code
+, p_http_reason_phrase in http_reason_phrase_t -- The HTTP reason phrase
+);
+/**
+
+This procedure will:
+1. Raise a VALUE_ERROR exception when p_http_status_code is NULL
+2. Raise an application error via `raise_application_error( -20000 + -1 * p_http_status_code, ...)`
+   when the status code is not between 200 and 299.
+
+In the second case, the error message will contain the HTTP status description plus the HTTP reason phrase and
+the error number (-20000 + -1 * p_http_status_code) should fall into the normal range -20000 .. -20999,
+since HTTP status codes lie between 100 and 599.
+
+**/
+
 procedure handle_response
 ( p_response in web_service_response_typ -- The REST request response
 , p_check_http_status_code_ok in boolean default true -- Check that HTTP status code is between 200 and 299

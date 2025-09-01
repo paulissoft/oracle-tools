@@ -108,6 +108,15 @@ You need to dequeue from that queue using the correlation id to get the response
   deterministic
 /** Returns the HTTP status code description, e.g. OK for HTTP status code 200. **/
 
+, final member procedure check_http_status_code
+  ( self in web_service_response_typ -- The REST request response
+  )
+/** Invoke `web_service_pkg.check_http_status_code(self.http_status_code, self.http_reason_phrase)`. **/
+
+, final member function is_ok
+  return integer -- A numeric boolean (0=false)
+/** Invoke `self.check_http_status_code()` and return 0 when it raises an exception, else 1. **/
+
 , final member procedure handle_response
   ( self in web_service_response_typ -- The REST request response
   , p_check_http_status_code_ok in integer default 1 -- Check that HTTP status code is between 200 and 299 (0=false)
@@ -135,6 +144,7 @@ You need to dequeue from that queue using the correlation id to get the response
   , p_x_ratelimit_reset out nocopy varchar2 -- X-RateLimit-Reset HTTP header
   )
 /** Get the binary body plus other HTTP response info. **/
+
 )
 not final;
 /

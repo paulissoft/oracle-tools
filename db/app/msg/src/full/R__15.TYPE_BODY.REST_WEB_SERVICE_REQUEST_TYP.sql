@@ -213,7 +213,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$NOW');
 $end
 
-  web_service_pkg.make_rest_request(self).process(); -- put into the queue as well (if correlation id is set)
+  self.make_rest_request().process(); -- put into the queue as well (if correlation id is set)
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
@@ -237,12 +237,16 @@ begin
   p_json_object.put('BINARY_RESPONSE', self.binary_response);
 end serialize;
 
-static function response(p_context$ in varchar2)
+static function response
+( p_context$ in varchar2
+, p_wait in integer
+)
 return web_service_response_typ
 is
+  l_wait integer := p_wait;
   l_navigation binary_integer := dbms_aq.first_message;
   l_msg msg_typ := null;
-  l_msgid raw(16);
+  l_msgid raw(16) := null;
   l_message_properties dbms_aq.message_properties_t;  
   l_web_service_response web_service_response_typ := null;
 begin
@@ -255,7 +259,6 @@ $end
     <<msg_loop>>
     loop
       begin
-        l_msgid := null; -- every try a reset
         msg_aq_pkg.dequeue
         ( p_queue_name => web_service_response_typ.default_group()
         , p_delivery_mode => dbms_aq.persistent
@@ -263,7 +266,7 @@ $end
         , p_subscriber => null
         , p_dequeue_mode => dbms_aq.browse
         , p_navigation => l_navigation
-        , p_wait => dbms_aq.no_wait
+        , p_wait => l_wait
         , p_correlation => p_context$
         , p_deq_condition => null
         , p_force => false
@@ -296,8 +299,11 @@ $end
            when l_msg is not null and l_msg is of (web_service_response_typ)
            then treat(l_msg as web_service_response_typ)
          end;
-         
+
+      -- next round
+      l_wait := dbms_aq.no_wait;
       l_navigation := dbms_aq.next_message;
+      l_msgid := null; -- every try a reset
     end loop msg_loop;
   end if;
   
@@ -309,11 +315,20 @@ $end
 end response;
 
 final member function response
+( p_wait in integer
+)
 return web_service_response_typ
 is
 begin
-  return rest_web_service_request_typ.response(self.context$);
+  return rest_web_service_request_typ.response(self.context$, p_wait);
 end response;
+
+member function make_rest_request
+return web_service_response_typ
+is
+begin
+  return web_service_pkg.make_rest_request(self);
+end make_rest_request;
 
 member function http_method
 return varchar2
