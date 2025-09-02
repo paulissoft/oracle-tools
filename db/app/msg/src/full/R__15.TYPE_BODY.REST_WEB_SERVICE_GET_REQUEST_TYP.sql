@@ -18,7 +18,7 @@ constructor function rest_web_service_get_request_typ
 , p_credential_static_id in varchar2
 , p_token_url in varchar2
   -- from REST_WEB_SERVICE_GET_REQUEST_TYP
-, p_query_parms in property_tab_typ
+, p_parms in property_tab_typ
 , p_binary_response in integer
 )
 return self as result
@@ -37,7 +37,7 @@ begin
   , p_https_host => p_https_host
   , p_credential_static_id => p_credential_static_id
   , p_token_url => p_token_url
-  , p_query_parms => p_query_parms
+  , p_parms => p_parms
   , p_binary_response => p_binary_response
   );
   return;
@@ -61,7 +61,7 @@ final member procedure construct
 , p_credential_static_id in varchar2
 , p_token_url in varchar2
   -- from REST_WEB_SERVICE_GET_REQUEST_TYP
-, p_query_parms in property_tab_typ
+, p_parms in property_tab_typ
 , p_binary_response in integer
 )
 is
@@ -81,7 +81,8 @@ begin
   , p_https_host => p_https_host
   , p_credential_static_id => p_credential_static_id
   , p_token_url => p_token_url
-  , p_parms => p_query_parms
+  , p_parms => p_parms
+  , p_use_query_parameters => 1
   , p_binary_response => p_binary_response
   );
 end;

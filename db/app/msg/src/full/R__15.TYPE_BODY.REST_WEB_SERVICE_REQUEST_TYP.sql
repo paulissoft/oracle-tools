@@ -21,6 +21,7 @@ final member procedure construct
 , p_token_url in varchar2
   -- from REST_WEB_SERVICE_REQUEST_TYP
 , p_parms in property_tab_typ
+, p_use_query_parameters in integer
 , p_binary_response in integer
 )
 is
@@ -46,6 +47,7 @@ $end
   , p_token_url => p_token_url
   );
   self.parms := p_parms;
+  self.use_query_parameters := p_use_query_parameters;
   self.binary_response := p_binary_response;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -74,6 +76,7 @@ static procedure construct
 , p_token_url in varchar2 default null
   -- from REST_WEB_SERVICE_REQUEST_TYP
 , p_parms in property_tab_typ default null
+, p_use_query_parameters in integer default 0
 , p_binary_response in integer default 0
 , p_rest_web_service_request out nocopy rest_web_service_request_typ -- any of the rest_web_service_<HTTP_METHOD>_request_typ types
 )
@@ -98,6 +101,7 @@ begin
                , p_credential_static_id => p_credential_static_id
                , p_token_url => p_token_url
                , p_parms => p_parms
+               , p_use_query_parameters => p_use_query_parameters
                , p_binary_response => p_binary_response
                );
     when 'GET'
@@ -115,7 +119,7 @@ begin
                , p_https_host => p_https_host
                , p_credential_static_id => p_credential_static_id
                , p_token_url => p_token_url
-               , p_query_parms => p_parms
+               , p_parms => p_parms
                , p_binary_response => p_binary_response
                );
     when 'PATCH'
@@ -136,6 +140,7 @@ begin
                , p_credential_static_id => p_credential_static_id
                , p_token_url => p_token_url
                , p_parms => p_parms
+               , p_use_query_parameters => p_use_query_parameters
                , p_binary_response => p_binary_response
                );
     when 'POST'
@@ -156,6 +161,7 @@ begin
                , p_credential_static_id => p_credential_static_id
                , p_token_url => p_token_url
                , p_parms => p_parms
+               , p_use_query_parameters => p_use_query_parameters
                , p_binary_response => p_binary_response
                );
     when 'PUT'
@@ -176,6 +182,7 @@ begin
                , p_credential_static_id => p_credential_static_id
                , p_token_url => p_token_url
                , p_parms => p_parms
+               , p_use_query_parameters => p_use_query_parameters
                , p_binary_response => p_binary_response
                );
   end case;
@@ -234,6 +241,7 @@ begin
     http_request_response_pkg.to_json(self.parms, l_json_array);
     p_json_object.put('PARMS', l_json_array);
   end if;
+  p_json_object.put('USE_QUERY_PARAMETERS', self.use_query_parameters);
   p_json_object.put('BINARY_RESPONSE', self.binary_response);
 end serialize;
 

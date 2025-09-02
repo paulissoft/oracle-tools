@@ -24,7 +24,7 @@ Implement a REST GET request.
   , p_credential_static_id in varchar2 default null
   , p_token_url in varchar2 default null
     -- from REST_WEB_SERVICE_GET_REQUEST_TYP
-  , p_query_parms in property_tab_typ default null -- HTTP query parameters added to the URL
+  , p_parms in property_tab_typ default null -- HTTP query parameters added to the URL
   , p_binary_response in integer default 0
   )
   return self as result
@@ -48,7 +48,7 @@ Implement a REST GET request.
   , p_credential_static_id in varchar2
   , p_token_url in varchar2
     -- from REST_WEB_SERVICE_GET_REQUEST_TYP
-  , p_query_parms in property_tab_typ
+  , p_parms in property_tab_typ
   , p_binary_response in integer
   )
 /** The constructor method that can be used by this type or sub types. **/

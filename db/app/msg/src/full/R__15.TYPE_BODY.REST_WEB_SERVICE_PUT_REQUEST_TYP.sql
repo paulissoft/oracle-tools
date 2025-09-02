@@ -21,6 +21,7 @@ constructor function rest_web_service_put_request_typ
 , p_token_url in varchar2 default null
   -- from REST_WEB_SERVICE_REQUEST_TYP
 , p_parms in property_tab_typ default null
+, p_use_query_parameters in integer default 0
 , p_binary_response in integer default 0
 )
 return self as result
@@ -42,6 +43,7 @@ begin
   , p_credential_static_id => p_credential_static_id
   , p_token_url => p_token_url
   , p_parms => p_parms
+  , p_use_query_parameters => p_use_query_parameters
   , p_binary_response => p_binary_response
   );
   return;

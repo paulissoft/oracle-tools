@@ -1,5 +1,6 @@
 create or replace type rest_web_service_request_typ under web_service_request_typ
-( parms property_tab_typ -- Query parameters (GET request) or body parameters (when body is empty)
+( parms property_tab_typ -- Query or body parameters
+, use_query_parameters integer -- When 0 (false) put it in the body (not for HTTP method GET) else use query parameters (every HTTP method can use query parameters)
 , binary_response integer -- Do we invoke APEX_WEB_SERVICE.MAKE_REST_REQUEST (binary_response = 0) or APEX_WEB_SERVICE.MAKE_REST_REQUEST_B (binary_response = 1)?
 /**
 REST web service request
@@ -39,6 +40,7 @@ buffered messages if it has a non null LOB).
   , p_token_url in varchar2
     -- from REST_WEB_SERVICE_REQUEST_TYP
   , p_parms in property_tab_typ
+  , p_use_query_parameters in integer
   , p_binary_response in integer
   )
 /** The constructor method that can be used to construct sub types (this type is not instantiable). **/
@@ -64,6 +66,7 @@ buffered messages if it has a non null LOB).
   , p_token_url in varchar2 default null
     -- from REST_WEB_SERVICE_REQUEST_TYP
   , p_parms in property_tab_typ default null
+  , p_use_query_parameters in integer default 0
   , p_binary_response in integer default 0
   , p_rest_web_service_request out nocopy rest_web_service_request_typ -- Any of the REST_WEB_SERVICE_<HTTP_METHOD>_REQUEST_TYP types
   )

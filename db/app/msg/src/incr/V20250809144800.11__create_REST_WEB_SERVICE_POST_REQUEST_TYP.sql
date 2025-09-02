@@ -26,6 +26,7 @@ Implement a REST POST request.
   , p_token_url in varchar2 default null
     -- from REST_WEB_SERVICE_REQUEST_TYP
   , p_parms in property_tab_typ default null
+  , p_use_query_parameters in integer default 0
   , p_binary_response in integer default 0
   )
   return self as result

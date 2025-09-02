@@ -526,9 +526,11 @@ procedure make_rest_request
 , p_response out nocopy web_service_response_typ -- The response
 )
 is
+/*
   l_parm_names vc_arr2 := empty_vc_arr;
   l_parm_values vc_arr2 := empty_vc_arr;
-  l_url_encode boolean := (p_request.http_method = 'GET');
+*/  
+  l_url_encode boolean := (p_request.use_query_parameters != 0);
   l_idx positive;
   l_url varchar2(32767 byte) := p_request.url;
   l_parameters varchar2(32767 byte);
@@ -541,10 +543,12 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.print(dbug."input", 'p_request.context$: %s', p_request.context$);
 $end
 
+/*
   pragma inline (convert_to_parms_tables, 'YES');
   convert_to_parms_tables(p_request.parms, l_parm_names, l_parm_values);
+*/
 
-  if not l_url_encode
+  if not l_url_encode -- put them in the body
   then
     -- Content-Type=application/x-www-form-urlencoded?
     l_idx := http_request_response_pkg.get_property_idx(p_request.http_headers, 'Content-Type');
@@ -563,14 +567,17 @@ $end
   -- Use parameters as GET query parameters or put them into an empty body (non-GET)
   if l_parameters is not null
   then  
-    if p_request.http_method = 'GET'
+    if p_request.use_query_parameters != 0
     then
       l_url := l_url || '?' || l_parameters;
-    elsif p_request.binary_response = 0 and
+    elsif p_request.http_method() != 'GET' and
+          p_request.binary_response = 0 and
           (l_body_clob is null or dbms_lob.getlength(l_body_clob) = 0)
     then
       -- put parameters in empty character body
       l_body_clob := to_clob(l_parameters);
+    else
+      raise program_error; -- nowhere to put them
     end if;
   end if;
 
@@ -632,7 +639,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
       l_body_clob := apex_web_service.make_rest_request
-                     ( p_url => p_request.url
+                     ( p_url => l_url
                      , p_http_method => p_request.http_method
                      , p_username => p_username
                      , p_password => p_password
@@ -641,8 +648,10 @@ $end
                      , p_transfer_timeout => p_request.transfer_timeout
                      , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
                      , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
+/*                     
                      , p_parm_name => l_parm_names
                      , p_parm_value => l_parm_values
+*/                     
                      , p_wallet_path => p_request.wallet_path
                      , p_wallet_pwd => p_wallet_pwd
 /*APEX*/             , p_https_host => p_request.https_host
@@ -657,7 +666,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
       l_body_blob := apex_web_service.make_rest_request_b
-                     ( p_url => p_request.url
+                     ( p_url => l_url
                      , p_http_method => p_request.http_method
                      , p_username => p_username
                      , p_password => p_username
@@ -666,8 +675,10 @@ $end
                      , p_transfer_timeout => p_request.transfer_timeout
                      , p_body => case when l_body_clob is not null then l_body_clob else empty_clob() end
                      , p_body_blob => case when l_body_blob is not null then l_body_blob else empty_blob() end
+/*                     
                      , p_parm_name => l_parm_names
                      , p_parm_value => l_parm_values
+*/                     
                      , p_wallet_path => p_request.wallet_path
                      , p_wallet_pwd => null
 /*APEX*/             , p_https_host => p_request.https_host
