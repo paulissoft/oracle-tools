@@ -52,6 +52,11 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end construct;
 
@@ -208,6 +213,14 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   return l_result;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end must_be_processed;
 
 overriding
@@ -224,6 +237,11 @@ $end
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end process$now;
 
@@ -282,6 +300,8 @@ $end
         , p_message_properties => l_message_properties
         , p_msg => l_msg
         );
+        -- GJP 2025-09-03 Do not catch errors
+/*        
       exception
         when msg_aq_pkg.e_queue_table_does_not_exist or
              msg_aq_pkg.e_queue_does_not_exist or
@@ -298,6 +318,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
           l_msg := null;
           l_msgid := null;
+*/          
       end;
       
       exit msg_loop when l_msg is null;
@@ -320,6 +341,14 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   return l_web_service_response;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end response;
 
 final member function response

@@ -335,8 +335,8 @@ $end
     end;
   p_http_reason_phrase := p_response.http_reason_phrase;
 
-  p_body_clob := p_response.body_c;    
-  p_body_blob := p_response.body_b;
+  p_body_clob := p_response.body_c();    
+  p_body_blob := p_response.body_b();
 
   p_retry_after := http_request_response_pkg.get_property(p_response.http_headers, 'Retry-After');
   p_x_ratelimit_limit := http_request_response_pkg.get_property(p_response.http_headers, 'X-RateLimit-Limit');
@@ -534,8 +534,8 @@ is
   l_idx positive;
   l_url varchar2(32767 byte) := p_request.url;
   l_parameters varchar2(32767 byte);
-  l_body_clob clob := p_request.body_c;
-  l_body_blob blob := p_request.body_b;
+  l_body_clob clob := p_request.body_c();
+  l_body_blob blob := p_request.body_b();
   l_start constant number := dbms_utility.get_time;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
@@ -571,13 +571,13 @@ $end
     then
       l_url := l_url || '?' || l_parameters;
     elsif p_request.http_method() != 'GET' and
-          p_request.binary_response = 0 and
-          (l_body_clob is null or dbms_lob.getlength(l_body_clob) = 0)
+          (l_body_clob is null or dbms_lob.getlength(l_body_clob) = 0) and
+          (l_body_blob is null or dbms_lob.getlength(l_body_blob) = 0)
     then
-      -- put parameters in empty character body
+      -- put parameters in empty character body since there is room and binary body is not used
       l_body_clob := to_clob(l_parameters);
     else
-      raise program_error; -- nowhere to put them
+      raise program_error; -- nowhere to put them (without getting in the way of something else)
     end if;
   end if;
 
