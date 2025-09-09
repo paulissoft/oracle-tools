@@ -168,13 +168,32 @@ member procedure print
 ( self in msg_typ
 )
 is
-  l_msg constant varchar2(4000 char) := utl_lms.format_message('type: %s; repr: %s', get_type(), dbms_lob.substr(lob_loc => repr(), amount => 2000));
+  l_intro constant varchar2(4000 char) := utl_lms.format_message('type: %s; repr:', get_type());
+  l_line_tab dbms_sql.varchar2a;
 begin
+  oracle_tools.pkg_str_util.split
+  ( p_str => self.repr()
+  , p_delimiter => chr(10)
+  , p_str_tab => l_line_tab
+  );
+
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."info", l_msg);
+  dbug.print(dbug."info", l_intro);
 $else  
-  dbms_output.put_line(l_msg);
+  dbms_output.put_line(l_intro);
+$end
+
+  if l_line_tab.count > 0
+  then
+    for i_idx in l_line_tab.first .. l_line_tab.last
+    loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", l_line_tab(i_idx));
+$else  
+      dbms_output.put_line(l_line_tab(i_idx));
 $end  
+    end loop;
+  end if;
 end print;
 
 final
