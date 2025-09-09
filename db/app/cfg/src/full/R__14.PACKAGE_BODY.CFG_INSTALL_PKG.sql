@@ -891,6 +891,35 @@ exception
   then raise_application_error(-20000, 'Error while executing this SQL statement:' || chr(10) || l_sql_statement, true); 
 end purge_flyway_table;
 
+procedure check_object_valid
+( p_object_type in all_objects.object_type%type
+, p_object_name in all_objects.object_name%type
+, p_owner in all_objects.owner%type
+)
+is
+  l_found pls_integer;
+begin
+  select  1
+  into    l_found
+  from    all_objects obj
+  where   obj.owner in (p_owner, upper(p_owner))
+  and     obj.object_type in (p_object_type, upper(p_object_type))
+  and     obj.object_name in (p_object_name, upper(p_object_name))
+  and     obj.status = 'VALID';
+exception
+  when others
+  then raise_application_error
+       ( -20000
+       , utl_lms.format_message
+         ( '(Single) object not found or not VALID: %s %s.%s'
+         , p_object_type
+         , p_owner
+         , p_object_name
+         )
+       , true
+       );
+end check_object_valid;
+
 end cfg_install_pkg;
 /
 
