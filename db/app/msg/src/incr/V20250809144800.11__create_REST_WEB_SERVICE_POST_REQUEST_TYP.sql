@@ -32,8 +32,7 @@ Implement a REST POST request.
   return self as result
 /** The constructor. **/
 
-, overriding
-  final member function http_method
+, overriding final member function http_method
   return varchar2
 /** The HTTP method (POST). **/
 )

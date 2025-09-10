@@ -53,8 +53,7 @@ Implement a REST GET request.
   )
 /** The constructor method that can be used by this type or sub types. **/
 
-, overriding
-  final member function http_method
+, overriding final member function http_method
   return varchar2
 /** The HTTP method (GET). **/
 

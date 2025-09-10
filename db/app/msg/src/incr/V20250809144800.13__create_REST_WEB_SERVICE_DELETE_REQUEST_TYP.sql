@@ -32,8 +32,7 @@ Implement a REST DELETE request.
   return self as result
 /** The constructor. **/
 
-, overriding
-  final member function http_method return varchar2
+, overriding final member function http_method return varchar2
 /** The HTTP method (DELETE). **/
 )
 final;

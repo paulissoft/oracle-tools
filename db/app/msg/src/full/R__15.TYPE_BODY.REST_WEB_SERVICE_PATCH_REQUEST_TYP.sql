@@ -49,8 +49,7 @@ begin
   return;
 end rest_web_service_patch_request_typ;
 
-overriding
-final member function http_method
+overriding final member function http_method
 return varchar2
 is
 begin

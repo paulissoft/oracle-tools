@@ -72,16 +72,14 @@ buffered messages if it has a non null LOB).
   )
 /** A static method to create a sub type based on the HTTP method. **/
 
-, overriding
-  member function must_be_processed
+, overriding member function must_be_processed
   ( self in rest_web_service_request_typ
   , p_maybe_later in integer -- True (1) or false (0)
   )
   return integer -- True (1) or false (0)
 /** Must this object be processed? **/
 
-, overriding
-  member procedure process$now
+, overriding member procedure process$now
   ( self in rest_web_service_request_typ
   )
 /**
@@ -94,12 +92,21 @@ Steps:
 Now the actual response can be retrieved by response().
 **/
 
-, overriding
-  member procedure serialize
+, overriding member procedure serialize
   ( self in rest_web_service_request_typ
   , p_json_object in out nocopy json_object_t
   )
 /** Serialize to JSON. **/
+
+, overriding member function repr
+  ( self in rest_web_service_request_typ
+  )
+  return clob
+/**
+Get the pretty printed JSON representation of a message (or one of its sub types).
+
+See WEB_SERVICE_REQUEST_TYP.REPR(). Adds static function http_method().
+**/
 
 , static function response
   ( p_context$ in varchar2

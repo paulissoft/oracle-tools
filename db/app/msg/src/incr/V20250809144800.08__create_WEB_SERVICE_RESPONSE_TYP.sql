@@ -62,41 +62,55 @@ A construct method that can be used in this type or sub types.
 There is no super() constructor syntax but self.construct() is possible.
 **/
 
-, overriding
-  member function must_be_processed
+, overriding member function must_be_processed
   ( self in web_service_response_typ
   , p_maybe_later in integer -- True (1) or false (0)
   )
   return integer -- True (1) or false (0)
 /** Will return 0 if the request correlation is null, meaning it won't get enqueued. **/
 
-, overriding
-  member procedure process$later
+, overriding member procedure process$later
   ( self in web_service_response_typ
   )
 /** Will enqueue but without registering a PL/SQL notification callback. **/
 
-, overriding
-  member procedure process$now
+, overriding member procedure process$now
   ( self in web_service_response_typ
   )
 /** Will just raise an exception since you are supposed to dequeue yourself. **/
 
-, overriding
-  member procedure serialize
+, overriding member procedure serialize
   ( self in web_service_response_typ
   , p_json_object in out nocopy json_object_t
   )
 /** Serialize to JSON. */
 
-, overriding
-  member function default_processing_method
+, overriding member function repr
+  ( self in web_service_response_typ
+  )
+  return clob
+/**
+Get the pretty printed JSON representation of a message (or one of its sub types).
+
+See MSG_TYP.REPR(). Adds static function default_group().
+**/
+
+, overriding member function default_processing_method
   ( self in web_service_response_typ
   )
   return varchar2
 /** Returns NULL to indicate that a custom routine will dequeue and process the response. **/  
 
 , static function default_group
+  return varchar2
+/**
+All sub types share the same response queue.
+You need to dequeue from that queue using the correlation id to get the response (type WEB_SERVICE_RESPONSE_TYP).
+**/  
+
+, member function default_group
+  ( self in web_service_response_typ
+  )
   return varchar2
 /**
 All sub types share the same response queue.

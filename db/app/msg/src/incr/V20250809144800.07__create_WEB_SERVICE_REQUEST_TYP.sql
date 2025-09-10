@@ -43,16 +43,31 @@ This allows for asynchronous processing and retrieving the result later via the 
   )
 /** The constructor method that can be used to construct sub types (this type is not instantiable). **/
 
-, overriding
-  member procedure serialize
+, overriding member procedure serialize
   ( self in web_service_request_typ
   , p_json_object in out nocopy json_object_t
   )
 /** Serialize to a JSON object. **/
 
+, overriding member function repr
+  ( self in web_service_request_typ
+  )
+  return clob
+/**
+Get the pretty printed JSON representation of a message (or one of its sub types).
+
+See MSG_TYP.REPR(). Adds static function default_group().
+**/
+
 , static function default_group
   return varchar2
 /** All sub types share the same request queue based on the value of this function. **/  
+
+, member function default_group
+  ( self in web_service_request_typ
+  )
+  return varchar2
+/** All sub types share the same request queue, this function. **/  
 
 , static function generate_unique_id
   return varchar2

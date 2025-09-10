@@ -193,8 +193,7 @@ begin
   end case;
 end construct;
 
-overriding
-member function must_be_processed
+overriding member function must_be_processed
 ( self in rest_web_service_request_typ
 , p_maybe_later in integer -- True (1) or false (0)
 )
@@ -223,8 +222,7 @@ exception
 $end
 end must_be_processed;
 
-overriding
-member procedure process$now
+overriding member procedure process$now
 ( self in rest_web_service_request_typ
 )
 is
@@ -245,8 +243,7 @@ exception
 $end
 end process$now;
 
-overriding
-member procedure serialize
+overriding member procedure serialize
 ( self in rest_web_service_request_typ
 , p_json_object in out nocopy json_object_t
 )

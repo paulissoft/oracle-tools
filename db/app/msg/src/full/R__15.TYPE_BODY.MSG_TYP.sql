@@ -154,8 +154,21 @@ member function repr
 )
 return clob
 is
-  l_clob clob := serialize();
+  l_clob clob := null;
+  l_json_object json_object_t := json_object_t();  
+  l_json_functions json_object_t := json_object_t();  
 begin
+  l_json_functions.put('get_type', self.get_type());
+  l_json_functions.put('lob_attribute_list', self.lob_attribute_list());
+  l_json_functions.put('may_have_not_null_lob', self.may_have_not_null_lob());
+  l_json_functions.put('has_not_null_lob', self.has_not_null_lob());
+  l_json_functions.put('default_processing_method', self.default_processing_method());
+
+  l_json_object.put('data', self.serialize());
+  l_json_object.put('functions', l_json_functions);
+
+  l_clob := l_json_object.to_clob();
+
   select  json_serialize(l_clob returning clob pretty)
   into    l_clob
   from    dual;
@@ -168,7 +181,7 @@ member procedure print
 ( self in msg_typ
 )
 is
-  l_intro constant varchar2(4000 char) := utl_lms.format_message('type: %s; repr:', get_type());
+  l_intro constant varchar2(4000 char) := 'repr:';
   l_line_tab dbms_sql.varchar2a;
 begin
   oracle_tools.pkg_str_util.split

@@ -87,8 +87,7 @@ begin
   );
 end;
 
-overriding
-final member function http_method
+overriding final member function http_method
 return varchar2
 is
 begin

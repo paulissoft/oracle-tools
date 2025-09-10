@@ -21,8 +21,7 @@ begin
   msg_pkg.data2msg(p_body_blob, self.body_raw, self.body_blob);
 end construct;
 
-overriding
-member procedure serialize
+overriding member procedure serialize
 ( self in http_request_response_typ
 , p_json_object in out nocopy json_object_t
 )
@@ -58,8 +57,7 @@ begin
   end if;
 end serialize;
 
-overriding
-member function has_not_null_lob
+overriding member function has_not_null_lob
 ( self in http_request_response_typ
 )
 return integer

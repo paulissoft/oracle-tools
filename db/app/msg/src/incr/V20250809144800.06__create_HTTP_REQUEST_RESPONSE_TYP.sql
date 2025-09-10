@@ -30,15 +30,13 @@ See also:
   )
 /** The constructor method that can be used to construct sub types (this type is not instantiable). **/
 
-, overriding
-  member procedure serialize
+, overriding member procedure serialize
   ( self in http_request_response_typ
   , p_json_object in out nocopy json_object_t
   )
 /** Serialize to a JSON object. **/
 
-, overriding
-  member function has_not_null_lob
+, overriding member function has_not_null_lob
   ( self in http_request_response_typ
   )
   return integer -- 0=false, 1=true

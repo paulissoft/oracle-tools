@@ -32,8 +32,7 @@ Implement a REST PATCH request.
   return self as result
 /** The constructor. **/
 
-, overriding
-  final member function http_method
+, overriding final member function http_method
   return varchar2 -- must be overridden by a final function
 /** The HTTP method (PATCH). **/
 )

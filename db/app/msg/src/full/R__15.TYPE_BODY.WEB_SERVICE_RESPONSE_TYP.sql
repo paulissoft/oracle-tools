@@ -70,8 +70,7 @@ begin
   self.elapsed_time_ms := p_elapsed_time_ms;
 end construct;
 
-overriding
-member function must_be_processed
+overriding member function must_be_processed
 ( self in web_service_response_typ
 , p_maybe_later in integer -- True (1) or false (0)
 )
@@ -99,8 +98,7 @@ $end
   return l_result;
 end must_be_processed;
 
-overriding
-member procedure process$later
+overriding member procedure process$later
 ( self in web_service_response_typ
 )
 is
@@ -121,8 +119,7 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 end process$later;
 
-overriding
-member procedure process$now
+overriding member procedure process$now
 ( self in web_service_response_typ
 )
 is
@@ -143,8 +140,7 @@ exception
 $end
 end process$now;
 
-overriding
-member procedure serialize
+overriding member procedure serialize
 ( self in web_service_response_typ
 , p_json_object in out nocopy json_object_t
 )
@@ -159,8 +155,28 @@ begin
   p_json_object.put('ELAPSED_TIME_MS', self.elapsed_time_ms);
 end serialize;
 
-overriding
-member function default_processing_method
+overriding member function repr
+( self in web_service_response_typ
+)
+return clob
+is
+  l_clob clob := (self as http_request_response_typ /* the parent */).repr();
+  l_json_object json_object_t := json_object_t(l_clob);
+  l_json_functions json_object_t := treat(l_json_object.get('functions') as json_object_t);
+begin
+  l_json_functions.put('default_group', self.default_group());
+  l_json_object.put('functions', l_json_functions);
+  
+  l_clob := l_json_object.to_clob();
+
+  select  json_serialize(l_clob returning clob pretty)
+  into    l_clob
+  from    dual;
+
+  return l_clob;  
+end repr;
+
+overriding member function default_processing_method
 ( self in web_service_response_typ
 )
 return varchar2
@@ -174,6 +190,15 @@ return varchar2
 is
 begin
   return 'WEB_SERVICE_RESPONSE';
+end default_group;
+
+member function default_group
+( self in web_service_response_typ
+)
+return varchar2
+is
+begin
+  return 'WEB_SERVICE_RESPONSE'; -- faster not to invoke the static function
 end default_group;
 
 final member function http_status_descr
