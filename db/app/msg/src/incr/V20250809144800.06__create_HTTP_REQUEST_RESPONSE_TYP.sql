@@ -36,6 +36,16 @@ See also:
   )
 /** Serialize to a JSON object. **/
 
+, overriding member function repr
+  ( self in http_request_response_typ
+  )
+  return clob
+/**
+Get the pretty printed JSON representation of a message (or one of its sub types).
+
+See MSG_TYP.REPR(). Adds function body_c() (when JSON).
+**/
+
 , overriding member function has_not_null_lob
   ( self in http_request_response_typ
   )

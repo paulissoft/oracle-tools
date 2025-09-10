@@ -92,7 +92,7 @@ There is no super() constructor syntax but self.construct() is possible.
 /**
 Get the pretty printed JSON representation of a message (or one of its sub types).
 
-See MSG_TYP.REPR(). Adds static function default_group().
+See HTTP_REQUEST_RESPONSE_TYP.REPR(). Adds static function default_group().
 **/
 
 , overriding member function default_processing_method

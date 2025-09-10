@@ -164,7 +164,7 @@ begin
   l_json_functions.put('has_not_null_lob', self.has_not_null_lob());
   l_json_functions.put('default_processing_method', self.default_processing_method());
 
-  l_json_object.put('data', self.serialize());
+  l_json_object.put('data', json_object_t(self.serialize()));
   l_json_object.put('functions', l_json_functions);
 
   l_clob := l_json_object.to_clob();

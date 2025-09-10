@@ -57,6 +57,33 @@ begin
   end if;
 end serialize;
 
+overriding member function repr
+( self in http_request_response_typ
+)
+return clob
+is
+  l_clob clob := (self as msg_typ /* the parent */).repr();
+  l_json_object json_object_t := json_object_t(l_clob);
+  l_json_functions json_object_t := treat(l_json_object.get('functions') as json_object_t);
+begin
+  begin
+    -- try to add body_c as JSON
+    l_json_functions.put('body_c', json_object_t(self.body_c()));
+    l_json_object.put('functions', l_json_functions);
+  
+    l_clob := l_json_object.to_clob();
+
+    select  json_serialize(l_clob returning clob pretty)
+    into    l_clob
+    from    dual;
+  exception
+    when others
+    then null;
+  end;
+
+  return l_clob;
+end repr;
+
 overriding member function has_not_null_lob
 ( self in http_request_response_typ
 )
