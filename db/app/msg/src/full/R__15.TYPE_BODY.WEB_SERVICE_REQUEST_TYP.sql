@@ -66,7 +66,7 @@ is
   l_json_object json_object_t := json_object_t(l_clob);
   l_json_functions json_object_t := treat(l_json_object.get('functions') as json_object_t);
 begin
-  l_json_functions.put('default_group', self.default_group());
+  l_json_functions.put('default_group', web_service_request_typ.default_group());
   l_json_object.put('functions', l_json_functions);
   
   l_clob := l_json_object.to_clob();
@@ -83,15 +83,6 @@ return varchar2
 is
 begin
   return 'WEB_SERVICE_REQUEST';
-end default_group;
-
-member function default_group
-( self in web_service_request_typ
-)
-return varchar2
-is
-begin
-  return 'WEB_SERVICE_REQUEST'; -- faster not to invoke the static function
 end default_group;
 
 static function generate_unique_id

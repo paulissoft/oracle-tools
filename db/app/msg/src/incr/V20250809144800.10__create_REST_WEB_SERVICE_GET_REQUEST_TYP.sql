@@ -63,3 +63,8 @@ Implement a REST GET request.
 )
 final;
 /
+
+begin
+  oracle_tools.cfg_install_pkg.check_object_valid('TYPE', 'REST_WEB_SERVICE_GET_REQUEST_TYP');
+end;
+/

@@ -260,6 +260,27 @@ begin
   p_json_object.put('BINARY_RESPONSE', self.binary_response);
 end serialize;
 
+overriding member function repr
+( self in rest_web_service_request_typ
+)
+return clob
+is
+  l_clob clob := (self as web_service_request_typ /* the parent */).repr();
+  l_json_object json_object_t := json_object_t(l_clob);
+  l_json_functions json_object_t := treat(l_json_object.get('functions') as json_object_t);
+begin
+  l_json_functions.put('http_method', self.http_method());
+  l_json_object.put('functions', l_json_functions);
+  
+  l_clob := l_json_object.to_clob();
+
+  select  json_serialize(l_clob returning clob pretty)
+  into    l_clob
+  from    dual;
+
+  return l_clob;  
+end repr;
+
 static function response
 ( p_context$ in varchar2
 , p_wait in integer

@@ -37,3 +37,8 @@ Implement a REST DELETE request.
 )
 final;
 /
+
+begin
+  oracle_tools.cfg_install_pkg.check_object_valid('TYPE', 'REST_WEB_SERVICE_DELETE_REQUEST_TYP');
+end;
+/

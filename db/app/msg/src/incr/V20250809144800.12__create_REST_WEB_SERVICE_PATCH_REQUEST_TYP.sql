@@ -38,3 +38,8 @@ Implement a REST PATCH request.
 )
 final;
 /
+
+begin
+  oracle_tools.cfg_install_pkg.check_object_valid('TYPE', 'REST_WEB_SERVICE_PATCH_REQUEST_TYP');
+end;
+/

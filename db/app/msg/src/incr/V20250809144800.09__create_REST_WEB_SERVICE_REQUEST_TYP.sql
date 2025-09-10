@@ -145,3 +145,8 @@ The other (asynchronous) way is through process() and then response().
 not final
 not instantiable;
 /
+
+begin
+  oracle_tools.cfg_install_pkg.check_object_valid('TYPE', 'REST_WEB_SERVICE_REQUEST_TYP');
+end;
+/

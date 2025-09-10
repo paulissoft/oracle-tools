@@ -69,3 +69,8 @@ See also:
 not instantiable
 not final;
 /
+
+begin
+  oracle_tools.cfg_install_pkg.check_object_valid('TYPE', 'HTTP_REQUEST_RESPONSE_TYP');
+end;
+/

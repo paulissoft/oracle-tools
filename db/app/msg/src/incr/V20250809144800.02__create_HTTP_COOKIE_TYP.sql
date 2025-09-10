@@ -16,3 +16,8 @@ the only exception being attribute "secure" since boolean is a PL/SQL constructi
 )
 final;
 /
+
+begin
+  oracle_tools.cfg_install_pkg.check_object_valid('TYPE', 'HTTP_COOKIE_TYP');
+end;
+/

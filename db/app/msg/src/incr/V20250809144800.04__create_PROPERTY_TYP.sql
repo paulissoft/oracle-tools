@@ -9,3 +9,8 @@ An object type similar to the PL/SQL record APEX_WEB_SERVICE.HEADER and used for
 )
 final;
 /
+
+begin
+  oracle_tools.cfg_install_pkg.check_object_valid('TYPE', 'PROPERTY_TYP');
+end;
+/

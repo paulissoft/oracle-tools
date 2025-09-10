@@ -63,16 +63,15 @@ See MSG_TYP.REPR(). Adds static function default_group().
   return varchar2
 /** All sub types share the same request queue based on the value of this function. **/  
 
-, member function default_group
-  ( self in web_service_request_typ
-  )
-  return varchar2
-/** All sub types share the same request queue, this function. **/  
-
 , static function generate_unique_id
   return varchar2
 /** Return WEB_SERVICE_REQUEST_SEQ.NEXTVAL **/  
 )
 not instantiable
 not final;
+/
+
+begin
+  oracle_tools.cfg_install_pkg.check_object_valid('TYPE', 'WEB_SERVICE_REQUEST_TYP');
+end;
 /

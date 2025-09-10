@@ -108,15 +108,6 @@ All sub types share the same response queue.
 You need to dequeue from that queue using the correlation id to get the response (type WEB_SERVICE_RESPONSE_TYP).
 **/  
 
-, member function default_group
-  ( self in web_service_response_typ
-  )
-  return varchar2
-/**
-All sub types share the same response queue.
-You need to dequeue from that queue using the correlation id to get the response (type WEB_SERVICE_RESPONSE_TYP).
-**/  
-
 , final member function http_status_descr
   return varchar2
   deterministic
@@ -161,4 +152,9 @@ You need to dequeue from that queue using the correlation id to get the response
 
 )
 not final;
+/
+
+begin
+  oracle_tools.cfg_install_pkg.check_object_valid('TYPE', 'WEB_SERVICE_RESPONSE_TYP');
+end;
 /
