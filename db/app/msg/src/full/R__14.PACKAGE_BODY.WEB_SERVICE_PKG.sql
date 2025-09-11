@@ -526,10 +526,6 @@ procedure make_rest_request
 , p_response out nocopy web_service_response_typ -- The response
 )
 is
-/*
-  l_parm_names vc_arr2 := empty_vc_arr;
-  l_parm_values vc_arr2 := empty_vc_arr;
-*/  
   l_url_encode boolean := (p_request.use_query_parameters != 0);
   l_idx positive;
   l_url varchar2(32767 byte) := p_request.url;
@@ -540,13 +536,7 @@ is
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.MAKE_REST_REQUEST');
-  dbug.print(dbug."input", 'p_request.context$: %s', p_request.context$);
 $end
-
-/*
-  pragma inline (convert_to_parms_tables, 'YES');
-  convert_to_parms_tables(p_request.parms, l_parm_names, l_parm_values);
-*/
 
   if not l_url_encode -- put them in the body
   then
@@ -580,6 +570,16 @@ $end
       raise program_error; -- nowhere to put them (without getting in the way of something else)
     end if;
   end if;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print
+  ( dbug."info"
+  , 'context$: %s; http_method: %s; url: %s'
+  , p_request.context$
+  , p_request.http_method
+  , l_url
+  );
+$end
 
 $if oracle_tools.cfg_pkg.c_apex_installed $then  
   pragma inline (convert_to_cookie_table, 'YES');
