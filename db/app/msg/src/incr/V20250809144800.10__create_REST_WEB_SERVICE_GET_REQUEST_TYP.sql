@@ -12,8 +12,8 @@ Implement a REST GET request.
   , p_group$ in varchar2 default null -- Use WEB_SERVICE_REQUEST_TYP.DEFAULT_GROUP() when null
   , p_context$ in varchar2 default null -- You may use WEB_SERVICE_REQUEST_TYP.GENERATE_UNIQUE_ID() to generate an AQ correlation id
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ default null
-  , p_http_headers in property_tab_typ default null
+  , p_cookies in http_cookie_tab_typ default null -- The static cookies
+  , p_http_headers in property_tab_typ default null -- The static HTTP headers
     -- from WEB_SERVICE_REQUEST_TYP
   , p_url in varchar2 default null
   , p_scheme in varchar2 default null -- 'Basic'
@@ -36,8 +36,8 @@ Implement a REST GET request.
   , p_group$ in varchar2
   , p_context$ in varchar2
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ
-  , p_http_headers in property_tab_typ
+  , p_cookies in http_cookie_tab_typ -- The static cookies
+  , p_http_headers in property_tab_typ -- The static HTTP headers
     -- from WEB_SERVICE_REQUEST_TYP
   , p_url in varchar2
   , p_scheme in varchar2

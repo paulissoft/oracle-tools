@@ -1,15 +1,18 @@
 create or replace type http_request_response_typ under msg_typ
-( cookies http_cookie_tab_typ    -- The request/response cookies
-, http_headers property_tab_typ  -- The request/response headers
-, body_vc varchar2(4000 byte)    -- Is empty for a GET request (envelope for a SOAP request)
-, body_clob clob                 -- idem
-, body_raw raw(2000)             -- Is empty for a GET request (empty for a SOAP request)
-, body_blob blob                 -- idem
+( cookies$ http_cookie_tab_typ    -- The static request/response cookies
+, http_headers$ property_tab_typ  -- The static request/response headers
+, body_vc varchar2(4000 byte)     -- Is empty for a GET request (envelope for a SOAP request)
+, body_clob clob                  -- idem
+, body_raw raw(2000)              -- Is empty for a GET request (empty for a SOAP request)
+, body_blob blob                  -- idem
 
 /**
 HTTP request response
 =====================
 Common attributes and methods for SOAP/REST requests/responses.
+
+Sensitive and/or volatile information like the Autorization header can be supplied via the function http_headers().
+
 See also:
 
 - `APEX_WEB_SERVICE.MAKE_REQUEST`
@@ -23,8 +26,8 @@ See also:
   , p_group$ in varchar2 -- The group this object belongs to
   , p_context$ in varchar2 -- The context of this object (may be a correlation id when put into AQ)
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ -- The cookies
-  , p_http_headers property_tab_typ -- The HTTP headers
+  , p_cookies in http_cookie_tab_typ -- The static cookies
+  , p_http_headers property_tab_typ -- The static HTTP headers
   , p_body_clob in clob -- The character body (will be copied to body_vc when at most 4000 bytes, else to body_clob)
   , p_body_blob in blob -- The binary body (will be copied to body_raw when at most 2000 bytes, else to body_blob)
   )
@@ -64,17 +67,34 @@ See MSG_TYP.REPR(). Adds function body_c() (when JSON).
   return blob
 /** Get the binary body. **/
 
+/* GJP 2025-09-12 Obsolete */
+/*
 , final member function cookie_idx
   ( p_name in varchar2
   )
   return integer -- null when not found
-/** Get the cookie index for this name (case sensitive). **/
+-- Get the cookie index for this name (case sensitive). 
 
 , final member function http_header_idx
   ( p_name in varchar2
   )
   return integer -- null when not found
-/** Get the HTTP header index for this name (case insensitive). **/  
+-- Get the HTTP header index for this name (case insensitive).
+*/
+
+, member function cookies
+  return http_cookie_tab_typ
+/**
+Returns just the static cookies (cookies$) here.
+Can be overridden to include sensitive or volatile cookies.
+**/
+
+, member function http_headers
+  return property_tab_typ
+/**
+Returns just static headers (headers$) here.
+Can be overridden to include for instance the Authorization header (Bearer token).
+**/
 )
 not instantiable
 not final;

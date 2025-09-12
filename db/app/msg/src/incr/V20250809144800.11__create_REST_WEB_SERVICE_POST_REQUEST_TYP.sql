@@ -11,8 +11,8 @@ Implement a REST POST request.
   , p_group$ in varchar2 default null -- Use WEB_SERVICE_REQUEST_TYP.DEFAULT_GROUP() when null
   , p_context$ in varchar2 default null -- You may use WEB_SERVICE_REQUEST_TYP.GENERATE_UNIQUE_ID() to generate an AQ correlation id
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ default null
-  , p_http_headers in property_tab_typ default null
+  , p_cookies in http_cookie_tab_typ default null -- The static cookies
+  , p_http_headers in property_tab_typ default null -- The static HTTP headers
   , p_body_clob in clob default null
   , p_body_blob in blob default null
     -- from WEB_SERVICE_REQUEST_TYP

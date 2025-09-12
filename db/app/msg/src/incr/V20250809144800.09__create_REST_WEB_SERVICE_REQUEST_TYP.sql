@@ -25,8 +25,8 @@ buffered messages if it has a non null LOB).
   , p_group$ in varchar2
   , p_context$ in varchar2
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ
-  , p_http_headers in property_tab_typ
+  , p_cookies in http_cookie_tab_typ -- The static cookies
+  , p_http_headers in property_tab_typ -- The static HTTP headers
   , p_body_clob in clob
   , p_body_blob in blob
     -- from WEB_SERVICE_REQUEST_TYP
@@ -51,8 +51,8 @@ buffered messages if it has a non null LOB).
   , p_group$ in varchar2 default null
   , p_context$ in varchar2 default null
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ default null
-  , p_http_headers in property_tab_typ default null
+  , p_cookies in http_cookie_tab_typ default null    -- The static cookies
+  , p_http_headers in property_tab_typ default null  -- The static HTTP headers
   , p_body_clob in clob default null                 -- empty for a GET request (envelope for a SOAP request)
   , p_body_blob in blob default null                 -- empty for a GET request (empty for a SOAP request)
     -- from WEB_SERVICE_REQUEST_TYP

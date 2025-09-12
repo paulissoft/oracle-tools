@@ -27,8 +27,8 @@ This allows for asynchronous processing and retrieving the result later via the 
   , p_group$ in varchar2
   , p_context$ in varchar2
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ
-  , p_http_headers in property_tab_typ
+  , p_cookies in http_cookie_tab_typ -- The static cookies
+  , p_http_headers in property_tab_typ -- The static HTTP headers
   , p_body_clob in clob
   , p_body_blob in blob
     -- from WEB_SERVICE_REQUEST_TYP  

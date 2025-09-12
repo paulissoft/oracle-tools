@@ -15,8 +15,8 @@ final member procedure construct
 is
 begin
   (self as msg_typ).construct(p_group$, p_context$);
-  self.cookies := p_cookies;
-  self.http_headers := p_http_headers;
+  self.cookies$ := p_cookies;
+  self.http_headers$ := p_http_headers;
   msg_pkg.data2msg(p_body_clob, self.body_vc, self.body_clob);
   msg_pkg.data2msg(p_body_blob, self.body_raw, self.body_blob);
 end construct;
@@ -29,15 +29,15 @@ is
   l_json_array json_array_t;
 begin
   (self as msg_typ).serialize(p_json_object);
-  if self.cookies is not null
+  if self.cookies$ is not null
   then
-    http_request_response_pkg.to_json(self.cookies, l_json_array);
-    p_json_object.put('COOKIES', l_json_array);
+    http_request_response_pkg.to_json(self.cookies$, l_json_array);
+    p_json_object.put('COOKIES$', l_json_array);
   end if;
-  if self.http_headers is not null
+  if self.http_headers$ is not null
   then
-    http_request_response_pkg.to_json(self.http_headers, l_json_array);
-    p_json_object.put('HTTP_HEADERS', l_json_array);
+    http_request_response_pkg.to_json(self.http_headers$, l_json_array);
+    p_json_object.put('HTTP_HEADERS$', l_json_array);
   end if;
   if self.body_vc is not null
   then
@@ -135,13 +135,15 @@ begin
     end;
 end body_b;
 
+/* GJP 2025-09-12 Obsolete */
+/*
 final member function cookie_idx
 ( p_name in varchar2
 )
 return integer -- null when not found
 is
 begin
-  return http_request_response_pkg.get_cookie_idx(self.cookies, p_name);
+  return http_request_response_pkg.get_cookie_idx(self.cookies(), p_name);
 end cookie_idx;
 
 final member function http_header_idx
@@ -150,8 +152,23 @@ final member function http_header_idx
 return integer -- null when not found
 is
 begin
-  return http_request_response_pkg.get_property_idx(self.http_headers, p_name);
+  return http_request_response_pkg.get_property_idx(self.http_headers(), p_name);
 end http_header_idx;
+*/
+
+member function cookies
+return http_cookie_tab_typ
+is
+begin
+  return self.cookies$;
+end cookies;  
+
+member function http_headers
+return property_tab_typ
+is
+begin
+  return self.http_headers$;
+end http_headers;
 
 end;
 /

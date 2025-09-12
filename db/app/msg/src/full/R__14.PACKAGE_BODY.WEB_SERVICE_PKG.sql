@@ -312,6 +312,7 @@ procedure handle_response
 , p_x_ratelimit_reset out nocopy varchar2 -- X-RateLimit-Reset HTTP header
 )
 is
+  l_http_headers constant property_tab_typ := p_response.http_headers();
 $if oracle_tools.cfg_pkg.c_debugging $then
   l_clob clob;
 $end
@@ -338,10 +339,10 @@ $end
   p_body_clob := p_response.body_c();    
   p_body_blob := p_response.body_b();
 
-  p_retry_after := http_request_response_pkg.get_property(p_response.http_headers, 'Retry-After');
-  p_x_ratelimit_limit := http_request_response_pkg.get_property(p_response.http_headers, 'X-RateLimit-Limit');
-  p_x_ratelimit_remaining := http_request_response_pkg.get_property(p_response.http_headers, 'X-RateLimit-Remaining');
-  p_x_ratelimit_reset := http_request_response_pkg.get_property(p_response.http_headers, 'X-RateLimit-Reset');
+  p_retry_after := http_request_response_pkg.get_property(l_http_headers, 'Retry-After');
+  p_x_ratelimit_limit := http_request_response_pkg.get_property(l_http_headers, 'X-RateLimit-Limit');
+  p_x_ratelimit_remaining := http_request_response_pkg.get_property(l_http_headers, 'X-RateLimit-Remaining');
+  p_x_ratelimit_reset := http_request_response_pkg.get_property(l_http_headers, 'X-RateLimit-Reset');
 
   if p_check_http_status_code_ok
   then
@@ -526,6 +527,7 @@ procedure make_rest_request
 , p_response out nocopy web_service_response_typ -- The response
 )
 is
+  l_http_headers constant property_tab_typ := p_request.http_headers();
   l_url_encode boolean := (p_request.use_query_parameters != 0);
   l_idx positive;
   l_url varchar2(32767 byte) := p_request.url;
@@ -541,8 +543,8 @@ $end
   if not l_url_encode -- put them in the body
   then
     -- Content-Type=application/x-www-form-urlencoded?
-    l_idx := http_request_response_pkg.get_property_idx(p_request.http_headers, 'Content-Type');
-    if l_idx is not null and p_request.http_headers(l_idx).value like 'application/x-www-form-urlencoded%'
+    l_idx := http_request_response_pkg.get_property_idx(l_http_headers, 'Content-Type');
+    if l_idx is not null and l_http_headers(l_idx).value like 'application/x-www-form-urlencoded%'
     then
       l_url_encode := true;
     end if;
@@ -583,14 +585,14 @@ $end
 
 $if oracle_tools.cfg_pkg.c_apex_installed $then  
   pragma inline (convert_to_cookie_table, 'YES');
-  convert_to_cookie_table(p_request.cookies, apex_web_service.g_request_cookies);
+  convert_to_cookie_table(p_request.cookies(), apex_web_service.g_request_cookies);
   pragma inline (convert_to_header_table, 'YES');
-  convert_to_header_table(p_request.http_headers, apex_web_service.g_request_headers);
+  convert_to_header_table(p_request.http_headers(), apex_web_service.g_request_headers);
 $else
   pragma inline (convert_to_cookie_table, 'YES');
-  convert_to_cookie_table(p_request.cookies, g_request_cookies);
+  convert_to_cookie_table(p_request.cookies(), g_request_cookies);
   pragma inline (convert_to_header_table, 'YES');
-  convert_to_header_table(p_request.http_headers, g_request_headers);
+  convert_to_header_table(p_request.http_headers(), g_request_headers);
 $end
 
   -- Do we prefer utl_http over apex_web_service since it is more performant?
@@ -715,14 +717,14 @@ $end -- $if oracle_tools.cfg_pkg.c_apex_installed $then
 
 $if oracle_tools.cfg_pkg.c_apex_installed $then
   pragma inline (convert_from_cookie_table, 'YES');
-  convert_from_cookie_table(apex_web_service.g_response_cookies, p_response.cookies);
+  convert_from_cookie_table(apex_web_service.g_response_cookies, p_response.cookies$);
   pragma inline (convert_from_header_table, 'YES');
-  convert_from_header_table(apex_web_service.g_headers, p_response.http_headers);
+  convert_from_header_table(apex_web_service.g_headers, p_response.http_headers$);
 $else
   pragma inline (convert_from_cookie_table, 'YES');
-  convert_from_cookie_table(g_response_cookies, p_response.cookies);
+  convert_from_cookie_table(g_response_cookies, p_response.cookies$);
   pragma inline (convert_from_header_table, 'YES');
-  convert_from_header_table(g_headers, p_response.http_headers);
+  convert_from_header_table(g_headers, p_response.http_headers$);
 $end
 
   p_response.elapsed_time_ms := (dbms_utility.get_time - l_start) * 10;
