@@ -135,27 +135,6 @@ begin
     end;
 end body_b;
 
-/* GJP 2025-09-12 Obsolete */
-/*
-final member function cookie_idx
-( p_name in varchar2
-)
-return integer -- null when not found
-is
-begin
-  return http_request_response_pkg.get_cookie_idx(self.cookies(), p_name);
-end cookie_idx;
-
-final member function http_header_idx
-( p_name in varchar2
-)
-return integer -- null when not found
-is
-begin
-  return http_request_response_pkg.get_property_idx(self.http_headers(), p_name);
-end http_header_idx;
-*/
-
 member function cookies
 return http_cookie_tab_typ
 is
@@ -163,12 +142,30 @@ begin
   return self.cookies$;
 end cookies;  
 
+final member function cookie
+( p_name in varchar2
+)
+return http_cookie_typ
+is
+begin
+  return http_request_response_pkg.get_cookie(self.cookies(), p_name);
+end cookie;
+
 member function http_headers
 return property_tab_typ
 is
 begin
   return self.http_headers$;
 end http_headers;
+
+final member function http_header
+( p_name in varchar2
+)
+return property_typ
+is
+begin
+  return http_request_response_pkg.get_property(self.http_headers(), p_name);
+end http_header;
 
 end;
 /

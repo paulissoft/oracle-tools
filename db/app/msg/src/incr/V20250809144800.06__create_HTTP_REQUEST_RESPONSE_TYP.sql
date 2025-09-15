@@ -67,21 +67,6 @@ See MSG_TYP.REPR(). Adds function body_c() (when JSON).
   return blob
 /** Get the binary body. **/
 
-/* GJP 2025-09-12 Obsolete */
-/*
-, final member function cookie_idx
-  ( p_name in varchar2
-  )
-  return integer -- null when not found
--- Get the cookie index for this name (case sensitive). 
-
-, final member function http_header_idx
-  ( p_name in varchar2
-  )
-  return integer -- null when not found
--- Get the HTTP header index for this name (case insensitive).
-*/
-
 , member function cookies
   return http_cookie_tab_typ
 /**
@@ -89,12 +74,24 @@ Returns just the static cookies (cookies$) here.
 Can be overridden to include sensitive or volatile cookies.
 **/
 
+, final member function cookie
+  ( p_name in varchar2
+  )
+  return http_cookie_typ
+/** Return the cookie for this name (case sensitive) when found or raise a NO_DATA_FOUND exception otherwise. **/
+
 , member function http_headers
   return property_tab_typ
 /**
 Returns just static headers (headers$) here.
 Can be overridden to include for instance the Authorization header (Bearer token).
 **/
+
+, final member function http_header
+  ( p_name in varchar2
+  )
+  return property_typ
+/** Return the HTTP header for this name (case insensitive) when found or raise a NO_DATA_FOUND exception otherwise. **/
 )
 not instantiable
 not final;

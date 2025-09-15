@@ -124,12 +124,24 @@ begin
   return null;
 end get_cookie_idx;
 
+procedure add_cookie
+( p_cookie in http_cookie_typ -- The cookie to add
+, p_cookies in out nocopy http_cookie_tab_typ -- The cookies
+)
+is
+begin
+  if get_cookie_idx(p_cookies => p_cookies, p_name => p_cookie.name) is not null then return; end if;
+  if p_cookies is null then p_cookies := http_cookie_tab_typ(); end if;
+  p_cookies.extend(1);
+  p_cookies(p_cookies.last) := p_cookie;
+end add_cookie;
+
 function get_cookie
 ( p_cookies in http_cookie_tab_typ
 , p_name in varchar2
 , p_ignore_case in boolean
 )
-return varchar2
+return http_cookie_typ
 deterministic
 is
   l_idx constant positive :=
@@ -139,7 +151,8 @@ is
     , p_ignore_case => p_ignore_case
     );
 begin    
-  return case when l_idx is not null then p_cookies(l_idx).value end;
+  if l_idx is null then raise no_data_found; end if;
+  return p_cookies(l_idx);
 end get_cookie;
 
 function get_property_idx
@@ -172,12 +185,24 @@ begin
   return null;
 end get_property_idx;
 
+procedure add_property
+( p_property in property_typ -- The property to add
+, p_properties in out nocopy property_tab_typ -- The properties (for instance HTTP headers)
+)
+is
+begin
+  if get_property_idx(p_properties => p_properties, p_name => p_property.name) is not null then return; end if;
+  if p_properties is null then p_properties := property_tab_typ(); end if;
+  p_properties.extend(1);
+  p_properties(p_properties.last) := p_property;
+end add_property;
+
 function get_property
 ( p_properties in property_tab_typ
 , p_name in varchar2
 , p_ignore_case in boolean
 )
-return varchar2
+return property_typ
 deterministic
 is
   l_idx constant positive :=
@@ -187,8 +212,27 @@ is
     , p_ignore_case => p_ignore_case
     );
 begin
-  return case when l_idx is not null then p_properties(l_idx).value end;  
+  if l_idx is null then raise no_data_found; end if;
+  return p_properties(l_idx);
 end get_property;
+
+function get_property_value
+( p_properties in property_tab_typ -- The properties (for instance HTTP headers)
+, p_name in varchar2 -- The property to search for
+, p_ignore_case in boolean default true -- Must we ignore case (default YES)?
+)
+return varchar2 -- the property value if found else null
+deterministic
+is
+  l_idx constant positive :=
+    get_property_idx
+    ( p_properties => p_properties
+    , p_name => p_name
+    , p_ignore_case => p_ignore_case
+    );
+begin
+  return case when l_idx is not null then p_properties(l_idx).value end;
+end get_property_value;
 
 function get_http_status_descr
 ( p_http_status_code in positiven -- Should be > 0
