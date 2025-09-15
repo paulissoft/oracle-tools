@@ -27,8 +27,8 @@ This allows for asynchronous processing and retrieving the result later via the 
   , p_group$ in varchar2
   , p_context$ in varchar2
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ
-  , p_http_headers in property_tab_typ
+  , p_cookies in http_cookie_tab_typ -- The static cookies
+  , p_http_headers in property_tab_typ -- The static HTTP headers
   , p_body_clob in clob
   , p_body_blob in blob
     -- from WEB_SERVICE_REQUEST_TYP  
@@ -43,12 +43,21 @@ This allows for asynchronous processing and retrieving the result later via the 
   )
 /** The constructor method that can be used to construct sub types (this type is not instantiable). **/
 
-, overriding
-  member procedure serialize
+, overriding member procedure serialize
   ( self in web_service_request_typ
   , p_json_object in out nocopy json_object_t
   )
 /** Serialize to a JSON object. **/
+
+, overriding member function repr
+  ( self in web_service_request_typ
+  )
+  return clob
+/**
+Get the pretty printed JSON representation of a message (or one of its sub types).
+
+See HTTP_REQUEST_RESPONSE_TYP.REPR(). Adds static function default_group().
+**/
 
 , static function default_group
   return varchar2

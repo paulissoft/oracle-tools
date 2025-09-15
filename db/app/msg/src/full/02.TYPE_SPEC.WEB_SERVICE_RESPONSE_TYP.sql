@@ -26,8 +26,8 @@ For http_reason_phrase:
   , p_group$ in varchar2 default null                -- Use default_group() from below when null
   , p_context$ in varchar2 default null
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ default null
-  , p_http_headers in property_tab_typ default null
+  , p_cookies in http_cookie_tab_typ default null    -- The static cookies
+  , p_http_headers in property_tab_typ default null  -- The static HTTP headers
   , p_body_clob in clob default null                 -- empty for a GET request (envelope for a SOAP request)
   , p_body_blob in blob default null                 -- empty for a GET request (empty for a SOAP request)
     -- from WEB_SERVICE_RESPONSE_TYP
@@ -46,8 +46,8 @@ For http_reason_phrase:
   , p_group$ in varchar2
   , p_context$ in varchar2
     -- from HTTP_REQUEST_RESPONSE_TYP
-  , p_cookies in http_cookie_tab_typ
-  , p_http_headers in property_tab_typ
+  , p_cookies in http_cookie_tab_typ -- The static cookies
+  , p_http_headers in property_tab_typ -- The static HTTP headers
   , p_body_clob in clob
   , p_body_blob in blob
     -- from WEB_SERVICE_RESPONSE_TYP
@@ -62,35 +62,40 @@ A construct method that can be used in this type or sub types.
 There is no super() constructor syntax but self.construct() is possible.
 **/
 
-, overriding
-  member function must_be_processed
+, overriding member function must_be_processed
   ( self in web_service_response_typ
   , p_maybe_later in integer -- True (1) or false (0)
   )
   return integer -- True (1) or false (0)
 /** Will return 0 if the request correlation is null, meaning it won't get enqueued. **/
 
-, overriding
-  member procedure process$later
+, overriding member procedure process$later
   ( self in web_service_response_typ
   )
 /** Will enqueue but without registering a PL/SQL notification callback. **/
 
-, overriding
-  member procedure process$now
+, overriding member procedure process$now
   ( self in web_service_response_typ
   )
 /** Will just raise an exception since you are supposed to dequeue yourself. **/
 
-, overriding
-  member procedure serialize
+, overriding member procedure serialize
   ( self in web_service_response_typ
   , p_json_object in out nocopy json_object_t
   )
 /** Serialize to JSON. */
 
-, overriding
-  member function default_processing_method
+, overriding member function repr
+  ( self in web_service_response_typ
+  )
+  return clob
+/**
+Get the pretty printed JSON representation of a message (or one of its sub types).
+
+See HTTP_REQUEST_RESPONSE_TYP.REPR(). Adds static function default_group().
+**/
+
+, overriding member function default_processing_method
   ( self in web_service_response_typ
   )
   return varchar2
@@ -107,6 +112,15 @@ You need to dequeue from that queue using the correlation id to get the response
   return varchar2
   deterministic
 /** Returns the HTTP status code description, e.g. OK for HTTP status code 200. **/
+
+, final member procedure check_http_status_code
+  ( self in web_service_response_typ -- The REST request response
+  )
+/** Invoke `web_service_pkg.check_http_status_code(self.http_status_code, self.http_reason_phrase)`. **/
+
+, final member function is_ok
+  return integer -- A numeric boolean (0=false)
+/** Invoke `self.check_http_status_code()` and return 0 when it raises an exception, else 1. **/
 
 , final member procedure handle_response
   ( self in web_service_response_typ -- The REST request response
@@ -135,6 +149,7 @@ You need to dequeue from that queue using the correlation id to get the response
   , p_x_ratelimit_reset out nocopy varchar2 -- X-RateLimit-Reset HTTP header
   )
 /** Get the binary body plus other HTTP response info. **/
+
 )
 not final;
 /
