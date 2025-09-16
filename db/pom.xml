@@ -38,8 +38,11 @@
     <!-- compile all and reuse settings for afterMigrate.sql -->
     <flyway.placeholders.compile_all>false</flyway.placeholders.compile_all>
     <flyway.placeholders.reuse_settings>false</flyway.placeholders.reuse_settings>
+    <!-- flyway-maven-plugin configuration -->
     <flyway.outOfOrder>false</flyway.outOfOrder>
     <flyway.table>flyway_schema_history</flyway.table>
+    <flyway.baselineVersion>0</flyway.baselineVersion>
+    <flyway.baselineOnMigrate>true</flyway.baselineOnMigrate>
     <!-- should not start with flyway. -->
     <nr_months_to_keep.flyway.table>12</nr_months_to_keep.flyway.table>
 
@@ -269,6 +272,58 @@
                 <goal>run</goal>
               </goals>
             </execution>
+
+            <execution>
+              <id>db-write-upgrade-sql</id>
+              <phase>${db.phase.process}</phase>
+              <configuration>
+                <target>
+                  <tempfile property="flyway.properties"
+                            destdir="${project.build.directory}"
+                            prefix="flyway"
+                            suffix=".properties"
+                            deleteonexit="true" />
+                  <property name="flyway.migrate.json" location="${project.build.directory}/flyway-migrate.json" />
+                  <property name="flyway.driver" value="oracle.jdbc.OracleDriver" />
+                  <property name="flyway.user" value="${db.username}" />
+                  <property name="flyway.password" value="${db.password}" />
+                  <property name="flyway.url" value="${db.url}" />
+                  <property environment="env" />
+                  <echoproperties destfile="${flyway.properties}" >
+                    <propertyset>
+                      <propertyref prefix="flyway.driver"/>
+                      <propertyref prefix="flyway.user"/>
+                      <propertyref prefix="flyway.password"/>
+                      <propertyref prefix="flyway.outOfOrder" />
+                      <propertyref prefix="flyway.table" />
+                      <propertyref prefix="flyway.baselineVersion" />
+                      <propertyref prefix="flyway.baselineOnMigrate" />
+                    </propertyset>
+                  </echoproperties>
+                  <exec executable="/Users/gpaulissen/dev/flyway-11.12.0/flyway"
+                        dir="${oracle-tools.dir}"
+                        spawn="true">
+                    <!--arg value="run"/-->
+                    <!--arg value="flyway"/-->
+                    <arg value="info"/>
+                    <arg value="-configFiles=${flyway.properties}"/>
+                    <arg value="-locations=${flyway.locations}"/>
+                    <arg value="-url=${flyway.url}"/>
+                    <!--arg value="-jarDirs=/Users/gpaulissen/dev/flyway-11.12.0" /-->
+                    <!--arg value="-jarDirs=${oracle-tools.dir}/.devbox/nix/profile/default/share/flyway/drivers" /-->
+                    <arg value="-outputType=json"/>
+                    <arg value="-outputFile=${flyway.migrate.json}"/>
+                    <arg value="-infoOfState=Pending" />
+                    <env key="LANG" value="en_US" />
+                    <env key="TNS_ADMIN" value="${env.TNS_ADMIN}" />
+                  </exec>
+                  <echo message="flyway.migrate.json: ${flyway.migrate.json}" />
+                </target>
+              </configuration>
+              <goals>
+                <goal>run</goal>
+              </goals>
+            </execution>
           </executions>
         </plugin>
 
@@ -295,9 +350,9 @@
               <location>filesystem:${db.src.callbacks.scripts.abs}</location>
             </locations>
             -->
-            <baselineVersion>0</baselineVersion>
-            <baselineOnMigrate>true</baselineOnMigrate>
-            <cleanDisabled>true</cleanDisabled>
+            <baselineVersion>${flyway.baselineVersion}</baselineVersion>
+            <baselineOnMigrate>${flyway.baselineOnMigrate}</baselineOnMigrate>
+            <cleanDisabled>true</cleanDisabled> <!-- GJP 2025-09-16 Keep this hard-coded. -->
             <user>${db.username}</user>
             <!-- The password may be set on the command line -->
             <password>${db.password}</password>
@@ -415,9 +470,9 @@
       </properties>
       <build>
         <plugins>
-          <plugin>
+          <!--plugin>
             <artifactId>maven-antrun-plugin</artifactId>
-          </plugin>
+          </plugin-->
           <plugin>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-maven-plugin</artifactId>

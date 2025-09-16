@@ -76,7 +76,7 @@
 
     <!--flyway.version>10.10.0</flyway.version--> <!-- latest and greatest at 2024-03-14 -->
     <!--flyway.version>10.12.0</flyway.version--> <!-- latest and greatest at 2024-05-14 -->
-    <flyway.version>11.12.0</flyway.version> <!-- latest and greatest at 2025-09-15 -->
+    <flyway.version>11.7.0</flyway.version> <!-- keep in sync with version in devbox.json file -->
 
     <!-- Oracle JDBC stuff -->
     <!-- https://www.oracle.com/database/technologies/maven-central-guide.html -->

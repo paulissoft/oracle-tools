@@ -1,6 +1,54 @@
 {
   "lockfile_version": "1",
   "packages": {
+    "flyway@11.7.0": {
+      "last_modified": "2025-07-28T17:09:23Z",
+      "resolved": "github:NixOS/nixpkgs/648f70160c03151bc2121d179291337ad6bc564b#flyway",
+      "source": "devbox-search",
+      "version": "11.7.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/19hlwfnjgh4rz8syvfkfmwf6r7vsj906-flyway-11.7.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/19hlwfnjgh4rz8syvfkfmwf6r7vsj906-flyway-11.7.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/azx70cdw7yyv6qjwhhsqp7adbrzpz8rx-flyway-11.7.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/azx70cdw7yyv6qjwhhsqp7adbrzpz8rx-flyway-11.7.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/s4gy1iw8yy9xwhj52b5rxykaj3b4xf7k-flyway-11.7.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/s4gy1iw8yy9xwhj52b5rxykaj3b4xf7k-flyway-11.7.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/2i5z53asg5lk5k1m9pjaicadzz7wj58d-flyway-11.7.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/2i5z53asg5lk5k1m9pjaicadzz7wj58d-flyway-11.7.0"
+        }
+      }
+    },
     "github:NixOS/nixpkgs/nixpkgs-unstable": {
       "last_modified": "2025-04-23T03:04:08Z",
       "resolved": "github:NixOS/nixpkgs/507b63021ada5fee621b6ca371c4fca9ca46f52c?lastModified=1745377448&narHash=sha256-jhZDfXVKdD7TSEGgzFJQvEEZ2K65UMiqW5YJ2aIqxMA%3D"
