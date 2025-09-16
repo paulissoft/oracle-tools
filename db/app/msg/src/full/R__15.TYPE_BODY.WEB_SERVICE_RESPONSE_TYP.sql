@@ -275,6 +275,26 @@ begin
   );
 end handle_response;
 
+final member procedure get
+( self in web_service_response_typ
+, p_body_clob out nocopy clob
+)
+is
+begin
+  self.check_http_status_code();
+  p_body_clob := self.body_c();
+end get;
+
+final member procedure get
+( self in web_service_response_typ
+, p_body_blob out nocopy blob
+)
+is
+begin
+  self.check_http_status_code();
+  p_body_blob := self.body_b();
+end get;
+
 end;
 /
 
