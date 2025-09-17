@@ -80,6 +80,26 @@
     <db.show.properties>false</db.show.properties>
   </properties>
 
+  <!-- Add these dependencies here so the exec:exec goal can write all Oracle dependencies to file. -->
+  <dependencies>
+    <dependency>
+      <groupId>${ojdbc.groupId}</groupId>
+      <artifactId>${ojdbc.artifactId}</artifactId>
+      <version>${ojdbc.version}</version>
+      <type>${ojdbc.type}</type>
+    </dependency>
+    <dependency>
+      <groupId>${osdt_core.groupId}</groupId>
+      <artifactId>${osdt_core.artifactId}</artifactId>
+      <version>${osdt_core.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${osdt_cert.groupId}</groupId>
+      <artifactId>${osdt_cert.artifactId}</artifactId>
+      <version>${osdt_cert.version}</version>
+    </dependency>
+  </dependencies>
+
   <!-- Needed for Db Generate DDL scripts in child projects -->
   <dependencyManagement>
     <dependencies>
@@ -274,50 +294,47 @@
             </execution>
 
             <execution>
-              <id>db-write-upgrade-sql</id>
+              <id>db-install-before</id>
               <phase>${db.phase.process}</phase>
               <configuration>
-                <target>
-                  <tempfile property="flyway.properties"
+                <target unless="never">
+                  <!--tempfile property="flyway.properties"
                             destdir="${project.build.directory}"
                             prefix="flyway"
                             suffix=".properties"
-                            deleteonexit="true" />
-                  <property name="flyway.migrate.json" location="${project.build.directory}/flyway-migrate.json" />
+                            deleteonexit="true" /-->
+                  <property name="flyway.properties" location="${project.build.directory}/flyway.properties" />
+                  <property name="flyway.info.json" location="${project.build.directory}/flyway-info.json" />
                   <property name="flyway.driver" value="oracle.jdbc.OracleDriver" />
                   <property name="flyway.user" value="${db.username}" />
                   <property name="flyway.password" value="${db.password}" />
                   <property name="flyway.url" value="${db.url}" />
                   <property environment="env" />
-                  <echoproperties destfile="${flyway.properties}" >
-                    <propertyset>
-                      <propertyref prefix="flyway.driver"/>
-                      <propertyref prefix="flyway.user"/>
-                      <propertyref prefix="flyway.password"/>
-                      <propertyref prefix="flyway.outOfOrder" />
-                      <propertyref prefix="flyway.table" />
-                      <propertyref prefix="flyway.baselineVersion" />
-                      <propertyref prefix="flyway.baselineOnMigrate" />
-                    </propertyset>
-                  </echoproperties>
-                  <exec executable="/Users/gpaulissen/dev/flyway-11.12.0/flyway"
-                        dir="${oracle-tools.dir}"
-                        spawn="true">
-                    <!--arg value="run"/-->
-                    <!--arg value="flyway"/-->
+                  <echo level="error" file="${flyway.properties}" >
+flyway.driver=${flyway.driver}
+flyway.user=${flyway.user}
+flyway.password=${flyway.password}
+flyway.outOfOrder=${flyway.outOfOrder}
+flyway.table=${flyway.table}
+flyway.baselineVersion=${flyway.baselineVersion}
+flyway.baselineOnMigrate=${flyway.baselineOnMigrate}
+flyway.locations=${flyway.locations}
+flyway.url=${flyway.url}
+                  </echo>
+                  <property name="flyway.script" location="${oracle-tools.dir}/db/src/scripts/flyway.pl" />
+                  <exec executable="perl"
+                        dir="${project.build.directory}"
+                        spawn="false">
+                    <arg value="${flyway.script}"/>
                     <arg value="info"/>
                     <arg value="-configFiles=${flyway.properties}"/>
-                    <arg value="-locations=${flyway.locations}"/>
-                    <arg value="-url=${flyway.url}"/>
-                    <!--arg value="-jarDirs=/Users/gpaulissen/dev/flyway-11.12.0" /-->
-                    <!--arg value="-jarDirs=${oracle-tools.dir}/.devbox/nix/profile/default/share/flyway/drivers" /-->
                     <arg value="-outputType=json"/>
-                    <arg value="-outputFile=${flyway.migrate.json}"/>
+                    <arg value="-outputFile=${flyway.info.json}"/>
                     <arg value="-infoOfState=Pending" />
                     <env key="LANG" value="en_US" />
                     <env key="TNS_ADMIN" value="${env.TNS_ADMIN}" />
                   </exec>
-                  <echo message="flyway.migrate.json: ${flyway.migrate.json}" />
+                  <echo message="flyway.info.json: ${flyway.info.json}" />
                 </target>
               </configuration>
               <goals>
@@ -375,7 +392,7 @@
           <artifactId>utplsql-maven-plugin</artifactId>
           <version>${utplsql-maven-plugin.version}</version>
           <dependencies>
-            <!-- specify the dependent jdbc8 driver here explicitly -->
+            <!-- specify the dependent jdbc driver here explicitly -->
             <dependency>
               <groupId>${ojdbc.groupId}</groupId>
               <artifactId>${ojdbc.artifactId}</artifactId>
@@ -406,7 +423,7 @@
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>sql-maven-plugin</artifactId>
           <dependencies>
-            <!-- specify the dependent jdbc8 driver here explicitly -->
+            <!-- specify the dependent jdbc driver here explicitly -->
             <dependency>
               <groupId>${ojdbc.groupId}</groupId>
               <artifactId>${ojdbc.artifactId}</artifactId>
@@ -466,7 +483,11 @@
     <profile>
       <id>db-install</id>
       <properties>
-        <default.goal>${db.phase.process} flyway:repair flyway:migrate</default.goal>
+        <!--exec.executable>${oracle-tools.dir}/db/src/scripts/flyway</exec.executable-->
+        <exec.executable>echo</exec.executable>
+        <exec.args>"%classpath"</exec.args>
+        <exec.outputFile>${project.build.directory}/classpath.txt</exec.outputFile>
+        <default.goal>exec:exec ${db.phase.process} flyway:repair flyway:migrate</default.goal>
       </properties>
       <build>
         <plugins>
@@ -543,6 +564,11 @@
               </execution>
               <execution>
                 <id>db-install-verify</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>db-install-before</id>
                 <!-- Unbind from lifecycle for this POM -->
                 <phase>none</phase>
               </execution>
@@ -630,6 +656,11 @@
               </execution>
               <execution>
                 <id>db-install-verify</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>db-install-before</id>
                 <!-- Unbind from lifecycle for this POM -->
                 <phase>none</phase>
               </execution>
@@ -800,6 +831,11 @@
             <executions>
               <execution>
                 <id>db-install-verify</id>
+                <!-- Unbind from lifecycle for this POM -->
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>db-install-before</id>
                 <!-- Unbind from lifecycle for this POM -->
                 <phase>none</phase>
               </execution>
