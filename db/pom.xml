@@ -46,6 +46,8 @@
     <!-- should not start with flyway. -->
     <nr_months_to_keep.flyway.table>12</nr_months_to_keep.flyway.table>
 
+    <classpath.txt>${project.build.directory}/classpath.txt</classpath.txt>
+
     <!-- ======================================================================= -->
     <!-- Properties for generate DDL (db-generate-ddl-full/db-generate-ddl-incr) -->
     <!-- ======================================================================= -->
@@ -298,41 +300,53 @@
               <phase>${db.phase.process}</phase>
               <configuration>
                 <target unless="never">
-                  <!--tempfile property="flyway.properties"
+                  <tempfile property="flyway.properties"
                             destdir="${project.build.directory}"
                             prefix="flyway"
                             suffix=".properties"
-                            deleteonexit="true" /-->
-                  <property name="flyway.properties" location="${project.build.directory}/flyway.properties" />
+                            deleteonexit="true" />
+                  <!--property name="flyway.properties" location="${project.build.directory}/flyway.properties" /-->
                   <property name="flyway.info.json" location="${project.build.directory}/flyway-info.json" />
+                  <!-- cleanup old stuff -->
+                  <delete file="${flyway.info.json}" quiet="true" />
                   <property name="flyway.driver" value="oracle.jdbc.OracleDriver" />
                   <property name="flyway.user" value="${db.username}" />
                   <property name="flyway.password" value="${db.password}" />
                   <property name="flyway.url" value="${db.url}" />
-                  <property environment="env" />
-                  <echo level="error" file="${flyway.properties}" >
-flyway.driver=${flyway.driver}
+                  <!--property environment="env" /--> <!-- for TNS_ADMIN -->
+                  <echoproperties destfile="${flyway.properties}">
+                    <propertyset>
+                      <propertyref prefix="flyway.placeholders." />
+                      <propertyref prefix="flyway.driver" />
+                      <propertyref prefix="flyway.outOfOrder" />
+                      <propertyref prefix="flyway.table" />
+                      <propertyref prefix="flyway.baselineVersion" />
+                      <propertyref prefix="flyway.baselineOnMigrate" />
+                    </propertyset>
+                  </echoproperties>
+                  <!-- append output properties that may have a colon (:) since echoproperties transforms that into \: -->
+                  <echo level="error" file="${flyway.properties}" append="true">
 flyway.user=${flyway.user}
 flyway.password=${flyway.password}
-flyway.outOfOrder=${flyway.outOfOrder}
-flyway.table=${flyway.table}
-flyway.baselineVersion=${flyway.baselineVersion}
-flyway.baselineOnMigrate=${flyway.baselineOnMigrate}
 flyway.locations=${flyway.locations}
 flyway.url=${flyway.url}
                   </echo>
                   <property name="flyway.script" location="${oracle-tools.dir}/db/src/scripts/flyway.pl" />
                   <exec executable="perl"
                         dir="${project.build.directory}"
-                        spawn="false">
+                        spawn="false"
+                        failonerror="true"
+                        discardOutput="true">
                     <arg value="${flyway.script}"/>
+                    <arg value="${classpath.txt}"/>
+                    <!-- hereafter flyway command line arguments -->
                     <arg value="info"/>
                     <arg value="-configFiles=${flyway.properties}"/>
                     <arg value="-outputType=json"/>
                     <arg value="-outputFile=${flyway.info.json}"/>
-                    <arg value="-infoOfState=Pending" />
+                    <arg value="-infoOfState=Pending"/>
                     <env key="LANG" value="en_US" />
-                    <env key="TNS_ADMIN" value="${env.TNS_ADMIN}" />
+                    <!--env key="TNS_ADMIN" value="${env.TNS_ADMIN}" /-->
                   </exec>
                   <echo message="flyway.info.json: ${flyway.info.json}" />
                 </target>
@@ -486,7 +500,7 @@ flyway.url=${flyway.url}
         <!--exec.executable>${oracle-tools.dir}/db/src/scripts/flyway</exec.executable-->
         <exec.executable>echo</exec.executable>
         <exec.args>"%classpath"</exec.args>
-        <exec.outputFile>${project.build.directory}/classpath.txt</exec.outputFile>
+        <exec.outputFile>${classpath.txt}</exec.outputFile>
         <default.goal>exec:exec ${db.phase.process} flyway:repair flyway:migrate</default.goal>
       </properties>
       <build>
