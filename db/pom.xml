@@ -46,6 +46,11 @@
     <!-- should not start with flyway. -->
     <nr_months_to_keep.flyway.table>12</nr_months_to_keep.flyway.table>
 
+    <!-- ======================================================================= -->
+    <!-- Properties for generate upgrade.sql (part of profile db-install)        -->
+    <!-- ======================================================================= -->
+    <!-- generate upgrade.sql? Set to true in profile db-install -->
+    <generate.upgrade.sql>false</generate.upgrade.sql>
     <classpath.file>${project.build.directory}/classpath.txt</classpath.file>
 
     <!-- ======================================================================= -->
@@ -299,7 +304,7 @@
               <id>db-install-before</id>
               <phase>${db.phase.process}</phase>
               <configuration>
-                <target unless="never">
+                <target if="${generate.upgrade.sql}">
                   <tempfile property="flyway.properties"
                             destdir="${project.build.directory}"
                             prefix="flyway"
@@ -497,6 +502,7 @@ flyway.url=${flyway.url}
     <profile>
       <id>db-install</id>
       <properties>
+        <generate.upgrade.sql>true</generate.upgrade.sql>
         <!--exec.executable>${oracle-tools.dir}/db/src/scripts/flyway</exec.executable-->
         <exec.executable>echo</exec.executable>
         <exec.args>"%classpath"</exec.args>
