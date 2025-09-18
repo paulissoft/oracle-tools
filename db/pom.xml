@@ -87,27 +87,6 @@
     <db.show.properties>false</db.show.properties>
   </properties>
 
-  <!-- Add these dependencies here so the exec:exec goal can write all Oracle dependencies to file. -->
-  <!-- Ideally the dependency:build-classpath should do that job, but it did not work for me.       -->
-  <dependencies>
-    <dependency>
-      <groupId>${ojdbc.groupId}</groupId>
-      <artifactId>${ojdbc.artifactId}</artifactId>
-      <version>${ojdbc.version}</version>
-      <type>${ojdbc.type}</type>
-    </dependency>
-    <dependency>
-      <groupId>${osdt_core.groupId}</groupId>
-      <artifactId>${osdt_core.artifactId}</artifactId>
-      <version>${osdt_core.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>${osdt_cert.groupId}</groupId>
-      <artifactId>${osdt_cert.artifactId}</artifactId>
-      <version>${osdt_cert.version}</version>
-    </dependency>
-  </dependencies>
-
   <!-- Needed for Db Generate DDL scripts in child projects -->
   <dependencyManagement>
     <dependencies>
@@ -510,6 +489,26 @@ flyway.url=${flyway.url}
         <exec.outputFile>${classpath.file}</exec.outputFile>
         <default.goal>exec:exec ${db.phase.process} flyway:repair flyway:migrate</default.goal>
       </properties>
+      <!-- Add these dependencies here so the exec:exec goal can write all Oracle dependencies to file. -->
+      <!-- Ideally the dependency:build-classpath should do that job, but it did not work for me.       -->
+      <dependencies>
+        <dependency>
+          <groupId>${ojdbc.groupId}</groupId>
+          <artifactId>${ojdbc.artifactId}</artifactId>
+          <version>${ojdbc.version}</version>
+          <type>${ojdbc.type}</type>
+        </dependency>
+        <dependency>
+          <groupId>${osdt_core.groupId}</groupId>
+          <artifactId>${osdt_core.artifactId}</artifactId>
+          <version>${osdt_core.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>${osdt_cert.groupId}</groupId>
+          <artifactId>${osdt_cert.artifactId}</artifactId>
+          <version>${osdt_cert.version}</version>
+        </dependency>
+      </dependencies>
       <build>
         <plugins>
           <!--plugin>

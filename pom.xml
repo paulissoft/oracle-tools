@@ -98,6 +98,11 @@
     <osdt_cert.artifactId>osdt_cert</osdt_cert.artifactId>
     <osdt_cert.version>${osdt_core.version}</osdt_cert.version> <!-- Aug 11, 2023 -->
 
+    <ojdbc-bom.groupId>${ojdbc.groupId}</ojdbc-bom.groupId>
+    <ojdbc-bom.artifactId>ojdbc-bom</ojdbc-bom.artifactId> <!-- This is not a JAR but POM artifact -->
+    <ojdbc-bom.version>${ojdbc.version}</ojdbc-bom.version>
+    <ojdbc-bom.type>pom</ojdbc-bom.type>
+
     <!-- End of Oracle JDBC stuff -->
     
     <!-- GJP 2023-09-05  Version 3.1.4 is the latest version to work with JDBC thin driver and a TNS NAMES entry. -->
@@ -131,6 +136,18 @@
       <url>https://download.red-gate.com/maven/release</url>
     </pluginRepository>
   </pluginRepositories>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>${ojdbc-bom.groupId}</groupId>
+        <artifactId>${ojdbc-bom.artifactId}</artifactId>
+        <version>${ojdbc-bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
     <defaultGoal>${default.goal}</defaultGoal>
