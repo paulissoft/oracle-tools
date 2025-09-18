@@ -587,11 +587,6 @@ flyway.url=${flyway.url}
                 <!-- Unbind from lifecycle for this POM -->
                 <phase>none</phase>
               </execution>
-              <execution>
-                <id>db-install-before</id>
-                <!-- Unbind from lifecycle for this POM -->
-                <phase>none</phase>
-              </execution>
             </executions>
           </plugin>
           <plugin>
@@ -676,11 +671,6 @@ flyway.url=${flyway.url}
               </execution>
               <execution>
                 <id>db-install-verify</id>
-                <!-- Unbind from lifecycle for this POM -->
-                <phase>none</phase>
-              </execution>
-              <execution>
-                <id>db-install-before</id>
                 <!-- Unbind from lifecycle for this POM -->
                 <phase>none</phase>
               </execution>
@@ -851,11 +841,6 @@ flyway.url=${flyway.url}
             <executions>
               <execution>
                 <id>db-install-verify</id>
-                <!-- Unbind from lifecycle for this POM -->
-                <phase>none</phase>
-              </execution>
-              <execution>
-                <id>db-install-before</id>
                 <!-- Unbind from lifecycle for this POM -->
                 <phase>none</phase>
               </execution>
