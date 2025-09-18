@@ -88,6 +88,7 @@
   </properties>
 
   <!-- Add these dependencies here so the exec:exec goal can write all Oracle dependencies to file. -->
+  <!-- Ideally the dependency:build-classpath should do that job, but it did not work for me.       -->
   <dependencies>
     <dependency>
       <groupId>${ojdbc.groupId}</groupId>
@@ -337,7 +338,6 @@ flyway.url=${flyway.url}
                   </echo>
                   <property name="flyway.script" location="${oracle-tools.dir}/db/src/scripts/flyway.pl" />
                   <loadfile property="classpath" srcFile="${classpath.file}"/>
-                  <echo message="classpath: ${classpath}" />
                   <exec executable="perl"
                         dir="${project.build.directory}"
                         spawn="false"
@@ -505,6 +505,7 @@ flyway.url=${flyway.url}
         <generate.upgrade.sql>true</generate.upgrade.sql>
         <!--exec.executable>${oracle-tools.dir}/db/src/scripts/flyway</exec.executable-->
         <exec.executable>echo</exec.executable>
+        <!-- %classpath: see https://guntherrotsch.github.io/blog_2020/maven-classpath.html -->
         <exec.args>"%classpath"</exec.args>
         <exec.outputFile>${classpath.file}</exec.outputFile>
         <default.goal>exec:exec ${db.phase.process} flyway:repair flyway:migrate</default.goal>
