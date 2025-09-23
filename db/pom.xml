@@ -324,11 +324,11 @@ flyway.url=${flyway.url}
                         discardOutput="true">
                     <arg value="${flyway.script}"/>
                     <!-- hereafter flyway command line arguments -->
-                    <arg value="info"/>
                     <arg value="-configFiles=${flyway.properties}"/>
                     <arg value="-outputType=json"/>
                     <arg value="-outputFile=${flyway.info.json}"/>
                     <arg value="-infoOfState=Pending"/>
+                    <arg value="info"/>
                     <env key="LANG" value="en_US" />
                     <env key="CLASSPATH" value="${classpath}" />
                   </exec>
