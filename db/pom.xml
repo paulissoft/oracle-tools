@@ -397,12 +397,24 @@ flyway.url=${flyway.url}
               <version>${ojdbc.version}</version>
               <type>pom</type>
             </dependency>
+            <!-- Oracle wallets -->
+            <dependency>
+              <groupId>${osdt_core.groupId}</groupId>
+              <artifactId>${osdt_core.artifactId}</artifactId>
+              <version>${osdt_core.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>${osdt_cert.groupId}</groupId>
+              <artifactId>${osdt_cert.artifactId}</artifactId>
+              <version>${osdt_cert.version}</version>
+            </dependency>
           </dependencies>
           <configuration>
             <!-- this plugin has no skip tag -->
             <paths>
               <path>${db.utplsql.path}</path>
             </paths>
+            <dbmsOutput>true</dbmsOutput>
           </configuration>
           <executions>
             <execution>
@@ -427,6 +439,17 @@ flyway.url=${flyway.url}
               <artifactId>${ojdbc.artifactId}</artifactId>
               <version>${ojdbc.version}</version>
               <type>pom</type>
+            </dependency>
+            <!-- Oracle wallets -->
+            <dependency>
+              <groupId>${osdt_core.groupId}</groupId>
+              <artifactId>${osdt_core.artifactId}</artifactId>
+              <version>${osdt_core.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>${osdt_cert.groupId}</groupId>
+              <artifactId>${osdt_cert.artifactId}</artifactId>
+              <version>${osdt_cert.version}</version>
             </dependency>
           </dependencies>
           <configuration>
@@ -498,6 +521,7 @@ flyway.url=${flyway.url}
           <version>${ojdbc.version}</version>
           <type>${ojdbc.type}</type>
         </dependency>
+        <!-- Oracle wallets -->       
         <dependency>
           <groupId>${osdt_core.groupId}</groupId>
           <artifactId>${osdt_core.artifactId}</artifactId>
