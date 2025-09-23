@@ -230,7 +230,7 @@ sub generate_upgrade_sql() {
     return unless (defined($output_file) && -f $output_file);
     return unless (defined($flyway_command) && $flyway_command eq 'info');
 
-    # files must be relative to this file
+    # files must be relative to the parent project directory 
     my $parent_project_dir = File::Spec->catdir(Cwd::cwd(), '..', '..');
 
     my $json_contents = slurp($output_file);
