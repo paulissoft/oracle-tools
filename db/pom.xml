@@ -285,12 +285,12 @@
               <phase>${db.phase.process}</phase>
               <configuration>
                 <target if="${generate.upgrade.sql}">
+                  <property name="mode.normal" value="true" /> <!-- false for more debugging -->
                   <tempfile property="flyway.properties"
                             destdir="${project.build.directory}"
                             prefix="flyway"
                             suffix=".properties"
-                            deleteonexit="true" />
-                  <!--property name="flyway.properties" location="${project.build.directory}/flyway.properties" /-->
+                            deleteonexit="${mode.normal}" />
                   <property name="flyway.info.json" location="${project.build.directory}/flyway-info.json" />
                   <!-- cleanup old stuff -->
                   <delete file="${flyway.info.json}" quiet="true" />
@@ -308,11 +308,22 @@
                       <propertyref prefix="flyway.baselineOnMigrate" />
                     </propertyset>
                   </echoproperties>
+
+                  <!-- replace new lines in ${flyway.locations} so it becomes a one liner -->
+                  <ac:propertyregex xmlns:ac="antlib:net.sf.antcontrib"
+                                    property="flyway.locations.one.line"
+                                    override="true"
+                                    input="${flyway.locations}"
+                                    regexp="[\n\r]+"
+                                    replace=""
+                                    casesensitive="false"
+                                    global="true" />
+
                   <!-- append output properties that may have a colon (:) since echoproperties transforms that into \: -->
                   <echo level="error" file="${flyway.properties}" append="true">
 flyway.user=${flyway.user}
 flyway.password=${flyway.password}
-flyway.locations=${flyway.locations}
+flyway.locations=${flyway.locations.one.line}
 flyway.url=${flyway.url}
                   </echo>
                   <property name="flyway.script" location="${oracle-tools.dir}/db/src/scripts/flyway.pl" />
@@ -321,7 +332,7 @@ flyway.url=${flyway.url}
                         dir="${project.build.directory}"
                         spawn="false"
                         failonerror="true"
-                        discardOutput="true">
+                        discardOutput="${mode.normal}">
                     <arg value="${flyway.script}"/>
                     <!-- hereafter flyway command line arguments -->
                     <arg value="-configFiles=${flyway.properties}"/>
@@ -331,6 +342,7 @@ flyway.url=${flyway.url}
                     <arg value="info"/>
                     <env key="LANG" value="en_US" />
                     <env key="CLASSPATH" value="${classpath}" />
+                    <env key="DB_SCHEMA" value="${db.schema}" />
                   </exec>
                   <echo message="flyway.info.json: ${flyway.info.json}" />
                 </target>
@@ -389,26 +401,6 @@ flyway.url=${flyway.url}
           <groupId>org.utplsql</groupId>
           <artifactId>utplsql-maven-plugin</artifactId>
           <version>${utplsql-maven-plugin.version}</version>
-          <dependencies>
-            <!-- specify the dependent jdbc driver here explicitly -->
-            <dependency>
-              <groupId>${ojdbc.groupId}</groupId>
-              <artifactId>${ojdbc.artifactId}</artifactId>
-              <version>${ojdbc.version}</version>
-              <type>pom</type>
-            </dependency>
-            <!-- Oracle wallets -->
-            <dependency>
-              <groupId>${osdt_core.groupId}</groupId>
-              <artifactId>${osdt_core.artifactId}</artifactId>
-              <version>${osdt_core.version}</version>
-            </dependency>
-            <dependency>
-              <groupId>${osdt_cert.groupId}</groupId>
-              <artifactId>${osdt_cert.artifactId}</artifactId>
-              <version>${osdt_cert.version}</version>
-            </dependency>
-          </dependencies>
           <configuration>
             <!-- this plugin has no skip tag -->
             <paths>
@@ -432,26 +424,6 @@ flyway.url=${flyway.url}
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>sql-maven-plugin</artifactId>
-          <dependencies>
-            <!-- specify the dependent jdbc driver here explicitly -->
-            <dependency>
-              <groupId>${ojdbc.groupId}</groupId>
-              <artifactId>${ojdbc.artifactId}</artifactId>
-              <version>${ojdbc.version}</version>
-              <type>pom</type>
-            </dependency>
-            <!-- Oracle wallets -->
-            <dependency>
-              <groupId>${osdt_core.groupId}</groupId>
-              <artifactId>${osdt_core.artifactId}</artifactId>
-              <version>${osdt_core.version}</version>
-            </dependency>
-            <dependency>
-              <groupId>${osdt_cert.groupId}</groupId>
-              <artifactId>${osdt_cert.artifactId}</artifactId>
-              <version>${osdt_cert.version}</version>
-            </dependency>
-          </dependencies>
           <configuration>
             <forceMojoExecution>true</forceMojoExecution>
             <driver>oracle.jdbc.OracleDriver</driver>
@@ -512,27 +484,6 @@ flyway.url=${flyway.url}
         <exec.outputFile>${classpath.file}</exec.outputFile>
         <default.goal>exec:exec ${db.phase.process} flyway:repair flyway:migrate</default.goal>
       </properties>
-      <!-- Add these dependencies here so the exec:exec goal can write all Oracle dependencies to file. -->
-      <!-- Ideally the dependency:build-classpath should do that job, but it did not work for me.       -->
-      <dependencies>
-        <dependency>
-          <groupId>${ojdbc.groupId}</groupId>
-          <artifactId>${ojdbc.artifactId}</artifactId>
-          <version>${ojdbc.version}</version>
-          <type>${ojdbc.type}</type>
-        </dependency>
-        <!-- Oracle wallets -->       
-        <dependency>
-          <groupId>${osdt_core.groupId}</groupId>
-          <artifactId>${osdt_core.artifactId}</artifactId>
-          <version>${osdt_core.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>${osdt_cert.groupId}</groupId>
-          <artifactId>${osdt_cert.artifactId}</artifactId>
-          <version>${osdt_cert.version}</version>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
           <!--plugin>

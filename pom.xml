@@ -84,7 +84,6 @@
     <ojdbc.java.version>11</ojdbc.java.version>  <!-- compatible with Java 11 -->
     <ojdbc.artifactId>ojdbc${ojdbc.java.version}-production</ojdbc.artifactId> <!-- This is not a JAR but POM artifact -->
     <ojdbc.version>23.3.0.23.09</ojdbc.version>
-    <ojdbc.type>pom</ojdbc.type>
 
     <oraclepki.groupId>com.oracle.database.security</oraclepki.groupId>
     <oraclepki.artifactId>oraclepki</oraclepki.artifactId>
@@ -101,7 +100,6 @@
     <ojdbc-bom.groupId>${ojdbc.groupId}</ojdbc-bom.groupId>
     <ojdbc-bom.artifactId>ojdbc-bom</ojdbc-bom.artifactId> <!-- This is not a JAR but POM artifact -->
     <ojdbc-bom.version>${ojdbc.version}</ojdbc-bom.version>
-    <ojdbc-bom.type>pom</ojdbc-bom.type>
 
     <!-- End of Oracle JDBC stuff -->
     

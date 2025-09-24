@@ -159,7 +159,7 @@
       <groupId>${ojdbc.groupId}</groupId>
       <artifactId>${ojdbc.artifactId}</artifactId>
       <version>${ojdbc.version}</version>
-      <type>${ojdbc.type}</type>
+      <type>pom</type>
       <scope>provided</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.springframework/spring-beans -->
