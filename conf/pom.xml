@@ -360,6 +360,7 @@
                     <isset property="db.proxy.username"/>
                   </condition>
                   <property name="db.userid" value="${db.username}/${db.password}@${db.connect.identifier}" />
+                  <property name="db.userid.without.password" value="${db.username}@${db.connect.identifier}" />
 
                   <!-- set utplsql properties -->
                   <property name="dbUrl" value="${db.url}" />

@@ -46,11 +46,12 @@
     <!-- should not start with flyway. -->
     <nr_months_to_keep.flyway.table>12</nr_months_to_keep.flyway.table>
 
-    <!-- ======================================================================= -->
-    <!-- Properties for generate upgrade.sql (part of profile db-install)        -->
-    <!-- ======================================================================= -->
-    <!-- generate upgrade.sql? Set to true in profile db-install -->
-    <generate.upgrade.sql>false</generate.upgrade.sql>
+    <!-- =============================================================================== -->
+    <!-- Properties for generate flyway migrations SQL (part of profile db-install)      -->
+    <!-- =============================================================================== -->
+    <!-- Do you want to generate a Flyway migrations SQL script?                         -->
+    <!-- Set db.install.generate.flyway.migrations.sql to true (see profile db-install). -->
+    <generate.flyway.migrations.sql>false</generate.flyway.migrations.sql>
     <classpath.file>${project.build.directory}/classpath.txt</classpath.file>
 
     <!-- ======================================================================= -->
@@ -284,7 +285,7 @@
               <id>db-install-before</id>
               <phase>${db.phase.process}</phase>
               <configuration>
-                <target if="${generate.upgrade.sql}">
+                <target if="${generate.flyway.migrations.sql}">
                   <property name="mode.normal" value="true" /> <!-- false for more debugging -->
                   <tempfile property="flyway.properties"
                             destdir="${project.build.directory}"
@@ -342,9 +343,8 @@ flyway.url=${flyway.url}
                     <arg value="info"/>
                     <env key="LANG" value="en_US" />
                     <env key="CLASSPATH" value="${classpath}" />
-                    <env key="DB_SCHEMA" value="${db.schema}" />
                   </exec>
-                  <echo message="flyway.info.json: ${flyway.info.json}" />
+                  <echo message="Flyway migrations SQL script generated in folder ${project.build.directory}" />
                 </target>
               </configuration>
               <goals>
@@ -476,7 +476,8 @@ flyway.url=${flyway.url}
     <profile>
       <id>db-install</id>
       <properties>
-        <generate.upgrade.sql>true</generate.upgrade.sql>
+        <db.install.generate.flyway.migrations.sql>false</db.install.generate.flyway.migrations.sql>
+        <generate.flyway.migrations.sql>${db.install.generate.flyway.migrations.sql}</generate.flyway.migrations.sql>
         <!--exec.executable>${oracle-tools.dir}/db/src/scripts/flyway</exec.executable-->
         <exec.executable>echo</exec.executable>
         <!-- %classpath: see https://guntherrotsch.github.io/blog_2020/maven-classpath.html -->
@@ -521,11 +522,13 @@ flyway.url=${flyway.url}
                       <os family="windows"/>
                     </condition>
 
+                    <!-- Passwords with a @ included pose problems when ${db.userid} is used to login. -->
+                    <!-- Workaround: connect without password (${db.userid.without.password}) and supply password as inputstring. -->
                     <exec executable="${sql.executable}"
                           inputstring="${db.password}"
                           failonerror="true">                     
                       <arg value="-S" /> <!-- silent -->
-                      <arg value="${quote}${db.userid}${quote}" />
+                      <arg value="${quote}${db.userid.without.password}${quote}" />
                       <arg value="@${oracle-tools.db.src.dir}/scripts/purge_flyway_table.sql" />
                       <arg value="${flyway.table}" />
                       <arg value="${nr_months_to_keep.flyway.table}" />
