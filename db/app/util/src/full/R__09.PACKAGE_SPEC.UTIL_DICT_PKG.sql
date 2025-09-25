@@ -1,4 +1,4 @@
-create or replace package UTIL_DICT_PKG AUTHID CURRENT_USER is
+CREATE OR REPLACE PACKAGE "UTIL_DICT_PKG" AUTHID CURRENT_USER is
 
 type fkey_search_rec_t is record
 ( master_table_name user_tables.table_name%type
@@ -20,3 +20,4 @@ pipelined;
 
 end util_dict_pkg;
 /
+

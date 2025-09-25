@@ -1,4 +1,4 @@
-create or replace package body UTIL_DICT_PKG is
+CREATE OR REPLACE PACKAGE BODY "UTIL_DICT_PKG" IS
 
 function fkey_search
 ( p_table_name in varchar2 default '%'
@@ -198,3 +198,4 @@ end fkey_search;
 
 end util_dict_pkg;
 /
+

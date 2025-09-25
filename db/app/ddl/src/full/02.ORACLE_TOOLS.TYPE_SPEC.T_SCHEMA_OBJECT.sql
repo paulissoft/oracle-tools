@@ -123,7 +123,7 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT" authid current_user as object
   , p_object_name in varchar2
   )
   return date
-, member function dict_last_ddl_time return date -- get dictionaly last_ddl_time, usually all_objects.last_ddl_time
+, member function dict_last_ddl_time return date -- get dictionary last_ddl_time, usually all_objects.last_ddl_time
 , static function ddl_batch_order
   ( p_object_type in varchar2
   )

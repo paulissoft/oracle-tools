@@ -1,7 +1,7 @@
 /* perl generate_ddl.pl (version 2024-12-07) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --nostrip-source-schema */
 
 /*
--- JDBC url - username : jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1 - BC_PROXY[ORACLE_TOOLS]
+-- JDBC url - username : jdbc:oracle:thin:@knpv_dev - KNPV_PROXY[ORACLE_TOOLS]
 -- source schema       : 
 -- source database link: 
 -- target schema       : ORACLE_TOOLS
@@ -170,11 +170,11 @@ ALTER TABLE "ORACLE_TOOLS"."GENERATE_DDL_SESSIONS" DROP CONSTRAINT GENERATE_DDL_
 call dbms_application_info.set_action('SQL statement 15');
 ALTER TABLE "ORACLE_TOOLS"."GENERATE_DDL_SESSIONS" DROP CONSTRAINT GENERATE_DDL_SESSIONS$FK$1;
 
-/* SQL statement 16 (ALTER;ORACLE_TOOLS;CONSTRAINT;SYS_C0024349;ORACLE_TOOLS;TABLE;SCHEMA_OBJECTS;;;;;2) */
+/* SQL statement 16 (ALTER;ORACLE_TOOLS;CONSTRAINT;SYS_C0033589;ORACLE_TOOLS;TABLE;SCHEMA_OBJECTS;;;;;2) */
 call dbms_application_info.set_action('SQL statement 16');
 ALTER TABLE "ORACLE_TOOLS"."SCHEMA_OBJECTS" DROP UNIQUE ("SYS_NC0003700038$") KEEP INDEX;
 
-/* SQL statement 17 (ALTER;ORACLE_TOOLS;CONSTRAINT;SYS_C0024348;ORACLE_TOOLS;TABLE;SCHEMA_OBJECTS;;;;;2) */
+/* SQL statement 17 (ALTER;ORACLE_TOOLS;CONSTRAINT;SYS_C0033588;ORACLE_TOOLS;TABLE;SCHEMA_OBJECTS;;;;;2) */
 call dbms_application_info.set_action('SQL statement 17');
 ALTER TABLE "ORACLE_TOOLS"."SCHEMA_OBJECTS" DROP UNIQUE ("SYS_NC0004800049$") KEEP INDEX;
 
@@ -838,17 +838,17 @@ DROP TYPE BODY ORACLE_TOOLS.T_CONSTRAINT_DDL;
 call dbms_application_info.set_action('SQL statement 182');
 DROP TYPE BODY ORACLE_TOOLS.T_PROCOBJ_DDL;
 
-/* SQL statement 183 (DROP;ORACLE_TOOLS;TYPE_BODY;T_TABLE_COLUMN_OBJECT;;;;;;;;2) */
+/* SQL statement 183 (DROP;ORACLE_TOOLS;TYPE_BODY;T_DDL;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 183');
+DROP TYPE BODY ORACLE_TOOLS.T_DDL;
+
+/* SQL statement 184 (DROP;ORACLE_TOOLS;TYPE_BODY;T_TABLE_COLUMN_OBJECT;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 184');
 DROP TYPE BODY ORACLE_TOOLS.T_TABLE_COLUMN_OBJECT;
 
-/* SQL statement 184 (DROP;ORACLE_TOOLS;TYPE_BODY;T_TABLE_OBJECT;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 184');
-DROP TYPE BODY ORACLE_TOOLS.T_TABLE_OBJECT;
-
-/* SQL statement 185 (DROP;ORACLE_TOOLS;TYPE_BODY;T_DDL;;;;;;;;2) */
+/* SQL statement 185 (DROP;ORACLE_TOOLS;TYPE_BODY;T_TABLE_OBJECT;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 185');
-DROP TYPE BODY ORACLE_TOOLS.T_DDL;
+DROP TYPE BODY ORACLE_TOOLS.T_TABLE_OBJECT;
 
 /* SQL statement 186 (DROP;ORACLE_TOOLS;TYPE_BODY;T_DEPENDENT_OR_GRANTED_OBJECT;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 186');

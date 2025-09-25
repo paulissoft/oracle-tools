@@ -1,7 +1,7 @@
-/* perl generate_ddl.pl (version 2023-01-05) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --strip-source-schema */
+/* perl generate_ddl.pl (version 2024-12-07) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --strip-source-schema */
 
 /*
--- JDBC url - username : jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1 - BC_PROXY[ORACLE_TOOLS]
+-- JDBC url - username : jdbc:oracle:thin:@knpv_dev - KNPV_PROXY[ORACLE_TOOLS]
 -- source schema       : 
 -- source database link: 
 -- target schema       : ORACLE_TOOLS
@@ -38,11 +38,11 @@ DROP PACKAGE BODY CFG_INSTALL_PKG;
 call dbms_application_info.set_action('SQL statement 5');
 DROP PACKAGE UT_CODE_CHECK_PKG;
 
-/* SQL statement 6 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;CFG_INSTALL_PKG;;;;;;;;2) */
+/* SQL statement 6 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;CFG_PKG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 6');
-DROP PACKAGE CFG_INSTALL_PKG;
-
-/* SQL statement 7 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;CFG_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 7');
 DROP PACKAGE CFG_PKG;
+
+/* SQL statement 7 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;CFG_INSTALL_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 7');
+DROP PACKAGE CFG_INSTALL_PKG;
 

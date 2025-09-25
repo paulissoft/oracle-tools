@@ -1,4 +1,4 @@
-create or replace package body ui_apex_messages_pkg
+CREATE OR REPLACE PACKAGE BODY "UI_APEX_MESSAGES_PKG" 
 as
 
 g_package_name constant varchar2(61 char) := $$PLSQL_UNIT;
@@ -255,7 +255,7 @@ $end
       -- ORA-06512: at "APEX_220200.WWV_FLOW_IMP_SHARED", line 6400
       -- ORA-06512: at "APEX_220200.WWV_FLOW_LANG", line 1177
       -- ORA-06512: at "APEX_220200.HTMLDB_LANG", line 157
-      -- ORA-06512: at "ORACLE_TOOLS.UI_APEX_MESSAGES_PKG", line 248
+      -- ORA-06512: at "UI_APEX_MESSAGES_PKG", line 248
       --
       -- In order to mimic the old behaviour (dup_val_on_index):
       -- 1. first get the mssage id
@@ -317,7 +317,7 @@ $if cfg_pkg.c_debugging $then
   dbug.enter(l_module_name);
 $end
 
-  init(to_number('${apex.application}'));
+  init(to_number('200'));
   commit;
 
 $if cfg_pkg.c_debugging $then
@@ -345,7 +345,7 @@ is
   l_max_tries constant pls_integer := 9;
 
   l_action varchar2(1);
-  -- ${apex.application} is a Flyway placeholder but when you run this in SQL Developer it will not be replaced
+  -- 200 is a Flyway placeholder but when you run this in SQL Developer it will not be replaced
   l_application_id constant number := g_application_id;
   l_name varchar2(100 char);
   l_language varchar2(10 char);
