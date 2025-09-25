@@ -23,6 +23,7 @@ Types of changes:
 - [Some unit tests for web_service_pkg fail.](https://github.com/paulissoft/oracle-tools/issues/213)
 - [The API_TIME_PKG must also support milliseconds since the Unix epoch, i.e. 1-JAN-1970 UTC.](https://github.com/paulissoft/oracle-tools/issues/214)
 - [Add the ability to check database objects after an incremental installation.](https://github.com/paulissoft/oracle-tools/issues/217)
+- [Ability to generate Flyway migrations SQL script while installing scripts.](https://github.com/paulissoft/oracle-tools/issues/218)
 
 ## [4.4.2] - 2025-04-17
 
