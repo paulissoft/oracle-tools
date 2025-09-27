@@ -31,39 +31,54 @@ use warnings;
 use IO::File;
 use File::Path qw(make_path);
 use File::Basename;
+use Getopt::Long;
+use Pod::Usage;
 
 my ($fh, $description, $file) = (undef, undef, undef);
 my $debug = 0;
 
-while (<STDIN>) {
-    # print STDERR $_;
-    if (m!^-- === (file \d+): (.+) ===$!) {
-        ($description, $file) = ($1, $2);
-        
-        print STDOUT "creating $description: $file\n";
+# prototypes
+sub main ();
+sub parse_command_line ();
 
-        make_path(dirname($file));
+sub main() {
+    parse_command_line ();
+    
+    while (<STDIN>) {
+        # print STDERR $_;
+        if (m!^-- === (file \d+): (.+) ===$!) {
+            ($description, $file) = ($1, $2);
+            
+            print STDOUT "creating $description: $file\n";
 
-        print STDOUT "created directory ", dirname($file), "\n"
-            if ($debug);
+            make_path(dirname($file));
 
-        $fh->close
-            if defined($fh);
-        
-        $fh = new IO::File "> $file";
+            print STDOUT "created directory ", dirname($file), "\n"
+                if ($debug);
 
-        die "Could not open file $file: $!"
-            unless defined($fh);
+            $fh->close
+                if defined($fh);
+            
+            $fh = new IO::File "> $file";
 
-        print STDOUT "opened $file\n"
-            if ($debug);
-    } elsif (defined($fh)) {
-        $fh->print($_);
+            die "Could not open file $file: $!"
+                unless defined($fh);
 
-        print STDOUT "written $_ to $file\n"
-            if ($debug);
+            print STDOUT "opened $file\n"
+                if ($debug);
+        } elsif (defined($fh)) {
+            $fh->print($_);
+
+            print STDOUT "written $_ to $file\n"
+                if ($debug);
+        }
     }
+
+    $fh->close
+        if defined($fh);
 }
 
-$fh->close
-    if defined($fh);
+sub parse_command_line () {
+    GetOptions('help' => sub { pod2usage(-verbose => 2) })
+        or pod2usage(-verbose => 0);
+}

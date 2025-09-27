@@ -138,7 +138,7 @@ my $output_file = undef;
 my $flyway_command = undef;
 
 # derived from $config_files
-my %flyway_properties = {};
+my %flyway_properties;
 
 main();
 
@@ -159,8 +159,13 @@ sub main() {
     # exec "/nix/store/rd89a3gnapg7wzs7w3h6vv3b4ha7md5x-zulu-ca-jdk-21.0.4/bin/java"  -Djava.security.egd=file:/dev/../dev/urandom -classpath '/nix/store/19hlwfnjgh4rz8syvfkfmwf6r7vsj906-flyway-11.7.0/share/flyway/lib/*:/nix/store/19hlwfnjgh4rz8syvfkfmwf6r7vsj906-flyway-11.7.0/share/flyway/drivers/*' org.flywaydb.commandline.Main "$@" 
 
     setup_devbox();
+
+    my $flyway_script = File::Spec->catfile($oracle_tools_dir, '.devbox', 'nix', 'profile', 'default', 'bin', 'flyway');
+
+    die "Flyway script ($flyway_script) not found."
+        unless -f $flyway_script;
     
-    my @flyway = split(/\R/, slurp(File::Spec->catfile($oracle_tools_dir, '.devbox', 'nix', 'profile', 'default', 'bin', 'flyway')));
+    my @flyway = split(/\R/, slurp($flyway_script));
     my $interpreter = shift(@flyway);
 
     # only the command rests
@@ -200,14 +205,19 @@ sub parse_command_line() {
 
     $flyway_command = pop(@ARGV);
 
+    die "Did not specify Flyway command."
+        unless defined($flyway_command);
+
     # restore @ARGV
     @ARGV = @argv;
 
     # foreach config file
-    foreach my $config_file (split(/,/, $config_files)) {
-        # foreach line ($_)
-        foreach (split(/\R/, slurp($config_file))) {
-            $flyway_properties{$1} = $2 if m/^([^=]+)=(.*)$/;
+    if (defined($config_files)) {
+        foreach my $config_file (split(/,/, $config_files)) {
+            # foreach line ($_)
+            foreach (split(/\R/, slurp($config_file))) {
+                $flyway_properties{$1} = $2 if m/^([^=]+)=(.*)$/;
+            }
         }
     }
 
