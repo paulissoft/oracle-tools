@@ -16,14 +16,22 @@ Types of changes:
 ## [Unreleased]
 
 - [Some private synonyms are not recognised during DDL export.](https://github.com/paulissoft/oracle-tools/issues/195)
-- [When using V_MY_INCLUDE_OBJECTS there is a JOB or TASK error.](https://github.com/paulissoft/oracle-tools/issues/209)
 - [Add script with OCI filesystem operations.](https://github.com/paulissoft/oracle-tools/issues/210)
-- [The message subsystem needs to handle HTTP responses with respect to HTTP rate limits.](https://github.com/paulissoft/oracle-tools/issues/211)
 - [Base the smart pool data source directly on the Hikari and Oracle UCP pool data sources.](https://github.com/paulissoft/oracle-tools/issues/212)
-- [Some unit tests for web_service_pkg fail.](https://github.com/paulissoft/oracle-tools/issues/213)
+
+## [5.0.0] - 2025-10-01
+
+### Added
+
+- [The message subsystem needs to handle HTTP responses with respect to HTTP rate limits.](https://github.com/paulissoft/oracle-tools/issues/211)
 - [The API_TIME_PKG must also support milliseconds since the Unix epoch, i.e. 1-JAN-1970 UTC.](https://github.com/paulissoft/oracle-tools/issues/214)
 - [Add the ability to check database objects after an incremental installation.](https://github.com/paulissoft/oracle-tools/issues/217)
 - [Ability to generate Flyway migrations SQL script while installing scripts.](https://github.com/paulissoft/oracle-tools/issues/218)
+
+### Fixed
+
+- [When using V_MY_INCLUDE_OBJECTS there is a JOB or TASK error.](https://github.com/paulissoft/oracle-tools/issues/209)
+- [Some unit tests for web_service_pkg fail.](https://github.com/paulissoft/oracle-tools/issues/213)
 
 ## [4.4.2] - 2025-04-17
 
