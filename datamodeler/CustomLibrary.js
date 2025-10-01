@@ -261,8 +261,8 @@ function _setUseDomainConstraints(table) {
     });
 }
 
-function _setIdentityColumn_relational(table) {
-    var where = "setIdentityColumn_relational";
+function _setAutoIncrement_relational(table) {
+    var where = "setAutoIncrement_relational";
     var dirty = null;
 
     _trace(where, table);
@@ -299,8 +299,8 @@ function _setIdentityColumn_relational(table) {
         });
 }
 
-function _setIdentityColumn_physical(table) {
-    var where = "setIdentityColumn_physical";
+function _setAutoIncrement_physical(table) {
+    var where = "setAutoIncrement_physical";
     // not conform the SQL Data Modeler 18 documentation (!)
     var clause = "IDENTITY_CLAUSE";
 
@@ -318,8 +318,8 @@ function _setIdentityColumn_physical(table) {
         });
 }
 
-function _setIdentityColumn(relationalTable, physicalTables) {
-    var where = "setIdentityColumn";
+function _setAutoIncrement(relationalTable, physicalTables) {
+    var where = "setAutoIncrement";
 
     if (!_canProcess(where, relationalTable)) {
         return;
@@ -327,20 +327,20 @@ function _setIdentityColumn(relationalTable, physicalTables) {
 
     _trace(where, relationalTable);
 
-    _setIdentityColumn_relational(relationalTable);
+    _setAutoIncrement_relational(relationalTable);
 
     _toStream(physicalTables)
         .filter(function (physicalTable) {
             return relationalTable.getName().equals(physicalTable.getName());
         })
         .forEach(function (physicalTable) {
-            _setIdentityColumn_physical(physicalTable);
+            _setAutoIncrement_physical(physicalTable);
         });
 }
 
-function _setIdentityColumns(relationalTables, physicalTables) {
+function _setAutoIncrements(relationalTables, physicalTables) {
     _toStream(relationalTables).forEach(function (relationalTable) {
-        _setIdentityColumn(relationalTable, physicalTables);
+        _setAutoIncrement(relationalTable, physicalTables);
     });
 }
 
@@ -562,7 +562,7 @@ function _createIndexOnFK(table) {
 }
 
 function _setTableAbbreviation(table) {
-    var where = "_setTableAbbreviation";
+    var where = "setTableAbbreviation";
     var pk = table.getPK();
 
     if (_isEmpty(table.getAbbreviation()) && pk !== null && pk.getName().endsWith("_PK")) {
@@ -737,7 +737,7 @@ function _applyStandardsTable(table, physicalTables) {
         _tableNamePlural(table);
         _setUseDomainConstraints(table);
         _setTableAbbreviation(table);
-        _setIdentityColumn(table, physicalTables);
+        _setAutoIncrement(table, physicalTables);
         // _tableToLowerCase(table);
         // _tableAbbreviationToColumn(table);
         // _removeTableAbbrFromColumn(table);
