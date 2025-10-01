@@ -85,6 +85,7 @@ $end
   msg_aq_pkg.enqueue(p_msg => self, p_msgid => l_msgid);
 
 $if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.print(dbug."info", 'l_msgid enqueued: %s', rawtohex(l_msgid));
   dbug.leave;
 $end
 end process$later;
@@ -153,8 +154,21 @@ member function repr
 )
 return clob
 is
-  l_clob clob := serialize();
+  l_clob clob := null;
+  l_json_object json_object_t := json_object_t();  
+  l_json_functions json_object_t := json_object_t();  
 begin
+  l_json_functions.put('get_type', self.get_type());
+  l_json_functions.put('lob_attribute_list', self.lob_attribute_list());
+  l_json_functions.put('may_have_not_null_lob', self.may_have_not_null_lob());
+  l_json_functions.put('has_not_null_lob', self.has_not_null_lob());
+  l_json_functions.put('default_processing_method', self.default_processing_method());
+
+  l_json_object.put('data', json_object_t(self.serialize()));
+  l_json_object.put('functions', l_json_functions);
+
+  l_clob := l_json_object.to_clob();
+
   select  json_serialize(l_clob returning clob pretty)
   into    l_clob
   from    dual;
@@ -167,13 +181,32 @@ member procedure print
 ( self in msg_typ
 )
 is
-  l_msg constant varchar2(4000 char) := utl_lms.format_message('type: %s; repr: %s', get_type(), dbms_lob.substr(lob_loc => repr(), amount => 2000));
+  l_intro constant varchar2(4000 char) := 'repr:';
+  l_line_tab dbms_sql.varchar2a;
 begin
+  oracle_tools.pkg_str_util.split
+  ( p_str => self.repr()
+  , p_delimiter => chr(10)
+  , p_str_tab => l_line_tab
+  );
+
 $if oracle_tools.cfg_pkg.c_debugging $then
-  dbug.print(dbug."info", l_msg);
+  dbug.print(dbug."info", l_intro);
 $else  
-  dbms_output.put_line(l_msg);
+  dbms_output.put_line(l_intro);
+$end
+
+  if l_line_tab.count > 0
+  then
+    for i_idx in l_line_tab.first .. l_line_tab.last
+    loop
+$if oracle_tools.cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", l_line_tab(i_idx));
+$else  
+      dbms_output.put_line(l_line_tab(i_idx));
 $end  
+    end loop;
+  end if;
 end print;
 
 final

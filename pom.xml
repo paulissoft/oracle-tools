@@ -14,7 +14,8 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <!--maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version-->
-    <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+    <!--maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version-->
+    <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
     <java.version>11</java.version>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
@@ -22,32 +23,40 @@
     
     <!-- plugins from super pom without version -->
     <!--maven-clean-plugin.version>3.2.0</maven-clean-plugin.version-->
-    <maven-clean-plugin.version>3.3.2</maven-clean-plugin.version>
+    <!--maven-clean-plugin.version>3.3.2</maven-clean-plugin.version-->
+    <maven-clean-plugin.version>3.5.0</maven-clean-plugin.version>
     <!--maven-deploy-plugin.version>3.0.0-M2</maven-deploy-plugin.version-->
-    <maven-deploy-plugin.version>3.1.2</maven-deploy-plugin.version>
+    <!--maven-deploy-plugin.version>3.1.2</maven-deploy-plugin.version-->
+    <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
     <!--maven-install-plugin.version>3.0.0-M1</maven-install-plugin.version-->
-    <maven-install-plugin.version>3.1.2</maven-install-plugin.version>
+    <!--maven-install-plugin.version>3.1.2</maven-install-plugin.version-->
+    <maven-install-plugin.version>3.1.4</maven-install-plugin.version>
     <!--maven-site-plugin.version>4.0.0-M1</maven-site-plugin.version-->
-    <maven-site-plugin.version>4.0.0-M14</maven-site-plugin.version>
+    <!--maven-site-plugin.version>4.0.0-M14</maven-site-plugin.version-->
+    <maven-site-plugin.version>4.0.0-M16</maven-site-plugin.version>
 
     <!--maven-dependency-plugin.version>3.3.0</maven-dependency-plugin.version-->
-    <maven-dependency-plugin.version>3.6.1</maven-dependency-plugin.version>
+    <!--maven-dependency-plugin.version>3.6.1</maven-dependency-plugin.version-->
+    <maven-dependency-plugin.version>3.8.1</maven-dependency-plugin.version>
     <!--maven-antrun-plugin.version>3.0.0</maven-antrun-plugin.version-->
     <maven-antrun-plugin.version>3.1.0</maven-antrun-plugin.version>
     <!--maven-antrun-plugin.version>1.8</maven-antrun-plugin.version-->
     <!-- WARNING: 20020829 is not newer, just use 1.0b3 -->
     <maven-ant-contrib-plugin.version>1.0b3</maven-ant-contrib-plugin.version>
     <!--maven-enforcer-plugin.version>3.0.0</maven-enforcer-plugin.version-->
-    <maven-enforcer-plugin.version>3.4.1</maven-enforcer-plugin.version>
+    <!--maven-enforcer-plugin.version>3.4.1</maven-enforcer-plugin.version-->
+    <maven-enforcer-plugin.version>3.6.1</maven-enforcer-plugin.version>
     <maven.minimum.version>3.6.3</maven.minimum.version>
     <!--flatten-maven-plugin.version>1.3.0</flatten-maven-plugin.version-->
-    <flatten-maven-plugin.version>1.6.0</flatten-maven-plugin.version>
+    <!--flatten-maven-plugin.version>1.6.0</flatten-maven-plugin.version-->
+    <flatten-maven-plugin.version>1.7.2</flatten-maven-plugin.version>
     <!--maven-assembly-plugin.version>3.6.0</maven-assembly-plugin.version-->
     <maven-assembly-plugin.version>3.7.1</maven-assembly-plugin.version>
     <!--properties-maven-plugin.version>1.2.0</properties-maven-plugin.version-->
     <properties-maven-plugin.version>1.2.1</properties-maven-plugin.version>
     <!--exec-maven-plugin.version>3.0.0</exec-maven-plugin.version-->
-    <exec-maven-plugin.version>3.2.0</exec-maven-plugin.version>
+    <!--exec-maven-plugin.version>3.2.0</exec-maven-plugin.version-->
+    <exec-maven-plugin.version>3.5.1</exec-maven-plugin.version>
     <sql-maven-plugin.version>3.0.0</sql-maven-plugin.version>
     <!-- Begin of SCM section -->
     <!-- DO NOT UPDATE the SCM plugin: last version that is compatible with maven-scm-provider-svnjava and svnkit -->
@@ -66,7 +75,8 @@
     <!--flyway.version>9.22.0</flyway.version--> <!-- latest and greatest at 2023-09-06 -->
 
     <!--flyway.version>10.10.0</flyway.version--> <!-- latest and greatest at 2024-03-14 -->
-    <flyway.version>10.12.0</flyway.version> <!-- latest and greatest at 2024-05-14 -->
+    <!--flyway.version>10.12.0</flyway.version--> <!-- latest and greatest at 2024-05-14 -->
+    <flyway.version>11.7.0</flyway.version> <!-- keep in sync with version in devbox.json file -->
 
     <!-- Oracle JDBC stuff -->
     <!-- https://www.oracle.com/database/technologies/maven-central-guide.html -->
@@ -74,7 +84,6 @@
     <ojdbc.java.version>11</ojdbc.java.version>  <!-- compatible with Java 11 -->
     <ojdbc.artifactId>ojdbc${ojdbc.java.version}-production</ojdbc.artifactId> <!-- This is not a JAR but POM artifact -->
     <ojdbc.version>23.3.0.23.09</ojdbc.version>
-    <ojdbc.type>pom</ojdbc.type>
 
     <oraclepki.groupId>com.oracle.database.security</oraclepki.groupId>
     <oraclepki.artifactId>oraclepki</oraclepki.artifactId>
@@ -87,6 +96,10 @@
     <osdt_cert.groupId>${osdt_core.groupId}</osdt_cert.groupId>
     <osdt_cert.artifactId>osdt_cert</osdt_cert.artifactId>
     <osdt_cert.version>${osdt_core.version}</osdt_cert.version> <!-- Aug 11, 2023 -->
+
+    <ojdbc-bom.groupId>${ojdbc.groupId}</ojdbc-bom.groupId>
+    <ojdbc-bom.artifactId>ojdbc-bom</ojdbc-bom.artifactId> <!-- This is not a JAR but POM artifact -->
+    <ojdbc-bom.version>${ojdbc.version}</ojdbc-bom.version>
 
     <!-- End of Oracle JDBC stuff -->
     
@@ -121,6 +134,18 @@
       <url>https://download.red-gate.com/maven/release</url>
     </pluginRepository>
   </pluginRepositories>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>${ojdbc-bom.groupId}</groupId>
+        <artifactId>${ojdbc-bom.artifactId}</artifactId>
+        <version>${ojdbc-bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
     <defaultGoal>${default.goal}</defaultGoal>

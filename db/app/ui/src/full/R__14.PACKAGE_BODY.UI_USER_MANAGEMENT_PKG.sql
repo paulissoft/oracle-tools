@@ -48,7 +48,13 @@ $if cfg_pkg.c_debugging $then
   then
     for i_idx in p_role_tab.first .. p_role_tab.last
     loop
-      dbug.print(dbug."input", 'p_role_tab(%s): %s', i_idx, p_role_tab(i_idx));    
+      dbug.print
+      ( dbug."input"
+      , 'p_role_tab(%s): %s; current user has this role: %s'
+      , i_idx
+      , p_role_tab(i_idx)
+      , dbug.cast_to_varchar2(apex_util.current_user_in_group(p_group_name => p_role_tab(i_idx)))
+      );    
     end loop;
   end if;
   dbug.print(dbug."input", 'p_app_user: %s; p_app_id: %s', p_app_user, p_app_id);

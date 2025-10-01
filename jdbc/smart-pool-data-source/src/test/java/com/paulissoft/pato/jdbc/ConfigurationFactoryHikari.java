@@ -7,10 +7,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.beans.factory.annotation.Qualifier;
 
-import lombok.extern.slf4j.Slf4j;
-
-
-@Slf4j
 @Configuration
 public class ConfigurationFactoryHikari {
 
@@ -79,18 +75,18 @@ public class ConfigurationFactoryHikari {
 
     @Primary
     @ConfigurationProperties(prefix = "app.domain.datasource.hikari")
-    public MyDomainDataSourceHikari domainDataSourceHikari(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceHikari domainDataSourceHikari(@Qualifier("domainDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
-            .type(MyDomainDataSourceHikari.class)
+            .type(SmartPoolDataSourceHikari.class)
             .build();
     }
 
     @ConfigurationProperties(prefix = "app.operator.datasource.hikari")
-    public MyOperatorDataSourceHikari operatorDataSourceHikari(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
+    public SmartPoolDataSourceHikari operatorDataSourceHikari(@Qualifier("operatorDataSourceProperties") DataSourceProperties properties) {
         return properties
             .initializeDataSourceBuilder()
-            .type(MyOperatorDataSourceHikari.class)
+            .type(SmartPoolDataSourceHikari.class)
             .build();
     }
 }

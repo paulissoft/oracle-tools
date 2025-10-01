@@ -1,5 +1,5 @@
-create or replace force view msg_queue_info_v as
-select  queue as queue_name
+CREATE OR REPLACE FORCE VIEW "MSG_QUEUE_INFO_V" ("QUEUE_NAME", "MSG_STATE", "TOTAL", "MIN_ELAPSED", "AVG_ELAPSED", "MAX_ELAPSED") AS 
+  select  queue as queue_name
 ,       msg_state
 ,       count(*) as total
 ,       trunc(min(deq_time - enq_time) * 24 * 60 * 60, 2) as min_elapsed
@@ -11,5 +11,5 @@ group by
 ,       msg_state
 order by
         queue
-,       msg_state
-;
+,       msg_state;
+

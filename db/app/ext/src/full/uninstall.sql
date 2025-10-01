@@ -1,7 +1,7 @@
-/* perl generate_ddl.pl (version 2023-01-05) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --strip-source-schema */
+/* perl generate_ddl.pl (version 2024-12-07) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --strip-source-schema */
 
 /*
--- JDBC url - username : jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1 - BC_PROXY[ORACLE_TOOLS]
+-- JDBC url - username : jdbc:oracle:thin:@knpv_dev - KNPV_PROXY[ORACLE_TOOLS]
 -- source schema       : 
 -- source database link: 
 -- target schema       : ORACLE_TOOLS

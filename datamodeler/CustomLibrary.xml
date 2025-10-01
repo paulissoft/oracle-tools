@@ -1,24 +1,75 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- File contains Custom Libraries Scripts -->
 <custom_libraries>
-	<lib id="07802AFC-A9F4-43B2-F1E0-A60B9EF28FE9" name="CustomLibrary" engine="Oracle Nashorn" methods="tableAbbreviationToColumn,removeTableAbbrFromColumn,applyStandardsForSelectedLogicalItems,applyStandardsForSelectedRelationalItems" >
+	<lib id="B310E434-78AE-6AED-EA94-6808B0262483" name="my first library" engine="Oracle Nashorn" methods="checkcomments,NotNullConstr_Name_Length" >
+		<script>
+			<![CDATA[// variable used to return custom message
+var ruleMessage;
+// variable used to return the type of the rule Error
+// or Warning and red/blue color will be used for result
+// if another custom type is returned (Problem in the rule below) 
+// then result is colored in yellow
+var errType;
+var table;
+function checkcomments(object){
+ result = true;
+ ruleMessage="";
+ if(table.getCommentInRDBMS().equals("")){
+  ruleMessage="no comments in RDBMS defined";
+  errType="Problem:";
+  result = false;
+ }
+ if(table.getComment().equals("")){
+  if(ruleMessage.equals("")){
+   ruleMessage="no comments defined";
+  }else{
+   ruleMessage= ruleMessage +" , no comments defined";
+   }
+   // can be changed to Warning    
+   errType="Error";
+  return false;
+ }
+ return result;
+}
+//rule for not null constraint name
+function NotNullConstr_Name_Length(column){
+ model = column.getDesignPart();
+ name = column.getNotNullConstraintName();
+ result = true;
+ if(name!=null && !"".equals(name)){
+  holder = model.getNamingOptionsHolderFor("oracle.dbtools.crest.model.design.constraint.TableLevelConstraint");
+  if ((holder.getMaxNameLength() > 0) && (name.length() > holder.getMaxNameLength())) {
+    result = false;
+  }
+ }
+ return result
+}]]>
+		</script>
+	</lib>
+	<lib id="33FBA25E-7226-35D0-0BD5-3FB2044B270D" name="CustomLibrary" engine="Oracle Nashorn" methods="tableAbbreviationToColumn,removeTableAbbrFromColumn,setTableAbbreviation,applyStandardsForSelectedRelationalItems,applyStandardsForSelectedLogicalItems" >
 		<script>
 			<![CDATA[// -----------------------------------------------------------------------------
 // file  : CustomLibrary.js
 // goal  : Custom library for Oracle Data Modeler (ODM)
 // author: Gert-Jan Paulissen (Paulissoft)
-// date  : 2023-07-31
+// date  : 2025-09-29
 // usage : - Copy the contents of this file and paste them into a custom library
 //           (for instance CustomLibrary) in ODM. Add each function
 //           without underscore below as function / method to the ODM library.
 //           ODM Menu: Tools | Design Rules And transformations | Libraries
+//           Currently these are:
+//           * tableAbbreviationToColumn
+//           * removeTableAbbrFromColumn
+//           * setTableAbbreviation
+//           * applyStandardsForSelectedRelationalItems
+//           * applyStandardsForSelectedLogicalItems
 //         - Export this library to file CustomLibrary.xml.
 //         - Next add or change custom transformation scripts and use
 //           the description after each 'Custom Transformation Script:' below
 //           for the name. Set library and method in ODM as well.
 //           Menu: Tools | Design Rules And transformations | Transformations
 //         - Export these methods to file CustomTransformationScripts.xml.
-// note  : The functions applyStandardsForSelectedItems_(logical|relatonal) are
+// note  : The functions applyStandardsForSelectedItems_(logical|relational) are
 //         the most important functiond and can be used to apply standards of
 //         selected logical or relational items.
 //         If the dynamic property canApplyStandards is set to 0,
@@ -57,6 +108,10 @@ function _trace(where, obj) {
     }
 }
 
+function _isEmpty(name) {
+    return name === null || name.equals("") || name.equals("Unknown");
+}
+
 function _setDirty(where, obj) {
     _msg("Changing " +
          obj.getObjectTypeName() +
@@ -70,7 +125,7 @@ function _setDirty(where, obj) {
 function _canProcess(where, object) {
     var canProcess = object.getProperty(where);
 
-    if (canProcess === null || canProcess.equals("")) {
+    if (_isEmpty(canProcess)) {
         canProcess = "1";
         object.setProperty(where, canProcess);
         _setDirty(where, object);
@@ -269,10 +324,16 @@ function _setIdentityColumn_relational(table) {
                 column.setAutoIncrementColumn(true);
                 dirty = true;
             }
-            if (!column.isIdentityColumn()) {
-                column.setIdentityColumn(true);
+            // GJP 2025-09-29 No more identity columns: use sequence.NEXTVAL in default
+            if (column.isIdentityColumn()) {
+                column.setIdentityColumn(false);
                 dirty = true;
-            }
+            }            
+            if (_isEmpty(column.getAutoIncrementSequenceName())) {
+                column.setAutoIncrementSequenceName(table.getAbbreviation()+"_SEQ");
+                column.setDefaultValue(column.getAutoIncrementSequenceName()+".NEXTVAL");
+                dirty = true;
+            }            
             if (column.isAutoIncrementGenerateTrigger()) {
                 column.setAutoIncrementGenerateTrigger(false);
                 dirty = true;
@@ -280,6 +341,11 @@ function _setIdentityColumn_relational(table) {
             if (dirty) {
                 _setDirty(where, column);
             }
+            _debug("isAutoIncrementColumn: " + column.isAutoIncrementColumn());
+            _debug("isIdentityColumn: " + column.isIdentityColumn());
+            _debug("getAutoIncrementSequenceName: " + column.getAutoIncrementSequenceName());
+            _debug("getDefaultValue: " + column.getDefaultValue());
+            _debug("isAutoIncrementGenerateTrigger: " + column.isAutoIncrementGenerateTrigger());                
         });
 }
 
@@ -545,11 +611,35 @@ function _createIndexOnFK(table) {
         });
 }
 
+function _setTableAbbreviation(table) {
+    var where = "_setTableAbbreviation";
+    var pk = table.getPK();
+
+    if (_isEmpty(table.getAbbreviation()) && pk !== null && pk.getName().endsWith("_PK")) {
+        table.setAbbreviation(pk.getName().replaceAll("_PK", ""));
+        _debug("abbreviation: " + table.getAbbreviation());
+        _setDirty(where, table);
+    }
+}
+
+function setTableAbbreviation(model) {
+    try {
+        var tables = _getSelectedObjects(model, "Table");
+        
+        for (var i = 0; i < tables.length; i++) {
+            _setTableAbbreviation(tables.get(i));
+        }
+    } catch (e) {
+        _msg(e.stack);
+        throw(e);
+    }
+}
+
 // sorts table columns as asked here
 // https://forums.oracle.com/forums/thread.jspa?threadID=2508315&tstart=0
-// 1) first the pks columns,
+// 1) first the pk columns,
 // 2) after them fk columns
-// 3) and after the; the not null columns"
+// 3) and after them the not null columns
 function _addPKcolumns(list, table) {
     var pk = table.getPK();
 
@@ -696,6 +786,7 @@ function _applyStandardsTable(table, physicalTables) {
         _tableToUpperCase(table);
         _tableNamePlural(table);
         _setUseDomainConstraints(table);
+        _setTableAbbreviation(table);
         _setIdentityColumn(table, physicalTables);
         // _tableToLowerCase(table);
         // _tableAbbreviationToColumn(table);
@@ -761,52 +852,8 @@ function applyStandardsForSelectedLogicalItems(model) {
         _msg(e.stack);
         throw(e);
     }
-}]]>
-		</script>
-	</lib>
-	<lib id="B310E434-78AE-6AED-EA94-6808B0262483" name="my first library" engine="Oracle Nashorn" methods="checkcomments,NotNullConstr_Name_Length" >
-		<script>
-			<![CDATA[// variable used to return custom message
-var ruleMessage;
-// variable used to return the type of the rule Error
-// or Warning and red/blue color will be used for result
-// if another custom type is returned (Problem in the rule below) 
-// then result is colored in yellow
-var errType;
-var table;
-function checkcomments(object){
- result = true;
- ruleMessage="";
- if(table.getCommentInRDBMS().equals("")){
-  ruleMessage="no comments in RDBMS defined";
-  errType="Problem:";
-  result = false;
- }
- if(table.getComment().equals("")){
-  if(ruleMessage.equals("")){
-   ruleMessage="no comments defined";
-  }else{
-   ruleMessage= ruleMessage +" , no comments defined";
-   }
-   // can be changed to Warning    
-   errType="Error";
-  return false;
- }
- return result;
 }
-//rule for not null constraint name
-function NotNullConstr_Name_Length(column){
- model = column.getDesignPart();
- name = column.getNotNullConstraintName();
- result = true;
- if(name!=null && !"".equals(name)){
-  holder = model.getNamingOptionsHolderFor("oracle.dbtools.crest.model.design.constraint.TableLevelConstraint");
-  if ((holder.getMaxNameLength() > 0) && (name.length() > holder.getMaxNameLength())) {
-    result = false;
-  }
- }
- return result
-}]]>
+]]>
 		</script>
 	</lib>
 </custom_libraries>

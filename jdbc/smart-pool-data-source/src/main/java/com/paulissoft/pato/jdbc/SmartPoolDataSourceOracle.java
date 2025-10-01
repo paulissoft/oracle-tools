@@ -1,250 +1,880 @@
 package com.paulissoft.pato.jdbc;
 
-// import java.time.Duration;
+import java.io.Closeable;
+import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
-import oracle.ucp.jdbc.ValidConnection;
-import lombok.NonNull;
-import lombok.experimental.Delegate;
-import lombok.extern.slf4j.Slf4j;
+import java.sql.SQLFeatureNotSupportedException;
+import java.util.Properties;
+import java.util.function.Consumer;
+import java.util.logging.Logger;
+import javax.net.ssl.SSLContext;
+import oracle.jdbc.OracleShardingKeyBuilder;
+import oracle.ucp.ConnectionAffinityCallback;
+import oracle.ucp.ConnectionCreationInformation;
+import oracle.ucp.ConnectionLabelingCallback;
+import oracle.ucp.jdbc.ConnectionInitializationCallback;
+import oracle.ucp.jdbc.JDBCConnectionPoolStatistics;
+import oracle.ucp.jdbc.PoolDataSourceImpl;
+import oracle.ucp.jdbc.UCPConnectionBuilder;
 
 
-@Slf4j
 public class SmartPoolDataSourceOracle
-    extends SmartPoolDataSource<SimplePoolDataSourceOracle>
-    implements SimplePoolDataSource, PoolDataSourcePropertiesSettersOracle, PoolDataSourcePropertiesGettersOracle {
+    extends PoolDataSourceImpl
+    implements ConnectInfo, Closeable, StatePoolDataSource, StatisticsPoolDataSource {
 
-    static final long MIN_CONNECTION_TIMEOUT = SimplePoolDataSourceOracle.MIN_CONNECTION_TIMEOUT; // milliseconds for one pool, so twice this number for two
+    private static final long serialVersionUID = 1L;
+        
+    // this delegate will do the actual work
+    private static final SharedPoolDataSourceOracle delegate = new SharedPoolDataSourceOracle();
+    
+    private volatile String currentSchema = null;
 
-    static final String REX_CONNECTION_TIMEOUT =
-        "^(UCP-29: Failed to get a connection|UCP-45064: All connections in the Universal Connection Pool are in use.*)$";
+    /*
+    // Overridden property setter/getter methods from PoolDataSource/PoolDataSourceImpl/HikariDataSource used in SharedPoolDataSourceOracle.initialize()
+    */
+
+    @Override
+    public int getInitialPoolSize() {
+        return isInitializing() ? super.getInitialPoolSize() : delegate.ds.getInitialPoolSize();
+    }
+
+    @Override
+    public void setInitialPoolSize​(int initialPoolSize) throws SQLException {
+        checkInitializing("setInitialPoolSize​");
+        super.setInitialPoolSize​(initialPoolSize);
+    }
+
+    @Override
+    public int getMinPoolSize() {
+        return isInitializing() ? super.getMinPoolSize() : delegate.ds.getMinPoolSize();
+    }
+    
+    @Override
+    public void setMinPoolSize​(int minPoolSize) throws SQLException {
+        checkInitializing("setMinPoolSize​");
+        super.setMinPoolSize​(minPoolSize);
+    }
+
+    @Override
+    public int getMaxPoolSize() {
+        return isInitializing() ? super.getMaxPoolSize() : delegate.ds.getMaxPoolSize();
+    }
+    
+    @Override
+    public void setMaxPoolSize​(int maxPoolSize) throws SQLException {
+        checkInitializing("setMaxPoolSize​");
+        super.setMaxPoolSize​(maxPoolSize);
+    }
+
+    @Override
+    public String getUser() {
+        return isInitializing() ? super.getUser() : delegate.ds.getUser();
+    }
+
+    @Override
+    public String getURL() {
+        return isInitializing() ? super.getURL() : delegate.ds.getURL();
+    }
+
+    @Override
+    public void setURL​(String url) throws SQLException {
+        checkInitializing("setURL​");
+        super.setURL​(url);
+    }
+
+    @Override
+    public String getConnectionFactoryClassName() {
+        return isInitializing() ? super.getConnectionFactoryClassName() : delegate.ds.getConnectionFactoryClassName();
+    }
+    
+    @Override
+    public void setConnectionFactoryClassName​(String factoryClassName) throws SQLException {
+        checkInitializing("setConnectionFactoryClassName​");
+        super.setConnectionFactoryClassName​(factoryClassName);
+    }
+
+    @Override
+    public boolean getValidateConnectionOnBorrow() {
+        return isInitializing() ? super.getValidateConnectionOnBorrow() : delegate.ds.getValidateConnectionOnBorrow();
+    }
+
+    @Override
+    public void setValidateConnectionOnBorrow(boolean validateConnectionOnBorrow) throws SQLException {
+        checkInitializing("setValidateConnectionOnBorrow");
+
+        if (SharedPoolDataSourceOracle.useConnectionLabelingCallback) {
+            super.setValidateConnectionOnBorrow(validateConnectionOnBorrow);
+        } else {
+            try {
+                // setValidateConnectionOnBorrow(false) is impossible otherwise we cannot use getSQLForValidateConnection/setSQLForValidateConnection
+                if (!validateConnectionOnBorrow) {
+                    throw new SQLFeatureNotSupportedException("setValidateConnectionOnBorrow(false)");            
+                }
+                super.setValidateConnectionOnBorrow(validateConnectionOnBorrow);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+    }        
+
+    @Override
+    public int getAbandonedConnectionTimeout() {
+        return isInitializing() ? super.getAbandonedConnectionTimeout() : delegate.ds.getAbandonedConnectionTimeout();
+    }
+
+    @Override
+    public void setAbandonedConnectionTimeout​(int abandonedConnectionTimeout) throws SQLException {
+        checkInitializing("setAbandonedConnectionTimeout​");
+        super.setAbandonedConnectionTimeout​(abandonedConnectionTimeout);
+    }
+
+    @Override
+    public int getTimeToLiveConnectionTimeout() {
+        return isInitializing() ? super.getTimeToLiveConnectionTimeout() : delegate.ds.getTimeToLiveConnectionTimeout();
+    }
+    
+    @Override
+    public void setTimeToLiveConnectionTimeout​(int timeToLiveConnectionTimeout) throws SQLException {
+        checkInitializing("setTimeToLiveConnectionTimeout​");
+        super.setTimeToLiveConnectionTimeout​(timeToLiveConnectionTimeout);
+    }
+
+    @Override
+    public int getInactiveConnectionTimeout() {
+        return isInitializing() ? super.getInactiveConnectionTimeout() : delegate.ds.getInactiveConnectionTimeout();
+    }
+
+    @Override
+    public void setInactiveConnectionTimeout​(int inactivityTimeout) throws SQLException {
+        checkInitializing("setInactiveConnectionTimeout​");
+        super.setInactiveConnectionTimeout​(inactivityTimeout);
+    }
+
+    /*
+    @Deprecated
+    @Override
+    public int getConnectionWaitTimeout​() {
+        return isInitializing() ? super.getConnectionWaitTimeout​() : delegate.ds.getConnectionWaitTimeout​();
+    }
+    */
+
+    /*
+    @Deprecated
+    @Override
+    public void setConnectionWaitTimeout​(int waitTimeout) throws SQLException {
+        checkInitializing("setConnectionWaitTimeout​");
+        super.setConnectionWaitTimeout​(waitTimeout);
+    }
+    */
+
+    @Override
+    public int getTimeoutCheckInterval() {
+        return isInitializing() ? super.getTimeoutCheckInterval() : delegate.ds.getTimeoutCheckInterval();
+    }
+
+    @Override
+    public void setTimeoutCheckInterval​(int timeInterval) throws SQLException {
+        checkInitializing("setTimeoutCheckInterval​");
+        super.setTimeoutCheckInterval​(timeInterval);
+    }
+
+    @Override
+    public int getMaxStatements() {
+        return isInitializing() ? super.getMaxStatements() : delegate.ds.getMaxStatements();
+    }
+    
+    @Override
+    public void setMaxStatements​(int maxStatements) throws SQLException {
+        checkInitializing("setMaxStatements​");
+        super.setMaxStatements​(maxStatements);
+    }
+
+    @Override
+    public long getMaxConnectionReuseTime() {
+        return isInitializing() ? super.getMaxConnectionReuseTime() : delegate.ds.getMaxConnectionReuseTime();
+    }
+
+    @Override
+    public void setMaxConnectionReuseTime​(long maxConnectionReuseTime) throws SQLException {
+        checkInitializing("setMaxConnectionReuseTime​");
+        super.setMaxConnectionReuseTime​(maxConnectionReuseTime);
+    }
+
+    @Override
+    public int getSecondsToTrustIdleConnection() {
+        return isInitializing() ? super.getSecondsToTrustIdleConnection() : delegate.ds.getSecondsToTrustIdleConnection();
+    }
+
+    @Override
+    public void setSecondsToTrustIdleConnection​(int secondsToTrustIdleConnection) throws SQLException {
+        checkInitializing("setSecondsToTrustIdleConnection​");
+        super.setSecondsToTrustIdleConnection​(secondsToTrustIdleConnection);
+    }
+
+    @Override
+    public int getConnectionValidationTimeout() {
+        return isInitializing() ? super.getConnectionValidationTimeout() : delegate.ds.getConnectionValidationTimeout();
+    }
+
+    @Override
+    public void setConnectionValidationTimeout​(int connectionValidationTimeout) throws SQLException {
+        checkInitializing("setConnectionValidationTimeout​");
+        super.setConnectionValidationTimeout​(connectionValidationTimeout);
+    }
+
+    @Override
+    public boolean getFastConnectionFailoverEnabled() {
+        return isInitializing() ? super.getFastConnectionFailoverEnabled() : delegate.ds.getFastConnectionFailoverEnabled();
+    }
+
+    @Override
+    public void setFastConnectionFailoverEnabled​(boolean failoverEnabled) throws SQLException {
+        checkInitializing("setFastConnectionFailoverEnabled​");
+        super.setFastConnectionFailoverEnabled​(failoverEnabled);
+    }
+
+    @Override
+    public int getMaxIdleTime() {
+        return isInitializing() ? super.getMaxIdleTime() : delegate.ds.getMaxIdleTime();
+    }
+
+    @Override
+    public void setMaxIdleTime​(int idleTime) throws SQLException {
+        checkInitializing("setMaxIdleTime​");
+        super.setMaxIdleTime​(idleTime);
+    }
+
+    @Override
+    public void setDataSourceName​(String dataSourceName) throws SQLException {
+        checkInitializing("setDataSourceName​");
+        super.setDataSourceName​(dataSourceName);
+    }
+
+    @Override
+    public String getDataSourceName() {
+        return isInitializing() ? super.getDataSourceName() : delegate.ds.getDataSourceName();
+    }
+
+    @Override
+    public int getQueryTimeout() {
+        return isInitializing() ? super.getQueryTimeout() : delegate.ds.getQueryTimeout();
+    }
+    
+    @Override
+    public void setQueryTimeout​(int queryTimeout) throws SQLException {
+        checkInitializing("setQueryTimeout​");
+        super.setQueryTimeout​(queryTimeout);
+    }
+
+    @Override
+    public String getONSConfiguration() {
+        return isInitializing() ? super.getONSConfiguration() : delegate.ds.getONSConfiguration();
+    }
+    
+    @Override
+    public void setONSConfiguration​(String onsConfigStr) {
+        checkInitializing("setONSConfiguration​");
+        super.setONSConfiguration​(onsConfigStr);
+    }
+
+    @Override
+    public int getMaxConnectionReuseCount() {
+        return isInitializing() ? super.getMaxConnectionReuseCount() : delegate.ds.getMaxConnectionReuseCount();
+    }
+
+    @Override
+    public void setMaxConnectionReuseCount​(int maxConnectionReuseCount) throws SQLException {
+        checkInitializing("setMaxConnectionReuseCount​");
+        super.setMaxConnectionReuseCount​(maxConnectionReuseCount);
+    }
     
     /*
-     * Constructor
-     */
-
-    public SmartPoolDataSourceOracle() {
-        super(SimplePoolDataSourceOracle::new);
-    }
-
-    public SmartPoolDataSourceOracle(@NonNull final PoolDataSourceConfigurationOracle poolDataSourceConfigurationOracle) {
-        // configuration is supposed to be set completely
-        super(SimplePoolDataSourceOracle::new, poolDataSourceConfigurationOracle);
-    }
-
-    public SmartPoolDataSourceOracle(String url,
-                                     String username,
-                                     String password,
-                                     String type)
-    {
-        this(PoolDataSourceConfigurationOracle.build(url,
-                                                     username,
-                                                     password,
-                                                     type != null ? type : SmartPoolDataSourceOracle.class.getName()));
-    }
-
-    public SmartPoolDataSourceOracle(String url,
-                                     String username,
-                                     String password,
-                                     String type,
-                                     String connectionPoolName,
-                                     int initialPoolSize,
-                                     int minPoolSize,
-                                     int maxPoolSize,
-                                     String connectionFactoryClassName,
-                                     boolean validateConnectionOnBorrow,
-                                     int abandonedConnectionTimeout,
-                                     int timeToLiveConnectionTimeout,
-                                     int inactiveConnectionTimeout,
-                                     int timeoutCheckInterval,
-                                     int maxStatements,
-                                     long connectionWaitDurationInMillis,
-                                     long maxConnectionReuseTime,
-                                     int secondsToTrustIdleConnection,
-                                     int connectionValidationTimeout)
-    {
-        this(PoolDataSourceConfigurationOracle.build(url,
-                                                     username,
-                                                     password,
-                                                     // cannot reference this before supertype constructor has been called,
-                                                     // hence can not use this in constructor above
-                                                     type != null ? type : SmartPoolDataSourceOracle.class.getName(),
-                                                     connectionPoolName,
-                                                     initialPoolSize,
-                                                     minPoolSize,
-                                                     maxPoolSize,
-                                                     connectionFactoryClassName,
-                                                     validateConnectionOnBorrow,
-                                                     abandonedConnectionTimeout,
-                                                     timeToLiveConnectionTimeout,
-                                                     inactiveConnectionTimeout,
-                                                     timeoutCheckInterval,
-                                                     maxStatements,
-                                                     connectionWaitDurationInMillis,
-                                                     maxConnectionReuseTime,
-                                                     secondsToTrustIdleConnection,
-                                                     connectionValidationTimeout));
-    }
-
-    protected interface ToOverrideOracle extends ToOverride {
-        long getConnectionWaitDurationInMillis(); // may add the overflow
-
-        void setConnectionWaitDurationInMillis(long connectionWaitDurationInMillis) /*throws SQLException*/; // check for minimum
-
-        int getBorrowedConnectionsCount();
-        
-        int getAvailableConnectionsCount();
-    }
-
-    // setXXX methods only (getPoolDataSourceSetter() may return different values depending on state hence use a function)
-    @Delegate(types=PoolDataSourcePropertiesSettersOracle.class, excludes=ToOverrideOracle.class)
-    private PoolDataSourcePropertiesSettersOracle getPoolDataSourceSetter() {
-        try {
-            switch (getState()) {
-            case INITIALIZING:
-                return getPoolDataSource();
-            case CLOSED:
-                throw new IllegalStateException("You can not use the pool once it is closed.");
-            default:
-                throw new IllegalStateException("The configuration of the pool is sealed once initialized or started.");
-            }
-        } catch (IllegalStateException ex) {
-            log.error("Exception in getPoolDataSourceSetter():", ex);
-            throw ex;
-        }
-    }
-
-    // getXXX methods only (getPoolDataSourceGetter() may return different values depending on state hence use a function)
-    @Delegate(types=PoolDataSourcePropertiesGettersOracle.class, excludes=ToOverrideOracle.class)
-    private PoolDataSourcePropertiesGettersOracle getPoolDataSourceGetter() {
-        try {
-            switch (getState()) {
-            case CLOSED:
-                throw new IllegalStateException("You can not use the pool once it is closed.");
-            default:
-                return getPoolDataSource();
-            }
-        } catch (IllegalStateException ex) {
-            log.error("Exception in getPoolDataSourceGetter():", ex);
-            throw ex;
-        }
-    }
+    // Other overridden methods from PoolDataSourceImpl
+    */
     
-    // no getXXX() nor setXXX(), just the rest (getPoolDataSource() may return different values depending on state hence use a function)
-    @Delegate(excludes={ PoolDataSourcePropertiesSettersOracle.class, PoolDataSourcePropertiesGettersOracle.class, ToOverrideOracle.class })
     @Override
-    protected final SimplePoolDataSourceOracle getPoolDataSource() {
-        return super.getPoolDataSource();
-    }
-
-    // methods defined in interface ToOverrideOracle
-    
-    public PoolDataSourceConfiguration get() {
-        return PoolDataSourceConfigurationOracle
-            .builder()
-            .driverClassName(null)
-            .url(getURL())
-            .username(getUsername())
-            .password(null) // do not copy password
-            .type(this.getClass().getName())
-            .connectionPoolName(null) // do not copy pool name
-            .initialPoolSize(getInitialPoolSize())
-            .minPoolSize(getMinPoolSize())
-            .maxPoolSize(getMaxPoolSize())
-            .connectionFactoryClassName(getConnectionFactoryClassName())
-            .validateConnectionOnBorrow(getValidateConnectionOnBorrow())
-            .abandonedConnectionTimeout(getAbandonedConnectionTimeout())
-            .timeToLiveConnectionTimeout(getTimeToLiveConnectionTimeout())
-            .inactiveConnectionTimeout(getInactiveConnectionTimeout())
-            .timeoutCheckInterval(getTimeoutCheckInterval())
-            .maxStatements(getMaxStatements())
-            .connectionWaitDurationInMillis(getConnectionWaitDurationInMillis())
-            .maxConnectionReuseTime(getMaxConnectionReuseTime())
-            .secondsToTrustIdleConnection(getSecondsToTrustIdleConnection())
-            .connectionValidationTimeout(getConnectionValidationTimeout())
-            .build();
-    }
-
-    public long getConnectionWaitDurationInMillis() {
-        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
-        SimplePoolDataSourceOracle poolDataSourceOverflow;
-
-        if (getState() == State.INITIALIZING || getState() == State.INITIALIZED || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
-            return poolDataSource.getConnectionWaitDurationInMillis();
-        } else {
-            return poolDataSource.getConnectionWaitDurationInMillis() + poolDataSourceOverflow.getConnectionWaitDurationInMillis();
-        }
-    }
-
-    public void setConnectionWaitDurationInMillis(long connectionWaitDurationInMillis) throws SQLException {
-        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
-        
-        if (connectionWaitDurationInMillis < 2 * MIN_CONNECTION_TIMEOUT) { // both pools must have at least this minimum
-            // if we subtract we will get an invalid value (less than minimum)
-            throw new IllegalArgumentException(String.format("The connection wait duration in milliseconds (%d) must be at least %d.",
-                                                             connectionWaitDurationInMillis,
-                                                             2 * MIN_CONNECTION_TIMEOUT));
-        }
-        poolDataSource.setConnectionWaitDurationInMillis(connectionWaitDurationInMillis);
-    }
-
-    public int getBorrowedConnectionsCount() {
-        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
-        SimplePoolDataSourceOracle poolDataSourceOverflow;
-
-        if (getState() == State.INITIALIZING || getState() == State.INITIALIZED || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
-            return poolDataSource.getBorrowedConnectionsCount();
-        } else {
-            return poolDataSource.getBorrowedConnectionsCount() + poolDataSourceOverflow.getBorrowedConnectionsCount();
-        }
-    }
-        
-    public int getAvailableConnectionsCount() {
-        final SimplePoolDataSourceOracle poolDataSource = getPoolDataSource();
-        SimplePoolDataSourceOracle poolDataSourceOverflow;
-
-        if (getState() == State.INITIALIZING || getState() == State.INITIALIZED || (poolDataSourceOverflow = getPoolDataSourceOverflow()) == null) {
-            return poolDataSource.getAvailableConnectionsCount();
-        } else {
-            return poolDataSource.getAvailableConnectionsCount() + poolDataSourceOverflow.getAvailableConnectionsCount();
-        }
-    }
-
-    protected boolean getConnectionFailsDueToNoIdleConnections(final Exception ex) {
-        return (ex instanceof SQLException) && ex.getMessage().matches(REX_CONNECTION_TIMEOUT);
+    public Connection getConnection() throws SQLException {
+        return delegate.getConnection();
     }
 
     @Override
-    protected Connection getConnection(final boolean useOverflow,
-                                       final SimplePoolDataSourceOracle poolDataSource,
-                                       final SimplePoolDataSourceOracle poolDataSourceOverflow) throws SQLException {
-        final Connection conn = super.getConnection(useOverflow, poolDataSource, poolDataSourceOverflow);
+    public Connection getConnection(Properties labels) throws SQLException {
+        try {
+            throw new SQLFeatureNotSupportedException("getConnection");            
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public Connection getConnection(String username, String password) throws SQLException {
+        return delegate.getConnection(username, password);
+    }
+
+    @Override
+    public Connection getConnection(String username, String password, Properties labels) throws SQLException {
+        try {
+            throw new SQLFeatureNotSupportedException("getConnection");            
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+    
+    @Override
+    public PrintWriter getLogWriter() throws SQLException {
+        return isInitializing() ? super.getLogWriter() : delegate.ds.getLogWriter();
+    }
+
+    @Override
+    public void setLogWriter(PrintWriter out) throws SQLException {
+        checkInitializing("setLogWriter");
+        super.setLogWriter(out);
+    }
+
+    @Override
+    public Logger getParentLogger() {
+        try {
+            return isInitializing() ? super.getParentLogger() : delegate.ds.getParentLogger();
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public <T> T unwrap(Class<T> iface) throws SQLException {
+        return isInitializing() ? super.unwrap(iface) : delegate.ds.unwrap(iface);
+    }
+
+    @Override
+    public boolean isWrapperFor(Class<?> iface) throws SQLException {
+        return isInitializing() ? super.isWrapperFor(iface) : delegate.ds.isWrapperFor(iface);
+    }
+
+    @Override
+    public String getSQLForValidateConnection() {
+        if (SharedPoolDataSourceOracle.useConnectionLabelingCallback) {
+            return isInitializing() ? super.getSQLForValidateConnection() : delegate.ds.getSQLForValidateConnection();
+        } else {
+            return getSQLAlterSessionSetCurrentSchema();
+        }
+    }
+
+    @Override
+    public void setSQLForValidateConnection(String SQLstring) throws SQLException {
+        checkInitializing("setSQLForValidateConnection");
+
+        if (SharedPoolDataSourceOracle.useConnectionLabelingCallback) {
+            super.setSQLForValidateConnection(SQLstring);
+        } else {
+            try {
+                // since getSQLForValidateConnection is overridden it does not make sense to set it
+                throw new SQLFeatureNotSupportedException("setSQLForValidateConnection");            
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+    }
+
+    @Override
+    public void setPassword(String password) throws SQLException {
+        checkInitializing("setPassword");
+
+        // Here we will set both the super and the delegate password so that the overridden getConnection() will always use
+        // the same password no matter where it comes from.
+
+        super.setPassword(password);
+        delegate.ds.setPassword(password);
+    }
+
+    @Override
+    public void setUser(String username) throws SQLException {
+        checkInitializing("setUser");
+
+        // Here we will set both the super and the delegate username so that the overridden getConnection() will always use
+        // the same password no matter where it comes from.
+        var connectInfo = determineProxyUsernameAndCurrentDSchema(username);
+        
+        synchronized(this) {
+            currentSchema = connectInfo[1];
+        }
+
+        if (!SharedPoolDataSourceOracle.useConnectionLabelingCallback) {
+            setValidateConnectionOnBorrow(true); // must be used in combination with setSQLForValidateConnection()
+        }
             
-        if (useOverflow && !isOverflowStatic()) {
-            // The setInvalid method of the ValidConnection interface
-            // indicates that a connection should be removed from the connection pool when it is closed. 
-            ((ValidConnection) conn).setInvalid();
-        }
+        super.setUser(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
+        delegate.ds.setUser(connectInfo[0] != null ? connectInfo[0] : connectInfo[1]);
 
-        return conn;
+        // Add this object here (setUsername() should always be called) and
+        // not in the constructor to prevent a this escape warning in the constructor.
+        delegate.add(this);
+    }
+
+    /*
+      public final void setTokenSupplier​(Supplier<? extends AccessToken> tokenSupplier) throws SQLException;
+    */
+    
+    /*
+    // Interface ConnectInfo
+    */
+    public String getCurrentSchema() {
+        return currentSchema;
+    }
+
+    /*
+    // Interface Closeable
+    */
+    public void close() {
+        delegate.remove(this);
+    }
+
+    /*
+    // Start of interface StatePoolDataSource
+    */
+    
+    public boolean isInitializing() {
+        return delegate.isInitializing();
+    }
+
+    public boolean hasInitializationError() {
+        return delegate.hasInitializationError();
+    }    
+    
+    public boolean isOpen() {
+        return delegate.members.contains(this) && ( delegate.isOpen() || delegate.isClosing() );
+    }
+
+    public boolean isClosed() {
+        return !delegate.members.contains(this) && ( delegate.isClosing() || delegate.isClosed() );
+    }
+
+    /*
+    // End of interface StatePoolDataSource
+    */
+
+    /*
+    // Interface StatisticsPoolDataSource
+    */
+
+    @Override
+    public int getBorrowedConnectionsCount() /*throws SQLException*/ {
+        return delegate.ds.getBorrowedConnectionsCount();
+    }
+
+    public int getActiveConnections() {
+        return getBorrowedConnectionsCount();
+    }
+    
+    @Override
+    public int getAvailableConnectionsCount() /*throws SQLException*/ {
+        return delegate.ds.getAvailableConnectionsCount();
+    }
+
+    public int getIdleConnections() {
+        return getAvailableConnectionsCount();
+    }
+    
+    /*
+    // Unsupported operations
+    */
+    
+    @Override
+    public void registerConnectionCreationConsumer(Consumer<ConnectionCreationInformation> consumer) {
+        try {
+            throw new SQLFeatureNotSupportedException("registerConnectionCreationConsumer");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     @Override
-    protected void initializeOverflowPool(final PoolDataSourceConfiguration poolDataSourceConfiguration,
-                                          final int maxPoolSizeOverflow) throws SQLException {
-        super.initializeOverflowPool(poolDataSourceConfiguration, maxPoolSizeOverflow);
+    public void unregisterConnectionCreationConsumer() {
+        try {
+            throw new SQLFeatureNotSupportedException("unregisterConnectionCreationConsumer");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
 
-        final SimplePoolDataSourceOracle poolDataSourceOverflow = getPoolDataSourceOverflow();
-  
-        poolDataSourceOverflow.setConnectionTimeout(poolDataSourceOverflow.getConnectionTimeout() - getMinConnectionTimeout());
+    @Override
+    public Consumer<ConnectionCreationInformation> getConnectionCreationConsumer() {
+        try {
+            throw new SQLFeatureNotSupportedException("ConnectionCreationInformation> getConnectionCreationConsumer");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
 
-        if (isOverflowStatic()) {
-            poolDataSourceOverflow.setInitialPoolSize(0); // do not start with a pool full of default connections
-            poolDataSourceOverflow.setMinPoolSize(maxPoolSizeOverflow);
-        } else {      
-            // settings to keep the overflow pool data source as empty as possible
-            poolDataSourceOverflow.setInitialPoolSize(0);                
-            poolDataSourceOverflow.setMinPoolSize(0);
+    @Override
+    public OracleShardingKeyBuilder createShardingKeyBuilder() {
+        try {
+            throw new SQLFeatureNotSupportedException("createShardingKeyBuilder");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setPropertyCycle(int paramInt) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setPropertyCycle");
+    }
+
+    @Override
+    public int getPropertyCycle() {
+        try {
+            throw new SQLFeatureNotSupportedException("getPropertyCycle");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setServerName(String paramString) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setServerName");
+    }
+
+    @Override
+    public String getServerName() {
+        try {
+            throw new SQLFeatureNotSupportedException("getServerName");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setPortNumber(int paramInt) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setPortNumber");
+    }
+
+    @Override
+    public int getPortNumber() {
+        try {
+            throw new SQLFeatureNotSupportedException("getPortNumber");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setDatabaseName(String paramString) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setDatabaseName");
+    }
+
+    @Override
+    public String getDatabaseName() {
+        try {
+            throw new SQLFeatureNotSupportedException("getDatabaseName");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setDescription(String paramString) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setDescription");
+    }
+
+    @Override
+    public String getDescription() {
+        try {
+            throw new SQLFeatureNotSupportedException("getDescription");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setNetworkProtocol(String paramString) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setNetworkProtocol");
+    }
+
+    @Override
+    public String getNetworkProtocol() {
+        try {
+            throw new SQLFeatureNotSupportedException("getNetworkProtocol");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setRoleName(String paramString) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setRoleName");
+    }
+
+    @Override
+    public String getRoleName() {
+        try {
+            throw new SQLFeatureNotSupportedException("getRoleName");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public int getConnectionHarvestTriggerCount() {
+        try {
+            throw new SQLFeatureNotSupportedException("getConnectionHarvestTriggerCount");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setConnectionHarvestTriggerCount(int paramInt) throws SQLException {
+        try {
+            throw new SQLFeatureNotSupportedException("setConnectionHarvestTriggerCount");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public int getConnectionHarvestMaxCount() {
+        try {
+            throw new SQLFeatureNotSupportedException("getConnectionHarvestMaxCount");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setConnectionHarvestMaxCount(int paramInt) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setConnectionHarvestMaxCount");
+    }
+
+    @Override
+    public void registerConnectionLabelingCallback(ConnectionLabelingCallback paramConnectionLabelingCallback) throws SQLException {
+        throw new SQLFeatureNotSupportedException("registerConnectionLabelingCallback");
+    }
+
+    @Override
+    public void removeConnectionLabelingCallback() throws SQLException {
+        throw new SQLFeatureNotSupportedException("removeConnectionLabelingCallback");
+    }
+
+    @Override
+    public void registerConnectionAffinityCallback(ConnectionAffinityCallback paramConnectionAffinityCallback) throws SQLException {
+        throw new SQLFeatureNotSupportedException("registerConnectionAffinityCallback");
+    }
+
+    @Override
+    public void removeConnectionAffinityCallback() throws SQLException {
+        throw new SQLFeatureNotSupportedException("removeConnectionAffinityCallback");
+    }
+
+    @Override
+    public Properties getConnectionProperties() {
+        try {
+            throw new SQLFeatureNotSupportedException("getConnectionProperties");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public String getConnectionProperty(String paramString) {
+        try {
+            throw new SQLFeatureNotSupportedException("getConnectionProperty");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setConnectionProperty(String paramString1, String paramString2) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setConnectionProperty");
+    }
+
+    @Override
+    public void setConnectionProperties(Properties paramProperties) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setConnectionProperties");
+    }
+
+    @Override
+    public Properties getConnectionFactoryProperties() {
+        try {
+            throw new SQLFeatureNotSupportedException("getConnectionFactoryProperties");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public String getConnectionFactoryProperty(String paramString) {
+        try {
+            throw new SQLFeatureNotSupportedException("getConnectionFactoryProperty");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setConnectionFactoryProperty(String paramString1, String paramString2) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setConnectionFactoryProperty");
+    }
+
+    @Override
+    public void setConnectionFactoryProperties(Properties paramProperties) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setConnectionFactoryProperties");
+    }
+
+    @Override
+    public JDBCConnectionPoolStatistics getStatistics() {
+        try {
+            throw new SQLFeatureNotSupportedException("getStatistics");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void registerConnectionInitializationCallback(ConnectionInitializationCallback paramConnectionInitializationCallback) throws SQLException {
+        throw new SQLFeatureNotSupportedException("registerConnectionInitializationCallback");
+    }
+
+    @Override
+    public void unregisterConnectionInitializationCallback() throws SQLException {
+        throw new SQLFeatureNotSupportedException("unregisterConnectionInitializationCallback");
+    }
+
+    @Override
+    public ConnectionInitializationCallback getConnectionInitializationCallback() {
+        try {
+            throw new SQLFeatureNotSupportedException("getConnectionInitializationCallback");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public int getConnectionLabelingHighCost() {
+        try {
+            throw new SQLFeatureNotSupportedException("getConnectionLabelingHighCost");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setConnectionLabelingHighCost(int paramInt) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setConnectionLabelingHighCost");
+    }
+
+    @Override
+    public int getHighCostConnectionReuseThreshold() {
+        try {
+            throw new SQLFeatureNotSupportedException("getHighCostConnectionReuseThreshold");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setHighCostConnectionReuseThreshold(int paramInt) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setHighCostConnectionReuseThreshold");
+    }
+
+    @Override
+    public UCPConnectionBuilder createConnectionBuilder() {
+        try {
+            throw new SQLFeatureNotSupportedException("createConnectionBuilder");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public int getConnectionRepurposeThreshold() {
+        try {
+            throw new SQLFeatureNotSupportedException("getConnectionRepurposeThreshold");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setConnectionRepurposeThreshold(int paramInt) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setConnectionRepurposeThreshold");
+    }
+
+    @Override
+    public Properties getPdbRoles() {
+        try {
+            throw new SQLFeatureNotSupportedException("getPdbRoles");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public String getServiceName() {
+        try {
+            throw new SQLFeatureNotSupportedException("getServiceName");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void reconfigureDataSource(Properties paramProperties) throws SQLException {
+        throw new SQLFeatureNotSupportedException("reconfigureDataSource");
+    }
+
+    @Override
+    public int getMaxConnectionsPerService() {
+        try {
+            throw new SQLFeatureNotSupportedException("getMaxConnectionsPerService");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public int getMaxConnectionsPerShard() {
+        try {
+            throw new SQLFeatureNotSupportedException("getMaxConnectionsPerShard");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setMaxConnectionsPerShard(int paramInt) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setMaxConnectionsPerShard");
+    }
+
+    @Override
+    public void setShardingMode(boolean paramBoolean) throws SQLException {
+        throw new SQLFeatureNotSupportedException("setShardingMode");
+    }
+
+    @Override
+    public boolean getShardingMode() {
+        try {
+            throw new SQLFeatureNotSupportedException("getShardingMode");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setSSLContext(SSLContext paramSSLContext) {
+        try {
+            throw new SQLFeatureNotSupportedException("setSSLContext");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    public void setHostnameResolver(HostnameResolver paramHostnameResolver) {
+        try {
+            throw new SQLFeatureNotSupportedException("setHostnameResolver");
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
         }
     }
 }

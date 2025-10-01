@@ -87,6 +87,28 @@ Purge the Flyway table:
 
 **/
 
+procedure check_object_valid
+( p_object_type in all_objects.object_type%type -- The object type (TYPE, PACKAGE, ...), case insensitive
+, p_object_name in all_objects.object_name%type -- The object name, case insensitive
+, p_owner in all_objects.owner%type default user -- The owner, case insensitive
+);
+/**
+Check whether a database object is valid with a query like this:
+
+```
+select  count(*)
+from    all_objects obj
+where   obj.owner in (p_owner, upper(p_owner))
+and     obj.object_type in (p_object_type, upper(p_object_type))
+and     obj.object_name in (p_object_name, upper(p_object_name))
+and     obj.status = 'VALID'
+```
+
+If the count is not 1, raise_application_error(-20000, ...) is called with an appropriate error message.
+
+Can be used in incremental scripts that create a package or type specification but where the specification may not be valid.
+**/
+
 end cfg_install_pkg;
 /
 

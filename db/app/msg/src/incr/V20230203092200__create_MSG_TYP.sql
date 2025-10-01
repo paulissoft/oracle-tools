@@ -145,7 +145,20 @@ MSG_AQ_PKG.ENQUEUE(self, ...);
   ( self in msg_typ
   )
   return clob
-/** Get the pretty printed JSON representation of a message (or one of its sub types). **/
+/**
+Get the pretty printed JSON representation of a message (or one of its sub types).
+It includes data (the result of serialize()) and
+certain (deterministic) functions (static functions without parameter or member functions depending just on self) like:
+
+- get_type
+- lob_attribute_list
+- may_have_not_null_lob
+- has_not_null_lob
+- default_processing_method
+
+Every time a sub type adds an interesting (deterministic) function,
+this method should be overridden.
+**/
   
 , final
   member procedure print

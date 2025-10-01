@@ -1,8 +1,10 @@
 # OCI client interface
 
-Based on the following articles:
+Based on the following links:
 - [Create and use an Oracle Autonomous Cloud Database from the Command Line](https://learncodeshare.net/2020/04/06/create-and-use-an-oracle-autonomous-cloud-database-from-the-command-line/)
 - [Install and Configure the Oracle Cloud Command Line Interface](https://learncodeshare.net/2020/03/06/install-and-configure-the-oracle-cloud-command-line-interface/)
+- [Completely cleaning up the contents of an OCI compartment](https://www.ateam-oracle.com/post/cleanup-an-oci-compartment)
+- [ociextirpater](https://github.com/therealcmj/ociextirpater)
 
 The scripts in this directory allow you to automatically:
 - download the wallet for connecting to an autonomous database

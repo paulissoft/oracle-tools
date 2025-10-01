@@ -1,7 +1,7 @@
-/* perl generate_ddl.pl (version 2023-01-05) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --strip-source-schema */
+/* perl generate_ddl.pl (version 2024-12-07) --nodynamic-sql --force-view --group-constraints --skip-install-sql --source-schema=ORACLE_TOOLS --strip-source-schema */
 
 /*
--- JDBC url - username : jdbc:oracle:thin:@//127.0.0.1:1521/freepdb1 - BC_PROXY[ORACLE_TOOLS]
+-- JDBC url - username : jdbc:oracle:thin:@knpv_dev - KNPV_PROXY[ORACLE_TOOLS]
 -- source schema       : 
 -- source database link: 
 -- target schema       : ORACLE_TOOLS
@@ -46,37 +46,37 @@ REVOKE EXECUTE ON "DATA_BR_PKG" FROM "PUBLIC";
 call dbms_application_info.set_action('SQL statement 7');
 REVOKE EXECUTE ON "DATA_API_PKG" FROM "PUBLIC";
 
-/* SQL statement 8 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_TABLE_MGMT_PKG;;;;;;;;2) */
+/* SQL statement 8 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_SQL_PKG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 8');
-DROP PACKAGE BODY DATA_TABLE_MGMT_PKG;
-
-/* SQL statement 9 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_SQL_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 9');
 DROP PACKAGE BODY DATA_SQL_PKG;
 
-/* SQL statement 10 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_PARTITIONING_PKG;;;;;;;;2) */
+/* SQL statement 9 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_API_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 9');
+DROP PACKAGE BODY DATA_API_PKG;
+
+/* SQL statement 10 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_TABLE_MGMT_PKG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 10');
-DROP PACKAGE BODY DATA_PARTITIONING_PKG;
+DROP PACKAGE BODY DATA_TABLE_MGMT_PKG;
 
 /* SQL statement 11 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_BR_PKG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 11');
 DROP PACKAGE BODY DATA_BR_PKG;
 
-/* SQL statement 12 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_API_PKG;;;;;;;;2) */
+/* SQL statement 12 (DROP;ORACLE_TOOLS;PACKAGE_BODY;DATA_PARTITIONING_PKG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 12');
-DROP PACKAGE BODY DATA_API_PKG;
+DROP PACKAGE BODY DATA_PARTITIONING_PKG;
 
-/* SQL statement 13 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_SQL_PKG;;;;;;;;2) */
+/* SQL statement 13 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_TABLE_MGMT_PKG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 13');
+DROP PACKAGE DATA_TABLE_MGMT_PKG;
+
+/* SQL statement 14 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_SQL_PKG;;;;;;;;2) */
+call dbms_application_info.set_action('SQL statement 14');
 DROP PACKAGE DATA_SQL_PKG;
 
-/* SQL statement 14 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_PARTITIONING_PKG;;;;;;;;2) */
-call dbms_application_info.set_action('SQL statement 14');
-DROP PACKAGE DATA_PARTITIONING_PKG;
-
-/* SQL statement 15 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_TABLE_MGMT_PKG;;;;;;;;2) */
+/* SQL statement 15 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_PARTITIONING_PKG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 15');
-DROP PACKAGE DATA_TABLE_MGMT_PKG;
+DROP PACKAGE DATA_PARTITIONING_PKG;
 
 /* SQL statement 16 (DROP;ORACLE_TOOLS;PACKAGE_SPEC;DATA_BR_PKG;;;;;;;;2) */
 call dbms_application_info.set_action('SQL statement 16');

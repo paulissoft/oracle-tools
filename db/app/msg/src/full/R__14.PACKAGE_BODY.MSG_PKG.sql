@@ -54,9 +54,14 @@ is
   l_msg_tab msg_tab_t := msg_tab_t();
   l_statement varchar2(32767 byte);
 begin
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.GET_MSG_TAB');
+$end
+
   for r in
   ( select  ut.type_name
     ,       ut.supertype_name
+    ,       ut.instantiable
     from    user_types ut
     connect by prior
             ut.type_name = ut.supertype_name and ut.supertype_owner = $$PLSQL_UNIT_OWNER -- GJP 2023-03-29 do not use USER
@@ -64,7 +69,16 @@ begin
             ut.type_name = 'MSG_TYP'
   )
   loop
-    if r.supertype_name is not null
+$if oracle_tools.cfg_pkg.c_debugging $then
+    dbug.print
+    ( dbug."info"
+    , 'r.type_name: %s; r.supertype_name: %s; r.instantiable: %s'
+    , r.type_name
+    , r.supertype_name
+    , r.instantiable
+    );
+$end
+    if r.supertype_name is not null and r.instantiable = 'YES'
     then
       l_msg_tab.extend(1);
 
@@ -72,14 +86,14 @@ begin
 
       begin
         execute immediate l_statement using out l_msg_tab(l_msg_tab.last);
-$if oracle_tools.cfg_pkg.c_debugging $then
       exception
         when others
         then
+$if oracle_tools.cfg_pkg.c_debugging $then
           dbug.print(dbug."error", 'statement: %s', l_statement);
           dbug.on_error;
-          raise;
 $end
+          raise_application_error(-20000, 'Could not create instance of type "' || r.type_name || '"', true);
       end;
     end if;
   end loop;
@@ -90,6 +104,15 @@ $end
   end if;
 
   return l_msg_tab;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end get_msg_tab;
 
 procedure process_msg

@@ -23,12 +23,12 @@ return item_tab_t pipelined
 is
 /*
 ORA-14552: cannot perform a DDL, commit or rollback inside a query or DML 
-ORA-06512: at "ORACLE_TOOLS.UI_APEX_EXPORT_PKG", line 57
+ORA-06512: at "UI_APEX_EXPORT_PKG", line 57
 ORA-06512: at "APEX_240100.WWV_FLOW_SECURITY", line 2142
 ORA-06512: at "APEX_240100.WWV_FLOW_EXPORT_API", line 197
 ORA-01453: SET TRANSACTION must be first statement of transaction
 ORA-06512: at "APEX_240100.WWV_FLOW_EXPORT_API", line 70
-ORA-06512: at "ORACLE_TOOLS.UI_APEX_EXPORT_PKG", line 31
+ORA-06512: at "UI_APEX_EXPORT_PKG", line 31
 */
 
   pragma autonomous_transaction;

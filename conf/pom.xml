@@ -108,11 +108,12 @@
       <!-- https://blogs.oracle.com/developers/post/your-own-way%E2%80%8A-%E2%80%8Aoracle-jdbc-drivers-19700-on-maven%C2%A0central -->
       <!-- https://www.oracle.com/database/technologies/maven-central-guide.html -->
       <dependency>
-        <groupId>${ojdbc.groupId}</groupId>
-        <artifactId>${ojdbc.artifactId}</artifactId>
-        <version>${ojdbc.version}</version>
-        <type>${ojdbc.type}</type>
-     </dependency>
+        <groupId>${ojdbc-bom.groupId}</groupId>
+        <artifactId>${ojdbc-bom.artifactId}</artifactId>
+        <version>${ojdbc-bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -120,7 +121,19 @@
     <dependency>
       <groupId>${ojdbc.groupId}</groupId>
       <artifactId>${ojdbc.artifactId}</artifactId>
-      <type>${ojdbc.type}</type>
+      <version>${ojdbc.version}</version>
+      <type>pom</type>
+    </dependency>
+    <!-- Oracle wallets -->
+    <dependency>
+      <groupId>${osdt_core.groupId}</groupId>
+      <artifactId>${osdt_core.artifactId}</artifactId>
+      <version>${osdt_core.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${osdt_cert.groupId}</groupId>
+      <artifactId>${osdt_cert.artifactId}</artifactId>
+      <version>${osdt_cert.version}</version>
     </dependency>
   </dependencies>
 
@@ -347,6 +360,7 @@
                     <isset property="db.proxy.username"/>
                   </condition>
                   <property name="db.userid" value="${db.username}/${db.password}@${db.connect.identifier}" />
+                  <property name="db.userid.without.password" value="${db.username}@${db.connect.identifier}" />
 
                   <!-- set utplsql properties -->
                   <property name="dbUrl" value="${db.url}" />

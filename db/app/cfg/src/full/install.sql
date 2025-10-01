@@ -10,12 +10,12 @@ whenever sqlerror exit failure
 set define off sqlblanklines on
 ALTER SESSION SET PLSQL_WARNINGS = 'ENABLE:ALL';
 
-prompt @@R__09.PACKAGE_SPEC.CFG_PKG.sql
-@@R__09.PACKAGE_SPEC.CFG_PKG.sql
-show errors PACKAGE "CFG_PKG"
 prompt @@R__09.PACKAGE_SPEC.CFG_INSTALL_PKG.sql
 @@R__09.PACKAGE_SPEC.CFG_INSTALL_PKG.sql
 show errors PACKAGE "CFG_INSTALL_PKG"
+prompt @@R__09.PACKAGE_SPEC.CFG_PKG.sql
+@@R__09.PACKAGE_SPEC.CFG_PKG.sql
+show errors PACKAGE "CFG_PKG"
 prompt @@R__09.PACKAGE_SPEC.UT_CODE_CHECK_PKG.sql
 @@R__09.PACKAGE_SPEC.UT_CODE_CHECK_PKG.sql
 show errors PACKAGE "UT_CODE_CHECK_PKG"

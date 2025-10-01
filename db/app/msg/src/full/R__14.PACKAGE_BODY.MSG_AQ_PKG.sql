@@ -131,6 +131,11 @@ begin
   , p_retention_time => p_retention_time
   );
   commit;
+exception
+  when others
+  then
+    rollback;
+    raise;
 end create_queue_at;
 
 procedure start_queue_at
@@ -143,6 +148,11 @@ begin
   ( p_queue_name => p_queue_name
   );
   commit;
+exception
+  when others
+  then
+    rollback;
+    raise;
 end start_queue_at;
 
 procedure add_subscriber_at
@@ -161,6 +171,11 @@ begin
   , p_delivery_mode => p_delivery_mode
   );
   commit;
+exception
+  when others
+  then
+    rollback;
+    raise;
 end add_subscriber_at;  
 
 procedure remove_subscriber_at
@@ -175,6 +190,11 @@ begin
   , p_subscriber => p_subscriber
   );
   commit;
+exception
+  when others
+  then
+    rollback;
+    raise;
 end remove_subscriber_at;  
 
 procedure register_at
@@ -191,6 +211,11 @@ begin
   , p_plsql_callback => p_plsql_callback
   );
   commit;
+exception
+  when others
+  then
+    rollback;
+    raise;
 end register_at;  
 
 procedure unregister_at
@@ -207,6 +232,11 @@ begin
   , p_plsql_callback => p_plsql_callback
   );
   commit;
+exception
+  when others
+  then
+    rollback;
+    raise;
 end unregister_at;  
 
 procedure execute_immediate
@@ -871,12 +901,16 @@ $end
     end if;
   end loop;
 
+  commit;
+
 $if msg_aq_pkg.c_debugging >= 1 $then
   dbug.leave;
 $end
 exception
   when e_dequeue_timeout
   then
+    rollback;
+    
 $if msg_aq_pkg.c_debugging >= 1 $then
     dbug.leave;
 $end
@@ -885,6 +919,7 @@ $end
 $if msg_aq_pkg.c_debugging >= 1 $then
   when others
   then
+    rollback;
     dbug.leave_on_error;
     raise;
 $end

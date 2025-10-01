@@ -1,85 +1,16 @@
 CREATE OR REPLACE TYPE BODY "REST_WEB_SERVICE_REQUEST_TYP" AS
 
-constructor function rest_web_service_request_typ
-( self in out nocopy rest_web_service_request_typ
-  -- from web_service_request_typ
-, p_group$ in varchar2
-, p_context$ in varchar2
-, p_url in varchar2
-, p_scheme in varchar2
-, p_proxy_override in varchar2
-, p_transfer_timeout in number
-, p_wallet_path in varchar2
-, p_https_host in varchar2
-, p_credential_static_id in varchar2
-, p_token_url in varchar2
-, p_cookies_clob in clob
-, p_http_headers_clob in clob
-  -- this type
-, p_http_method in varchar2
-, p_body_clob in clob
-, p_body_blob in blob
-, p_parms_clob in clob
-, p_binary_response in integer
-)
-return self as result
-is
-begin
-  self.construct
-  ( p_group$ => p_group$
-  , p_context$ => p_context$
-  , p_url => p_url
-  , p_scheme => p_scheme
-  , p_proxy_override => p_proxy_override
-  , p_transfer_timeout => p_transfer_timeout
-  , p_wallet_path => p_wallet_path
-  , p_https_host => p_https_host
-  , p_credential_static_id => p_credential_static_id
-  , p_token_url => p_token_url
-  , p_cookies_clob => p_cookies_clob
-  , p_http_headers_clob => p_http_headers_clob
-  , p_http_method => p_http_method
-  , p_body_clob => p_body_clob
-  , p_body_blob => p_body_blob
-  , p_parms_clob => p_parms_clob
-  , p_binary_response => p_binary_response
-  );
-  return;
-end rest_web_service_request_typ;
-
-constructor function rest_web_service_request_typ
-( self in out nocopy rest_web_service_request_typ
-)
-return self as result
-is
-begin
-  self.construct
-  ( p_group$ => null
-  , p_context$ => null
-  , p_url => null
-  , p_scheme => null
-  , p_proxy_override => null
-  , p_transfer_timeout => null
-  , p_wallet_path => null
-  , p_https_host => null
-  , p_credential_static_id => null
-  , p_token_url => null
-  , p_cookies_clob => null
-  , p_http_headers_clob => null
-  , p_http_method => null
-  , p_body_clob => null
-  , p_body_blob => null
-  , p_parms_clob => null
-  , p_binary_response => null
-  );
-  return;
-end rest_web_service_request_typ;
-
 final member procedure construct
 ( self in out nocopy rest_web_service_request_typ
-  -- from web_service_request_typ
+  -- from MSG_TYP
 , p_group$ in varchar2
 , p_context$ in varchar2
+  -- from HTTP_REQUEST_RESPONSE_TYP
+, p_cookies in http_cookie_tab_typ
+, p_http_headers in property_tab_typ
+, p_body_clob in clob
+, p_body_blob in blob
+  -- from WEB_SERVICE_REQUEST_TYP
 , p_url in varchar2
 , p_scheme in varchar2
 , p_proxy_override in varchar2
@@ -88,13 +19,9 @@ final member procedure construct
 , p_https_host in varchar2
 , p_credential_static_id in varchar2
 , p_token_url in varchar2
-, p_cookies_clob in clob
-, p_http_headers_clob in clob
-  -- this type
-, p_http_method in varchar2
-, p_body_clob in clob
-, p_body_blob in blob
-, p_parms_clob in clob
+  -- from REST_WEB_SERVICE_REQUEST_TYP
+, p_parms in property_tab_typ
+, p_use_query_parameters in integer
 , p_binary_response in integer
 )
 is
@@ -106,6 +33,10 @@ $end
   (self as web_service_request_typ).construct
   ( p_group$ => p_group$
   , p_context$ => p_context$
+  , p_cookies => p_cookies
+  , p_http_headers => p_http_headers
+  , p_body_clob => p_body_clob
+  , p_body_blob => p_body_blob
   , p_url => p_url
   , p_scheme => p_scheme
   , p_proxy_override => p_proxy_override
@@ -114,22 +45,155 @@ $end
   , p_https_host => p_https_host
   , p_credential_static_id => p_credential_static_id
   , p_token_url => p_token_url
-  , p_cookies_clob => p_cookies_clob
-  , p_http_headers_clob => p_http_headers_clob
   );
-  self.http_method := p_http_method;
-  msg_pkg.data2msg(p_body_clob, self.body_vc, self.body_clob);
-  msg_pkg.data2msg(p_body_blob, self.body_raw, self.body_blob);
-  msg_pkg.data2msg(p_parms_clob, self.parms_vc, self.parms_clob);
+  self.parms := p_parms;
+  self.use_query_parameters := p_use_query_parameters;
   self.binary_response := p_binary_response;
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end construct;
 
-overriding
-member function must_be_processed
+static procedure construct
+( p_http_method in varchar2
+  -- from MSG_TYP
+, p_group$ in varchar2 default null
+, p_context$ in varchar2 default null
+  -- from HTTP_REQUEST_RESPONSE_TYP
+, p_cookies in http_cookie_tab_typ default null    -- request/response cookies
+, p_http_headers in property_tab_typ default null  -- request/response headers
+, p_body_clob in clob default null                 -- empty for GET request (envelope for a SOAP request)
+, p_body_blob in blob default null                 -- empty for GET request (empty for a SOAP request)
+  -- from WEB_SERVICE_REQUEST_TYP
+, p_url in varchar2 default null
+, p_scheme in varchar2 default null -- 'Basic'
+, p_proxy_override in varchar2 default null
+, p_transfer_timeout in number default 180
+, p_wallet_path in varchar2 default null
+, p_https_host in varchar2 default null
+, p_credential_static_id in varchar2 default null
+, p_token_url in varchar2 default null
+  -- from REST_WEB_SERVICE_REQUEST_TYP
+, p_parms in property_tab_typ default null
+, p_use_query_parameters in integer default 0
+, p_binary_response in integer default 0
+, p_rest_web_service_request out nocopy rest_web_service_request_typ -- any of the rest_web_service_<HTTP_METHOD>_request_typ types
+)
+is
+begin
+  case upper(p_http_method)
+    when 'DELETE'
+    then p_rest_web_service_request :=
+           new rest_web_service_delete_request_typ
+               ( p_group$ => p_group$
+               , p_context$ => p_context$
+               , p_cookies => p_cookies
+               , p_http_headers => p_http_headers
+               , p_body_clob => p_body_clob
+               , p_body_blob => p_body_blob
+               , p_url => p_url
+               , p_scheme => p_scheme
+               , p_proxy_override => p_proxy_override
+               , p_transfer_timeout => p_transfer_timeout
+               , p_wallet_path => p_wallet_path
+               , p_https_host => p_https_host
+               , p_credential_static_id => p_credential_static_id
+               , p_token_url => p_token_url
+               , p_parms => p_parms
+               , p_use_query_parameters => p_use_query_parameters
+               , p_binary_response => p_binary_response
+               );
+    when 'GET'
+    then p_rest_web_service_request :=
+           new rest_web_service_get_request_typ
+               ( p_group$ => p_group$
+               , p_context$ => p_context$
+               , p_cookies => p_cookies
+               , p_http_headers => p_http_headers
+               , p_url => p_url
+               , p_scheme => p_scheme
+               , p_proxy_override => p_proxy_override
+               , p_transfer_timeout => p_transfer_timeout
+               , p_wallet_path => p_wallet_path
+               , p_https_host => p_https_host
+               , p_credential_static_id => p_credential_static_id
+               , p_token_url => p_token_url
+               , p_parms => p_parms
+               , p_binary_response => p_binary_response
+               );
+    when 'PATCH'
+    then p_rest_web_service_request :=
+           new rest_web_service_patch_request_typ
+               ( p_group$ => p_group$
+               , p_context$ => p_context$
+               , p_cookies => p_cookies
+               , p_http_headers => p_http_headers
+               , p_body_clob => p_body_clob
+               , p_body_blob => p_body_blob
+               , p_url => p_url
+               , p_scheme => p_scheme
+               , p_proxy_override => p_proxy_override
+               , p_transfer_timeout => p_transfer_timeout
+               , p_wallet_path => p_wallet_path
+               , p_https_host => p_https_host
+               , p_credential_static_id => p_credential_static_id
+               , p_token_url => p_token_url
+               , p_parms => p_parms
+               , p_use_query_parameters => p_use_query_parameters
+               , p_binary_response => p_binary_response
+               );
+    when 'POST'
+    then p_rest_web_service_request :=
+           new rest_web_service_post_request_typ
+               ( p_group$ => p_group$
+               , p_context$ => p_context$
+               , p_cookies => p_cookies
+               , p_http_headers => p_http_headers
+               , p_body_clob => p_body_clob
+               , p_body_blob => p_body_blob
+               , p_url => p_url
+               , p_scheme => p_scheme
+               , p_proxy_override => p_proxy_override
+               , p_transfer_timeout => p_transfer_timeout
+               , p_wallet_path => p_wallet_path
+               , p_https_host => p_https_host
+               , p_credential_static_id => p_credential_static_id
+               , p_token_url => p_token_url
+               , p_parms => p_parms
+               , p_use_query_parameters => p_use_query_parameters
+               , p_binary_response => p_binary_response
+               );
+    when 'PUT'
+    then p_rest_web_service_request :=
+           new rest_web_service_put_request_typ
+               ( p_group$ => p_group$
+               , p_context$ => p_context$
+               , p_cookies => p_cookies
+               , p_http_headers => p_http_headers
+               , p_body_clob => p_body_clob
+               , p_body_blob => p_body_blob
+               , p_url => p_url
+               , p_scheme => p_scheme
+               , p_proxy_override => p_proxy_override
+               , p_transfer_timeout => p_transfer_timeout
+               , p_wallet_path => p_wallet_path
+               , p_https_host => p_https_host
+               , p_credential_static_id => p_credential_static_id
+               , p_token_url => p_token_url
+               , p_parms => p_parms
+               , p_use_query_parameters => p_use_query_parameters
+               , p_binary_response => p_binary_response
+               );
+  end case;
+end construct;
+
+overriding member function must_be_processed
 ( self in rest_web_service_request_typ
 , p_maybe_later in integer -- True (1) or false (0)
 )
@@ -148,10 +212,17 @@ $if oracle_tools.cfg_pkg.c_debugging $then
 $end
 
   return l_result;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end must_be_processed;
 
-overriding
-member procedure process$now
+overriding member procedure process$now
 ( self in rest_web_service_request_typ
 )
 is
@@ -160,95 +231,167 @@ $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.PROCESS$NOW');
 $end
 
-  self.response().process;
+  self.make_rest_request().process(); -- put into the queue as well (if correlation id is set)
 
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
 $end
 end process$now;
 
-overriding
-member procedure serialize
+overriding member procedure serialize
 ( self in rest_web_service_request_typ
 , p_json_object in out nocopy json_object_t
 )
 is
-  l_parms_vc constant json_object_t := 
-    case
-      when self.parms_vc is not null
-      then json_object_t(self.parms_vc)
-      else null
-    end;
-  l_parms_clob constant json_object_t := 
-    case
-      when self.parms_clob is not null
-      then json_object_t(self.parms_clob)
-      else null
-    end;
+  l_json_array json_array_t;
 begin
   (self as web_service_request_typ).serialize(p_json_object);
-  p_json_object.put('HTTP_METHOD', self.http_method);
-  if self.body_vc is not null
+  if self.parms is not null
   then
-    p_json_object.put('BODY_VC', self.body_vc);
+    http_request_response_pkg.to_json(self.parms, l_json_array);
+    p_json_object.put('PARMS', l_json_array);
   end if;
-  if self.body_clob is not null
-  then
-    p_json_object.put('BODY_CLOB', self.body_clob);
-  end if;
-  if self.body_raw is not null
-  then
-    p_json_object.put('BODY_RAW', self.body_raw);
-  end if;
-  if self.body_blob is not null
-  then
-    p_json_object.put('BODY_BLOB', self.body_blob);
-  end if;
-  if l_parms_vc is not null
-  then
-    p_json_object.put('PARMS_VC', l_parms_vc);
-  end if;
-  if l_parms_clob is not null
-  then
-    p_json_object.put('PARMS_CLOB', l_parms_clob);
-  end if;
+  p_json_object.put('USE_QUERY_PARAMETERS', self.use_query_parameters);
   p_json_object.put('BINARY_RESPONSE', self.binary_response);
 end serialize;
 
-overriding
-member function has_not_null_lob
+overriding member function repr
 ( self in rest_web_service_request_typ
 )
-return integer
+return clob
 is
+  l_clob clob := (self as web_service_request_typ /* the parent */).repr();
+  l_json_object json_object_t := json_object_t(l_clob);
+  l_json_functions json_object_t := treat(l_json_object.get('functions') as json_object_t);
 begin
-  return
-    case
-      when (self as web_service_request_typ).has_not_null_lob = 1 then 1
-      when self.body_clob is not null then 1
-      when self.body_blob is not null then 1
-      when self.parms_clob is not null then 1
-      else 0
-    end;
-end has_not_null_lob;
+  l_json_functions.put('http_method', self.http_method());
+  l_json_object.put('functions', l_json_functions);
+  
+  l_clob := l_json_object.to_clob();
 
-member function response
+  select  json_serialize(l_clob returning clob pretty)
+  into    l_clob
+  from    dual;
+
+  return l_clob;  
+end repr;
+
+static function response
+( p_context$ in varchar2
+, p_wait in integer
+)
 return web_service_response_typ
 is
-  l_web_service_response web_service_response_typ;
+  l_wait integer := p_wait;
+  l_navigation binary_integer := dbms_aq.first_message;
+  l_msg msg_typ := null;
+  l_msgid raw(16) := null;
+  l_message_properties dbms_aq.message_properties_t;  
+  l_web_service_response web_service_response_typ := null;
 begin
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.RESPONSE');
 $end
 
-  l_web_service_response := web_service_pkg.make_rest_request(self);
+  if p_context$ is not null
+  then
+    <<msg_loop>>
+    loop
+      begin
+        msg_aq_pkg.dequeue
+        ( p_queue_name => web_service_response_typ.default_group()
+        , p_delivery_mode => dbms_aq.persistent
+        , p_visibility => dbms_aq.on_commit
+        , p_subscriber => null
+        , p_dequeue_mode => dbms_aq.browse
+        , p_navigation => l_navigation
+        , p_wait => l_wait
+        , p_correlation => p_context$
+        , p_deq_condition => null
+        , p_force => false
+        , p_msgid => l_msgid
+        , p_message_properties => l_message_properties
+        , p_msg => l_msg
+        );
+        -- GJP 2025-09-03 Do not catch errors
+/*        
+      exception
+        when msg_aq_pkg.e_queue_table_does_not_exist or
+             msg_aq_pkg.e_queue_does_not_exist or
+             msg_aq_pkg.e_dequeue_timeout
+        then
+          -- normal behaviour
+          l_msg := null;
+          l_msgid := null;
+          
+        when others
+        then
+$if oracle_tools.cfg_pkg.c_debugging $then
+          dbug.on_error;
+$end
+          l_msg := null;
+          l_msgid := null;
+*/          
+      end;
+      
+      exit msg_loop when l_msg is null;
+
+      l_web_service_response :=
+        case
+           when l_msg is not null and l_msg is of (web_service_response_typ)
+           then treat(l_msg as web_service_response_typ)
+         end;
+
+      -- next round
+      l_wait := dbms_aq.no_wait;
+      l_navigation := dbms_aq.next_message;
+      l_msgid := null; -- every try a reset
+    end loop msg_loop;
+  end if;
   
 $if oracle_tools.cfg_pkg.c_debugging $then
   dbug.leave;
 $end
 
   return l_web_service_response;
+
+$if oracle_tools.cfg_pkg.c_debugging $then
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end response;
+
+final member function response
+( p_wait in integer
+)
+return web_service_response_typ
+is
+begin
+  return rest_web_service_request_typ.response(self.context$, p_wait);
+end response;
+
+member function make_rest_request
+return web_service_response_typ
+is
+begin
+  return web_service_pkg.make_rest_request(self);
+end make_rest_request;
+
+member function http_method
+return varchar2
+is
+begin
+  -- must be overridden by a final function
+  raise program_error;
+end http_method;
 
 end;
 /

@@ -2,18 +2,24 @@
 // file  : CustomLibrary.js
 // goal  : Custom library for Oracle Data Modeler (ODM)
 // author: Gert-Jan Paulissen (Paulissoft)
-// date  : 2023-07-31
+// date  : 2025-09-29
 // usage : - Copy the contents of this file and paste them into a custom library
 //           (for instance CustomLibrary) in ODM. Add each function
 //           without underscore below as function / method to the ODM library.
 //           ODM Menu: Tools | Design Rules And transformations | Libraries
+//           Currently these are:
+//           * tableAbbreviationToColumn
+//           * removeTableAbbrFromColumn
+//           * setTableAbbreviation
+//           * applyStandardsForSelectedRelationalItems
+//           * applyStandardsForSelectedLogicalItems
 //         - Export this library to file CustomLibrary.xml.
 //         - Next add or change custom transformation scripts and use
 //           the description after each 'Custom Transformation Script:' below
 //           for the name. Set library and method in ODM as well.
 //           Menu: Tools | Design Rules And transformations | Transformations
 //         - Export these methods to file CustomTransformationScripts.xml.
-// note  : The functions applyStandardsForSelectedItems_(logical|relatonal) are
+// note  : The functions applyStandardsForSelectedItems_(logical|relational) are
 //         the most important functiond and can be used to apply standards of
 //         selected logical or relational items.
 //         If the dynamic property canApplyStandards is set to 0,
@@ -52,6 +58,10 @@ function _trace(where, obj) {
     }
 }
 
+function _isEmpty(name) {
+    return name === null || name.equals("") || name.equals("Unknown");
+}
+
 function _setDirty(where, obj) {
     _msg("Changing " +
          obj.getObjectTypeName() +
@@ -65,7 +75,7 @@ function _setDirty(where, obj) {
 function _canProcess(where, object) {
     var canProcess = object.getProperty(where);
 
-    if (canProcess === null || canProcess.equals("")) {
+    if (_isEmpty(canProcess)) {
         canProcess = "1";
         object.setProperty(where, canProcess);
         _setDirty(where, object);
@@ -251,8 +261,8 @@ function _setUseDomainConstraints(table) {
     });
 }
 
-function _setIdentityColumn_relational(table) {
-    var where = "setIdentityColumn_relational";
+function _setAutoIncrement_relational(table) {
+    var where = "setAutoIncrement_relational";
     var dirty = null;
 
     _trace(where, table);
@@ -264,10 +274,16 @@ function _setIdentityColumn_relational(table) {
                 column.setAutoIncrementColumn(true);
                 dirty = true;
             }
-            if (!column.isIdentityColumn()) {
-                column.setIdentityColumn(true);
+            // GJP 2025-09-29 No more identity columns: use sequence.NEXTVAL in default
+            if (column.isIdentityColumn()) {
+                column.setIdentityColumn(false);
                 dirty = true;
-            }
+            }            
+            if (_isEmpty(column.getAutoIncrementSequenceName())) {
+                column.setAutoIncrementSequenceName(table.getAbbreviation()+"_SEQ");
+                column.setDefaultValue(column.getAutoIncrementSequenceName()+".NEXTVAL");
+                dirty = true;
+            }            
             if (column.isAutoIncrementGenerateTrigger()) {
                 column.setAutoIncrementGenerateTrigger(false);
                 dirty = true;
@@ -275,11 +291,16 @@ function _setIdentityColumn_relational(table) {
             if (dirty) {
                 _setDirty(where, column);
             }
+            _debug("isAutoIncrementColumn: " + column.isAutoIncrementColumn());
+            _debug("isIdentityColumn: " + column.isIdentityColumn());
+            _debug("getAutoIncrementSequenceName: " + column.getAutoIncrementSequenceName());
+            _debug("getDefaultValue: " + column.getDefaultValue());
+            _debug("isAutoIncrementGenerateTrigger: " + column.isAutoIncrementGenerateTrigger());                
         });
 }
 
-function _setIdentityColumn_physical(table) {
-    var where = "setIdentityColumn_physical";
+function _setAutoIncrement_physical(table) {
+    var where = "setAutoIncrement_physical";
     // not conform the SQL Data Modeler 18 documentation (!)
     var clause = "IDENTITY_CLAUSE";
 
@@ -297,8 +318,8 @@ function _setIdentityColumn_physical(table) {
         });
 }
 
-function _setIdentityColumn(relationalTable, physicalTables) {
-    var where = "setIdentityColumn";
+function _setAutoIncrement(relationalTable, physicalTables) {
+    var where = "setAutoIncrement";
 
     if (!_canProcess(where, relationalTable)) {
         return;
@@ -306,20 +327,20 @@ function _setIdentityColumn(relationalTable, physicalTables) {
 
     _trace(where, relationalTable);
 
-    _setIdentityColumn_relational(relationalTable);
+    _setAutoIncrement_relational(relationalTable);
 
     _toStream(physicalTables)
         .filter(function (physicalTable) {
             return relationalTable.getName().equals(physicalTable.getName());
         })
         .forEach(function (physicalTable) {
-            _setIdentityColumn_physical(physicalTable);
+            _setAutoIncrement_physical(physicalTable);
         });
 }
 
-function _setIdentityColumns(relationalTables, physicalTables) {
+function _setAutoIncrements(relationalTables, physicalTables) {
     _toStream(relationalTables).forEach(function (relationalTable) {
-        _setIdentityColumn(relationalTable, physicalTables);
+        _setAutoIncrement(relationalTable, physicalTables);
     });
 }
 
@@ -540,11 +561,35 @@ function _createIndexOnFK(table) {
         });
 }
 
+function _setTableAbbreviation(table) {
+    var where = "setTableAbbreviation";
+    var pk = table.getPK();
+
+    if (_isEmpty(table.getAbbreviation()) && pk !== null && pk.getName().endsWith("_PK")) {
+        table.setAbbreviation(pk.getName().replaceAll("_PK", ""));
+        _debug("abbreviation: " + table.getAbbreviation());
+        _setDirty(where, table);
+    }
+}
+
+function setTableAbbreviation(model) {
+    try {
+        var tables = _getSelectedObjects(model, "Table");
+        
+        for (var i = 0; i < tables.length; i++) {
+            _setTableAbbreviation(tables.get(i));
+        }
+    } catch (e) {
+        _msg(e.stack);
+        throw(e);
+    }
+}
+
 // sorts table columns as asked here
 // https://forums.oracle.com/forums/thread.jspa?threadID=2508315&tstart=0
-// 1) first the pks columns,
+// 1) first the pk columns,
 // 2) after them fk columns
-// 3) and after the; the not null columns"
+// 3) and after them the not null columns
 function _addPKcolumns(list, table) {
     var pk = table.getPK();
 
@@ -691,7 +736,8 @@ function _applyStandardsTable(table, physicalTables) {
         _tableToUpperCase(table);
         _tableNamePlural(table);
         _setUseDomainConstraints(table);
-        _setIdentityColumn(table, physicalTables);
+        _setTableAbbreviation(table);
+        _setAutoIncrement(table, physicalTables);
         // _tableToLowerCase(table);
         // _tableAbbreviationToColumn(table);
         // _removeTableAbbrFromColumn(table);

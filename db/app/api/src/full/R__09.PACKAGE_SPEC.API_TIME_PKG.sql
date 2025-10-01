@@ -6,6 +6,7 @@ subtype timestamp_t is timestamp(6) with time zone; -- return value of systimest
 subtype timestamp_diff_t is interval day(9) to second(6);
 subtype seconds_t is number; -- before the decimal the number of seconds, after the decimal the fractional seconds
 subtype timestamp_str_t is varchar2(33 char);
+subtype milliseconds_t is integer; -- milliseconds since the epoch, i.e. 1-JAN-1970 (UTC)
 
 c_timestamp_format constant varchar2(37 char) := 'YYYY-MM-DD"T"HH24:MI:SS.FF6"Z"TZH:TZM';
 
@@ -25,6 +26,10 @@ return time_t;
 function get_timestamp
 return timestamp_t;
 /** Get the current timestamp. Just returns systimestamp(). **/
+
+function get_milliseconds
+return milliseconds_t;
+/** Get the current timestamp in milliseconds since the epoch. **/
 
 function elapsed_time
 ( p_start in time_t -- start value returned by get_time
@@ -51,6 +56,20 @@ function delta
 )
 return seconds_t; -- in seconds with fractions (not hundredths of seconds!)
 /** Just another name for elapsed_time above. **/
+
+function elapsed_time_ms
+( p_start in milliseconds_t -- start value returned by get_milliseconds
+, p_end in milliseconds_t -- end value returned by get_milliseconds
+)
+return milliseconds_t; -- in milliseconds since the epoch
+/** Elapsed time in milliseconds since the epoch. **/
+
+function delta_ms
+( p_start in milliseconds_t -- start value returned by get_milliseconds
+, p_end in milliseconds_t -- end value returned by get_milliseconds
+)
+return milliseconds_t; -- in milliseconds since the epoch
+/** Just another name for elapsed_time_ms above. **/
 
 function elapsed_time
 ( p_start in timestamp_t -- start value returned by get_timestamp
