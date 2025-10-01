@@ -46,23 +46,26 @@ function NotNullConstr_Name_Length(column){
 }]]>
 		</script>
 	</lib>
-	<lib id="C2B5EA14-0D8B-2E16-D2D5-F243C4F45759" name="CustomLibrary" engine="Oracle Nashorn" methods="tableAbbreviationToColumn,removeTableAbbrFromColumn,setTableAbbreviation,applyStandardsForSelectedRelationalItems,applyStandardsForSelectedLogicalItems" >
+	<lib id="4FF08DFA-6E41-795B-8712-0323FA409D1B" name="CustomLibrary" engine="Oracle Nashorn" methods="tableAbbreviationToColumn,removeTableAbbrFromColumn,applyStandardsForSelectedRelationalItems,applyStandardsForSelectedLogicalItems,setTableAbbreviation,tableNamePlural,tableToLowerCase,copyTablePrefixToIndexesAndKeys" >
 		<script>
 			<![CDATA[// -----------------------------------------------------------------------------
 // file  : CustomLibrary.js
 // goal  : Custom library for Oracle Data Modeler (ODM)
 // author: Gert-Jan Paulissen (Paulissoft)
-// date  : 2025-09-29
+// date  : 2025-10-01
 // usage : - Copy the contents of this file and paste them into a custom library
 //           (for instance CustomLibrary) in ODM. Add each function
 //           without underscore below as function / method to the ODM library.
 //           ODM Menu: Tools | Design Rules And transformations | Libraries
 //           Currently these are:
-//           * tableAbbreviationToColumn
-//           * removeTableAbbrFromColumn
-//           * setTableAbbreviation
-//           * applyStandardsForSelectedRelationalItems
-//           * applyStandardsForSelectedLogicalItems
+//           1) tableAbbreviationToColumn
+//           2) removeTableAbbrFromColumn
+//           3) applyStandardsForSelectedRelationalItems
+//           4) applyStandardsForSelectedLogicalItems
+//           5) setTableAbbreviation
+//           6) tableNamePlural
+//           7) tableToLowerCase
+//           8) copyTablePrefixToIndexesAndKeys
 //         - Export this library to file CustomLibrary.xml.
 //         - Next add or change custom transformation scripts and use
 //           the description after each 'Custom Transformation Script:' below
@@ -81,6 +84,16 @@ var appView = Java.type("oracle.dbtools.crest.swingui.ApplicationView");
 var maxLength = 4000;
 var trace = false;
 var debug = false;
+
+/**
+ * Displays a message in a dialog box and returns the string that is input.
+ *
+ * @param question The message that is displayed in the dialog box
+ * @return A String object containing the user input
+ */
+function _ask(question) {
+    return javax.swing.JOptionPane.showInputDialog(question);
+}
 
 function _msg(msg) {
     appView.log(msg);
@@ -113,13 +126,15 @@ function _isEmpty(name) {
 }
 
 function _setDirty(where, obj) {
-    _msg("Changing " +
-         obj.getObjectTypeName() +
-         " " +
-         obj.getName() +
-         " - " +
-         where);
-    obj.setDirty(true);
+    if (!obj.isDirty()) {
+        _msg("Changing " +
+             obj.getObjectTypeName() +
+             " " +
+             obj.getName() +
+             " - " +
+             where);
+        obj.setDirty(true);
+    }
 }
 
 function _canProcess(where, object) {
@@ -139,9 +154,14 @@ function _canProcess(where, object) {
     }
 
     if (canProcess !== 0) {
+        _debug("Can process " +
+               object.getObjectTypeName() +
+               " " +
+               object.getName() +
+               " since the dynamic property " + where + " is 1 (true).");
         return true;
     } else {
-        _msg("Can not process " +
+        _msg("Can NOT process " +
              object.getObjectTypeName() +
              " " +
              object.getName() +
@@ -186,6 +206,10 @@ function _getSelectedObjects(model, objectType) {
 function _copyCommentsInRDBMS(object) {
     var where = "copyCommentsInRDBMS";
 
+    if (!_canProcess(where, object)) {
+        return;
+    }
+
     _trace(where, object);
     if (object.getComment().equals("")) {
         if (!object.getCommentInRDBMS().equals("")) {
@@ -219,11 +243,16 @@ function _copyCommentsInRDBMS_container(object) {
 
 function _copyPreferredAbbreviation(object) {
     var where = "copyPreferredAbbreviation";
-    var preferredAbbreviation = object.getPreferredAbbreviation();
+
+    if (!_canProcess(where, object)) {
+        return;
+    }
 
     _trace(where, object);
 
     if (object.getShortName().equals("")) {
+        var preferredAbbreviation = object.getPreferredAbbreviation();
+
         if (!preferredAbbreviation.equals("")) {
             object.setShortName(preferredAbbreviation);
             _setDirty(where, object);
@@ -237,6 +266,11 @@ function _setRelationName(object,
                           targetShortName,
                           targetAbbreviation) {
     var where = "setRelationName";
+
+    if (!_canProcess(where, object)) {
+        return;
+    }
+
     var sourceName = (sourceAbbreviation.equals("") ?
                       sourceShortName :
                       sourceAbbreviation);
@@ -247,10 +281,6 @@ function _setRelationName(object,
                 "" :
                 sourceName + "_" + targetName);
 
-    if (!_canProcess(where, object)) {
-        return;
-    }
-
     if (!name.equals("") && !object.getName().equals(name)) {
         object.setName(name);
         _setDirty(where, object);
@@ -260,45 +290,93 @@ function _setRelationName(object,
 function _setSecurityOptions(table) {
     var where = "setSecurityOptions";
 
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
     _trace(where, table);
     _toStream(table.getElements()).forEach(function (column) {
+        var dirty = false;
+        
         if (column.isContainsPII() !== false) {
             column.setContainsPII(false);
-            _setDirty(where, column);
+            dirty = true;
         }
         if (column.isContainsSensitiveInformation() !== false) {
             column.setContainsSensitiveInformation(false);
+            dirty = true;
+        }
+        if (dirty) {
             _setDirty(where, column);
         }
     });
 }
 
+/**
+ * Convert table name to plural (English).
+ *
+ * Skip names that end with S or ES (includes thus IES).
+ * For names that end in CH, SH, X, and Z, add -ES to make them plural.
+ * For names that end with Y, convert that into -IES.
+ * Else, add an -S to make them plural. 
+ *
+ * See also https://www.english-grammar-revolution.com/last-name-plural.html.
+ *   
+ * @param table  The table object
+ */
 function _tableNamePlural(table) {
     var where = "tableNamePlural";
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
     var tableName = table.getName();
     var dirty = true;
 
     _trace(where, table);
 
-    if (tableName.endsWith("Y")) {
+    if (tableName.endsWith("S") ||
+        tableName.endsWith("ES")) {
+        dirty = false;
+    } else if (tableName.endsWith("CH") ||               
+               tableName.endsWith("SH") ||
+               tableName.endsWith("X") ||
+               tableName.endsWith("Z")) {
+        table.setName(tableName + "ES");
+    } else if (tableName.endsWith("Y")) {
         // Y -> IES
         table.setName(tableName.slice(0, -1) + "IES");
-    } else if (tableName.endsWith("X")) {
-        // X -> CES
-        table.setName(tableName.slice(0, -1) + "CES");
-    } else if (!tableName.endsWith("S")) {
-        // . -> .S
-        table.setName(tableName + "S");
     } else {
-        dirty = false;
+        // add S
+        table.setName(tableName + "S");
     }
     if (dirty) {
         _setDirty(where, table);
     }
 }
 
+// Custom Transformation Script:
+// Pluralize table names (English) | relational
+function tableNamePlural(model) {
+    try {
+        var tables = _getSelectedObjects(model, "Table");
+        
+        for (var i = 0; i < tables.length; i++) {
+            _tableNamePlural(tables.get(i));
+        }
+    } catch (e) {
+        _msg(e.stack);
+        throw(e);
+    }
+}
+
 function _setUseDomainConstraints(table) {
     var where = "setUseDomainConstraints";
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
 
     _trace(where, table);
     _toStream(table.getElements()).forEach(function (column) {
@@ -311,12 +389,17 @@ function _setUseDomainConstraints(table) {
     });
 }
 
-function _setAutoIncrement_relational(table) {
-    var where = "setAutoIncrement_relational";
+function _setAutoIncrement(relationalTable, physicalTables) {
+    var where = "setAutoIncrement";
+
+    if (!_canProcess(where, relationalTable)) {
+        return;
+    }
+
     var dirty = null;
 
-    _trace(where, table);
-    _toStream(table.getElements())
+    _trace(where, relationalTable);
+    _toStream(relationalTable.getElements())
         .filter(function (column) { return column.getName().equals("ID"); })
         .forEach(function (column) {
             dirty = false;
@@ -330,7 +413,7 @@ function _setAutoIncrement_relational(table) {
                 dirty = true;
             }            
             if (_isEmpty(column.getAutoIncrementSequenceName())) {
-                column.setAutoIncrementSequenceName(table.getAbbreviation()+"_SEQ");
+                column.setAutoIncrementSequenceName(relationalTable.getAbbreviation()+"_SEQ");
                 column.setDefaultValue(column.getAutoIncrementSequenceName()+".NEXTVAL");
                 dirty = true;
             }            
@@ -341,22 +424,35 @@ function _setAutoIncrement_relational(table) {
             if (dirty) {
                 _setDirty(where, column);
             }
+            _debug("*** " + relationalTable.getName() + "." + column.getName() + " ***");
             _debug("isAutoIncrementColumn: " + column.isAutoIncrementColumn());
             _debug("isIdentityColumn: " + column.isIdentityColumn());
             _debug("getAutoIncrementSequenceName: " + column.getAutoIncrementSequenceName());
             _debug("getDefaultValue: " + column.getDefaultValue());
             _debug("isAutoIncrementGenerateTrigger: " + column.isAutoIncrementGenerateTrigger());                
         });
-}
 
-function _setAutoIncrement_physical(table) {
-    var where = "setAutoIncrement_physical";
+    var physicalTable = null;
+
+    // find physical table
+    _toStream(physicalTables)
+        .filter(function (physicalTable) {
+            return relationalTable.getName().equals(physicalTable.getName());
+        })
+        .forEach(function (pt) {
+            physicalTable = pt;
+        });
+
+    if (physicalTable === null || !_canProcess(where, physicalTable)) {
+        return;
+    }
+
     // not conform the SQL Data Modeler 18 documentation (!)
-    var clause = "IDENTITY_CLAUSE";
+    var clause = "DEFAULT_CLAUSE"; // was IDENTITY_CLAUSE
 
-    _trace(where, table);
+    _trace(where, physicalTable);
 
-    _toStream(table.getColumns())
+    _toStream(physicalTable.getColumns())
         .filter(function (column) {
             return column.getName().equals("ID") &&
                    ( column.getAutoIncrementDDL() === null ||
@@ -365,42 +461,24 @@ function _setAutoIncrement_physical(table) {
         .forEach(function (column) {
             column.setAutoIncrementDDL(clause);
             _setDirty(where, column);
+            _debug("*** " + physicalTable.getName() + "." + column.getName() + " ***");
+            _debug("getAutoIncrementDDL: " + column.getAutoIncrementDDL());
         });
 }
 
-function _setAutoIncrement(relationalTable, physicalTables) {
-    var where = "setAutoIncrement";
-
-    if (!_canProcess(where, relationalTable)) {
-        return;
-    }
-
-    _trace(where, relationalTable);
-
-    _setAutoIncrement_relational(relationalTable);
-
-    _toStream(physicalTables)
-        .filter(function (physicalTable) {
-            return relationalTable.getName().equals(physicalTable.getName());
-        })
-        .forEach(function (physicalTable) {
-            _setAutoIncrement_physical(physicalTable);
-        });
-}
-
-function _setAutoIncrements(relationalTables, physicalTables) {
-    _toStream(relationalTables).forEach(function (relationalTable) {
-        _setAutoIncrement(relationalTable, physicalTables);
-    });
-}
-
+/**
+ * Convert table name, column names and key names to lower case.
+ *
+ * @param table  The table object
+ */
 function _tableToLowerCase(table) {
     var where = "tableToLowerCase";
-    var name = table.getName().toLowerCase();
 
     if (!_canProcess(where, table)) {
         return;
     }
+
+    var name = table.getName().toLowerCase();
 
     _trace(where, table);
 
@@ -434,13 +512,34 @@ function _tableToLowerCase(table) {
     });
 }
 
+// Custom Transformation Script:
+// Set table, column and key names to lower case | relational
+function tableToLowerCase(model) {
+    try {
+        var tables = _getSelectedObjects(model, "Table");
+        
+        for (var i = 0; i < tables.length; i++) {
+            _tableToLowerCase(tables.get(i));
+        }
+    } catch (e) {
+        _msg(e.stack);
+        throw(e);
+    }
+}
+
+/**
+ * Prefix each column name with the table abbreviation (plus an underscore).
+ *
+ * @param table  The table object
+ */
 function _tableAbbreviationToColumn(table) {
     var where = "tableAbbreviationToColumn";
-    var abbr = table.getAbbreviation()+"_";
 
     if (!_canProcess(where, table)) {
         return;
     }
+
+    var abbr = table.getAbbreviation()+"_";
 
     _trace(where, table);
 
@@ -455,21 +554,27 @@ function _tableAbbreviationToColumn(table) {
 }
 
 // Custom Transformation Script:
-// Table abbreviation to column | relational
+// Prefix each column with the table abbreviation | relational
 function tableAbbreviationToColumn(model) {
     _toStream(model.getTableSet()).forEach()(function (table) {
         _tableAbbreviationToColumn(table);
     });
 }
 
+/**
+ * Remove from each column the table abbreviation (plus an underscore) prefix.
+ *
+ * @param table  The table object
+ */
 function _removeTableAbbrFromColumn(table) {
     var where = "removeTableAbbrFromColumn";
-    var abbr = table.getAbbreviation()+"_";
-    var count = table.getAbbreviation().length()+1;
 
     if (!_canProcess(where, table)) {
         return;
     }
+
+    var abbr = table.getAbbreviation()+"_";
+    var count = table.getAbbreviation().length()+1;
 
     _trace(where, table);
 
@@ -485,7 +590,7 @@ function _removeTableAbbrFromColumn(table) {
 }
 
 // Custom Transformation Script:
-// Remove Table abbr from column | relational
+// Remove from columns the table abbreviation prefix | relational
 function removeTableAbbrFromColumn(model) {
     _toStream(model.getTableSet()).forEach(function (table) {
         _removeTableAbbrFromColumn(table);
@@ -494,11 +599,12 @@ function removeTableAbbrFromColumn(model) {
 
 function _tableToUpperCase(table) {
     var where = "tableToUpperCase";
-    var name = table.getName().toUpperCase();
 
     if (!_canProcess(where, table)) {
         return;
     }
+
+    var name = table.getName().toUpperCase();
 
     _trace(where, table);
 
@@ -585,12 +691,13 @@ function _getIndex(tab, cols) {
 
 function _createIndexOnFK(table) {
     var where = "createIndexOnFK";
-    var columns;
-    var newIndex;
 
     if (!_canProcess(where, table)) {
         return;
     }
+
+    var columns;
+    var newIndex;
 
     _trace(where, table);
 
@@ -611,8 +718,18 @@ function _createIndexOnFK(table) {
         });
 }
 
+/**
+ * Set table abbreviation based on primary key.
+ *
+ * @param table  The table object
+ */
 function _setTableAbbreviation(table) {
     var where = "setTableAbbreviation";
+
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
     var pk = table.getPK();
 
     if (_isEmpty(table.getAbbreviation()) && pk !== null && pk.getName().endsWith("_PK")) {
@@ -622,6 +739,8 @@ function _setTableAbbreviation(table) {
     }
 }
 
+// Custom Transformation Script:
+// Set table abbreviation based on primary key | relational
 function setTableAbbreviation(model) {
     try {
         var tables = _getSelectedObjects(model, "Table");
@@ -697,14 +816,15 @@ function _addMandatoryOptColumns(list, cols, mand) {
 
 function _setColumnsOrder(table) {
     var where = "setColumnsOrder";
-    var oldColumnList = new java.util.ArrayList();
-    var newColumnList = new java.util.ArrayList();
-    var cols = table.getElements();
-    var index = 0;
 
     if (!_canProcess(where, table)) {
         return;
     }
+
+    var oldColumnList = new java.util.ArrayList();
+    var newColumnList = new java.util.ArrayList();
+    var cols = table.getElements();
+    var index = 0;
 
     _trace(where, table);
 
@@ -738,15 +858,21 @@ function _setColumnsOrder(table) {
     }
 }
 
+/**
+ * Copy table prefix to indexes and keys.
+ *
+ * @param table  The table object
+ */
 function _copyTablePrefixToIndexesAndKeys(table) {
     var where = "copyTablePrefixToIndexesAndKeys";
-    var pos = table.getName().indexOf("_");
-    var prefix = (pos < 0 ? null : table.getName().substring(0, pos+1));
-    var name = null;
 
     if (!_canProcess(where, table)) {
         return;
     }
+
+    var pos = table.getName().indexOf("_");
+    var prefix = (pos < 0 ? null : table.getName().substring(0, pos+1));
+    var name = null;
 
     if (prefix) {
         _toStream(table.getKeys()).forEach(function (key) {
@@ -774,27 +900,44 @@ function _copyTablePrefixToIndexesAndKeys(table) {
     }
 }
 
+// Custom Transformation Script:
+// Copy table prefix to indexes and keys | relational
+function copyTablePrefixToIndexesAndKeys(model) {
+    try {
+        var tables = _getSelectedObjects(model, "Table");
+        
+        for (var i = 0; i < tables.length; i++) {
+            _copyTablePrefixToIndexesAndKeys(tables.get(i));
+        }
+    } catch (e) {
+        _msg(e.stack);
+        throw(e);
+    }
+}
+
 function _applyStandardsTable(table, physicalTables) {
     var where = "applyStandards";
 
+    if (!_canProcess(where, table)) {
+        return;
+    }
+
     _showObject(table);
 
-    if (_canProcess(where, table)) {
-        _copyComments_container(table);
-        _copyCommentsInRDBMS_container(table);
-        _setSecurityOptions(table);
-        _tableToUpperCase(table);
-        _tableNamePlural(table);
-        _setUseDomainConstraints(table);
-        _setTableAbbreviation(table);
-        _setAutoIncrement(table, physicalTables);
-        // _tableToLowerCase(table);
-        // _tableAbbreviationToColumn(table);
-        // _removeTableAbbrFromColumn(table);
-        _createIndexOnFK(table);
-        _setColumnsOrder(table);
-        // _copyTablePrefixToIndexesAndKeys(table);
-    }
+    _copyComments_container(table);
+    _copyCommentsInRDBMS_container(table);
+    _setSecurityOptions(table);
+    _tableToUpperCase(table);
+    // _tableNamePlural(table); // there is a tableNamePlural()
+    _setUseDomainConstraints(table);
+    _setTableAbbreviation(table);
+    _setAutoIncrement(table, physicalTables);
+    // _tableToLowerCase(table); // there is a tableToLowerCase()
+    // _tableAbbreviationToColumn(table); // there is a tableAbbreviationToColumn()
+    // _removeTableAbbrFromColumn(table); // there is a removeTableAbbrFromColumn()
+    _createIndexOnFK(table);
+    _setColumnsOrder(table);
+    // _copyTablePrefixToIndexesAndKeys(table); // there is a copyTablePrefixToIndexesAndKeys()
 }
 
 // Custom Transformation Script:
@@ -803,6 +946,12 @@ function applyStandardsForSelectedRelationalItems(model) {
     var physicalTables = model.getStorageDesign().getTableProxySet();
 
     try {
+        // Ask some questions before converting all.
+        debug = /^[YyTt1]/.test(_ask('Debugging on [N] ? '));
+        if (debug) { // enable trace only when debug is true
+            trace = /^[YyTt1]/.test(_ask('Tracing on [N] ? '));
+        }
+        
         _getSelectedObjects(model, "Table").forEach(function (table) {
             _applyStandardsTable(table, physicalTables);
         });
@@ -815,33 +964,43 @@ function applyStandardsForSelectedRelationalItems(model) {
 function _applyStandardsEntity(entity) {
     var where = "applyStandards";
 
+    if (!_canProcess(where, entity)) {
+        return;
+    }
+
     _showObject(entity);
 
-    if (_canProcess(where, entity)) {
-        _copyPreferredAbbreviation(entity);
-        _copyComments_container(entity);
-        _copyCommentsInRDBMS_container(entity);
-    }
+    _copyPreferredAbbreviation(entity);
+    _copyComments_container(entity);
+    _copyCommentsInRDBMS_container(entity);
 }
 
 function _applyStandardsRelation(rel) {
     var where = "applyStandards";
 
+    if (!_canProcess(where, rel)) {
+        return;
+    }
+
     _showObject(rel);
 
-    if (_canProcess(where, rel)) {
-        _setRelationName(rel,
-                         rel.getSourceEntity().getShortName(),
-                         rel.getSourceEntity().getPreferredAbbreviation(),
-                         rel.getTargetEntity().getShortName(),
-                         rel.getTargetEntity().getPreferredAbbreviation());
-    }
+    _setRelationName(rel,
+                     rel.getSourceEntity().getShortName(),
+                     rel.getSourceEntity().getPreferredAbbreviation(),
+                     rel.getTargetEntity().getShortName(),
+                     rel.getTargetEntity().getPreferredAbbreviation());
 }
 
 // Custom Transformation Script:
 // Apply standards for selected logical items | logical
 function applyStandardsForSelectedLogicalItems(model) {
     try {
+        // Ask some questions before converting all.
+        debug = /^[YyTt1]/.test(_ask('Debugging on [N] ? '));
+        if (debug) { // enable trace only when debug is true
+            trace = /^[YyTt1]/.test(_ask('Tracing on [N] ? '));
+        }
+
         _getSelectedObjects(model, "Entity").forEach(function (entity) {
             _applyStandardsEntity(entity);
         });
