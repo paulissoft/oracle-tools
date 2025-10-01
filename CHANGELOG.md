@@ -23,10 +23,14 @@ Types of changes:
 
 ### Added
 
-- [The message subsystem needs to handle HTTP responses with respect to HTTP rate limits.](https://github.com/paulissoft/oracle-tools/issues/211)
 - [The API_TIME_PKG must also support milliseconds since the Unix epoch, i.e. 1-JAN-1970 UTC.](https://github.com/paulissoft/oracle-tools/issues/214)
 - [Add the ability to check database objects after an incremental installation.](https://github.com/paulissoft/oracle-tools/issues/217)
 - [Ability to generate Flyway migrations SQL script while installing scripts.](https://github.com/paulissoft/oracle-tools/issues/218)
+
+### Changed
+
+- [The message subsystem needs to handle HTTP responses with respect to HTTP rate limits.](https://github.com/paulissoft/oracle-tools/issues/211)
+- [The SQL Data Modeller Nashorn scripts should not use identity columns but a default with next value for a sequence.](https://github.com/paulissoft/oracle-tools/issues/220)
 
 ### Fixed
 
