@@ -705,7 +705,19 @@ procedure enable_constraints
 , p_error_tab out nocopy dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
 )
 is
+  l_statement varchar2(4000 byte);
 begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.ENABLE_CONSTRAINTS');
+  dbug.print
+  ( dbug."input"
+  , 'p_owner: %s; p_table_name: %s; p_stop_on_error: %s'
+  , p_owner
+  , p_table_name
+  , dbug.cast_to_varchar2(p_stop_on_error)
+  );
+$end
+
   for r in 
   ( select  table_name
     ,       constraint_name
@@ -713,18 +725,34 @@ begin
     where   c.owner = p_owner
     and     c.table_name like p_table_name
     and     c.status = 'DISABLED'
-    and     c.validated = 'VALIDATED'
+    and     c.validated = 'NOT VALIDATED'
   )
   loop
     begin
-      execute immediate utl_lms.format_message('alter table "%s" enable constraint "%s"', r.table_name, r.constraint_name);
+      l_statement := utl_lms.format_message('alter table "%s" enable constraint "%s"', r.table_name, r.constraint_name);
+$if cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'statement: %s', l_statement);
+$end        
+      execute immediate l_statement;
     exception
       when others
       then
-        p_error_tab(p_error_tab.count + 1) := sqlerrm;
+$if cfg_pkg.c_debugging $then
+        dbug.on_error;
+$end        
+        p_error_tab(p_error_tab.count + 1) := r.table_name || '|' || r.constraint_name || '|' || sqlerrm;
         if p_stop_on_error then raise; end if;
     end;
   end loop;
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end enable_constraints;
 
 procedure disable_constraints
@@ -734,7 +762,19 @@ procedure disable_constraints
 , p_error_tab out nocopy dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
 )
 is
+  l_statement varchar2(4000 byte);
 begin
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.DISABLE_CONSTRAINTS');
+  dbug.print
+  ( dbug."input"
+  , 'p_owner: %s; p_table_name: %s; p_stop_on_error: %s'
+  , p_owner
+  , p_table_name
+  , dbug.cast_to_varchar2(p_stop_on_error)
+  );
+$end
+
   for r in 
   ( select  table_name
     ,       constraint_name
@@ -746,14 +786,30 @@ begin
   )
   loop
     begin
-      execute immediate utl_lms.format_message('alter table "%s" disable constraint "%s"', r.table_name, r.constraint_name);
+      l_statement := utl_lms.format_message('alter table "%s" disable constraint "%s"', r.table_name, r.constraint_name);
+$if cfg_pkg.c_debugging $then
+      dbug.print(dbug."info", 'statement: %s', l_statement);
+$end        
+      execute immediate l_statement;
     exception
       when others
       then
-        p_error_tab(p_error_tab.count + 1) := sqlerrm;
+$if cfg_pkg.c_debugging $then
+        dbug.on_error;
+$end        
+        p_error_tab(p_error_tab.count + 1) := r.table_name || '|' || r.constraint_name || '|' || sqlerrm;
         if p_stop_on_error then raise; end if;
     end;
   end loop;
+
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+exception
+  when others
+  then
+    dbug.leave_on_error;
+    raise;
+$end
 end disable_constraints;
 
 procedure restore_data_integrity

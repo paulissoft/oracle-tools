@@ -129,7 +129,7 @@ procedure enable_constraints
 );
 /**
 Enable DISABLED constraints that have a VALIDATED clause, i.e. those constraints
-where ALL_CONSTRAINTS.STATUS = 'DISABLED' and ALL_CONSTRAINTS.VALIDATED = 'VALIDATED'.
+where ALL_CONSTRAINTS.STATUS = 'DISABLED' and ALL_CONSTRAINTS.VALIDATED = 'NOT VALIDATED'.
 **/
 
 procedure disable_constraints
