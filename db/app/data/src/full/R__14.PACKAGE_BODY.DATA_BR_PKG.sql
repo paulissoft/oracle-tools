@@ -698,6 +698,64 @@ exception
 $end
 end validate_table;
 
+procedure enable_constraints
+( p_owner in varchar2 default sys_context('userenv', 'current_schema') -- The table schema
+, p_table_name in varchar2 default '%' -- A wildcard for table names
+, p_stop_on_error in boolean default true -- When enabling a constraint fails, the procedure will stop (yes/no)
+, p_error_tab out nocopy dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
+)
+is
+begin
+  for r in 
+  ( select  table_name
+    ,       constraint_name
+    from    all_constraints c
+    where   c.owner = p_owner
+    and     c.table_name like p_table_name
+    and     c.status = 'DISABLED'
+    and     c.validated = 'VALIDATED'
+  )
+  loop
+    begin
+      execute immediate utl_lms.format_message('alter table "%s" enable constraint "%s"', r.table_name, r.constraint_name);
+    exception
+      when others
+      then
+        p_error_tab(p_error_tab.count + 1) := sqlerrm;
+        if p_stop_on_error then raise; end if;
+    end;
+  end loop;
+end enable_constraints;
+
+procedure disable_constraints
+( p_owner in varchar2 default sys_context('userenv', 'current_schema') -- The table schema
+, p_table_name in varchar2 default '%' -- A wildcard for table names
+, p_stop_on_error in boolean default true -- When disabling a constraint fails, the procedure will stop (yes/no)
+, p_error_tab out nocopy dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
+)
+is
+begin
+  for r in 
+  ( select  table_name
+    ,       constraint_name
+    from    all_constraints c
+    where   c.owner = p_owner
+    and     c.table_name like p_table_name
+    and     c.status = 'ENABLED'
+    and     c.validated = 'VALIDATED'
+  )
+  loop
+    begin
+      execute immediate utl_lms.format_message('alter table "%s" disable constraint "%s"', r.table_name, r.constraint_name);
+    exception
+      when others
+      then
+        p_error_tab(p_error_tab.count + 1) := sqlerrm;
+        if p_stop_on_error then raise; end if;
+    end;
+  end loop;
+end disable_constraints;
+
 procedure restore_data_integrity
 ( p_br_package_tab in t_br_package_tab
 )

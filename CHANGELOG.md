@@ -18,6 +18,7 @@ Types of changes:
 - [Some private synonyms are not recognised during DDL export.](https://github.com/paulissoft/oracle-tools/issues/195)
 - [Add script with OCI filesystem operations.](https://github.com/paulissoft/oracle-tools/issues/210)
 - [Base the smart pool data source directly on the Hikari and Oracle UCP pool data sources.](https://github.com/paulissoft/oracle-tools/issues/212)
+- [Add procedures for enabling/disabling constraints.](https://github.com/paulissoft/oracle-tools/issues/217)
 
 ## [5.0.0] - 2025-10-01
 

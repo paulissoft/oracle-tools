@@ -121,6 +121,28 @@ First get all the tables with a column VALID.
 Next change VALID to p_valid if possible and if not catch the error.
 **/
 
+procedure enable_constraints
+( p_owner in varchar2 default sys_context('userenv', 'current_schema') -- The table schema
+, p_table_name in varchar2 default '%' -- A wildcard for table names
+, p_stop_on_error in boolean default true -- When enabling a constraint fails, the procedure will stop (yes/no)
+, p_error_tab out nocopy dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
+);
+/**
+Enable DISABLED constraints that have a VALIDATED clause, i.e. those constraints
+where ALL_CONSTRAINTS.STATUS = 'DISABLED' and ALL_CONSTRAINTS.VALIDATED = 'VALIDATED'.
+**/
+
+procedure disable_constraints
+( p_owner in varchar2 default sys_context('userenv', 'current_schema') -- The table schema
+, p_table_name in varchar2 default '%' -- A wildcard for table names
+, p_stop_on_error in boolean default true -- When disabling a constraint fails, the procedure will stop (yes/no)
+, p_error_tab out nocopy dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
+);
+/**
+Disable ENABLED constraints that have a VALIDATED clause, i.e. those constraints
+where ALL_CONSTRAINTS.STATUS = 'ENABLED' and ALL_CONSTRAINTS.VALIDATED = 'VALIDATED'.
+**/
+
 procedure restore_data_integrity
 ( p_br_package_tab in t_br_package_tab -- A list of packages for each schema involved in data integrity.
 );
@@ -136,7 +158,7 @@ The following dynamic calls will be made:
 
 - `execute immediate 'call ' || dbms_assert.sql_object_name(l_owner || '.' || p_br_package_tab(l_owner) || '.refresh_mv') || '(p_mview_name => ''%_MV_BR_%'')'`
 
-- `data_br_pkg.enable_br(p_br_package_tab; '%', true)`
+- `data_br_pkg.enable_br(p_br_package_tab, '%', true)`
 
 - `data_br_pkg.enable_br(p_br_package_tab, l_constraint_name, true)`
 
