@@ -699,9 +699,11 @@ $end
 end validate_table;
 
 procedure enable_constraints
-( p_owner in varchar2 default sys_context('userenv', 'current_schema') -- The table schema
-, p_table_name in varchar2 default '%' -- A wildcard for table names
-, p_stop_on_error in boolean default true -- When enabling a constraint fails, the procedure will stop (yes/no)
+( p_owner in varchar2
+, p_table_name in varchar2
+, p_constraint_name in varchar2
+, p_validate_clause in varchar2
+, p_stop_on_error in boolean
 , p_error_tab out nocopy dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
 )
 is
@@ -711,25 +713,33 @@ $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.ENABLE_CONSTRAINTS');
   dbug.print
   ( dbug."input"
-  , 'p_owner: %s; p_table_name: %s; p_stop_on_error: %s'
+  , 'p_owner: %s; p_table_name: %s; p_table_name: %s; p_validate_clause: %s; p_stop_on_error: %s'
   , p_owner
   , p_table_name
+  , p_table_name
+  , p_validate_clause
   , dbug.cast_to_varchar2(p_stop_on_error)
   );
 $end
 
   for r in 
-  ( select  table_name
-    ,       constraint_name
+  ( select  c.table_name
+    ,       c.constraint_name
     from    all_constraints c
     where   c.owner = p_owner
-    and     c.table_name like p_table_name
+    and     c.table_name like p_table_name escape '\'
+    and     c.constraint_name like p_constraint_name escape '\'
     and     c.status = 'DISABLED'
-    and     c.validated = 'NOT VALIDATED'
+    order by
+            case c.constraint_type
+              when 'R'
+              then 1 -- foreign keys last
+              else 0
+            end asc
   )
   loop
     begin
-      l_statement := utl_lms.format_message('alter table "%s" enable constraint "%s"', r.table_name, r.constraint_name);
+      l_statement := utl_lms.format_message('alter table "%s" enable %s constraint "%s"', r.table_name, p_validate_clause, r.constraint_name);
 $if cfg_pkg.c_debugging $then
       dbug.print(dbug."info", 'statement: %s', l_statement);
 $end        
@@ -756,9 +766,11 @@ $end
 end enable_constraints;
 
 procedure disable_constraints
-( p_owner in varchar2 default sys_context('userenv', 'current_schema') -- The table schema
-, p_table_name in varchar2 default '%' -- A wildcard for table names
-, p_stop_on_error in boolean default true -- When disabling a constraint fails, the procedure will stop (yes/no)
+( p_owner in varchar2
+, p_table_name in varchar2
+, p_constraint_name in varchar2
+, p_validate_clause in varchar2
+, p_stop_on_error in boolean
 , p_error_tab out nocopy dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
 )
 is
@@ -768,9 +780,11 @@ $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.DISABLE_CONSTRAINTS');
   dbug.print
   ( dbug."input"
-  , 'p_owner: %s; p_table_name: %s; p_stop_on_error: %s'
+  , 'p_owner: %s; p_table_name: %s; p_table_name: %s; p_validate_clause: %s; p_stop_on_error: %s'
   , p_owner
   , p_table_name
+  , p_table_name
+  , p_validate_clause
   , dbug.cast_to_varchar2(p_stop_on_error)
   );
 $end
@@ -780,13 +794,19 @@ $end
     ,       constraint_name
     from    all_constraints c
     where   c.owner = p_owner
-    and     c.table_name like p_table_name
+    and     c.table_name like p_table_name escape '\'
+    and     c.constraint_name like p_constraint_name escape '\'
     and     c.status = 'ENABLED'
-    and     c.validated = 'VALIDATED'
+    order by
+            case c.constraint_type
+              when 'R'
+              then 0 -- foreign keys first
+              else 1
+            end asc
   )
   loop
     begin
-      l_statement := utl_lms.format_message('alter table "%s" disable constraint "%s"', r.table_name, r.constraint_name);
+      l_statement := utl_lms.format_message('alter table "%s" disable %s constraint "%s"', r.table_name, p_validate_clause, r.constraint_name);
 $if cfg_pkg.c_debugging $then
       dbug.print(dbug."info", 'statement: %s', l_statement);
 $end        

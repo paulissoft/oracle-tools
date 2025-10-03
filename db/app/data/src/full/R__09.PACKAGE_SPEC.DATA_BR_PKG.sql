@@ -123,24 +123,32 @@ Next change VALID to p_valid if possible and if not catch the error.
 
 procedure enable_constraints
 ( p_owner in varchar2 default sys_context('userenv', 'current_schema') -- The table schema
-, p_table_name in varchar2 default '%' -- A wildcard for table names
+, p_table_name in varchar2 default '%' -- A wildcard for table names with \ as escape
+, p_constraint_name in varchar2 default '%' -- A wildcard for constraint names with \ as escape
+, p_validate_clause in varchar2 default 'VALIDATE' -- Can be VALIDATE/NOVALIDATE or empty
 , p_stop_on_error in boolean default true -- When enabling a constraint fails, the procedure will stop (yes/no)
 , p_error_tab out nocopy dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
 );
 /**
 Enable DISABLED constraints that have a VALIDATED clause, i.e. those constraints
-where ALL_CONSTRAINTS.STATUS = 'DISABLED' and ALL_CONSTRAINTS.VALIDATED = 'NOT VALIDATED'.
+where ALL_CONSTRAINTS.STATUS = 'DISABLED'.
+
+Like when creating foreign keys, enabling foreign key constraints are enabled last.
 **/
 
 procedure disable_constraints
 ( p_owner in varchar2 default sys_context('userenv', 'current_schema') -- The table schema
-, p_table_name in varchar2 default '%' -- A wildcard for table names
+, p_table_name in varchar2 default '%' -- A wildcard for table names with \ as escape
+, p_constraint_name in varchar2 default '%' -- A wildcard for constraint names with \ as escape
+, p_validate_clause in varchar2 default 'NOVALIDATE' -- Can be VALIDATE/NOVALIDATE or empty
 , p_stop_on_error in boolean default true -- When disabling a constraint fails, the procedure will stop (yes/no)
 , p_error_tab out nocopy dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
 );
 /**
 Disable ENABLED constraints that have a VALIDATED clause, i.e. those constraints
-where ALL_CONSTRAINTS.STATUS = 'ENABLED' and ALL_CONSTRAINTS.VALIDATED = 'VALIDATED'.
+where ALL_CONSTRAINTS.STATUS = 'ENABLED'.
+
+Like when dropping foreign keys, disabling foreign key constraints are enabled first.
 **/
 
 procedure restore_data_integrity
