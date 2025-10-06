@@ -32,6 +32,8 @@ c_test_view_name constant user_objects.object_name%type := c_test_base_name_pare
 
 $end
 
+-- LOCAL
+
 procedure enter
 ( p_routine in varchar2
 , p_print_always in boolean default true
@@ -168,7 +170,46 @@ $end
   );
 end leave_on_error;
 
--- LOCAL
+function ignore_error
+( p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
+, p_sqlerrm in varchar2 default sqlerrm
+, p_sqlcode in integer default sqlcode
+)
+return boolean
+is
+  l_routine constant varchar2(30 byte) := 'ignore_error';
+  l_result boolean := null;
+begin
+  enter(l_routine);
+  print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab, true);
+  print('p_sqlcode', p_sqlcode, true);
+  print('p_sqlerrm', p_sqlerrm, true);
+
+  if p_ignore_sqlcode_tab is null or not(p_sqlcode member of p_ignore_sqlcode_tab)
+  then
+    if not(g_reraise_original_exception)
+    then
+      raise_application_error(-20000, p_sqlerrm, true);
+    end if;
+    l_result := false;
+  else
+    l_result := true;
+  end if;
+
+  print('return', case l_result when true then 'TRUE' when false then 'FALSE' else 'NULL' end, true);
+  
+  leave(l_routine);
+
+  return l_result;
+
+/*
+exception
+  when others
+  then
+    leave_on_error(l_routine);
+    raise;*/
+end ignore_error;
+
 procedure do
 ( p_statement in varchar2
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default null
@@ -178,6 +219,7 @@ is
 begin
   enter(l_routine);
   print('p_statement', p_statement, true);
+  print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab, true);
 
   if not(g_dry_run)
   then
@@ -201,19 +243,17 @@ exception
     then
       rollback;
     end if;
-    if p_ignore_sqlcode_tab is null or not(sqlcode member of p_ignore_sqlcode_tab)
+
+    leave_on_error(l_routine);
+
+    if not
+       ( ignore_error
+         ( p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
+         , p_sqlerrm => 'Statement causing an error: ' || p_statement
+         )
+       )
     then
-      if g_reraise_original_exception
-      then
-        print('Statement causing an error', p_statement, true);
-        leave_on_error(l_routine);
-        raise;
-      else
-        leave_on_error(l_routine);
-        raise_application_error(-20000, 'Statement causing an error: ' || p_statement, true);
-      end if;
-    else
-      leave_on_error(l_routine);
+      raise;
     end if;
 end do;
 
@@ -307,6 +347,7 @@ begin
   else
     raise_application_error(-20000, 'Parameter "p_operation" must be one of "ADD", "MODIFY" or "DROP"');
   end if;
+  
   do
   ( p_statement => 'ALTER TABLE "' || p_table_name || '" ' || p_operation || ' ("' || p_column_name || '" ' || p_extra || ')'
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
@@ -341,6 +382,7 @@ begin
   else
     raise_application_error(-20000, 'Parameter "p_operation" must be one of "CREATE", "ALTER" or "DROP"');
   end if;
+  
   do
   ( p_statement => p_operation || ' TABLE "' || p_table_name || '" ' || p_extra
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
@@ -478,8 +520,6 @@ begin
       else
         raise_application_error(-20000, 'Parameter "p_operation" must be one of "ADD", "MODIFY", "RENAME" or "DROP"');
     end case;
-
-    l_statement := 'ALTER TABLE "' || p_table_name || '" ' || p_operation || ' CONSTRAINT "' || l_constraint_name || '" ' || p_extra;
   exception
     when others
     then
@@ -490,18 +530,13 @@ begin
          )
       then
         raise;
-      else
-        l_statement := null;
       end if;
   end;
-
-  if l_statement is not null
-  then
-    do
-    ( p_statement => l_statement
-    , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
-    );
-  end if;
+  
+  do
+  ( p_statement => 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' CONSTRAINT ' || l_constraint_name || ' ' || p_extra
+  , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
+  );
   
   leave(l_routine);
 exception
@@ -556,6 +591,7 @@ is
   l_routine constant varchar2(30 byte) := 'index_ddl';
   l_index_name user_indexes.index_name%type := p_index_name;
   l_index_name_list varchar2(32767) := null; -- used in CREATE
+  l_statement varchar2(32767 byte) := null;
 
   procedure determine_index_name
   is
@@ -641,31 +677,43 @@ begin
   print('p_extra', p_extra, true);
   print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab, true);
 
-  if upper(p_operation) in ('CREATE', 'ALTER', 'DROP')
-  then
-    null;
-  else
-    raise_application_error(-20000, 'Parameter "p_operation" must be one of "CREATE", "ALTER" or "DROP"');
-  end if;
-  if upper(p_operation) = 'ALTER'
-  then
-    if instr(p_index_name, '%') > 0 and upper(p_extra) like 'RENAME TO %'
+  begin
+    if upper(p_operation) in ('CREATE', 'ALTER', 'DROP')
     then
-      determine_index_name;
+      null;
+    else
+      raise_application_error(-20000, 'Parameter "p_operation" must be one of "CREATE", "ALTER" or "DROP"');
     end if;
-    do
-    ( p_statement => p_operation || ' INDEX ' || l_index_name || ' ' || p_extra
-    , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
-    );
-  else
-    if upper(p_operation) = 'CREATE'
+    
+    if upper(p_operation) = 'ALTER'
     then
-      if p_table_name is null or nvl(cardinality(p_column_tab), 0) = 0
+      if instr(p_index_name, '%') > 0 and upper(p_extra) like 'RENAME TO %'
       then
-        raise_application_error(-20000, 'Parameter "p_table_name" and "p_column_tab" should NOT be empty');
+        determine_index_name;
+      end if;
+
+      l_statement := p_operation || ' INDEX ' || l_index_name || ' ' || p_extra;
+    else
+      if upper(p_operation) = 'CREATE'
+      then
+        if p_table_name is null or nvl(cardinality(p_column_tab), 0) = 0
+        then
+          raise_application_error(-20000, 'Parameter "p_table_name" and "p_column_tab" should NOT be empty');
+        end if;
+        
+        l_index_name_list := ' (';
+        for i_idx in p_column_tab.first .. p_column_tab.last
+        loop
+          if i_idx <> p_column_tab.first
+          then
+            l_index_name_list := l_index_name_list || ',';
+          end if;
+          l_index_name_list := l_index_name_list || p_column_tab(i_idx);
+        end loop;
+        l_index_name_list := l_index_name_list || ')';
       end if;
       
-      l_statement := p_operation || ' INDEX "' || l_index_name || '"' || case when p_table_name is not null then ' ON "' || p_table_name || '"' || l_index_name_list end || ' ' || p_extra;
+      l_statement := p_operation || ' INDEX ' || l_index_name || case when p_table_name is not null then ' ON ' || p_table_name || l_index_name_list end || ' ' || p_extra;
     end if;
   exception
     when others
@@ -677,18 +725,13 @@ begin
          )
       then
         raise;
-      else
-        l_statement := null;
       end if;
   end;
-
-  if l_statement is not null
-  then
-    do
-    ( p_statement => l_statement
-    , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
-    );
-  end if;
+  
+  do
+  ( p_statement => l_statement
+  , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
+  );
 
   leave(l_routine);
 exception
@@ -723,6 +766,7 @@ begin
   else
     raise_application_error(-20000, 'Parameter "p_operation" must be one of "CREATE", "CREATE OR REPLACE", "ALTER" or "DROP"');
   end if;
+  
   do
   ( p_statement =>
       case
@@ -762,6 +806,7 @@ begin
   else
     raise_application_error(-20000, 'Parameter "p_operation" must be one of "CREATE", "CREATE OR REPLACE", "ALTER" or "DROP"');
   end if;
+  
   do
   ( p_statement => p_operation || ' VIEW "' || p_view_name || '" ' || p_extra
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
