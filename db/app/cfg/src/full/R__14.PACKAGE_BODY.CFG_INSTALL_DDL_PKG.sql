@@ -65,14 +65,6 @@ begin
   dbms_output.put_line(case when not(p_is_ddl_statement) then '-- ' end || p_line);
 end print;
 
-procedure enter
-( p_routine in varchar2
-)
-is
-begin
-  print('Entering ' || $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || p_routine);
-end enter;  
-
 procedure print
 ( p_description in varchar2
 , p_what in varchar2
@@ -92,6 +84,32 @@ begin
   if g_dry_run or g_verbose then null; else return; end if;
   
   if cardinality(p_column_tab) > 0
+  then
+    for i_idx in p_column_tab.first .. p_column_tab.last
+    loop
+      print
+      ( p_description => p_description || '(' || i_idx || ')'
+      , p_what => p_column_tab(i_idx)
+      );
+    end loop;
+  else
+    print
+    ( p_description => p_description
+    , p_what => 'empty'
+    );
+  end if;
+end print;
+
+procedure print
+( p_description in varchar2
+, p_column_tab in sys.odcivarchar2list
+)
+is
+begin
+  -- more than one print() is issued so return as a.s.a.p.
+  if g_dry_run or g_verbose then null; else return; end if;
+  
+  if p_column_tab is not null and p_column_tab.count > 0
   then
     for i_idx in p_column_tab.first .. p_column_tab.last
     loop
@@ -133,6 +151,14 @@ begin
     );
   end if;
 end print;
+
+procedure enter
+( p_routine in varchar2
+)
+is
+begin
+  print('Entering ' || $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || p_routine);
+end enter;  
 
 procedure leave
 ( p_routine in varchar2
@@ -214,7 +240,7 @@ exception
 end do;
 
 function columns_match
-( p_act_column_tab in t_column_tab
+( p_act_column_tab in sys.odcivarchar2list
 , p_exp_column_tab in t_column_tab
 , p_must_match_exactly in boolean
 )
@@ -223,19 +249,23 @@ deterministic
 is
 begin
   print('p_act_column_tab', p_act_column_tab);
-  
-  if cardinality(p_act_column_tab) = cardinality(p_exp_column_tab)
+
+  if case when p_act_column_tab is null then 0 else p_act_column_tab.count end =
+     case when p_exp_column_tab is null then 0 else p_exp_column_tab.count end
   then
-    for i_idx in p_act_column_tab.first .. p_act_column_tab.last
-    loop
-      if ( p_must_match_exactly and p_act_column_tab(i_idx) = p_exp_column_tab(i_idx) ) or
-         ( not(p_must_match_exactly) and p_act_column_tab(i_idx) member of p_exp_column_tab )
-      then
-        null; -- continue the search
-      else
-        return false;
-      end if;
-    end loop;
+    if p_act_column_tab.count > 0
+    then
+      for i_idx in p_act_column_tab.first .. p_act_column_tab.last
+      loop
+        if ( p_must_match_exactly and p_act_column_tab(i_idx) = p_exp_column_tab(i_idx) ) or
+           ( not(p_must_match_exactly) and p_act_column_tab(i_idx) member of p_exp_column_tab )
+        then
+          null; -- continue the search
+        else
+          return false;
+        end if;
+      end loop;
+    end if;
     return true;
   else
     return false; -- sizes don't match
@@ -365,7 +395,6 @@ is
   is
     l_routine constant varchar2(60 byte) := 'constraint_ddl.determine_constraint_name';
     l_nr_constraints_found naturaln := 0;
-    l_column_tab t_column_tab;    
   begin
     enter(l_routine);
   
@@ -382,6 +411,17 @@ is
         ,       con.table_name
         ,       con.constraint_name
         ,       con.constraint_type
+        ,       cast
+                ( multiset
+                  ( select  cons.column_name
+                    from    user_cons_columns cons
+                    where   cons.owner = con.owner
+                    and     cons.constraint_name = con.constraint_name
+                    order by
+                            cons.position
+                    ,       cons.column_name
+                  ) as sys.odcivarchar2list
+                ) as column_tab
         from    user_constraints con
         where   con.owner = user
         and     con.table_name in ( p_table_name, upper(p_table_name) )
@@ -399,17 +439,8 @@ is
         -- See 2. Can probably better but this is fine.
         if cardinality(p_column_tab) > 0
         then
-          select  cons.column_name
-          bulk collect
-          into    l_column_tab          
-          from    user_cons_columns cons
-          where   cons.owner = r_con.owner
-          and     cons.constraint_name = r_con.constraint_name
-          order by
-                  cons.position; -- can be null for Check constraints
-
           if columns_match
-             ( p_act_column_tab => l_column_tab
+             ( p_act_column_tab => r_con.column_tab
              , p_exp_column_tab => p_column_tab
              , p_must_match_exactly => (r_con.constraint_type <> 'C')
              )
@@ -551,7 +582,6 @@ is
   is
     l_routine constant varchar2(60 byte) := 'index_ddl.determine_index_name';
     l_nr_indexes_found naturaln := 0;
-    l_column_tab t_column_tab;    
   begin
     enter(l_routine);
     
@@ -563,6 +593,15 @@ is
       -- 2. But also all the index columns must match p_column_tab (when not null and in that order).
       for r_ind in
       ( select  ind.index_name
+        ,       cast
+                ( multiset
+                  ( select  inds.column_name
+                    from    user_ind_columns inds
+                    where   inds.index_name = ind.index_name
+                    order by
+                            inds.column_position
+                  ) as sys.odcivarchar2list
+                ) as column_tab
         from    user_indexes ind
         where   ind.table_owner = user
         and     ind.table_name in ( p_table_name, upper(p_table_name) )
@@ -576,16 +615,8 @@ is
         -- See 2. Can probably better but this is fine.
         if cardinality(p_column_tab) > 0
         then
-          select  inds.column_name
-          bulk collect
-          into    l_column_tab
-          from    user_ind_columns inds
-          where   inds.index_name = r_ind.index_name
-          order by
-                  inds.column_position;
-
           if columns_match
-             ( p_act_column_tab => l_column_tab
+             ( p_act_column_tab => r_ind.column_tab
              , p_exp_column_tab => p_column_tab
              , p_must_match_exactly => true
              )
