@@ -417,6 +417,7 @@ is
                     from    user_cons_columns cons
                     where   cons.owner = con.owner
                     and     cons.constraint_name = con.constraint_name
+                    and     cons.table_name = con.table_name
                     order by
                             cons.position
                     ,       cons.column_name
@@ -598,6 +599,7 @@ is
                   ( select  inds.column_name
                     from    user_ind_columns inds
                     where   inds.index_name = ind.index_name
+                    and     inds.table_name = ind.table_name
                     order by
                             inds.column_position
                   ) as sys.odcivarchar2list
