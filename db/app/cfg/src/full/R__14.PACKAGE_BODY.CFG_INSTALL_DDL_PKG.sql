@@ -54,6 +54,102 @@ begin
   end if;
 end check_condition;
 
+procedure print
+( p_line in varchar2
+, p_is_ddl_statement in boolean default false
+)
+is
+begin
+  if g_verbose or g_dry_run then null; else return; end if;
+
+  dbms_output.put_line(case when not(p_is_ddl_statement) then '-- ' end || p_line);
+end print;
+
+procedure enter
+( p_routine in varchar2
+)
+is
+begin
+  print('Entering ' || $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || p_routine);
+end enter;  
+
+procedure print
+( p_description in varchar2
+, p_what in varchar2
+)
+is
+begin
+  print(p_description || ': ' || p_what);
+end print;
+
+procedure print
+( p_description in varchar2
+, p_column_tab in t_column_tab
+)
+is
+begin
+  -- more than one print() is issued so return as a.s.a.p.
+  if g_dry_run or g_verbose then null; else return; end if;
+  
+  if cardinality(p_column_tab) > 0
+  then
+    for i_idx in p_column_tab.first .. p_column_tab.last
+    loop
+      print
+      ( p_description => p_description || '(' || i_idx || ')'
+      , p_what => p_column_tab(i_idx)
+      );
+    end loop;
+  else
+    print
+    ( p_description => p_description
+    , p_what => 'empty'
+    );
+  end if;
+end print;
+
+procedure print
+( p_description in varchar2
+, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab 
+)
+is
+begin
+  -- more than one print() is issued so return as a.s.a.p.
+  if g_dry_run or g_verbose then null; else return; end if;
+  
+  if cardinality(p_ignore_sqlcode_tab) > 0
+  then
+    for i_idx in p_ignore_sqlcode_tab.first .. p_ignore_sqlcode_tab.last
+    loop
+      print
+      ( p_description => p_description || '(' || i_idx || ')'
+      , p_what => p_ignore_sqlcode_tab(i_idx)
+      );
+    end loop;
+  else
+    print
+    ( p_description => p_description
+    , p_what => 'empty'
+    );
+  end if;
+end print;
+
+procedure leave
+( p_routine in varchar2
+)
+is
+begin
+  print('Leaving ' || $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || p_routine);
+end leave;
+
+procedure leave_on_error
+( p_routine in varchar2
+)
+is
+begin
+  print('Leaving ' || $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || p_routine || ' with error ' || sqlerrm);
+end leave_on_error;
+
 function ignore_error
 ( p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 , p_statement in varchar2 default null
@@ -68,7 +164,7 @@ begin
     then
       if g_reraise_original_exception
       then
-        dbms_output.put_line('Statement causing an error: ' || p_statement);
+        print('Statement causing an error: ' || p_statement);
       else
         raise_application_error(-20000, 'Statement causing an error: ' || p_statement, true);
       end if;
@@ -85,10 +181,7 @@ procedure do
 )
 is
 begin
-  if g_dry_run or g_verbose 
-  then
-    dbms_output.put_line(p_statement);
-  end if;
+  print(p_statement, true);
   if not(g_dry_run)
   then
     if g_explicit_commit
@@ -119,6 +212,35 @@ exception
       raise;
     end if;
 end do;
+
+function columns_match
+( p_act_column_tab in t_column_tab
+, p_exp_column_tab in t_column_tab
+, p_must_match_exactly in boolean
+)
+return boolean
+deterministic
+is
+begin
+  print('p_act_column_tab', p_act_column_tab);
+  
+  if cardinality(p_act_column_tab) = cardinality(p_exp_column_tab)
+  then
+    for i_idx in p_act_column_tab.first .. p_act_column_tab.last
+    loop
+      if ( p_must_match_exactly and p_act_column_tab(i_idx) = p_exp_column_tab(i_idx) ) or
+         ( not(p_must_match_exactly) and p_act_column_tab(i_idx) member of p_exp_column_tab )
+      then
+        null; -- continue the search
+      else
+        return false;
+      end if;
+    end loop;
+    return true;
+  else
+    return false; -- sizes don't match
+  end if;
+end columns_match;
 
 -- GLOBAL
 procedure set_ddl_execution_settings
@@ -166,7 +288,15 @@ procedure column_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab 
 )
 is
+  l_routine constant varchar2(30 byte) := 'column_ddl';
 begin
+  enter(l_routine);
+  print('p_operation', p_operation);
+  print('p_table_name', p_table_name);
+  print('p_column_name', p_column_name);
+  print('p_extra', p_extra);
+  print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+  
   check_condition
   ( upper(p_operation) in ('ADD', 'MODIFY', 'DROP')
   , 'Parameter "p_operation" must be one of "ADD", "MODIFY" or "DROP"'
@@ -176,6 +306,13 @@ begin
   ( p_statement => 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' (' || p_column_name || ' ' || p_extra || ')'
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
+
+  leave(l_routine);
+exception
+  when others
+  then
+    leave_on_error(l_routine);
+    raise;
 end column_ddl;
 
 procedure table_ddl
@@ -185,7 +322,14 @@ procedure table_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 )
 is
+  l_routine constant varchar2(30 byte) := 'table_ddl';
 begin
+  enter(l_routine);
+  print('p_operation', p_operation);
+  print('p_table_name', p_table_name);
+  print('p_extra', p_extra);
+  print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+  
   check_condition
   ( upper(p_operation) in ('CREATE', 'ALTER', 'DROP')
   , 'Parameter "p_operation" must be one of "CREATE", "ALTER" or "DROP"'
@@ -194,6 +338,13 @@ begin
   ( p_statement => p_operation || ' TABLE ' || p_table_name || ' ' || p_extra
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
+
+  leave(l_routine);
+exception
+  when others
+  then
+    leave_on_error(l_routine);
+    raise;
 end table_ddl;
 
 procedure constraint_ddl
@@ -206,13 +357,18 @@ procedure constraint_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 )
 is
+  l_routine constant varchar2(30 byte) := 'constraint_ddl';
   l_constraint_name user_constraints.constraint_name%type := p_constraint_name;
+  l_statement varchar2(32767 byte) := null;
 
   procedure determine_constraint_name
   is
+    l_routine constant varchar2(60 byte) := 'constraint_ddl.determine_constraint_name';
     l_nr_constraints_found naturaln := 0;
-    l_nr_columns_found naturaln := 0;
+    l_column_tab t_column_tab;    
   begin
+    enter(l_routine);
+  
     if instr(p_constraint_name, '%') > 0
     then
       check_condition
@@ -223,7 +379,9 @@ is
       -- 2. But also all the constraint columns must match p_column_tab (when not null).
       for r_con in
       ( select  con.owner
+        ,       con.table_name
         ,       con.constraint_name
+        ,       con.constraint_type
         from    user_constraints con
         where   con.owner = user
         and     con.table_name in ( p_table_name, upper(p_table_name) )
@@ -233,71 +391,113 @@ is
         and     con.constraint_type = upper(p_constraint_type)
       )
       loop
-        -- if g_verbose then dbms_output.put_line('r_con.constraint_name: ' || r_con.constraint_name); end if;
-        
+        print('r_con.owner', r_con.owner);
+        print('r_con.table_name', r_con.table_name);
+        print('r_con.constraint_name', r_con.constraint_name);
+        print('r_con.constraint_type', r_con.constraint_type);
+
         -- See 2. Can probably better but this is fine.
-        if p_column_tab is not null
+        if cardinality(p_column_tab) > 0
         then
-          l_nr_columns_found := 0;
-          for r_cons in
-          ( select  cons.column_name
-            from    user_cons_columns cons
-            where   cons.owner = r_con.owner
-            and     cons.constraint_name = r_con.constraint_name
-          )
-          loop
-            -- if g_verbose then dbms_output.put_line('r_cons.column_name: ' || r_cons.column_name); end if;
-            
-            if r_cons.column_name member of p_column_tab
-            then
-              l_nr_columns_found := l_nr_columns_found + 1;
-            end if;
-          end loop;
+          select  cons.column_name
+          bulk collect
+          into    l_column_tab          
+          from    user_cons_columns cons
+          where   cons.owner = r_con.owner
+          and     cons.constraint_name = r_con.constraint_name
+          order by
+                  cons.position; -- can be null for Check constraints
+
+          if columns_match
+             ( p_act_column_tab => l_column_tab
+             , p_exp_column_tab => p_column_tab
+             , p_must_match_exactly => (r_con.constraint_type <> 'C')
+             )
+          then
+            print('constraint', 'candidate (' || r_con.constraint_name || ')');
+            l_nr_constraints_found := l_nr_constraints_found + 1;
+          else
+            print('constraint', 'NO candidate');
+          end if;
+        else
+          -- assume this one is OK
+          print('constraint', 'candidate (' || r_con.constraint_name || ')');
+          l_nr_constraints_found := l_nr_constraints_found + 1;
         end if;
 
-        if p_column_tab is null or l_nr_columns_found = p_column_tab.count
-        then
-          l_nr_constraints_found := l_nr_constraints_found + 1;
-          l_constraint_name := r_con.constraint_name;
-        end if;
+        if l_nr_constraints_found > 1 then raise too_many_rows; end if;
+        l_constraint_name := r_con.constraint_name;
       end loop;
       case l_nr_constraints_found
         when 0
         then raise no_data_found;
         when 1
         then null; -- OK
-        else raise too_many_rows;
       end case;
     end if;
+    
+    leave(l_routine);
+  exception
+    when others
+    then
+      leave_on_error(l_routine);
+      raise;
   end determine_constraint_name;
 begin
-/*
-  if g_verbose
+  enter(l_routine);
+  print('p_operation', p_operation);
+  print('p_table_name', p_table_name);
+  print('p_constraint_name', p_constraint_name);
+  print('p_constraint_type', p_constraint_type);
+  print('p_column_tab', p_column_tab);
+  print('p_extra', p_extra);
+  print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+
+  begin
+    case upper(p_operation)
+      when 'ADD'
+      then null;
+      when 'MODIFY'
+      then null;
+      when 'RENAME'
+      then determine_constraint_name;
+      when 'DROP'
+      then determine_constraint_name;
+        
+      else
+        check_condition(false, 'Parameter "p_operation" must be one of "ADD", "MODIFY", "RENAME" or "DROP"');
+    end case;
+    
+    l_statement := 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' CONSTRAINT ' || l_constraint_name || ' ' || p_extra;
+  exception
+    when others
+    then
+      if not
+         ( ignore_error
+           ( p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
+           )
+         )
+      then
+        raise;
+      else
+        l_statement := null;
+      end if;
+  end;
+
+  if l_statement is not null
   then
-    dbms_output.put_line('p_operation: ' || p_operation);
-    dbms_output.put_line('p_table_name: ' || p_table_name);
-    dbms_output.put_line('p_constraint_name: ' || p_constraint_name);
-    dbms_output.put_line('p_constraint_type: ' || p_constraint_type);
+    do
+    ( p_statement => l_statement
+    , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
+    );
   end if;
-*/
-  case upper(p_operation)
-    when 'ADD'
-    then null;
-    when 'MODIFY'
-    then null;
-    when 'RENAME'
-    then determine_constraint_name;
-    when 'DROP'
-    then determine_constraint_name;
-      
-    else
-      check_condition(false, 'Parameter "p_operation" must be one of "ADD", "MODIFY", "RENAME" or "DROP"');
-  end case;
   
-  do
-  ( p_statement => 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' CONSTRAINT ' || l_constraint_name || ' ' || p_extra
-  , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
-  );
+  leave(l_routine);
+exception
+  when others
+  then
+    leave_on_error(l_routine);
+    raise;
 end constraint_ddl;
 
 procedure comment_ddl
@@ -307,7 +507,14 @@ procedure comment_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 )
 is
+  l_routine constant varchar2(30 byte) := 'comment_ddl';
 begin
+  enter(l_routine);
+  print('p_table_name', p_table_name);
+  print('p_column_name', p_column_name);
+  print('p_comment', p_comment);
+  print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+  
   do
   ( p_statement =>
       case
@@ -317,6 +524,13 @@ begin
       end
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
+
+  leave(l_routine);
+exception
+  when others
+  then
+    leave_on_error(l_routine);
+    raise;
 end comment_ddl;    
 
 procedure index_ddl
@@ -328,14 +542,19 @@ procedure index_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 )
 is
+  l_routine constant varchar2(30 byte) := 'index_ddl';
   l_index_name user_indexes.index_name%type := p_index_name;
   l_index_name_list varchar2(32767) := null; -- used in CREATE
+  l_statement varchar2(32767 byte) := null;
 
   procedure determine_index_name
   is
+    l_routine constant varchar2(60 byte) := 'index_ddl.determine_index_name';
     l_nr_indexes_found naturaln := 0;
-    l_nr_columns_found naturaln := 0;
+    l_column_tab t_column_tab;    
   begin
+    enter(l_routine);
+    
     if instr(p_index_name, '%') > 0
     then
       check_condition(p_table_name is not null, 'Parameter "p_table_name" should NOT be empty');
@@ -352,79 +571,127 @@ is
                 )
       )
       loop
+        print('r_ind.index_name', r_ind.index_name);
+        
         -- See 2. Can probably better but this is fine.
-        if p_column_tab is not null
+        if cardinality(p_column_tab) > 0
         then
-          l_nr_columns_found := 0;
-          for r_inds in
-          ( select  inds.column_name
-            ,       inds.column_position
-            from    user_ind_columns inds
-            where   inds.index_name = r_ind.index_name
-          )
-          loop
-            if p_column_tab.exists(r_inds.column_position) and r_inds.column_name = p_column_tab(r_inds.column_position)
-            then
-              l_nr_columns_found := l_nr_columns_found + 1;
-            end if;
-          end loop;
+          select  inds.column_name
+          bulk collect
+          into    l_column_tab
+          from    user_ind_columns inds
+          where   inds.index_name = r_ind.index_name
+          order by
+                  inds.column_position;
+
+          if columns_match
+             ( p_act_column_tab => l_column_tab
+             , p_exp_column_tab => p_column_tab
+             , p_must_match_exactly => true
+             )
+          then
+            print('index', 'candidate (' || r_ind.index_name || ')');
+            l_nr_indexes_found := l_nr_indexes_found + 1;
+          else
+            print('index', 'NO candidate (' || r_ind.index_name || ')');
+          end if;
+        else
+          -- assume this is OK
+          print('index', 'candidate (' || r_ind.index_name || ')');
+          l_nr_indexes_found := l_nr_indexes_found + 1;
         end if;
 
-        if p_column_tab is null or l_nr_columns_found = p_column_tab.count
-        then
-          l_nr_indexes_found := l_nr_indexes_found + 1;
-          l_index_name := r_ind.index_name;
-        end if;
+        if l_nr_indexes_found > 1 then raise too_many_rows; end if;
+        l_index_name := r_ind.index_name;
       end loop;
       case l_nr_indexes_found
         when 0
         then raise no_data_found;
         when 1
         then null; -- OK
-        else raise too_many_rows;
       end case;
     end if;
+    leave(l_routine);
+  exception
+    when others
+    then
+      leave_on_error(l_routine);
+      raise;
   end determine_index_name;
 begin
-  check_condition
-  ( upper(p_operation) in ('CREATE', 'ALTER', 'DROP')
-  , 'Parameter "p_operation" must be one of "CREATE", "ALTER" or "DROP"'
-  );
-  if upper(p_operation) = 'ALTER'
-  then
-    if instr(p_index_name, '%') > 0 and upper(p_extra) like 'RENAME TO %'
+  enter(l_routine);
+  print('p_operation', p_operation);
+  print('p_index_name', p_index_name);
+  print('p_table_name', p_table_name);
+  print('p_column_tab', p_column_tab);
+  print('p_extra', p_extra);
+  print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+
+  begin
+    check_condition
+    ( upper(p_operation) in ('CREATE', 'ALTER', 'DROP')
+    , 'Parameter "p_operation" must be one of "CREATE", "ALTER" or "DROP"'
+    );
+    
+    if upper(p_operation) = 'ALTER'
     then
-      determine_index_name;
+      if instr(p_index_name, '%') > 0 and upper(p_extra) like 'RENAME TO %'
+      then
+        determine_index_name;
+      end if;
+
+      l_statement := p_operation || ' INDEX ' || l_index_name || ' ' || p_extra;
+    else
+      if upper(p_operation) = 'CREATE'
+      then
+        check_condition
+        ( p_table_name is not null and cardinality(p_column_tab) > 0
+        , 'Parameter "p_table_name" and "p_column_tab" should NOT be empty'
+        );
+        
+        l_index_name_list := ' (';
+        for i_idx in p_column_tab.first .. p_column_tab.last
+        loop
+          if i_idx <> p_column_tab.first
+          then
+            l_index_name_list := l_index_name_list || ',';
+          end if;
+          l_index_name_list := l_index_name_list || p_column_tab(i_idx);
+        end loop;
+        l_index_name_list := l_index_name_list || ')';
+      end if;
+      
+      l_statement := p_operation || ' INDEX ' || l_index_name || case when p_table_name is not null then ' ON ' || p_table_name || l_index_name_list end || ' ' || p_extra;
     end if;
+  exception
+    when others
+    then
+      if not
+         ( ignore_error
+           ( p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
+           )
+         )
+      then
+        raise;
+      else
+        l_statement := null;
+      end if;
+  end;
+
+  if l_statement is not null
+  then
     do
-    ( p_statement => p_operation || ' INDEX ' || l_index_name || ' ' || p_extra
+    ( p_statement => l_statement
     , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
     );
-  else
-    if upper(p_operation) = 'CREATE'
-    then
-      check_condition
-      ( p_table_name is not null and cardinality(p_column_tab) > 0
-      , 'Parameter "p_table_name" and "p_column_tab" should NOT be empty'
-      );
-      
-      l_index_name_list := '(';
-      for i_idx in p_column_tab.first .. p_column_tab.last
-      loop
-        if i_idx <> p_column_tab.first
-        then
-          l_index_name_list := l_index_name_list || ',';
-        end if;
-        l_index_name_list := l_index_name_list || p_column_tab(i_idx);
-      end loop;
-      l_index_name_list := l_index_name_list || ')';
-    end if;
-    
-    do
-    ( p_statement => p_operation || ' INDEX ' || l_index_name || case when p_table_name is not null then ' ON ' || p_table_name || l_index_name_list end || ' ' || p_extra
-    , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
-    );  
   end if;
+
+  leave(l_routine);
+exception
+  when others
+  then
+    leave_on_error(l_routine);
+    raise;
 end index_ddl;    
 
 procedure trigger_ddl
@@ -436,7 +703,16 @@ procedure trigger_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 )
 is
+  l_routine constant varchar2(30 byte) := 'trigger_ddl';
 begin
+  enter(l_routine);
+  print('p_operation', p_operation);
+  print('p_trigger_name', p_trigger_name);
+  print('p_trigger_extra', p_trigger_extra);
+  print('p_table_name', p_table_name);
+  print('p_extra', p_extra);
+  print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+
   check_condition
   ( upper(p_operation) in ('CREATE', 'CREATE OR REPLACE', 'ALTER', 'DROP')
   , 'Parameter "p_operation" must be one of "CREATE", "CREATE OR REPLACE", "ALTER" or "DROP"'
@@ -451,6 +727,13 @@ begin
       end
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
+
+  leave(l_routine);
+exception
+  when others
+  then
+    leave_on_error(l_routine);
+    raise;
 end trigger_ddl;    
 
 procedure view_ddl
@@ -460,7 +743,14 @@ procedure view_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_view_ddl -- SQL codes to ignore
 )
 is
+  l_routine constant varchar2(30 byte) := 'view_ddl';
 begin
+  enter(l_routine);
+  print('p_operation', p_operation);
+  print('p_view_name', p_view_name);
+  print('p_extra', p_extra);
+  print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+  
   check_condition
   ( upper(p_operation) in ('CREATE', 'CREATE OR REPLACE', 'ALTER', 'DROP')
   , 'Parameter "p_operation" must be one of "CREATE", "CREATE OR REPLACE", "ALTER" or "DROP"'
@@ -470,6 +760,13 @@ begin
   ( p_statement => p_operation || ' VIEW ' || p_view_name || ' ' || p_extra
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
+
+  leave(l_routine);
+exception
+  when others
+  then
+    leave_on_error(l_routine);
+    raise;
 end view_ddl;
 
 $if cfg_pkg.c_testing $then
@@ -593,6 +890,32 @@ begin
   g_testing := false;
 end ut_teardown;
 
+procedure ut_get_statement_lines
+( lines out nocopy dbms_output.chararr
+, numlines in out nocopy integer
+)
+is
+  l_last integer;
+begin
+  dbms_output.get_lines
+  ( lines => lines
+  , numlines => numlines
+  );
+  l_last := lines.last;
+  if l_last is not null
+  then
+    -- delete from the rear
+    for i_idx in reverse lines.first .. l_last
+    loop
+      if substr(lines(i_idx), 1, 3) = '-- '
+      then
+        lines.delete(i_idx);
+        numlines := numlines - 1;
+      end if;
+    end loop;
+  end if;
+end ut_get_statement_lines;
+
 procedure ut_column_ddl
 is
   l_lines dbms_output.chararr;
@@ -639,12 +962,12 @@ begin
   , p_extra => 'xyz '
   );
   l_nr_lines := 1000;
-  dbms_output.get_lines
+  ut_get_statement_lines
   ( lines => l_lines
   , numlines => l_nr_lines
   );
   ut.expect(l_nr_lines).to_equal(1);
-  ut.expect(l_lines(1)).to_equal('ALTER TABLE test Add (abc xyz )');
+  ut.expect(l_lines(l_lines.first)).to_equal('ALTER TABLE test Add (abc xyz )');
   reset_ddl_execution_settings;
 end ut_column_ddl;
 
@@ -715,12 +1038,12 @@ begin
   , p_extra => 'XYZ'
   );
   l_nr_lines := 1000;
-  dbms_output.get_lines
+  ut_get_statement_lines
   ( lines => l_lines
   , numlines => l_nr_lines
   );
   ut.expect(l_nr_lines).to_equal(1);
-  ut.expect(l_lines(1)).to_equal('CREATE TABLE TEST XYZ');
+  ut.expect(l_lines(l_lines.first)).to_equal('CREATE TABLE TEST XYZ');
   reset_ddl_execution_settings;
 end ut_table_ddl;
 
@@ -792,12 +1115,12 @@ begin
   , p_extra => 'xyz '
   );
   l_nr_lines := 1000;
-  dbms_output.get_lines
+  ut_get_statement_lines
   ( lines => l_lines
   , numlines => l_nr_lines
   );
   ut.expect(l_nr_lines).to_equal(1);
-  ut.expect(l_lines(1)).to_equal('ALTER TABLE test Add CONSTRAINT abc xyz ');
+  ut.expect(l_lines(l_lines.first)).to_equal('ALTER TABLE test Add CONSTRAINT abc xyz ');
   reset_ddl_execution_settings;
 end ut_constraint_ddl;
 
@@ -924,7 +1247,7 @@ begin
   , p_ignore_sqlcode_tab => null
   );
   l_nr_lines := 1000;
-  dbms_output.get_lines
+  ut_get_statement_lines
   ( lines => l_lines
   , numlines => l_nr_lines
   );
@@ -952,7 +1275,7 @@ begin
   , p_ignore_sqlcode_tab => null
   );
   l_nr_lines := 1000;
-  dbms_output.get_lines
+  ut_get_statement_lines
   ( lines => l_lines
   , numlines => l_nr_lines
   );
@@ -1005,12 +1328,12 @@ begin
   , p_extra => 'XYZ'
   );
   l_nr_lines := 1000;
-  dbms_output.get_lines
+  ut_get_statement_lines
   ( lines => l_lines
   , numlines => l_nr_lines
   );
   ut.expect(l_nr_lines).to_equal(1);
-  ut.expect(l_lines(1)).to_equal('CREATE VIEW TEST XYZ');
+  ut.expect(l_lines(l_lines.first)).to_equal('CREATE VIEW TEST XYZ');
   reset_ddl_execution_settings;
 end ut_view_ddl;
 
