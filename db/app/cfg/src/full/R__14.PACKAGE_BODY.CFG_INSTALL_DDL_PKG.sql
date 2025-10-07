@@ -54,6 +54,31 @@ begin
   end if;
 end check_condition;
 
+function ignore_error
+( p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
+, p_statement in varchar2 default null
+, p_sqlcode in integer default sqlcode
+)
+return boolean
+is
+begin
+  if p_ignore_sqlcode_tab is null or not(p_sqlcode member of p_ignore_sqlcode_tab)
+  then
+    if p_statement is not null
+    then
+      if g_reraise_original_exception
+      then
+        dbms_output.put_line('Statement causing an error: ' || p_statement);
+      else
+        raise_application_error(-20000, 'Statement causing an error: ' || p_statement, true);
+      end if;
+    end if;
+    return false;
+  else
+    return true;
+  end if;
+end ignore_error;
+
 procedure do
 ( p_statement in varchar2
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default null
@@ -84,15 +109,14 @@ exception
     then
       rollback;
     end if;
-    if p_ignore_sqlcode_tab is null or not(sqlcode member of p_ignore_sqlcode_tab)
+    if not
+       ( ignore_error
+         ( p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
+         , p_statement => p_statement
+         )
+       )
     then
-      if g_reraise_original_exception
-      then
-        dbms_output.put_line('Statement causing an error: ' || p_statement);
-        raise;
-      else
-        raise_application_error(-20000, 'Statement causing an error: ' || p_statement, true);
-      end if;
+      raise;
     end if;
 end do;
 
