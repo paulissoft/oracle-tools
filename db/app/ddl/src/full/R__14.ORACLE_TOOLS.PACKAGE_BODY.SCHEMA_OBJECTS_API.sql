@@ -361,12 +361,16 @@ $end
                   and     m.comments is not null
                   union all
                   -- column comments
-                  select  c.owner             
+                  select  c.owner
                   ,       ( select  o.object_type
                             from    all_objects o
                             where   o.owner = c.owner
                             and     o.object_name = c.table_name
-                          )                   
+                            -- GJP 2025-10-07
+                            -- Getting this error (ORA-01427: single-row subquery returns more than one row) (BOOCPP15J).
+                            -- Solution: added next line since OCPPMESSAGE had a TABLE and a TABLE PARTITION object (!).
+                            and     o.object_type in ('TABLE', 'VIEW')
+                          )
                   ,       c.table_name        
                   ,       c.column_name       
                   from    all_col_comments c

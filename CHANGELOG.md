@@ -19,6 +19,8 @@ Types of changes:
 - [Add script with OCI filesystem operations.](https://github.com/paulissoft/oracle-tools/issues/210)
 - [Base the smart pool data source directly on the Hikari and Oracle UCP pool data sources.](https://github.com/paulissoft/oracle-tools/issues/212)
 - [Add procedures for enabling/disabling constraints.](https://github.com/paulissoft/oracle-tools/issues/217)
+- [Generating DDL raises an error when there are column comments for a partitioned table.](https://github.com/paulissoft/oracle-tools/issues/222)
+- [The CFG_INSTALL_DLL_PKG had some index/constraint rename errors and logging was not sufficient.](https://github.com/paulissoft/oracle-tools/issues/223)
 
 ## [5.0.0] - 2025-10-01
 
