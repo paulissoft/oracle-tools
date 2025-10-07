@@ -457,7 +457,7 @@ is
         end if;
 
         if l_nr_constraints_found > 1 then raise too_many_rows; end if;
-        l_constraint_name := r_con.constraint_name;
+        l_constraint_name := dbms_assert.enquote_name(r_con.constraint_name);    
       end loop;
       case l_nr_constraints_found
         when 0
@@ -466,7 +466,7 @@ is
         then null; -- OK
       end case;
     end if;
-    
+
     leave(l_routine);
   exception
     when others
@@ -633,7 +633,7 @@ is
         end if;
 
         if l_nr_indexes_found > 1 then raise too_many_rows; end if;
-        l_index_name := r_ind.index_name;
+        l_index_name := dbms_assert.enquote_name(r_ind.index_name);
       end loop;
       case l_nr_indexes_found
         when 0
@@ -642,6 +642,7 @@ is
         then null; -- OK
       end case;
     end if;
+
     leave(l_routine);
   exception
     when others
@@ -1284,7 +1285,7 @@ begin
   );
   ut.expect(l_nr_lines).to_be_greater_or_equal(1);
   -- 
-  ut.expect(l_lines(l_lines.first)).to_be_like('ALTER TABLE test$CFG_INSTALL_DDL_PKG$child$tab RENAME CONSTRAINT SYS\_% TO test$CFG_INSTALL_DDL_PKG$child$ck2', '\');
+  ut.expect(l_lines(l_lines.first)).to_be_like('ALTER TABLE test$CFG_INSTALL_DDL_PKG$child$tab RENAME CONSTRAINT "SYS\_%" TO test$CFG_INSTALL_DDL_PKG$child$ck2', '\');
 end ut_rename_constraint;
 
 procedure ut_rename_index
@@ -1312,7 +1313,7 @@ begin
   );
   ut.expect(l_nr_lines).to_be_greater_or_equal(1);
   -- 
-  ut.expect(l_lines(l_lines.first)).to_be_like('ALTER INDEX SYS\_% RENAME TO XYZ', '\');
+  ut.expect(l_lines(l_lines.first)).to_be_like('ALTER INDEX "SYS\_%" RENAME TO XYZ', '\');
 end ut_rename_index;
 
 procedure ut_view_ddl
