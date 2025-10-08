@@ -113,17 +113,40 @@ procedure table_ddl
 Issues a p_operation || ' TABLE ' || p_table_name || ' ' || p_extra
 **/
 
-procedure constraint_ddl
+procedure check_constraint_ddl
 ( p_operation in varchar2 -- The operation: usually ADD, MODIFY, RENAME or DROP
 , p_table_name in user_constraints.table_name%type -- The table name
 , p_constraint_name in user_constraints.constraint_name%type -- The constraint name
-, p_constraint_type in user_constraints.constraint_type%type default null -- The constraint type (used when you RENAME or DROP a constraint containing the wildcard %)
-, p_column_tab in t_column_tab default null -- The column names to check for (used when you RENAME or DROP a constraint containing the wildcard %)
+, p_search_condition_vc in user_constraints.search_condition_vc%type default null -- The check constraint search condition
+, p_column_tab in t_column_tab default null -- The column names to check for in ascending order (there is no order in USER_CONS_COLUMNS for check constraints)
 , p_extra in varchar2 default null -- To add after the constraint name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_constraint_ddl -- SQL codes to ignore
 );
 /**
-Issues a 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' CONSTRAINT ' || p_constraint_name || ' ' || p_extra
+Issues a "'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' CONSTRAINT ' || p_constraint_name || ' ' || p_extra" command.
+
+The table, constraint, search condition and columns will be used
+to lookup exactly one check constraint (when it should exist, i.e. operation <> 'ADD').
+
+You can also use `constraint_ddl`, but then you will miss the search condition lookup.
+**/
+
+procedure constraint_ddl
+( p_operation in varchar2 -- The operation: usually ADD, MODIFY, RENAME or DROP
+, p_table_name in user_constraints.table_name%type -- The table name
+, p_constraint_name in user_constraints.constraint_name%type -- The constraint name
+, p_constraint_type in user_constraints.constraint_type%type default null -- The constraint type
+, p_column_tab in t_column_tab default null -- The column names to check for (in ascending order for check constraints else the order from USER_CONS_COLUMNS)
+, p_extra in varchar2 default null -- To add after the constraint name
+, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_constraint_ddl -- SQL codes to ignore
+);
+/**
+Issues a "'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' CONSTRAINT ' || p_constraint_name || ' ' || p_extra" command.
+
+The table, constraint, constraint type and columns will be used
+to lookup exactly one check constraint (when it should exist, i.e. operation <> 'ADD').
+
+You can also use `check_constraint_ddl` for check constraints which gives you the option to use the search condition.
 **/
 
 procedure comment_ddl
