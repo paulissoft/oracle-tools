@@ -10,7 +10,8 @@ c_ddl_lock_timeout           constant naturaln := 60; -- alter session set ddl_l
 c_dry_run                    constant boolean  := false; -- must commands be executed or just shown via dbms_output?
 c_reraise_original_exception constant boolean  := true; -- raise original exception or use raise_application_error(-20000, ..., true)
 c_explicit_commit            constant boolean  := true; -- explicit commit before and after statements?
-
+c_verbose                    constant boolean  := cfg_pkg.c_testing;
+                    
 type t_ignore_sqlcode_tab is table of pls_integer; -- must be a nested table
 type t_column_tab is table of all_tab_columns.column_name%type; -- must be a nested table
 
@@ -81,6 +82,7 @@ procedure set_ddl_execution_settings
 , p_dry_run in boolean default null -- must commands be executed or just shown via dbms_output?
 , p_reraise_original_exception in boolean default null -- raise original exception or use raise_application_error(-20000, ..., true)
 , p_explicit_commit in boolean default null -- explicit commit before and after statements?
+, p_verbose in boolean default null -- set verbose to true/false or keep the default (null)
 );
 /**
 Change DDL execution settings that are stored for this session.

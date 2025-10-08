@@ -6,8 +6,10 @@ g_ddl_lock_timeout           naturaln := c_ddl_lock_timeout;
 g_dry_run                    boolean  := c_dry_run;
 g_reraise_original_exception boolean  := c_reraise_original_exception;
 g_explicit_commit            boolean  := c_explicit_commit;
-g_verbose           constant boolean  := cfg_pkg.c_testing;
-g_testing                    boolean := false;
+g_verbose                    boolean  := c_verbose;
+
+-- testing only
+g_testing                    boolean  := false;
 
 $if cfg_pkg.c_testing $then
 
@@ -609,6 +611,7 @@ procedure set_ddl_execution_settings
 , p_dry_run in boolean
 , p_reraise_original_exception in boolean
 , p_explicit_commit in boolean
+, p_verbose in boolean
 )
 is
 begin
@@ -628,6 +631,10 @@ begin
   then
     g_explicit_commit := p_explicit_commit;
   end if;
+  if p_verbose is not null
+  then
+    g_verbose := p_verbose;
+  end if;
 end set_ddl_execution_settings;
 
 procedure reset_ddl_execution_settings
@@ -638,6 +645,7 @@ begin
   , p_dry_run => c_dry_run
   , p_reraise_original_exception => c_reraise_original_exception
   , p_explicit_commit => c_explicit_commit
+  , p_verbose => c_verbose
   );
 end reset_ddl_execution_settings;
 
