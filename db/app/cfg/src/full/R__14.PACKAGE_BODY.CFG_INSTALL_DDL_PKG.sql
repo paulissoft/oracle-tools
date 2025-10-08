@@ -310,8 +310,8 @@ begin
   -- 1) both p_table_name and p_table_name_no_qq null: return null
   -- 2) just one of them null: raise value_error
   -- 3) p_table_name <> p_table_name_no_qq means p_table_name is a quoted identifier: return 1
-  -- 4) lower(p_table_name) = upper(p_table_name): return 0
-  -- 5) else: return 1
+  -- 4) lower(p_table_name) = upper(p_table_name): return 1
+  -- 5) else: return 0
   if nvl(p_table_name, p_table_name_no_qq) is null
   then
     null;
@@ -321,13 +321,13 @@ begin
   elsif p_table_name <> p_table_name_no_qq
   then
     -- p_table_name is a quoted identifier
-    l_result := 0; -- 1;
+    l_result := 1;
   elsif lower(p_table_name) = upper(p_table_name)
   then
     -- no alphabetic characters, maybe just only wildcards
-    l_result := 0;
+    l_result := 1;
   else
-    l_result := 0; -- 1;
+    l_result := 0;
   end if;
   
   return l_result;
@@ -369,13 +369,16 @@ is
   l_constraint_name_exact constant natural := match_name_exact(p_constraint_name, l_constraint_name_no_qq);
   l_column_list varchar2(4000 byte) := to_column_list(p_column_tab);
 
-  procedure finalize
+  procedure finalize(p_error_raised in boolean)
   is
   begin
     -- we can now use dbms_assert to get quoted identifiers
-    p_table_name := dbms_assert.enquote_name(l_table_name_no_qq, false); -- do not convert to upper case since it is a data dictionary name
+    if not p_error_raised
+    then
+      p_table_name := dbms_assert.enquote_name(l_table_name_no_qq, false); -- do not convert to upper case since it is a data dictionary name
+      print('p_table_name out', p_table_name);
+    end if;
     p_constraint_name := dbms_assert.enquote_name(l_constraint_name_no_qq, false); -- do not convert to upper case since it is a data dictionary name
-    print('p_table_name out', p_table_name);
     print('p_constraint_name out', p_constraint_name);
   end finalize;
 begin
@@ -419,7 +422,7 @@ begin
               con.constraint_name like l_constraint_name_no_qq escape '\' or
               ( l_constraint_name_exact = 0 and con.constraint_name like upper(l_constraint_name_no_qq) escape '\' )
             )
-    and     ( p_constraint_type is null or con.constraint_type = upper(p_constraint_type) )
+    and     ( p_constraint_type is null or con.constraint_type = upper(p_constraint_type))
     group by
             con.owner
     ,       con.table_name
@@ -434,7 +437,7 @@ begin
   where   l_column_list is null
   or      src.column_list = l_column_list;
 
-  finalize;
+  finalize(false);
 
   leave(l_routine_name);
 exception
@@ -442,6 +445,7 @@ exception
   then
     leave_on_error(l_routine_name);
     if p_ignore_no_data_found then null; else raise; end if;
+    finalize(true);
 
   when others
   then
