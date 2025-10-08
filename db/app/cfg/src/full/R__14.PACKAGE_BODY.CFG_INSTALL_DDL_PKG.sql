@@ -74,6 +74,16 @@ begin
   print(p_description || ': ' || p_what);
 end print;
 
+function to_string
+( p_what in boolean
+)
+return varchar2
+deterministic
+is
+begin
+  return case p_what when true then 'true' when false then 'false' else 'null' end;
+end to_string;
+
 procedure print
 ( p_description in varchar2
 , p_column_tab in t_column_tab
@@ -157,7 +167,7 @@ procedure enter
 )
 is
 begin
-  print('Entering ' || $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || p_routine);
+  print('>' || $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || p_routine);
 end enter;  
 
 procedure leave
@@ -165,7 +175,7 @@ procedure leave
 )
 is
 begin
-  print('Leaving ' || $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || p_routine);
+  print('<' || $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || p_routine);
 end leave;
 
 procedure leave_on_error
@@ -173,7 +183,7 @@ procedure leave_on_error
 )
 is
 begin
-  print('Leaving ' || $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || p_routine || ' with error ' || sqlerrm);
+  print('<' || $$PLSQL_UNIT_OWNER || '.' || $$PLSQL_UNIT || '.' || p_routine || ' with error ' || sqlerrm);
 end leave_on_error;
 
 function ignore_error
@@ -272,7 +282,175 @@ begin
   end if;
 end columns_match;
 
+function unquote_name
+( p_object_name in varchar2
+)
+return varchar2
+deterministic
+is
+begin
+  return case
+           when substr(p_object_name, 1, 1) = '"' and
+                substr(p_object_name, -1) = '"'
+           then replace(substr(p_object_name, 2, length(p_object_name) - 2), '""', '"')
+           else p_object_name
+         end;
+end unquote_name;
+
+function match_name_exact
+( p_table_name in varchar2
+, p_table_name_no_qq in varchar2
+)
+return natural -- null/0/1
+deterministic
+is
+  l_result natural := null;
+begin
+  -- these cases:
+  -- 1) both p_table_name and p_table_name_no_qq null: return null
+  -- 2) just one of them null: raise value_error
+  -- 3) p_table_name <> p_table_name_no_qq means p_table_name is a quoted identifier: return 1
+  -- 4) lower(p_table_name) = upper(p_table_name): return 0
+  -- 5) else: return 1
+  if nvl(p_table_name, p_table_name_no_qq) is null
+  then
+    null;
+  elsif p_table_name is null or p_table_name_no_qq is null
+  then
+    raise value_error;
+  elsif p_table_name <> p_table_name_no_qq
+  then
+    -- p_table_name is a quoted identifier
+    l_result := 0; -- 1;
+  elsif lower(p_table_name) = upper(p_table_name)
+  then
+    -- no alphabetic characters, maybe just only wildcards
+    l_result := 0;
+  else
+    l_result := 0; -- 1;
+  end if;
+  
+  return l_result;
+end match_name_exact;
+
+function to_column_list
+( p_column_tab in t_column_tab
+)
+return varchar2
+deterministic
+is
+  l_column_list varchar2(4000 byte) := null;
+begin
+  if cardinality(p_column_tab) > 0
+  then
+    for i_idx in p_column_tab.first .. p_column_tab.last
+    loop
+      l_column_list := l_column_list || case when l_column_list is not null then ',' end || p_column_tab(i_idx);
+    end loop;
+  end if;
+
+  return l_column_list;
+end to_column_list;
+
+procedure determine_table_constraint_name
+( p_table_name in out nocopy user_constraints.table_name%type
+, p_constraint_name in out nocopy user_constraints.constraint_name%type
+, p_constraint_type in user_constraints.constraint_type%type
+, p_column_tab in t_column_tab
+, p_ignore_no_data_found in boolean default g_testing
+)
+is
+  l_routine_name constant varchar2(60 byte) := 'determine_table_constraint_name';
+  l_table_name_no_qq user_constraints.table_name%type := unquote_name(p_table_name);
+  -- when p_table_name is already a quoted identifier we will use exact match
+  l_table_name_exact constant natural := match_name_exact(p_table_name, l_table_name_no_qq);
+  l_constraint_name_no_qq user_constraints.constraint_name%type := unquote_name(p_constraint_name);
+  -- when p_constraint_name is already a quoted identifier we will use exact match
+  l_constraint_name_exact constant natural := match_name_exact(p_constraint_name, l_constraint_name_no_qq);
+  l_column_list varchar2(4000 byte) := to_column_list(p_column_tab);
+
+  procedure finalize
+  is
+  begin
+    -- we can now use dbms_assert to get quoted identifiers
+    p_table_name := dbms_assert.enquote_name(l_table_name_no_qq, false); -- do not convert to upper case since it is a data dictionary name
+    p_constraint_name := dbms_assert.enquote_name(l_constraint_name_no_qq, false); -- do not convert to upper case since it is a data dictionary name
+    print('p_table_name out', p_table_name);
+    print('p_constraint_name out', p_constraint_name);
+  end finalize;
+begin
+  enter(l_routine_name);
+
+  print('p_table_name', p_table_name);
+  print('p_constraint_name', p_constraint_name);
+  print('p_constraint_type', p_constraint_type);
+  print('p_column_tab', p_column_tab);
+
+  print('l_table_name_no_qq', l_table_name_no_qq);
+  print('l_table_name_exact', l_table_name_exact);
+  print('l_constraint_name_no_qq', l_constraint_name_no_qq);
+  print('l_constraint_name_exact', l_constraint_name_exact);
+  print('l_column_list', l_column_list);  
+
+  check_condition
+  ( instr(p_constraint_name, '%') = 0 or upper(p_constraint_type) in ( 'P', 'U', 'R', 'C' )
+  , 'Parameter "p_constraint_type" must be one of "P", "U", "R" or "C" when wildcard "%" is used inside "p_constraint_name"'
+  );
+  
+  -- 1. Find the one and only constraint that matches the filter criteria p_table_name, p_constraint_name and p_constraint_type.
+  -- 2. But also all the constraint columns must match p_column_tab (when not null).
+  with src as
+  ( select  con.owner
+    ,       con.table_name
+    ,       con.constraint_name
+    ,       con.constraint_type
+    ,       listagg(cons.column_name, ',') within group (order by cons.position, cons.column_name) as column_list
+    from    user_constraints con
+            inner join user_cons_columns cons
+            on cons.owner = con.owner and
+               cons.constraint_name = con.constraint_name and
+               cons.table_name = con.table_name
+    where   con.owner = user
+    and     ( l_table_name_no_qq is null or
+              con.table_name = l_table_name_no_qq or
+              ( l_table_name_exact = 0 and con.table_name = upper(l_table_name_no_qq) )
+            )
+    and     ( l_constraint_name_no_qq is null or
+              con.constraint_name like l_constraint_name_no_qq escape '\' or
+              ( l_constraint_name_exact = 0 and con.constraint_name like upper(l_constraint_name_no_qq) escape '\' )
+            )
+    and     ( p_constraint_type is null or con.constraint_type = upper(p_constraint_type) )
+    group by
+            con.owner
+    ,       con.table_name
+    ,       con.constraint_name
+    ,       con.constraint_type
+  )
+  select  src.table_name
+  ,       src.constraint_name
+  into    l_table_name_no_qq
+  ,       l_constraint_name_no_qq
+  from    src
+  where   l_column_list is null
+  or      src.column_list = l_column_list;
+
+  finalize;
+
+  leave(l_routine_name);
+exception
+  when no_data_found
+  then
+    leave_on_error(l_routine_name);
+    if p_ignore_no_data_found then null; else raise; end if;
+
+  when others
+  then
+    leave_on_error(l_routine_name);
+    raise;    
+end determine_table_constraint_name;
+
 -- GLOBAL
+
 procedure set_ddl_execution_settings
 ( p_ddl_lock_timeout in natural
 , p_dry_run in boolean
@@ -318,9 +496,9 @@ procedure column_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab 
 )
 is
-  l_routine constant varchar2(30 byte) := 'column_ddl';
+  l_routine_name constant varchar2(30 byte) := 'column_ddl';
 begin
-  enter(l_routine);
+  enter(l_routine_name);
   print('p_operation', p_operation);
   print('p_table_name', p_table_name);
   print('p_column_name', p_column_name);
@@ -337,11 +515,11 @@ begin
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
 
-  leave(l_routine);
+  leave(l_routine_name);
 exception
   when others
   then
-    leave_on_error(l_routine);
+    leave_on_error(l_routine_name);
     raise;
 end column_ddl;
 
@@ -352,9 +530,9 @@ procedure table_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 )
 is
-  l_routine constant varchar2(30 byte) := 'table_ddl';
+  l_routine_name constant varchar2(30 byte) := 'table_ddl';
 begin
-  enter(l_routine);
+  enter(l_routine_name);
   print('p_operation', p_operation);
   print('p_table_name', p_table_name);
   print('p_extra', p_extra);
@@ -369,11 +547,11 @@ begin
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
 
-  leave(l_routine);
+  leave(l_routine_name);
 exception
   when others
   then
-    leave_on_error(l_routine);
+    leave_on_error(l_routine_name);
     raise;
 end table_ddl;
 
@@ -387,96 +565,23 @@ procedure constraint_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 )
 is
-  l_routine constant varchar2(30 byte) := 'constraint_ddl';
+  l_routine_name constant varchar2(30 byte) := 'constraint_ddl';
+  l_table_name user_constraints.table_name%type := p_table_name;
   l_constraint_name user_constraints.constraint_name%type := p_constraint_name;
   l_statement varchar2(32767 byte) := null;
 
   procedure determine_constraint_name
   is
-    l_routine constant varchar2(60 byte) := 'constraint_ddl.determine_constraint_name';
-    l_nr_constraints_found naturaln := 0;
   begin
-    enter(l_routine);
-  
-    if instr(p_constraint_name, '%') > 0
-    then
-      check_condition
-      ( upper(p_constraint_type) in ( 'P', 'U', 'R', 'C' )
-      , 'Parameter "p_constraint_type" must be one of "P", "U", "R" or "C"'
-      );
-      -- 1. Find the one and only constraint that matches the filter criteria p_table_name, p_constraint_name and p_constraint_type.
-      -- 2. But also all the constraint columns must match p_column_tab (when not null).
-      for r_con in
-      ( select  con.owner
-        ,       con.table_name
-        ,       con.constraint_name
-        ,       con.constraint_type
-        ,       cast
-                ( multiset
-                  ( select  cons.column_name
-                    from    user_cons_columns cons
-                    where   cons.owner = con.owner
-                    and     cons.constraint_name = con.constraint_name
-                    and     cons.table_name = con.table_name
-                    order by
-                            cons.position
-                    ,       cons.column_name
-                  ) as sys.odcivarchar2list
-                ) as column_tab
-        from    user_constraints con
-        where   con.owner = user
-        and     con.table_name in ( p_table_name, upper(p_table_name) )
-        and     ( con.constraint_name like p_constraint_name escape '\' or
-                  con.constraint_name like upper(p_constraint_name) escape '\'
-                )
-        and     con.constraint_type = upper(p_constraint_type)
-      )
-      loop
-        print('r_con.owner', r_con.owner);
-        print('r_con.table_name', r_con.table_name);
-        print('r_con.constraint_name', r_con.constraint_name);
-        print('r_con.constraint_type', r_con.constraint_type);
-
-        -- See 2. Can probably better but this is fine.
-        if cardinality(p_column_tab) > 0
-        then
-          if columns_match
-             ( p_act_column_tab => r_con.column_tab
-             , p_exp_column_tab => p_column_tab
-             , p_must_match_exactly => (r_con.constraint_type <> 'C')
-             )
-          then
-            print('constraint', 'candidate (' || r_con.constraint_name || ')');
-            l_nr_constraints_found := l_nr_constraints_found + 1;
-          else
-            print('constraint', 'NO candidate');
-          end if;
-        else
-          -- assume this one is OK
-          print('constraint', 'candidate (' || r_con.constraint_name || ')');
-          l_nr_constraints_found := l_nr_constraints_found + 1;
-        end if;
-
-        if l_nr_constraints_found > 1 then raise too_many_rows; end if;
-        l_constraint_name := dbms_assert.enquote_name(r_con.constraint_name);    
-      end loop;
-      case l_nr_constraints_found
-        when 0
-        then raise no_data_found;
-        when 1
-        then null; -- OK
-      end case;
-    end if;
-
-    leave(l_routine);
-  exception
-    when others
-    then
-      leave_on_error(l_routine);
-      raise;
-  end determine_constraint_name;
+    determine_table_constraint_name
+    ( p_table_name => l_table_name
+    , p_constraint_name => l_constraint_name
+    , p_constraint_type => p_constraint_type
+    , p_column_tab => p_column_tab
+    );
+  end;
 begin
-  enter(l_routine);
+  enter(l_routine_name);
   print('p_operation', p_operation);
   print('p_table_name', p_table_name);
   print('p_constraint_name', p_constraint_name);
@@ -488,9 +593,9 @@ begin
   begin
     case upper(p_operation)
       when 'ADD'
-      then null;
+      then null; -- new constraint so can not determine case
       when 'MODIFY'
-      then null;
+      then null; -- determine_constraint_name; -- just to determine the correct names
       when 'RENAME'
       then determine_constraint_name;
       when 'DROP'
@@ -500,7 +605,7 @@ begin
         check_condition(false, 'Parameter "p_operation" must be one of "ADD", "MODIFY", "RENAME" or "DROP"');
     end case;
     
-    l_statement := 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' CONSTRAINT ' || l_constraint_name || ' ' || p_extra;
+    l_statement := 'ALTER TABLE ' || l_table_name || ' ' || p_operation || ' CONSTRAINT ' || l_constraint_name || ' ' || p_extra;
   exception
     when others
     then
@@ -524,11 +629,11 @@ begin
     );
   end if;
   
-  leave(l_routine);
+  leave(l_routine_name);
 exception
   when others
   then
-    leave_on_error(l_routine);
+    leave_on_error(l_routine_name);
     raise;
 end constraint_ddl;
 
@@ -539,9 +644,9 @@ procedure comment_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 )
 is
-  l_routine constant varchar2(30 byte) := 'comment_ddl';
+  l_routine_name constant varchar2(30 byte) := 'comment_ddl';
 begin
-  enter(l_routine);
+  enter(l_routine_name);
   print('p_table_name', p_table_name);
   print('p_column_name', p_column_name);
   print('p_comment', p_comment);
@@ -557,11 +662,11 @@ begin
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
 
-  leave(l_routine);
+  leave(l_routine_name);
 exception
   when others
   then
-    leave_on_error(l_routine);
+    leave_on_error(l_routine_name);
     raise;
 end comment_ddl;    
 
@@ -574,17 +679,17 @@ procedure index_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 )
 is
-  l_routine constant varchar2(30 byte) := 'index_ddl';
+  l_routine_name constant varchar2(30 byte) := 'index_ddl';
   l_index_name user_indexes.index_name%type := p_index_name;
   l_index_name_list varchar2(32767) := null; -- used in CREATE
   l_statement varchar2(32767 byte) := null;
 
   procedure determine_index_name
   is
-    l_routine constant varchar2(60 byte) := 'index_ddl.determine_index_name';
+    l_routine_name constant varchar2(60 byte) := 'index_ddl.determine_index_name';
     l_nr_indexes_found naturaln := 0;
   begin
-    enter(l_routine);
+    enter(l_routine_name);
     
     if instr(p_index_name, '%') > 0
     then
@@ -645,15 +750,15 @@ is
       end case;
     end if;
 
-    leave(l_routine);
+    leave(l_routine_name);
   exception
     when others
     then
-      leave_on_error(l_routine);
+      leave_on_error(l_routine_name);
       raise;
   end determine_index_name;
 begin
-  enter(l_routine);
+  enter(l_routine_name);
   print('p_operation', p_operation);
   print('p_index_name', p_index_name);
   print('p_table_name', p_table_name);
@@ -720,11 +825,11 @@ begin
     );
   end if;
 
-  leave(l_routine);
+  leave(l_routine_name);
 exception
   when others
   then
-    leave_on_error(l_routine);
+    leave_on_error(l_routine_name);
     raise;
 end index_ddl;    
 
@@ -737,9 +842,9 @@ procedure trigger_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
 )
 is
-  l_routine constant varchar2(30 byte) := 'trigger_ddl';
+  l_routine_name constant varchar2(30 byte) := 'trigger_ddl';
 begin
-  enter(l_routine);
+  enter(l_routine_name);
   print('p_operation', p_operation);
   print('p_trigger_name', p_trigger_name);
   print('p_trigger_extra', p_trigger_extra);
@@ -762,11 +867,11 @@ begin
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
 
-  leave(l_routine);
+  leave(l_routine_name);
 exception
   when others
   then
-    leave_on_error(l_routine);
+    leave_on_error(l_routine_name);
     raise;
 end trigger_ddl;    
 
@@ -777,9 +882,9 @@ procedure view_ddl
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_view_ddl -- SQL codes to ignore
 )
 is
-  l_routine constant varchar2(30 byte) := 'view_ddl';
+  l_routine_name constant varchar2(30 byte) := 'view_ddl';
 begin
-  enter(l_routine);
+  enter(l_routine_name);
   print('p_operation', p_operation);
   print('p_view_name', p_view_name);
   print('p_extra', p_extra);
@@ -795,11 +900,11 @@ begin
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
 
-  leave(l_routine);
+  leave(l_routine_name);
 exception
   when others
   then
-    leave_on_error(l_routine);
+    leave_on_error(l_routine_name);
     raise;
 end view_ddl;
 
@@ -821,6 +926,8 @@ begin
     , c_test_ck_name_parent
     , c_test_uk_name_parent
     )
+  -- ORA-00955: name is already used by an existing object
+  , p_ignore_sqlcode_tab => t_ignore_sqlcode_tab(-955)
   );
 
   -- child
@@ -908,20 +1015,42 @@ end ut_drop_constraints;
 
 procedure ut_setup
 is
+  l_routine_name constant varchar2(60 byte) := 'ut_setup';
 begin
   g_testing := true;
-  set_ddl_execution_settings(p_reraise_original_exception => false); -- show statement as well when it fails
+  
+  enter(l_routine_name);
+  
+  set_ddl_execution_settings(p_reraise_original_exception => true); -- do NOT show statement when it fails
   ut_init;
   reset_ddl_execution_settings;
+
+  leave(l_routine_name);
+exception
+  when others
+  then
+    leave_on_error(l_routine_name);
+    raise;
 end ut_setup;
 
 procedure ut_teardown
 is
+  l_routine_name constant varchar2(60 byte) := 'ut_teardown';
 begin
-  set_ddl_execution_settings(p_reraise_original_exception => false); -- show statement as well when it fails
+  enter(l_routine_name);
+
+  set_ddl_execution_settings(p_reraise_original_exception => true); -- do NOT show statement when it fails
   ut_done;
   reset_ddl_execution_settings;
+
+  leave(l_routine_name);
   g_testing := false;
+exception
+  when others
+  then
+    leave_on_error(l_routine_name);
+    g_testing := false;
+    raise;
 end ut_teardown;
 
 procedure ut_get_statement_lines
@@ -1105,14 +1234,20 @@ end ut_table_does_not_exist;
 
 procedure ut_constraint_ddl
 is
+  l_routine_name constant varchar2(60 byte) := 'ut_constraint_ddl';
   l_lines dbms_output.chararr;
   l_nr_lines integer := 1000;
 begin
+  enter(l_routine_name);
   set_ddl_execution_settings(p_dry_run => true);
+
+  print('g_dry_run', to_string(g_dry_run));
+  print('g_verbose', to_string(g_verbose));
   
   -- check parameters
   for i_idx in 1..8
   loop
+    print('i_idx', i_idx);
     begin
       constraint_ddl
       ( p_operation => case i_idx
@@ -1156,6 +1291,13 @@ begin
   ut.expect(l_nr_lines).to_equal(1);
   ut.expect(l_lines(l_lines.first)).to_equal('ALTER TABLE test Add CONSTRAINT abc xyz ');
   reset_ddl_execution_settings;
+
+  leave(l_routine_name);
+exception
+  when others
+  then
+    leave_on_error(l_routine_name);
+    raise;
 end ut_constraint_ddl;
 
 procedure ut_pk_constraint_already_exists
@@ -1287,7 +1429,7 @@ begin
   );
   ut.expect(l_nr_lines).to_be_greater_or_equal(1);
   -- 
-  ut.expect(l_lines(l_lines.first)).to_be_like('ALTER TABLE test$CFG_INSTALL_DDL_PKG$child$tab RENAME CONSTRAINT "SYS\_%" TO test$CFG_INSTALL_DDL_PKG$child$ck2', '\');
+  ut.expect(l_lines(l_lines.first)).to_be_like('ALTER TABLE "TEST$CFG_INSTALL_DDL_PKG$CHILD$TAB" RENAME CONSTRAINT "SYS\_%" TO test$CFG_INSTALL_DDL_PKG$child$ck2', '\');
 end ut_rename_constraint;
 
 procedure ut_rename_index
