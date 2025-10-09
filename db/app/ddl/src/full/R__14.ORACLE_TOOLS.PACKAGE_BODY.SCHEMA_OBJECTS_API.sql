@@ -369,7 +369,7 @@ $end
                             -- GJP 2025-10-07
                             -- Getting this error (ORA-01427: single-row subquery returns more than one row) (BOOCPP15J).
                             -- Solution: added next line since OCPPMESSAGE had a TABLE and a TABLE PARTITION object (!).
-                            and     o.object_type in ('TABLE', 'VIEW')
+                            and     o.object_type in ('TABLE', 'VIEW','MATERIALIZED VIEW')
                           )
                   ,       c.table_name        
                   ,       c.column_name       
