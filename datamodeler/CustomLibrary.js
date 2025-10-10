@@ -1,33 +1,34 @@
 // -----------------------------------------------------------------------------
-// file  : CustomLibrary.js
-// goal  : Custom library for Oracle Data Modeler (ODM)
-// author: Gert-Jan Paulissen (Paulissoft)
-// date  : 2025-10-01
-// usage : - Copy the contents of this file and paste them into a custom library
-//           (for instance CustomLibrary) in ODM. Add each function
-//           without underscore below as function / method to the ODM library.
-//           ODM Menu: Tools | Design Rules And transformations | Libraries
-//           Currently these are:
-//           1) tableAbbreviationToColumn
-//           2) removeTableAbbrFromColumn
-//           3) applyStandardsForSelectedRelationalItems
-//           4) applyStandardsForSelectedLogicalItems
-//           5) setTableAbbreviation
-//           6) tableNamePlural
-//           7) tableToLowerCase
-//           8) copyTablePrefixToIndexesAndKeys
-//         - Export this library to file CustomLibrary.xml.
-//         - Next add or change custom transformation scripts and use
-//           the description after each 'Custom Transformation Script:' below
-//           for the name. Set library and method in ODM as well.
-//           Menu: Tools | Design Rules And transformations | Transformations
-//         - Export these methods to file CustomTransformationScripts.xml.
-// note  : The functions applyStandardsForSelectedItems_(logical|relational) are
-//         the most important functiond and can be used to apply standards of
-//         selected logical or relational items.
-//         If the dynamic property canApplyStandards is set to 0,
-//         no standards will be applied.
-//         The property canApplyStandards will be set to 1 if missing.
+// file   : CustomLibrary.js
+// goal   : Custom library for Oracle Data Modeler (ODM)
+// author : Gert-Jan Paulissen (Paulissoft)
+// date   : 2025-10-10
+// usage  : - Copy the contents of this file and paste them into a custom library
+//            (for instance CustomLibrary) in ODM. Add each function
+//            without underscore below as function / method to the ODM library.
+//            ODM Menu: Tools | Design Rules And transformations | Libraries
+//            Currently these are:
+//            1) tableAbbreviationToColumn
+//            2) removeTableAbbrFromColumn
+//            3) applyStandardsForSelectedRelationalItems
+//            4) applyStandardsForSelectedLogicalItems
+//            5) setTableAbbreviation
+//            6) tableNamePlural
+//            7) tableToLowerCase
+//            8) copyTablePrefixToIndexesAndKeys
+//          - Export this library to file CustomLibrary.xml.
+//          - Next add or change custom transformation scripts and use
+//            the description after each 'Custom Transformation Script:' below
+//            for the name. Set library and method in ODM as well.
+//            Menu: Tools | Design Rules And transformations | Transformations
+//          - Export these methods to file CustomTransformationScripts.xml.
+// note   : The functions applyStandardsForSelectedItems_(logical|relational) are
+//          the most important functiond and can be used to apply standards of
+//          selected logical or relational items.
+//          If the dynamic property canApplyStandards is set to 0,
+//          no standards will be applied.
+//          The property canApplyStandards will be set to 1 if missing.
+// changes: 2025-10-10 - setDefaultOnNull(true) when !isDefaultOnNull() for ID columns
 // -----------------------------------------------------------------------------
 
 var appView = Java.type("oracle.dbtools.crest.swingui.ApplicationView");
@@ -366,7 +367,11 @@ function _setAutoIncrement(relationalTable, physicalTables) {
                 column.setAutoIncrementSequenceName(relationalTable.getAbbreviation()+"_SEQ");
                 column.setDefaultValue(column.getAutoIncrementSequenceName()+".NEXTVAL");
                 dirty = true;
-            }            
+            }
+            if (!column.isDefaultOnNull()) {
+                column.setDefaultOnNull(true); // when column is set to NULL (and not just ignored), the sequence is also used
+                dirty = true;
+            }
             if (column.isAutoIncrementGenerateTrigger()) {
                 column.setAutoIncrementGenerateTrigger(false);
                 dirty = true;
@@ -379,6 +384,7 @@ function _setAutoIncrement(relationalTable, physicalTables) {
             _debug("isIdentityColumn: " + column.isIdentityColumn());
             _debug("getAutoIncrementSequenceName: " + column.getAutoIncrementSequenceName());
             _debug("getDefaultValue: " + column.getDefaultValue());
+            _debug("isDefaultOnNull: " + column.isDefaultOnNull());
             _debug("isAutoIncrementGenerateTrigger: " + column.isAutoIncrementGenerateTrigger());                
         });
 
