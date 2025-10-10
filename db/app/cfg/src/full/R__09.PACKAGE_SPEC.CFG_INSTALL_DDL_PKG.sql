@@ -95,14 +95,16 @@ procedure reset_ddl_execution_settings;
 /** Reset to the default values, i.e. c_ddl_lock_timeout, c_dry_run, c_reraise_original_exception, c_explicit_commit. **/
 
 procedure column_ddl
-( p_operation in varchar2 -- The operation: usually ADD, MODIFY or DROP
+( p_operation in varchar2 -- The operation: usually ADD, MODIFY, DROP or RENAME
 , p_table_name in user_tab_columns.table_name%type -- The table name
 , p_column_name in user_tab_columns.column_name%type -- The column name
 , p_extra in varchar2 default null -- To add after the column name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_column_ddl -- SQL codes to ignore
 );
 /**
-Issues a 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' (' || p_column_name || ' ' || p_extra || ')'
+Issues a:
+- 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' (' || p_column_name || ' ' || p_extra || ')' (no RENAME)
+- 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' COLUMN ' || p_column_name || ' ' || p_extra (RENAME)
 **/
 
 procedure table_ddl

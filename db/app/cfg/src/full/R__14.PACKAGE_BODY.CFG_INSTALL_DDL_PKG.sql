@@ -667,12 +667,17 @@ begin
   print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
   
   check_condition
-  ( upper(p_operation) in ('ADD', 'MODIFY', 'DROP')
-  , 'Parameter "p_operation" must be one of "ADD", "MODIFY" or "DROP"'
+  ( upper(p_operation) in ('ADD', 'MODIFY', 'DROP', 'RENAME')
+  , 'Parameter "p_operation" must be one of "ADD", "MODIFY", "DROP" or "RENAME"'
   );
 
   do
-  ( p_statement => 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' (' || p_column_name || ' ' || p_extra || ')'
+  ( p_statement =>
+      case
+        when upper(p_operation) <> 'RENAME'
+        then 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' (' || p_column_name || ' ' || p_extra || ')'
+        else 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' COLUMN ' || p_column_name || ' ' || p_extra
+      end
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
 
