@@ -1,13 +1,13 @@
 CREATE OR REPLACE PACKAGE DATA_AUDITING_PKG AUTHID CURRENT_USER IS
 
-PROCEDURE add_auditing_colums
-( p_table_name in user_tab_colums.table_name%type -- Table name, may be surrounded by double quotes
-, p_column_aud$ins$who in user_tab_colums.column_name%type -- When not null this column will be renamed to AUD$INS$WHO
-, p_column_aud$ins$when in user_tab_colums.column_name%type -- When not null this column will be renamed to AUD$INS$WHEN
-, p_column_aud$ins$where in user_tab_colums.column_name%type -- When not null this column will be renamed to AUD$INS$WHERE
-, p_column_aud$upd$who in user_tab_colums.column_name%type -- When not null this column will be renamed to AUD$UPD$WHO
-, p_column_aud$upd$when in user_tab_colums.column_name%type -- When not null this column will be renamed to AUD$UPD$WHEN
-, p_column_aud$upd$where in user_tab_colums.column_name%type -- When not null this column will be renamed to AUD$UPD$WHERE
+PROCEDURE add_auditing_columns
+( p_table_name in user_tab_columns.table_name%type -- Table name, may be surrounded by double quotes
+, p_column_aud$ins$who in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$INS$WHO
+, p_column_aud$ins$when in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$INS$WHEN
+, p_column_aud$ins$where in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$INS$WHERE
+, p_column_aud$upd$who in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHO
+, p_column_aud$upd$when in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHEN
+, p_column_aud$upd$where in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHERE
 );
 /**
 
@@ -38,7 +38,7 @@ The package CFG_INSTALL_DDL_PKG will be used for all DDL.
 
 **/
 procedure add_auditing_trigger
-( p_table_name in user_tab_colums.table_name%type
+( p_table_name in user_tab_columns.table_name%type
 );
 /**
 
@@ -75,6 +75,7 @@ procedure upd
 ( p_aud$upd$who in out nocopy varchar2
 , p_aud$upd$when in out nocopy timestamp with time zone -- standard
 , p_aud$upd$where in out nocopy varchar2
+, p_size in naturaln default utl_call_stack.dynamic_depth -- This will skip the call to API_CALL_STACK_PKG.GET_CALL_STACK() itself
 );
 /**
 Invoked by the trigger created by ADD_AUDITING_TRIGGER.
@@ -91,6 +92,7 @@ procedure upd
 ( p_aud$upd$who in out nocopy varchar2
 , p_aud$upd$when in out nocopy timestamp -- datatype of an old existing colum
 , p_aud$upd$where in out nocopy varchar2
+, p_size in naturaln default utl_call_stack.dynamic_depth -- This will skip the call to API_CALL_STACK_PKG.GET_CALL_STACK() itself
 );
 /** See above but systimestamp will be used for P_AUD$UPD$WHEN **/
 
@@ -98,6 +100,7 @@ procedure upd
 ( p_aud$upd$who in out nocopy varchar2
 , p_aud$upd$when in out nocopy date -- datatype of an old existing colum
 , p_aud$upd$where in out nocopy varchar2
+, p_size in naturaln default utl_call_stack.dynamic_depth -- This will skip the call to API_CALL_STACK_PKG.GET_CALL_STACK() itself
 );
 /** See above but sysdate will be used for P_AUD$UPD$WHEN **/
 

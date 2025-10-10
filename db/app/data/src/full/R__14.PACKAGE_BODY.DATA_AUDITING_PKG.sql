@@ -1,21 +1,21 @@
-CREATE OR REPLACE PACKAGE DATA_AUDITING_PKG AUTHID CURRENT_USER IS
+CREATE OR REPLACE PACKAGE BODY DATA_AUDITING_PKG IS
 
-procedure add_auditing_colums
-( p_table_name in user_tab_colums.table_name%type -- Table name, may be surrounded by double quotes
-, p_column_aud$ins$who in user_tab_colums.column_name%type -- When not null this column will be renamed to AUD$INS$WHO
-, p_column_aud$ins$when in user_tab_colums.column_name%type -- When not null this column will be renamed to AUD$INS$WHEN
-, p_column_aud$ins$where in user_tab_colums.column_name%type -- When not null this column will be renamed to AUD$INS$WHERE
-, p_column_aud$upd$who in user_tab_colums.column_name%type -- When not null this column will be renamed to AUD$UPD$WHO
-, p_column_aud$upd$when in user_tab_colums.column_name%type -- When not null this column will be renamed to AUD$UPD$WHEN
-, p_column_aud$upd$where in user_tab_colums.column_name%type -- When not null this column will be renamed to AUD$UPD$WHERE
+procedure add_auditing_columns
+( p_table_name in user_tab_columns.table_name%type -- Table name, may be surrounded by double quotes
+, p_column_aud$ins$who in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$INS$WHO
+, p_column_aud$ins$when in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$INS$WHEN
+, p_column_aud$ins$where in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$INS$WHERE
+, p_column_aud$upd$who in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHO
+, p_column_aud$upd$when in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHEN
+, p_column_aud$upd$where in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHERE
 )
 is
   procedure add_auditing_colum
-  ( p_existing_column_name in user_tab_colums.column_name%type
-  , p_column_name in user_tab_colums.column_name%type
+  ( p_existing_column_name in user_tab_columns.column_name%type
+  , p_column_name in user_tab_columns.column_name%type
   )
   is
-    l_data_type constant user_tab_colums.data_type%type :=
+    l_data_type constant user_tab_columns.data_type%type :=
       case
         when substr(p_column_name, -4) = 'WHEN'
         then 'TIMESTAMP WITH TIME ZONE'
@@ -46,7 +46,7 @@ is
       , p_column_name => p_column_name
       , p_extra => l_data_type
       );
-    end;
+    end if;
     cfg_install_ddl_pkg.column_ddl
     ( p_operation => 'MODIFY'
     , p_table_name => p_table_name
@@ -61,13 +61,13 @@ begin
   add_auditing_colum(p_column_aud$upd$who, 'AUD$UPD$WHO');
   add_auditing_colum(p_column_aud$upd$when, 'AUD$UPD$WHEN');
   add_auditing_colum(p_column_aud$upd$where, 'AUD$UPD$WHERE');
-end add_auditing_colums;
+end add_auditing_columns;
 
 procedure add_auditing_trigger
-( p_table_name in user_tab_colums.table_name%type
+( p_table_name in user_tab_columns.table_name%type
 )
 is
-  l_table_name_no_qq constant user_tab_colums.table_name%type :=
+  l_table_name_no_qq constant user_tab_columns.table_name%type :=
     case
       when p_table_name like '"%"'
       then replace(substr(p_table_name, 2, length(p_table_name) - 2), '""', '"')
@@ -85,7 +85,7 @@ is
     case
       when l_table_name_exact = 1
       then utl_lms.format_message('"%s"', l_trigger_name_no_qq)
-      then utl_lms.format_message('%s', l_trigger_name_no_qq)
+      else utl_lms.format_message('%s', l_trigger_name_no_qq)
     end;
   l_found pls_integer;
   
@@ -145,36 +145,39 @@ procedure upd
 ( p_aud$upd$who in out nocopy varchar2
 , p_aud$upd$when in out nocopy timestamp with time zone -- standard
 , p_aud$upd$where in out nocopy varchar2
+, p_size in naturaln
 )
 is
 begin
   if p_aud$upd$who is null then p_aud$upd$who := oracle_tools.data_session_username; end if;
   if p_aud$upd$when is null then p_aud$upd$when := oracle_tools.data_timestamp; end if;
-  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_caller; end if;
+  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_caller(p_size); end if;
 end upd;
 
 procedure upd
 ( p_aud$upd$who in out nocopy varchar2
 , p_aud$upd$when in out nocopy timestamp -- datatype of an old existing colum
 , p_aud$upd$where in out nocopy varchar2
+, p_size in naturaln
 )
 is
 begin
   if p_aud$upd$who is null then p_aud$upd$who := oracle_tools.data_session_username; end if;
   if p_aud$upd$when is null then p_aud$upd$when := systimestamp; end if;
-  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_caller; end if;
+  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_caller(p_size); end if;
 end upd;
 
 procedure upd
 ( p_aud$upd$who in out nocopy varchar2
 , p_aud$upd$when in out nocopy date -- datatype of an old existing colum
 , p_aud$upd$where in out nocopy varchar2
+, p_size in naturaln
 )
 is
 begin
   if p_aud$upd$who is null then p_aud$upd$who := oracle_tools.data_session_username; end if;
   if p_aud$upd$when is null then p_aud$upd$when := sysdate; end if;
-  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_caller; end if;
+  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_caller(p_size); end if;
 end upd;
 
 END;
