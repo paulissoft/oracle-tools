@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION "DATA_CALLER" AUTHID DEFINER
+CREATE OR REPLACE FUNCTION "DATA_CALLER" 
 ( p_size in naturaln default utl_call_stack.dynamic_depth
 )
 return varchar2

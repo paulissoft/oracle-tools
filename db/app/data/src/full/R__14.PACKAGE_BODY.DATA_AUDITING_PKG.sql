@@ -125,7 +125,7 @@ END;'
   begin
     select  1
     into    l_found
-    from    user_object o
+    from    user_objects o
             inner join user_triggers t
             on t.trigger_name = o.object_name and t.status = 'DISABLED'
     where   o.status = 'VALID'
