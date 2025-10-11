@@ -142,45 +142,56 @@ END;
 end add_auditing_trigger;
 
 procedure upd
-( p_who in out nocopy varchar2
-, p_when in out nocopy timestamp with time zone -- standard
-, p_where in out nocopy varchar2
+( p_who out nocopy varchar2
+, p_when out nocopy timestamp with time zone -- standard
+, p_where out nocopy varchar2
 )
 is
 begin
-  if p_who is null then p_who := oracle_tools.data_session_username; end if;
-  if p_when is null then p_when := oracle_tools.data_timestamp; end if;
-  if p_where is null then p_who := oracle_tools.data_call_info; end if;
+/*DBUG    
+  dbug.enter('UPD');
+/*DBUG*/    
+  p_who := oracle_tools.data_session_username;
+  p_when := oracle_tools.data_timestamp;
+  p_where := oracle_tools.data_call_info;
+/*DBUG    
+  dbug.print(dbug."output", 'p_who: %s; p_when: %s; p_where: %s', p_who, p_when, p_where);
+  dbug.leave;
+/*DBUG*/    
+exception
+  when others
+  then 
+/*DBUG    
+    dbug.leave_on_error;
+/*DBUG*/    
+    null; /* this call may never raise an error */
+end upd;
+
+procedure upd
+( p_who out nocopy varchar2
+, p_when out nocopy timestamp -- datatype of an old existing colum
+, p_where out nocopy varchar2
+)
+is
+begin
+  p_who := oracle_tools.data_session_username;
+  p_when := systimestamp;
+  p_where := oracle_tools.data_call_info;
 exception
   when others
   then null; /* this call may never raise an error */
 end upd;
 
 procedure upd
-( p_who in out nocopy varchar2
-, p_when in out nocopy timestamp -- datatype of an old existing colum
-, p_where in out nocopy varchar2
+( p_who out nocopy varchar2
+, p_when out nocopy date -- datatype of an old existing colum
+, p_where out nocopy varchar2
 )
 is
 begin
-  if p_who is null then p_who := oracle_tools.data_session_username; end if;
-  if p_when is null then p_when := systimestamp; end if;
-  if p_where is null then p_who := oracle_tools.data_call_info; end if;
-exception
-  when others
-  then null; /* this call may never raise an error */
-end upd;
-
-procedure upd
-( p_who in out nocopy varchar2
-, p_when in out nocopy date -- datatype of an old existing colum
-, p_where in out nocopy varchar2
-)
-is
-begin
-  if p_who is null then p_who := oracle_tools.data_session_username; end if;
-  if p_when is null then p_when := sysdate; end if;
-  if p_where is null then p_who := oracle_tools.data_call_info; end if;
+  p_who := oracle_tools.data_session_username;
+  p_when := sysdate;
+  p_where := oracle_tools.data_call_info;
 exception
   when others
   then null; /* this call may never raise an error */

@@ -46,6 +46,18 @@ $end
   is
     l_string t_string := null;
   begin
+/*DBUG    
+    dbug.enter('CONSTRUCT_CALL_INFO (1)');
+    dbug.print
+    ( dbug."input"
+    , 'p_owner: %s; p_object_type: %s; p_object_name: %s; p_line_no: %s'
+    , p_owner
+    , p_object_type
+    , p_object_name
+    , p_line_no
+    );
+/*DBUG*/    
+    
     l_string :=
           utl_lms.format_message
           ( '%s %s%s%s'
@@ -70,12 +82,20 @@ $end
         , case i_idx when 2 then ' subprogram ' else '.' end
         , p_unit_qualified_name(i_idx)
         );
-     end loop;
+    end loop;
      
-     return l_string;
+/*DBUG    
+    dbug.print(dbug."output", 'return: %s', l_string);
+    dbug.leave;
+/*DBUG*/    
+     
+    return l_string;
   exception
     when value_error
     then
+/*DBUG    
+      dbug.leave_on_error;
+/*DBUG*/    
       return l_string; -- till so far
   end construct_call_info;
 
@@ -88,6 +108,17 @@ $end
   is
     l_string t_string := p_last_call_info; -- the most important one
   begin
+/*DBUG    
+    dbug.enter('CONSTRUCT_CALL_INFO (2)');
+    dbug.print
+    ( dbug."input"
+    , 'p_apex_call_info: %s; p_first_call_info: %s; p_last_call_info: %s'
+    , p_apex_call_info
+    , p_first_call_info
+    , p_last_call_info
+    );
+/*DBUG*/    
+    
     if p_first_call_info <> p_last_call_info -- implies both not null
     then
       l_string := p_first_call_info || ' -->> ' || l_string;
@@ -97,14 +128,27 @@ $end
     then
       l_string := p_apex_call_info || ' | ' || l_string;
     end if;
+
+/*DBUG    
+    dbug.print(dbug."output", 'return: %s', l_string);
+    dbug.leave;
+/*DBUG*/    
     
     return l_string;
   exception
     when value_error
     then
+/*DBUG    
+      dbug.leave_on_error;
+/*DBUG*/    
       return l_string; -- till so far
   end construct_call_info;
 begin
+/*DBUG    
+  dbug.enter('DATA_CALL_INFO');
+  dbug.print(dbug."info", 'l_depth: %s', l_depth);
+/*DBUG*/    
+  
   for i_idx in 2..l_depth -- skip first index, i.e. this routine
   loop
     l_unit_qualified_name := utl_call_stack.subprogram(i_idx);
@@ -112,6 +156,18 @@ begin
     l_object_type := utl_call_stack.unit_type(i_idx);
     l_object_name := l_unit_qualified_name(1);
     l_line_no := utl_call_stack.unit_line(i_idx);
+
+/*DBUG    
+    dbug.print
+    ( dbug."info"
+    , 'i_idx: %s; l_owner: %s; l_object_type: %s; l_object_name: %s; l_line_no: %s'
+    , i_idx
+    , l_owner
+    , l_object_type
+    , l_object_name
+    , l_line_no
+    );
+/*DBUG*/    
     
     -- skip calls from:
     -- 1) ORACLE_TOOLS.DATA_AUDITING_PKG subprogram UPD
@@ -166,6 +222,10 @@ begin
       );
   end if;
 
+/*DBUG    
+  dbug.leave;
+/*DBUG*/    
+
   return construct_call_info
          ( l_apex_call_info
          , l_first_call_info
@@ -173,7 +233,11 @@ begin
          );
 exception
   when others
-  then return null;
+  then 
+/*DBUG    
+    dbug.leave_on_error;
+/*DBUG*/    
+    return null;
 end;
 /
 

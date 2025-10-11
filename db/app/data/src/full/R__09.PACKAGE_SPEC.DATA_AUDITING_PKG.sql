@@ -82,9 +82,9 @@ The second statement only when the trigger is valid and disabled.
 **/
 
 procedure upd
-( p_who in out nocopy varchar2
-, p_when in out nocopy timestamp with time zone -- standard
-, p_where in out nocopy varchar2
+( p_who out nocopy varchar2
+, p_when out nocopy timestamp with time zone -- standard
+, p_where out nocopy varchar2
 );
 /**
 Invoked by the trigger created by ADD_AUDITING_TRIGGER.
@@ -98,16 +98,16 @@ Functions used:
 **/
 
 procedure upd
-( p_who in out nocopy varchar2
-, p_when in out nocopy timestamp -- datatype of an old existing colum
-, p_where in out nocopy varchar2
+( p_who out nocopy varchar2
+, p_when out nocopy timestamp -- datatype of an old existing colum
+, p_where out nocopy varchar2
 );
 /** See above but systimestamp will be used for P_WHEN **/
 
 procedure upd
-( p_who in out nocopy varchar2
-, p_when in out nocopy date -- datatype of an old existing colum
-, p_where in out nocopy varchar2
+( p_who out nocopy varchar2
+, p_when out nocopy date -- datatype of an old existing colum
+, p_where out nocopy varchar2
 );
 /** See above but sysdate will be used for P_WHEN **/
 
