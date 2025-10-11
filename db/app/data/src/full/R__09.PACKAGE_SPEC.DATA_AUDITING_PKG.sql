@@ -75,7 +75,6 @@ procedure upd
 ( p_aud$upd$who in out nocopy varchar2
 , p_aud$upd$when in out nocopy timestamp with time zone -- standard
 , p_aud$upd$where in out nocopy varchar2
-, p_size in naturaln default utl_call_stack.dynamic_depth -- This will skip the call to API_CALL_STACK_PKG.GET_CALL_STACK() itself
 );
 /**
 Invoked by the trigger created by ADD_AUDITING_TRIGGER.
@@ -85,14 +84,13 @@ Will set the auditing values but only when null.
 Functions used:
 - P_AUD$UPD$WHO  : ORACLE_TOOLS.DATA_SESSION_USERNAME
 - P_AUD$UPD$WHEN : ORACLE_TOOLS.DATA_TIMESTAMP
-- P_AUD$UPD$WHERE: ORACLE_TOOLS.DATA_CALLER
+- P_AUD$UPD$WHERE: ORACLE_TOOLS.DATA_CALL_INFO
 **/
 
 procedure upd
 ( p_aud$upd$who in out nocopy varchar2
 , p_aud$upd$when in out nocopy timestamp -- datatype of an old existing colum
 , p_aud$upd$where in out nocopy varchar2
-, p_size in naturaln default utl_call_stack.dynamic_depth -- This will skip the call to API_CALL_STACK_PKG.GET_CALL_STACK() itself
 );
 /** See above but systimestamp will be used for P_AUD$UPD$WHEN **/
 
@@ -100,7 +98,6 @@ procedure upd
 ( p_aud$upd$who in out nocopy varchar2
 , p_aud$upd$when in out nocopy date -- datatype of an old existing colum
 , p_aud$upd$where in out nocopy varchar2
-, p_size in naturaln default utl_call_stack.dynamic_depth -- This will skip the call to API_CALL_STACK_PKG.GET_CALL_STACK() itself
 );
 /** See above but sysdate will be used for P_AUD$UPD$WHEN **/
 

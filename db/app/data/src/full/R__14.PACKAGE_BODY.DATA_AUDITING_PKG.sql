@@ -13,6 +13,7 @@ is
   procedure add_auditing_colum
   ( p_existing_column_name in user_tab_columns.column_name%type
   , p_column_name in user_tab_columns.column_name%type
+  , p_data_default in varchar2 default null
   )
   is
     l_data_type constant user_tab_columns.data_type%type :=
@@ -20,15 +21,6 @@ is
         when substr(p_column_name, -4) = 'WHEN'
         then 'TIMESTAMP WITH TIME ZONE'
         else 'VARCHAR2(128 CHAR)'
-      end;
-    l_data_default constant varchar2(60 byte) :=
-      case
-        when substr(p_column_name, -3) = 'WHO'
-        then 'ORACLE_TOOLS.DATA_SESSION_USERNAME'
-        when substr(p_column_name, -4) = 'WHEN'
-        then 'ORACLE_TOOLS.DATA_TIMESTAMP'
-        when substr(p_column_name, -5) = 'WHERE'
-        then 'ORACLE_TOOLS.DATA_CALLER'
       end;
   begin
     if p_existing_column_name is not null
@@ -47,17 +39,21 @@ is
       , p_extra => l_data_type
       );
     end if;
-    cfg_install_ddl_pkg.column_ddl
-    ( p_operation => 'MODIFY'
-    , p_table_name => p_table_name
-    , p_column_name => p_column_name
-    , p_extra => 'DEFAULT ' || l_data_default
-    );
+
+    if p_data_default is not null
+    then
+      cfg_install_ddl_pkg.column_ddl
+      ( p_operation => 'MODIFY'
+      , p_table_name => p_table_name
+      , p_column_name => p_column_name
+      , p_extra => 'DEFAULT ' || p_data_default
+      );
+    end if;
   end;
 begin
-  add_auditing_colum(p_column_aud$ins$who, 'AUD$INS$WHO');
-  add_auditing_colum(p_column_aud$ins$when, 'AUD$INS$WHEN');
-  add_auditing_colum(p_column_aud$ins$where, 'AUD$INS$WHERE');
+  add_auditing_colum(p_column_aud$ins$who, 'AUD$INS$WHO', 'ORACLE_TOOLS.DATA_SESSION_USERNAME');
+  add_auditing_colum(p_column_aud$ins$when, 'AUD$INS$WHEN', 'ORACLE_TOOLS.DATA_TIMESTAMP');
+  add_auditing_colum(p_column_aud$ins$where, 'AUD$INS$WHERE', 'ORACLE_TOOLS.DATA_CALL_INFO');
   add_auditing_colum(p_column_aud$upd$who, 'AUD$UPD$WHO');
   add_auditing_colum(p_column_aud$upd$when, 'AUD$UPD$WHEN');
   add_auditing_colum(p_column_aud$upd$where, 'AUD$UPD$WHERE');
@@ -145,39 +141,36 @@ procedure upd
 ( p_aud$upd$who in out nocopy varchar2
 , p_aud$upd$when in out nocopy timestamp with time zone -- standard
 , p_aud$upd$where in out nocopy varchar2
-, p_size in naturaln
 )
 is
 begin
   if p_aud$upd$who is null then p_aud$upd$who := oracle_tools.data_session_username; end if;
   if p_aud$upd$when is null then p_aud$upd$when := oracle_tools.data_timestamp; end if;
-  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_caller(p_size); end if;
+  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_call_info; end if;
 end upd;
 
 procedure upd
 ( p_aud$upd$who in out nocopy varchar2
 , p_aud$upd$when in out nocopy timestamp -- datatype of an old existing colum
 , p_aud$upd$where in out nocopy varchar2
-, p_size in naturaln
 )
 is
 begin
   if p_aud$upd$who is null then p_aud$upd$who := oracle_tools.data_session_username; end if;
   if p_aud$upd$when is null then p_aud$upd$when := systimestamp; end if;
-  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_caller(p_size); end if;
+  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_call_info; end if;
 end upd;
 
 procedure upd
 ( p_aud$upd$who in out nocopy varchar2
 , p_aud$upd$when in out nocopy date -- datatype of an old existing colum
 , p_aud$upd$where in out nocopy varchar2
-, p_size in naturaln
 )
 is
 begin
   if p_aud$upd$who is null then p_aud$upd$who := oracle_tools.data_session_username; end if;
   if p_aud$upd$when is null then p_aud$upd$when := sysdate; end if;
-  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_caller(p_size); end if;
+  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_call_info; end if;
 end upd;
 
 END;

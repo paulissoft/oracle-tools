@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION "DATA_CALLER" 
+CREATE OR REPLACE FUNCTION "DATA_CALL_INFO" 
 return varchar2
 is
   subtype t_string is varchar2(1000 char);
@@ -114,12 +114,16 @@ begin
     l_object_name := l_unit_qualified_name(1);
     l_line_no := utl_call_stack.unit_line(i_idx);
     
-    -- skip calls from ORACLE_TOOLS.DATA_AUDITING_PKG and generated auditing triggers
+    -- skip calls from:
+    -- 1) ORACLE_TOOLS.DATA_AUDITING_PKG subprogram UPD
+    -- 2) generated auditing triggers
     case
-      -- invoked from package ORACLE_TOOLS.DATA_AUDITING_PKG
+      -- invoked from package ORACLE_TOOLS.DATA_AUDITING_PKG subprogram UPD
       when l_owner = $$PLSQL_UNIT_OWNER and
            substr(l_object_type, 1, 7) = 'PACKAGE' and
-           l_object_name = 'DATA_AUDITING_PKG'
+           l_object_name = 'DATA_AUDITING_PKG' and
+           l_unit_qualified_name.count = 2 and
+           l_unit_qualified_name(2) = 'UPD'
       then continue;
 
       -- invoked from generated auditing trigger
