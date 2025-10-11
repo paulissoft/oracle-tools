@@ -45,12 +45,12 @@ procedure add_auditing_trigger
 );
 /**
 
-Will create an auditing trigger.
+Will create (but not replace) an auditing trigger.
 
 Executes these DDL statements:
 
 ```
-CREATE OR REPLACE TRIGGER AUD$<p_table_name>
+CREATE TRIGGER AUD$<p_table_name>
 BEFORE INSERT OR UPDATE ON <p_table_name>
 FOR EACH ROW
 BEGIN

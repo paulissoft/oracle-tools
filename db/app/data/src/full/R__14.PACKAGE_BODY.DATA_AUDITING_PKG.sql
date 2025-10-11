@@ -91,7 +91,7 @@ is
   l_found pls_integer;
 begin
   cfg_install_ddl_pkg.trigger_ddl
-  ( p_operation => 'CREATE OR REPLACE'
+  ( p_operation => 'CREATE'
   , p_trigger_name => l_trigger_name
   , p_trigger_extra => 'BEFORE INSERT OR UPDATE'
   , p_table_name => p_table_name
@@ -113,7 +113,6 @@ BEGIN
   END IF;
 END;
 '
-  , p_ignore_sqlcode_tab => null
   );
 
   -- disabled an invalid trigger
