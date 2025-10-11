@@ -18,9 +18,12 @@ is
   is
     l_data_type constant user_tab_columns.data_type%type :=
       case
+        when substr(p_column_name, -3) = 'WHO'
+        then 'VARCHAR2(128 CHAR)'
         when substr(p_column_name, -4) = 'WHEN'
         then 'TIMESTAMP WITH TIME ZONE'
-        else 'VARCHAR2(128 CHAR)'
+        when substr(p_column_name, -5) = 'WHERE'
+        else 'VARCHAR2(1000 CHAR)'
       end;
   begin
     if p_existing_column_name is not null
@@ -51,9 +54,9 @@ is
     end if;
   end;
 begin
-  add_auditing_colum(p_column_aud$ins$who, 'AUD$INS$WHO', 'ORACLE_TOOLS.DATA_SESSION_USERNAME');
+  add_auditing_colum(p_column_aud$ins$who, 'AUD$INS$WHO', 'SUBSTR(ORACLE_TOOLS.DATA_SESSION_USERNAME,1,128)');
   add_auditing_colum(p_column_aud$ins$when, 'AUD$INS$WHEN', 'ORACLE_TOOLS.DATA_TIMESTAMP');
-  add_auditing_colum(p_column_aud$ins$where, 'AUD$INS$WHERE', 'ORACLE_TOOLS.DATA_CALL_INFO');
+  add_auditing_colum(p_column_aud$ins$where, 'AUD$INS$WHERE', 'SUBSTR(ORACLE_TOOLS.DATA_CALL_INFO,1,1000)');
   add_auditing_colum(p_column_aud$upd$who, 'AUD$UPD$WHO');
   add_auditing_colum(p_column_aud$upd$when, 'AUD$UPD$WHEN');
   add_auditing_colum(p_column_aud$upd$where, 'AUD$UPD$WHERE');
@@ -147,6 +150,9 @@ begin
   if p_aud$upd$who is null then p_aud$upd$who := oracle_tools.data_session_username; end if;
   if p_aud$upd$when is null then p_aud$upd$when := oracle_tools.data_timestamp; end if;
   if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_call_info; end if;
+exception
+  when others
+  then null; /* this call may never raise an error */
 end upd;
 
 procedure upd
@@ -159,6 +165,9 @@ begin
   if p_aud$upd$who is null then p_aud$upd$who := oracle_tools.data_session_username; end if;
   if p_aud$upd$when is null then p_aud$upd$when := systimestamp; end if;
   if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_call_info; end if;
+exception
+  when others
+  then null; /* this call may never raise an error */
 end upd;
 
 procedure upd
@@ -171,6 +180,9 @@ begin
   if p_aud$upd$who is null then p_aud$upd$who := oracle_tools.data_session_username; end if;
   if p_aud$upd$when is null then p_aud$upd$when := sysdate; end if;
   if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_call_info; end if;
+exception
+  when others
+  then null; /* this call may never raise an error */
 end upd;
 
 END;

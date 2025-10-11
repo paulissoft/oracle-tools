@@ -26,7 +26,12 @@ that will be renamed to the corresponding auditing column.
 The datatype:
 - WHO: VARCHAR2(128 CHAR)
 - WHEN: TIMESTAMP WITH TIME ZONE (or the datatype of the old existing column)
-- WHERE: VARCHAR2(128 CHAR)
+- WHERE: VARCHAR2(1000 CHAR)
+
+Functions used:
+- WHO: ORACLE_TOOLS.DATA_SESSION_USERNAME
+- WHEN: ORACLE_TOOLS.DATA_TIMESTAMP
+- WHERE: ORACLE_TOOLS.DATA_CALL_INFO
 
 When an auditing column already exists, nothing will happen.
 

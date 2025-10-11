@@ -362,14 +362,16 @@ $end
                   union all
                   -- column comments
                   select  c.owner
-                  ,       ( select  o.object_type
+                          -- GJP 2025-10-11
+                          -- Getting this error (ORA-01427: single-row subquery returns more than one row) (BOOCPP15J).
+                          -- Solution: change the subquery since OCPPMESSAGE had a TABLE and a TABLE PARTITION object (!).
+                          -- This subquery now takes care of objects with several object types (MATERIALIZED VIEW and TABLE)
+                          -- and excludes others (like TABLE PARTITION).
+                  ,       ( select  min(o.object_type) -- 'MATERIALIZED VIEW' < 'TABLE'
                             from    all_objects o
                             where   o.owner = c.owner
                             and     o.object_name = c.table_name
-                            -- GJP 2025-10-07
-                            -- Getting this error (ORA-01427: single-row subquery returns more than one row) (BOOCPP15J).
-                            -- Solution: added next line since OCPPMESSAGE had a TABLE and a TABLE PARTITION object (!).
-                            and     o.object_type in ('TABLE', 'VIEW','MATERIALIZED VIEW')
+                            and     o.object_type in ('TABLE', 'VIEW', 'MATERIALIZED VIEW')
                           )
                   ,       c.table_name        
                   ,       c.column_name       
