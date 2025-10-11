@@ -13,7 +13,6 @@ is
   procedure add_auditing_colum
   ( p_existing_column_name in user_tab_columns.column_name%type
   , p_column_name in user_tab_columns.column_name%type
-  , p_data_default in varchar2 default null
   )
   is
     l_data_type constant user_tab_columns.data_type%type :=
@@ -23,7 +22,7 @@ is
         when substr(p_column_name, -4) = 'WHEN'
         then 'TIMESTAMP WITH TIME ZONE'
         when substr(p_column_name, -5) = 'WHERE'
-        else 'VARCHAR2(1000 CHAR)'
+        then 'VARCHAR2(1000 CHAR)'
       end;
   begin
     if p_existing_column_name is not null
@@ -42,21 +41,24 @@ is
       , p_extra => l_data_type
       );
     end if;
-
-    if p_data_default is not null
-    then
-      cfg_install_ddl_pkg.column_ddl
-      ( p_operation => 'MODIFY'
-      , p_table_name => p_table_name
-      , p_column_name => p_column_name
-      , p_extra => 'DEFAULT ' || p_data_default
-      );
-    end if;
+  exception
+    when others
+    then raise_application_error
+         ( -20000
+         , utl_lms.format_message
+           ( 'Table: %s; column: %s%s; data type; %s'
+           , p_table_name
+           , p_column_name
+           , case when p_existing_column_name is not null then '(renamed from ' || p_existing_column_name || ')' end
+           , l_data_type
+           )
+         , true
+         );
   end;
 begin
-  add_auditing_colum(p_column_aud$ins$who, 'AUD$INS$WHO', 'SUBSTR(ORACLE_TOOLS.DATA_SESSION_USERNAME,1,128)');
-  add_auditing_colum(p_column_aud$ins$when, 'AUD$INS$WHEN', 'ORACLE_TOOLS.DATA_TIMESTAMP');
-  add_auditing_colum(p_column_aud$ins$where, 'AUD$INS$WHERE', 'SUBSTR(ORACLE_TOOLS.DATA_CALL_INFO,1,1000)');
+  add_auditing_colum(p_column_aud$ins$who, 'AUD$INS$WHO');
+  add_auditing_colum(p_column_aud$ins$when, 'AUD$INS$WHEN');
+  add_auditing_colum(p_column_aud$ins$where, 'AUD$INS$WHERE');
   add_auditing_colum(p_column_aud$upd$who, 'AUD$UPD$WHO');
   add_auditing_colum(p_column_aud$upd$when, 'AUD$UPD$WHEN');
   add_auditing_colum(p_column_aud$upd$where, 'AUD$UPD$WHERE');
@@ -79,7 +81,7 @@ is
       else 0
     end;
   l_trigger_name_no_qq constant user_triggers.trigger_name%type :=
-    utl_lms.format_message('AUD$%s', l_table_name_no_qq);
+    utl_lms.format_message('AUD$%s_TRG', l_table_name_no_qq);
   l_trigger_name constant user_triggers.trigger_name%type := 
     case
       when l_table_name_exact = 1
@@ -87,53 +89,53 @@ is
       else utl_lms.format_message('%s', l_trigger_name_no_qq)
     end;
   l_found pls_integer;
-  
-  procedure execute_immediate
-  ( p_statement in varchar2
-  , p_ignore_errors in boolean
-  )
-  is
-  begin
-    execute immediate p_statement;
-  exception
-    when others
-    then
-      if p_ignore_errors then null; else raise; end if;
-  end;
 begin
-  execute_immediate
-  ( utl_lms.format_message
-    ( 'CREATE TRIGGER %s
-BEFORE UPDATE ON %s
-FOR EACH ROW
-WHEN (NEW.AUD$UPD$WHO IS NULL OR NEW.AUD$UPD$WHEN IS NULL OR NEW.AUD$UPD$WHERE IS NULL)
-DISABLED
+  cfg_install_ddl_pkg.trigger_ddl
+  ( p_operation => 'CREATE OR REPLACE'
+  , p_trigger_name => l_trigger_name
+  , p_trigger_extra => 'BEFORE INSERT OR UPDATE'
+  , p_table_name => p_table_name
+  , p_extra => 'FOR EACH ROW
 BEGIN
-  ORACLE_TOOLS.DATA_AUDITING_PKG.UPD
-  ( P_AUD$UPD$WHO => :NEW.AUD$UPD$WHO
-  , P_AUD$UPD$WHEN => :NEW.AUD$UPD$WHEN
-  , P_AUD$UPD$WHERE => :NEW.AUD$UPD$WHERE
-  );
-END;'
-    , l_trigger_name
-    , p_table_name
-    )
-  , true
+  IF INSERTING
+  THEN
+    ORACLE_TOOLS.DATA_AUDITING_PKG.UPD
+    ( P_WHO => :NEW.AUD$INS$WHO
+    , P_WHEN => :NEW.AUD$INS$WHEN
+    , P_WHERE => :NEW.AUD$INS$WHERE
+    );
+  ELSE
+    ORACLE_TOOLS.DATA_AUDITING_PKG.UPD
+    ( P_WHO => :NEW.AUD$UPD$WHO
+    , P_WHEN => :NEW.AUD$UPD$WHEN
+    , P_WHERE => :NEW.AUD$UPD$WHERE
+    );
+  END IF;
+END;
+'
+  , p_ignore_sqlcode_tab => null
   );
 
+  -- disabled an invalid trigger
   begin
     select  1
     into    l_found
     from    user_objects o
             inner join user_triggers t
-            on t.trigger_name = o.object_name and t.status = 'DISABLED'
-    where   o.status = 'VALID'
+            on t.trigger_name = o.object_name
+    where   o.status <> 'VALID'
     and     o.object_type = 'TRIGGER'
     and     ( o.object_name = l_trigger_name_no_qq or
               ( l_table_name_exact = 0 and o.object_name = upper(l_trigger_name_no_qq) )
             )
     ;
-    execute_immediate(utl_lms.format_message('ALTER TRIGGER %s ENABLE', l_trigger_name), false);
+    
+    cfg_install_ddl_pkg.trigger_ddl
+    ( p_operation => 'ALTER'
+    , p_trigger_name => l_trigger_name
+    , p_table_name => null
+    , p_trigger_extra => 'DISABLE'
+    );
   exception
     when others
     then null;
@@ -141,45 +143,45 @@ END;'
 end add_auditing_trigger;
 
 procedure upd
-( p_aud$upd$who in out nocopy varchar2
-, p_aud$upd$when in out nocopy timestamp with time zone -- standard
-, p_aud$upd$where in out nocopy varchar2
+( p_who in out nocopy varchar2
+, p_when in out nocopy timestamp with time zone -- standard
+, p_where in out nocopy varchar2
 )
 is
 begin
-  if p_aud$upd$who is null then p_aud$upd$who := oracle_tools.data_session_username; end if;
-  if p_aud$upd$when is null then p_aud$upd$when := oracle_tools.data_timestamp; end if;
-  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_call_info; end if;
+  if p_who is null then p_who := oracle_tools.data_session_username; end if;
+  if p_when is null then p_when := oracle_tools.data_timestamp; end if;
+  if p_where is null then p_who := oracle_tools.data_call_info; end if;
 exception
   when others
   then null; /* this call may never raise an error */
 end upd;
 
 procedure upd
-( p_aud$upd$who in out nocopy varchar2
-, p_aud$upd$when in out nocopy timestamp -- datatype of an old existing colum
-, p_aud$upd$where in out nocopy varchar2
+( p_who in out nocopy varchar2
+, p_when in out nocopy timestamp -- datatype of an old existing colum
+, p_where in out nocopy varchar2
 )
 is
 begin
-  if p_aud$upd$who is null then p_aud$upd$who := oracle_tools.data_session_username; end if;
-  if p_aud$upd$when is null then p_aud$upd$when := systimestamp; end if;
-  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_call_info; end if;
+  if p_who is null then p_who := oracle_tools.data_session_username; end if;
+  if p_when is null then p_when := systimestamp; end if;
+  if p_where is null then p_who := oracle_tools.data_call_info; end if;
 exception
   when others
   then null; /* this call may never raise an error */
 end upd;
 
 procedure upd
-( p_aud$upd$who in out nocopy varchar2
-, p_aud$upd$when in out nocopy date -- datatype of an old existing colum
-, p_aud$upd$where in out nocopy varchar2
+( p_who in out nocopy varchar2
+, p_when in out nocopy date -- datatype of an old existing colum
+, p_where in out nocopy varchar2
 )
 is
 begin
-  if p_aud$upd$who is null then p_aud$upd$who := oracle_tools.data_session_username; end if;
-  if p_aud$upd$when is null then p_aud$upd$when := sysdate; end if;
-  if p_aud$upd$where is null then p_aud$upd$who := oracle_tools.data_call_info; end if;
+  if p_who is null then p_who := oracle_tools.data_session_username; end if;
+  if p_when is null then p_when := sysdate; end if;
+  if p_where is null then p_who := oracle_tools.data_call_info; end if;
 exception
   when others
   then null; /* this call may never raise an error */

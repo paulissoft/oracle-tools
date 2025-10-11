@@ -2,7 +2,6 @@ CREATE OR REPLACE FUNCTION "DATA_CALL_INFO"
 return varchar2
 is
   subtype t_string is varchar2(1000 char);
-  c_string_size constant pls_integer := 1000;
   
   l_depth constant positiven := utl_call_stack.dynamic_depth;
   
@@ -17,7 +16,7 @@ $if oracle_tools.cfg_pkg.c_apex_installed $then
       then null
       else utl_lms.format_message('APEX app %d page %d', l_app_id, l_app_page_id)
     end;
-else    
+$else    
   l_apex_call_info constant t_string := null;
 $end
 
