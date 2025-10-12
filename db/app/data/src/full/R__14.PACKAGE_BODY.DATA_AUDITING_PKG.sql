@@ -70,6 +70,7 @@ end add_columns;
 
 procedure add_trigger
 ( p_table_name in user_tab_columns.table_name%type
+, p_replace in boolean
 )
 is
   l_table_name_no_qq constant user_tab_columns.table_name%type :=
@@ -95,7 +96,7 @@ is
   l_found pls_integer;
 begin
   cfg_install_ddl_pkg.trigger_ddl
-  ( p_operation => 'CREATE'
+  ( p_operation => case when p_replace then 'CREATE OR REPLACE' else 'CREATE' end
   , p_trigger_name => l_trigger_name
   , p_trigger_extra => '
 BEFORE INSERT OR UPDATE'
@@ -153,12 +154,12 @@ END;
 end add_trigger;
 
 procedure set_columns
-( p_who out nocopy varchar2
-, p_when out nocopy timestamp with time zone -- standard
-, p_where out nocopy varchar2
-, p_do_no_set_who in boolean
-, p_do_no_set_when in boolean
-, p_do_no_set_where in boolean
+( p_who in out nocopy varchar2
+, p_when in out nocopy timestamp with time zone -- standard
+, p_where in out nocopy varchar2
+, p_do_not_set_who in boolean
+, p_do_not_set_when in boolean
+, p_do_not_set_where in boolean
 )
 is
 begin
@@ -182,12 +183,12 @@ exception
 end set_columns;
 
 procedure set_columns
-( p_who out nocopy varchar2
-, p_when out nocopy timestamp -- datatype of an old existing colum
-, p_where out nocopy varchar2
-, p_do_no_set_who in boolean
-, p_do_no_set_when in boolean
-, p_do_no_set_where in boolean
+( p_who in out nocopy varchar2
+, p_when in out nocopy timestamp -- datatype of an old existing colum
+, p_where in out nocopy varchar2
+, p_do_not_set_who in boolean
+, p_do_not_set_when in boolean
+, p_do_not_set_where in boolean
 )
 is
 begin
@@ -200,18 +201,18 @@ exception
 end set_columns;
 
 procedure set_columns
-( p_who out nocopy varchar2
-, p_when out nocopy date -- datatype of an old existing colum
-, p_where out nocopy varchar2
-, p_do_no_set_who in boolean
-, p_do_no_set_when in boolean
-, p_do_no_set_where in boolean
+( p_who in out nocopy varchar2
+, p_when in out nocopy date -- datatype of an old existing colum
+, p_where in out nocopy varchar2
+, p_do_not_set_who in boolean
+, p_do_not_set_when in boolean
+, p_do_not_set_where in boolean
 )
 is
 begin
-  if not(p_do_not_set_who, p_who is not null)) then p_who := oracle_tools.data_session_username; end if;
-  if not(p_do_not_set_when, p_when is not null)) then p_when := sysdate; end if;
-  if not(p_do_not_set_where, p_where is not null)) then p_where := get_call_info; end if;
+  if not(p_do_not_set_who) then p_who := oracle_tools.data_session_username; end if;
+  if not(p_do_not_set_when) then p_when := sysdate; end if;
+  if not(p_do_not_set_where) then p_where := get_call_info; end if;
 exception
   when others
   then null; /* this call may never raise an error */
@@ -230,14 +231,14 @@ is
 $if oracle_tools.cfg_pkg.c_apex_installed $then
   l_app_id constant pls_integer := apex_application.g_flow_id;
   l_app_page_id constant pls_integer := apex_application.g_flow_step_id;
-  l_tool_call_info constant t_string :=
+  l_tool_call_info t_string :=
     case
       when l_app_id is not null and
-      when l_app_page_id is not null
+           l_app_page_id is not null
       then utl_lms.format_message('APEX app %d page %d', l_app_id, l_app_page_id)
     end;
 $else    
-  l_tool_call_info constant t_string := null;
+  l_tool_call_info t_string := null;
 $end
 
   -- See dbms_application_info.set_module for sizes
@@ -375,7 +376,7 @@ begin
 
   if l_tool_call_info is null
   then
-    dbms_application_info.read_module(module_name => l_module_name, action => l_action_name);
+    dbms_application_info.read_module(module_name => l_module_name, action_name => l_action_name);
     if l_module_name is not null
     then
       l_tool_call_info := 'module ' || l_module_name;

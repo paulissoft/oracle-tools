@@ -42,10 +42,11 @@ The package CFG_INSTALL_DDL_PKG will be used for all DDL.
 **/
 procedure add_trigger
 ( p_table_name in user_tab_columns.table_name%type
+, p_replace in boolean default false
 );
 /**
 
-Will create (but not replace) an auditing trigger.
+Will create (or replace) an auditing trigger.
 
 Executes these DDL statements:
 
@@ -56,13 +57,13 @@ FOR EACH ROW
 BEGIN
   IF INSERTING
   THEN
-    ORACLE_TOOLS.DATA_AUDITING_PKG.UPD
+    ORACLE_TOOLS.DATA_AUDITING_PKG.SET_COLUMNS
     ( P_WHO => :NEW.AUD$INS$WHO
     , P_WHEN => :NEW.AUD$INS$WHEN
     , P_WHERE => :NEW.AUD$INS$WHERE
     );
   ELSE
-    ORACLE_TOOLS.DATA_AUDITING_PKG.UPD
+    ORACLE_TOOLS.DATA_AUDITING_PKG.SET_COLUMNS
     ( P_WHO => :NEW.AUD$UPD$WHO
     , P_WHEN => :NEW.AUD$UPD$WHEN
     , P_WHERE => :NEW.AUD$UPD$WHERE
@@ -85,9 +86,9 @@ procedure set_columns
 ( p_who in out nocopy varchar2
 , p_when in out nocopy timestamp with time zone -- standard
 , p_where in out nocopy varchar2
-, p_do_no_set_who in boolean default null
-, p_do_no_set_when in boolean default null
-, p_do_no_set_where in boolean default null
+, p_do_not_set_who in boolean default null
+, p_do_not_set_when in boolean default null
+, p_do_not_set_where in boolean default null
 );
 /**
 Invoked by the trigger created by ADD_TRIGGER.
@@ -104,9 +105,9 @@ procedure set_columns
 ( p_who in out nocopy varchar2
 , p_when in out nocopy timestamp -- datatype of an old existing colum
 , p_where in out nocopy varchar2
-, p_do_no_set_who in boolean default null
-, p_do_no_set_when in boolean default null
-, p_do_no_set_where in boolean default null
+, p_do_not_set_who in boolean default null
+, p_do_not_set_when in boolean default null
+, p_do_not_set_where in boolean default null
 );
 /** See above but systimestamp will be used for P_WHEN **/
 
@@ -114,9 +115,9 @@ procedure set_columns
 ( p_who in out nocopy varchar2
 , p_when in out nocopy date -- datatype of an old existing colum
 , p_where in out nocopy varchar2
-, p_do_no_set_who in boolean default null
-, p_do_no_set_when in boolean default null
-, p_do_no_set_where in boolean default null
+, p_do_not_set_who in boolean default null
+, p_do_not_set_when in boolean default null
+, p_do_not_set_where in boolean default null
 );
 /** See above but sysdate will be used for P_WHEN **/
 
