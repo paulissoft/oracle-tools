@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE DATA_AUDITING_PKG AUTHID CURRENT_USER IS
 
-PROCEDURE add_auditing_columns
+PROCEDURE add_columns
 ( p_table_name in user_tab_columns.table_name%type -- Table name, may be surrounded by double quotes
 , p_column_aud$ins$who in user_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$INS$WHO
 , p_column_aud$ins$when in user_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$INS$WHEN
@@ -35,12 +35,12 @@ Functions used:
 
 When an auditing column already exists, nothing will happen.
 
-The auditing columns will be set in a dedicated auditing trigger (created by ADD_AUDITING_TRIGGER).
+The auditing columns will be set in a dedicated auditing trigger (created by ADD_TRIGGER).
 
 The package CFG_INSTALL_DDL_PKG will be used for all DDL.
 
 **/
-procedure add_auditing_trigger
+procedure add_trigger
 ( p_table_name in user_tab_columns.table_name%type
 );
 /**
@@ -81,13 +81,16 @@ The second statement only when the trigger is valid and disabled.
 
 **/
 
-procedure upd
-( p_who out nocopy varchar2
-, p_when out nocopy timestamp with time zone -- standard
-, p_where out nocopy varchar2
+procedure set_columns
+( p_who in out nocopy varchar2
+, p_when in out nocopy timestamp with time zone -- standard
+, p_where in out nocopy varchar2
+, p_do_no_set_who in boolean default null
+, p_do_no_set_when in boolean default null
+, p_do_no_set_where in boolean default null
 );
 /**
-Invoked by the trigger created by ADD_AUDITING_TRIGGER.
+Invoked by the trigger created by ADD_TRIGGER.
 
 Will set the auditing values but only when null.
 
@@ -97,19 +100,28 @@ Functions used:
 - P_WHERE: ORACLE_TOOLS.DATA_CALL_INFO
 **/
 
-procedure upd
-( p_who out nocopy varchar2
-, p_when out nocopy timestamp -- datatype of an old existing colum
-, p_where out nocopy varchar2
+procedure set_columns
+( p_who in out nocopy varchar2
+, p_when in out nocopy timestamp -- datatype of an old existing colum
+, p_where in out nocopy varchar2
+, p_do_no_set_who in boolean default null
+, p_do_no_set_when in boolean default null
+, p_do_no_set_where in boolean default null
 );
 /** See above but systimestamp will be used for P_WHEN **/
 
-procedure upd
-( p_who out nocopy varchar2
-, p_when out nocopy date -- datatype of an old existing colum
-, p_where out nocopy varchar2
+procedure set_columns
+( p_who in out nocopy varchar2
+, p_when in out nocopy date -- datatype of an old existing colum
+, p_where in out nocopy varchar2
+, p_do_no_set_who in boolean default null
+, p_do_no_set_when in boolean default null
+, p_do_no_set_where in boolean default null
 );
 /** See above but sysdate will be used for P_WHEN **/
+
+function get_call_info
+return varchar2;
 
 END;
 /
