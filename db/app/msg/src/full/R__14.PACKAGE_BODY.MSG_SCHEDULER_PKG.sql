@@ -123,7 +123,7 @@ pragma exception_init(e_procobj_does_not_exist, -27476);
 e_procobj_already_exists exception;
 pragma exception_init(e_procobj_already_exists, -27477);
 
--- ORA-27475: unknown job "BC_API"."MSG_AQ_PKG$PROCESSING_LAUNCHER#1"
+-- ORA-27475: unknown job "MSG_AQ_PKG$PROCESSING_LAUNCHER#1"
 e_job_unknown exception;
 pragma exception_init(e_job_unknown, -27475);
 

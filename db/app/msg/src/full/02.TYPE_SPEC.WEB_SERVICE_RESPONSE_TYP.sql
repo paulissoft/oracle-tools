@@ -150,17 +150,16 @@ You need to dequeue from that queue using the correlation id to get the response
   )
 /** Get the binary body plus other HTTP response info. **/
 
+, final member procedure get
+  ( self in web_service_response_typ
+  , p_body_clob out nocopy clob
+  )
+
+, final member procedure get
+  ( self in web_service_response_typ
+  , p_body_blob out nocopy blob
+  )
 )
-not final
- alter type "WEB_SERVICE_RESPONSE_TYP" add
-final member procedure get
-( self in web_service_response_typ
-, p_body_clob out nocopy clob
-) cascade
- alter type "WEB_SERVICE_RESPONSE_TYP" add
-final member procedure get
-( self in web_service_response_typ
-, p_body_blob out nocopy blob
-) cascade;
+not final;
 /
 

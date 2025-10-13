@@ -1,4 +1,4 @@
-create or replace type body property_typ
+CREATE OR REPLACE TYPE BODY "PROPERTY_TYP" 
 is
 
 map member function to_string
@@ -10,3 +10,4 @@ end to_string;
 
 end;
 /
+

@@ -126,7 +126,7 @@ MSG_AQ_PKG.ENQUEUE(self, ...);
   ( self in msg_typ
   )
   return varchar2
-/** Get the schema and name of the type, e.g. SYS.NUMBER or MSG_TYP. **/
+/** Get the schema and name of the type, e.g. SYS.NUMBER or ORACLE_TOOLS.MSG_TYP. **/
   
 , final
   member function serialize
