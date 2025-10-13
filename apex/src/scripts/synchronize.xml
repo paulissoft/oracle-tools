@@ -10,7 +10,7 @@ The following properties must be set before:
 - application: an Apex application id
 - userid: an Oracle userid to connect to the database
 - workspace: Apex workspace name
-- export.dir: directory to save/retrieve install.sql
+- export.dir: directory to save/retrieve install.sql (will be created when necessary)
 - sql.home: the home directory of the SqlCli client (often the SQL Developer home)
 - runtime.classpath: the runtime classpath
 - ojdbc.java.version: the Java version for JDBC (8, 10, ...)
@@ -27,6 +27,8 @@ The following properties are only important during export:
   
   <target name="init">
     <echo message="(synchronize.xml.init) basedir: ${basedir}" />
+    <!-- 
+    <mkdir dir="${export.dir}" />
     <fail message="Property export.dir (${export.dir}) should be set and point to a directory">
       <condition>
         <not>
