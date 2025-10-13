@@ -419,7 +419,8 @@ begin
       -- 1) ORACLE_TOOLS.DATA_AUDITING_PKG subprogram SET_COLUMNS or GET_CALL_INFO
       -- 2) ORACLE_TOOLS.DATA_CALL_INFO
       -- 3) generated auditing triggers
-      -- 4) anonymous blocks (stop)
+      -- 4) unknown object types
+      -- 5) anonymous blocks (stop)
       case
         -- 1)
         when l_owner = $$PLSQL_UNIT_OWNER and
@@ -440,7 +441,19 @@ begin
              substr(l_object_name, 1, 4) = 'AUD$'
         then null;
 
-        -- 4) We will only get anonymous blocks from here on so exit all
+        -- 4)
+        when l_object_type is null or
+             l_object_type not in ( 'TRIGGER'
+                                  , 'PACKAGE'
+                                  , 'PACKAGE BODY'
+                                  , 'TYPE'
+                                  , 'TYPE BODY'
+                                  , 'FUNCTION'
+                                  , 'PROCEDURE'
+                                  )
+        then null;
+
+        -- 5) We will only get anonymous blocks from here on so exit all
         when l_object_type = 'ANONYMOUS BLOCK'
         then exit try_loop;
 
@@ -483,9 +496,22 @@ begin
 /*DBUG*/    
     
         -- skip:
-        -- 1) anonymous blocks
+        -- 1) unknown object types
+        -- 2) anonymous blocks
         case
           -- 1)
+          when l_object_type is null or
+               l_object_type not in ( 'TRIGGER'
+                                    , 'PACKAGE'
+                                    , 'PACKAGE BODY'
+                                    , 'TYPE'
+                                    , 'TYPE BODY'
+                                    , 'FUNCTION'
+                                    , 'PROCEDURE'
+                                    )
+          then null;
+          
+          -- 2)
           when l_object_type = 'ANONYMOUS BLOCK'
           then null;
 
