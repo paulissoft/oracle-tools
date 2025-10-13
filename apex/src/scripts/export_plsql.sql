@@ -1,7 +1,18 @@
 -- &1 workspace name
 -- &2 application id
 
-set serveroutput on size unlimited format trunc
+rem set serveroutput on size unlimited format trunc
+
+rem Do set serveroutput off, so you will not get this at the end of the APEX install.sql:
+rem
+rem *** ui_apex_synchronize.pre_export ***
+rem workspace name: BC_DEV
+rem application id: 116
+rem *** seed and publish ***
+rem primary application id: 116
+rem language              : nl
+
+set serveroutput off
 
 prompt (export_plsql.sql)
 

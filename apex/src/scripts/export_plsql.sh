@@ -24,4 +24,9 @@ connect $USERID
 exit sql.sqlcode
 EOF
 
-$sql /nolog @$tmpfile | perl $srcdir/export_plsql.pl
+# Use -S switch to remove this:
+#
+# Disconnected from Oracle Database 19c Enterprise Edition Release 19.0.0.0.0 - Production
+# Version 19.29.0.1.0
+
+$sql -S /nolog @$tmpfile | perl $srcdir/export_plsql.pl

@@ -10,7 +10,7 @@ The following properties must be set before:
 - application: an Apex application id
 - userid: an Oracle userid to connect to the database
 - workspace: Apex workspace name
-- export.dir: directory to save/retrieve install.sql
+- export.dir: directory to save/retrieve install.sql (will be created when necessary)
 - sql.home: the home directory of the SqlCli client (often the SQL Developer home)
 - runtime.classpath: the runtime classpath
 - ojdbc.java.version: the Java version for JDBC (8, 10, ...)
@@ -27,13 +27,19 @@ The following properties are only important during export:
   
   <target name="init">
     <echo message="(synchronize.xml.init) basedir: ${basedir}" />
-    <fail message="Property export.dir (${export.dir}) should be set and point to a directory">
+    <!-- https://github.com/paulissoft/oracle-tools/issues/224 --> 
+    <fail message="Property export.dir (${export.dir}) should be set">
       <condition>
         <not>
-          <and>
-            <isset property="export.dir" />
-            <available file="${export.dir}" type="dir" />
-          </and>
+          <isset property="export.dir" />
+        </not>
+      </condition>
+    </fail>
+    <mkdir dir="${export.dir}" />
+    <fail message="Property export.dir (${export.dir}) should be a directory">
+      <condition>
+        <not>
+          <available file="${export.dir}" type="dir" />
         </not>
       </condition>
     </fail>
@@ -97,15 +103,28 @@ The following properties are only important during export:
       <available file="/usr/local/bin/oradumper" type="file" />
     </condition>
     <condition property="export.oradumper" value="true" >
-      <isset property="oradumper.executable" />
+      <and>
+        <isset property="oradumper.executable" />
+        <!-- no other export property set -->
+        <not>
+          <or>
+            <isset property="export.sqlcl.plsql" />
+            <isset property="export.sqlcl.apex" />
+          </or>
+        </not>
+      </and>
     </condition>
     <echo message="(synchronize.xml.init) export.oradumper: ${export.oradumper}" />
 
     <condition property="export.sqlcl.plsql" value="true">
       <and>
         <isset property="my.sql.home" />
+        <!-- no other export property set -->
         <not>
-          <isset property="export.oradumper" />
+          <or>
+            <isset property="export.oradumper" />
+            <isset property="export.sqlcl.apex" />
+          </or>
         </not>
       </and>
     </condition>
@@ -114,6 +133,7 @@ The following properties are only important during export:
     <condition property="export.sqlcl.apex" value="true">
       <and>
         <isset property="my.sql.home" />
+        <!-- no other export property set -->
         <not>
           <or>
             <isset property="export.oradumper" />
@@ -123,17 +143,6 @@ The following properties are only important during export:
       </and>
     </condition>
     <echo message="(synchronize.xml.init) export.sqlcl.apex: ${export.sqlcl.apex}" />
-
-    <condition property="export.java" value="true">
-      <not>
-        <or>
-          <isset property="export.oradumper" />
-          <isset property="export.sqlcl.plsql" />
-          <isset property="export.sqlcl.apex" />
-        </or>
-      </not>
-    </condition>
-    <echo message="(synchronize.xml.init) export.java: ${export.java}" />
 
     <condition property="sql.executable" value="${my.sql.home}/bin/sql.exe" else="${my.sql.home}/bin/sql">
       <os family="windows"/>
@@ -577,47 +586,11 @@ The following properties are only important during export:
     </exec>
   </target>
 
-  <!-- export solution with oracle.apex.APEXExport class -->
-  <target name="export-java"
-          depends="init-export,init-split-userid"
-          if="export.java">
-    <echo message="(synchronize.xml.export-java)" />
-
-    <!-- first run pre_export.sql to apply seed translations and publish the
-         application -->
-    <sqlplus name="pre_import"
-             dir=""
-             sqlfile='@${basedir}/pre_export.sql'
-             sqlarg1='"${workspace}"'
-             sqlarg2='"${application}"'/>
-
-    <echo message="(synchronize.xml.export-java) Writing Apex export of application ${application}" />
-    <java classname="oracle.apex.APEXExport" fork="true" dir="${output.dir}">
-      <arg value="-db"/>
-      <arg value="${my.db}"/>
-      <arg value="-user"/>
-      <arg value="${my.user}"/>
-      <arg value="-password"/>
-      <arg value="${my.password}"/>
-      <arg value="-applicationid"/>
-      <arg value="${application}"/>
-      <arg value="-expPubReports"/>
-      <arg value="-expSavedReports"/>
-      <arg value="-expTranslations"/>
-      <arg value="-expOriginalIds"/>
-      <arg value="-split"/>
-      <classpath>
-        <pathelement refid="runtime.classpath"/>
-        <pathelement path="${lib.dir}"/>
-      </classpath>
-    </java>
-  </target>
-
   <target name="export"
-          depends="init,init-split-userid,export-oradumper,export-sqlcl,export-plsql,export-java"
+          depends="init,init-split-userid,export-oradumper,export-sqlcl,export-plsql"
           description="export">
     <echo message="(synchronize.xml.export)" />
-    <fail message="Error creating temporary export directory ${output.dir}/${output.file.base}">
+    <fail message="Error creating temporary export directory (directory ${output.dir}/${output.file.base} does not exist)">
       <condition>
         <not>
           <available file="${output.dir}/${output.file.base}" type="dir" />
