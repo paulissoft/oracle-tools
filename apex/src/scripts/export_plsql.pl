@@ -41,10 +41,16 @@ my $debug = 0;
 sub main ();
 sub parse_command_line ();
 
+# GJP 2025-10-13 Do not forget to invoke main (!)
+main();
+
 sub main() {
     parse_command_line ();
-    
+
     while (<STDIN>) {
+        print STDOUT "[$.]: $_"
+            if ($debug);
+        
         # print STDERR $_;
         if (m!^-- === (file \d+): (.+) ===$!) {
             ($description, $file) = ($1, $2);

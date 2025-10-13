@@ -27,15 +27,19 @@ The following properties are only important during export:
   
   <target name="init">
     <echo message="(synchronize.xml.init) basedir: ${basedir}" />
-    <!-- 
-    <mkdir dir="${export.dir}" />
-    <fail message="Property export.dir (${export.dir}) should be set and point to a directory">
+    <!-- https://github.com/paulissoft/oracle-tools/issues/224 --> 
+    <fail message="Property export.dir (${export.dir}) should be set">
       <condition>
         <not>
-          <and>
-            <isset property="export.dir" />
-            <available file="${export.dir}" type="dir" />
-          </and>
+          <isset property="export.dir" />
+        </not>
+      </condition>
+    </fail>
+    <mkdir dir="${export.dir}" />
+    <fail message="Property export.dir (${export.dir}) should be a directory">
+      <condition>
+        <not>
+          <available file="${export.dir}" type="dir" />
         </not>
       </condition>
     </fail>
@@ -619,7 +623,7 @@ The following properties are only important during export:
           depends="init,init-split-userid,export-oradumper,export-sqlcl,export-plsql,export-java"
           description="export">
     <echo message="(synchronize.xml.export)" />
-    <fail message="Error creating temporary export directory ${output.dir}/${output.file.base}">
+    <fail message="Error creating temporary export directory (directory ${output.dir}/${output.file.base} does not exist)">
       <condition>
         <not>
           <available file="${output.dir}/${output.file.base}" type="dir" />
