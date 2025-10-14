@@ -459,6 +459,7 @@ begin
 
         when l_last_call_info is null
         then
+          PRAGMA INLINE(construct_call_info, 'YES');
           l_last_call_info :=
             construct_call_info
             ( l_unit_qualified_name
@@ -517,6 +518,7 @@ begin
 
           when l_first_call_info is null
           then
+            PRAGMA INLINE(construct_call_info, 'YES');
             l_first_call_info :=
               construct_call_info
               ( l_unit_qualified_name
@@ -535,6 +537,7 @@ begin
   dbug.leave;
 /*DBUG*/    
 
+  PRAGMA INLINE(construct_call_info, 'YES');
   return construct_call_info
          ( l_tool_call_info
          , l_first_call_info

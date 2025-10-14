@@ -123,6 +123,14 @@ procedure set_columns
 
 function get_call_info
 return varchar2;
+/**
+
+Get call info from these sources:
+- dbms_application_info.read_module
+- apex_application.g_flow_id (app id) and apex_application.g_flow_step_id (app page id)
+- utl_call_stack
+
+**/
 
 END;
 /
