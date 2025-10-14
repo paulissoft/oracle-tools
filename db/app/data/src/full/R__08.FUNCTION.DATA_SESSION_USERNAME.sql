@@ -1,4 +1,4 @@
-create or replace FUNCTION "DATA_SESSION_USERNAME" 
+CREATE OR REPLACE FUNCTION "DATA_SESSION_USERNAME" 
 return varchar2 
 is
   l_session_username varchar2(128 char) := null;
