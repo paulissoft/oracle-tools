@@ -64,7 +64,12 @@ is
 begin
   if g_verbose or g_dry_run then null; else return; end if;
 
-  dbms_output.put_line(case when not(p_is_ddl_statement) then '-- ' end || p_line);
+  if p_is_ddl_statement
+  then
+    dbms_output.put_line(p_line);
+  else
+    dbms_output.put_line('/* ' || p_line || ' */');
+  end if;
 end print;
 
 procedure print
