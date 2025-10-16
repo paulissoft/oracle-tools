@@ -554,10 +554,10 @@ flyway.url=${flyway.url}
       </properties>
       <build>
         <plugins>
-          <plugin>
+          <!--plugin>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-maven-plugin</artifactId>
-          </plugin>
+          </plugin-->
           <plugin>
             <artifactId>maven-antrun-plugin</artifactId>
             <version>${maven-antrun-plugin.version}</version>
