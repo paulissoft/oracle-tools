@@ -31,6 +31,7 @@
     <db.src.dml.scripts>${db.src.scripts}/dml</db.src.dml.scripts>
     <db.src.full.scripts>${db.src.scripts}/full</db.src.full.scripts>
     <db.src.incr.scripts>${db.src.scripts}/incr</db.src.incr.scripts>
+    <db.src.upgr.scripts>${db.src.scripts}/upgr</db.src.upgr.scripts>
     <!-- callbacks are added to the artifact for deployment later on without
          CD sources -->
     <db.src.callbacks.scripts>${oracle-tools.db.src.dir}/callbacks</db.src.callbacks.scripts>
@@ -344,7 +345,13 @@ flyway.url=${flyway.url}
                     <env key="LANG" value="en_US" />
                     <env key="CLASSPATH" value="${classpath}" />
                   </exec>
-                  <echo message="Flyway migrations SQL script generated in folder ${project.build.directory}" />
+                  <mkdir dir="${project.basedir}/${db.src.upgr.scripts}" />
+                  <move todir="${project.basedir}/${db.src.upgr.scripts}">
+                    <fileset dir="${project.build.directory}">
+                      <include name="flyway-migrations-*.sql"/>
+                    </fileset>
+                  </move>
+                  <echo message="Flyway migrations SQL script generated in folder ${project.basedir}/${db.src.upgr.scripts}" />
                 </target>
               </configuration>
               <goals>
