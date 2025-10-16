@@ -27,7 +27,7 @@
       DATA_SQL_PKG,
       DATA_AUDITING_PKG,
       DATA_CALL_INFO,
-      DATA_SHOW_WITHOUT_AUDITING_COLUMNS
+      DATA_SHOW_WITHOUT_AUDITING_COLUMNS,
     </db.object.names>
     <db.test.phase>test</db.test.phase>
   </properties>

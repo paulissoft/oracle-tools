@@ -643,9 +643,10 @@ end get_call_info;
 
 procedure add_view
 ( p_table_name in user_tab_columns.table_name%type -- The table name
-, p_prefix in varchar2 default 'AUD$EXCL$' -- The view prefix
-, p_suffix in varchar2 default '_V' -- The view suffix
-, p_replace in boolean default false -- Do we create (or replace)?
+, p_prefix in varchar2
+, p_suffix in varchar2
+, p_replace in boolean
+, p_view_text in varchar2
 )
 is
   l_table_name_no_qq constant user_tab_columns.table_name%type :=
@@ -672,10 +673,49 @@ begin
   cfg_install_ddl_pkg.view_ddl
   ( p_operation => case when p_replace then 'CREATE OR REPLACE' else 'CREATE' end
   , p_view_name => l_view_name
-  , p_extra => utl_lms.format_message( 'AS
-SELECT * FROM ORACLE_TOOLS.DATA_SHOW_WITHOUT_AUDITING_COLUMNS(%s)', p_table_name )
+  , p_extra => p_view_text
   );
 end add_view;
+
+procedure add_view_without_auditing_columns
+( p_table_name in user_tab_columns.table_name%type -- The table name
+, p_prefix in varchar2 default 'AUD$EXCL$' -- The view prefix
+, p_suffix in varchar2 default '_V' -- The view suffix
+, p_replace in boolean default false -- Do we create (or replace)?
+)
+is
+begin
+  add_view
+  ( p_table_name => p_table_name
+  , p_prefix => p_prefix
+  , p_suffix => p_suffix
+  , p_replace => p_replace
+  , p_view_text => utl_lms.format_message( 'AS
+SELECT * FROM ORACLE_TOOLS.DATA_SHOW_WITHOUT_AUDITING_COLUMNS(%s)', p_table_name )
+  );
+end add_view_without_auditing_columns;
+
+procedure add_history_view
+( p_table_name in user_tab_columns.table_name%type -- The table name
+, p_prefix in varchar2 default 'AUD$HIST$' -- The view prefix
+, p_suffix in varchar2 default '_V' -- The view suffix
+, p_replace in boolean default false -- Do we create (or replace)?
+)
+is
+begin
+  add_view
+  ( p_table_name => p_table_name
+  , p_prefix => p_prefix
+  , p_suffix => p_suffix
+  , p_replace => p_replace
+  , p_view_text => utl_lms.format_message( 'AS
+SELECT  VERSIONS_STARTTIME
+,       VERSIONS_ENDTIME
+,       VERSIONS_OPERATION
+,       TAB.*
+FROM    %s VERSIONS BETWEEN SCN MINVALUE AND MAXVALUE TAB', p_table_name )
+  );
+end add_history_view;
 
 END;
 /

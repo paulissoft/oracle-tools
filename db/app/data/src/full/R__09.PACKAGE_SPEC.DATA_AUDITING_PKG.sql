@@ -134,7 +134,7 @@ Get call info from these sources:
 
 **/
 
-procedure add_view
+procedure add_view_without_auditing_columns
 ( p_table_name in user_tab_columns.table_name%type -- The table name
 , p_prefix in varchar2 default 'AUD$EXCL$' -- The view prefix
 , p_suffix in varchar2 default '_V' -- The view suffix
@@ -148,7 +148,29 @@ Executes this DDL statement:
 
 ```
 CREATE VIEW <p_prefix><p_table_name><p_suffix> AS
-SELECT * FROM ORACLE_TOOLS.DATA_SHOW_WITHOUT_AUDITING_COLUMNS(<p_table_name>);
+SELECT * FROM ORACLE_TOOLS.DATA_SHOW_WITHOUT_AUDITING_COLUMNS(<p_table_name>)
+```
+**/
+
+procedure add_history_view
+( p_table_name in user_tab_columns.table_name%type -- The table name
+, p_prefix in varchar2 default 'AUD$HIST$' -- The view prefix
+, p_suffix in varchar2 default '_V' -- The view suffix
+, p_replace in boolean default false -- Do we create (or replace)?
+);
+/**
+
+Will create (or replace) a history view.
+
+Executes this DDL statement:
+
+```
+CREATE VIEW <p_prefix><p_table_name><p_suffix> AS
+SELECT  VERSIONS_STARTTIME
+,       VERSIONS_ENDTIME
+,       VERSIONS_OPERATION
+,       TAB.*
+FROM    <p_table_name> VERSIONS BETWEEN SCN MINVALUE AND MAXVALUE TAB'
 ```
 **/
 
