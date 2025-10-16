@@ -20,8 +20,10 @@ Will add these auditing columns to the table:
 - AUD$UPD$WHERE
 
 When a p_column parameter is not empty,
-the value of that parameter should be an existing column (may be surrounded by double quotes)
+the value of that parameter may be an existing non-virtual column (may be surrounded by double quotes)
 that will be renamed to the corresponding auditing column.
+And a virtual column with the same name will be re-created pointing to the audit column.
+The table will thus be backwards compatible (although you can not issue DML on the virtual column).
 
 The datatype:
 - WHO: VARCHAR2(128 CHAR)
@@ -33,7 +35,7 @@ Functions used:
 - WHEN: ORACLE_TOOLS.DATA_TIMESTAMP
 - WHERE: ORACLE_TOOLS.DATA_CALL_INFO
 
-When an auditing column already exists, nothing will happen.
+When an auditing column already exists, nothing will happen except maybe for recreating the virtual column.
 
 The auditing columns will be set in a dedicated auditing trigger (created by ADD_TRIGGER).
 

@@ -10,36 +10,125 @@ procedure add_columns
 , p_column_aud$upd$where in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHERE
 )
 is
-  procedure add_colum
+  -- user_tab_columns does not provide info about virtual columns but user_tab_cols does
+  type t_column_tab is table of user_tab_cols%rowtype index by user_tab_cols.column_name%type; -- index by column name
+
+  l_table_name_no_qq constant user_tab_columns.table_name%type :=
+    case
+      when p_table_name like '"%"'
+      then replace(substr(p_table_name, 2, length(p_table_name) - 2), '""', '"')
+      else p_table_name
+    end;
+  l_table_name_exact constant naturaln :=
+    case
+      when p_table_name like '"%"'
+      then 1
+      else 0
+    end;
+
+  procedure add_column
   ( p_existing_column_name in user_tab_columns.column_name%type
-  , p_column_name in user_tab_columns.column_name%type
+  , p_audit_column_name in user_tab_columns.column_name%type -- always exact
   )
   is
+    l_existing_column_name_no_qq constant user_tab_columns.column_name%type :=
+      case
+        when p_existing_column_name like '"%"'
+        then replace(substr(p_existing_column_name, 2, length(p_existing_column_name) - 2), '""', '"')
+        else p_existing_column_name
+      end;
+    l_existing_column_name_exact constant naturaln :=
+      case
+        when p_existing_column_name like '"%"'
+        then 1
+        else 0
+      end;    
     l_data_type constant user_tab_columns.data_type%type :=
       case
-        when substr(p_column_name, -3) = 'WHO'
+        when substr(p_audit_column_name, -3) = 'WHO'
         then 'VARCHAR2(128 CHAR)'
-        when substr(p_column_name, -4) = 'WHEN'
+        when substr(p_audit_column_name, -4) = 'WHEN'
         then 'TIMESTAMP WITH TIME ZONE'
-        when substr(p_column_name, -5) = 'WHERE'
+        when substr(p_audit_column_name, -5) = 'WHERE'
         then 'VARCHAR2(1000 CHAR)'
       end;
+
+    l_column_tab t_column_tab;
+
+    procedure get_column_info
+    is
+    begin
+      l_column_tab.delete; -- refresh
+      
+      for r in
+      ( select  tc.*
+        from    user_tab_cols tc
+        where   ( tc.table_name = l_table_name_no_qq or
+                  ( l_table_name_exact = 0 and tc.table_name = upper(l_table_name_no_qq) )
+                )
+        and     ( tc.column_name = p_audit_column_name or
+                  ( tc.column_name = l_existing_column_name_no_qq or
+                    ( l_existing_column_name_exact = 0 and tc.column_name = upper(l_existing_column_name_no_qq) )
+                  )
+                )
+      )
+      loop
+        case
+          when r.column_name = p_audit_column_name
+          then l_column_tab(p_audit_column_name) := r;
+          else l_column_tab(p_existing_column_name) := r;
+        end case;
+      end loop;
+    end get_column_info;
   begin
+    get_column_info;
+    
     if p_existing_column_name is not null
     then
-      cfg_install_ddl_pkg.column_ddl
-      ( p_operation => 'RENAME'
-      , p_table_name => p_table_name
-      , p_column_name => p_existing_column_name
-      , p_extra => 'TO ' || p_column_name
-        -- ORA-00957: duplicate column name
-      , p_ignore_sqlcode_tab => oracle_tools.cfg_install_ddl_pkg.t_ignore_sqlcode_tab(-957)
-      );
-    else
+      -- rename existing (non-virtual) column to audit column?
+      if l_column_tab.exists(p_existing_column_name) and
+         l_column_tab(p_existing_column_name).virtual_column = 'NO'
+      then
+        cfg_install_ddl_pkg.column_ddl
+        ( p_operation => 'RENAME'
+        , p_table_name => p_table_name
+        , p_column_name => p_existing_column_name
+        , p_extra => 'TO ' || p_audit_column_name
+        );
+        get_column_info; -- refresh
+      end if;
+      
+      -- create virtual (previously) existing column as audit column?
+      if not(l_column_tab.exists(p_existing_column_name))
+      then
+        cfg_install_ddl_pkg.column_ddl
+        ( p_operation => 'ADD'
+        , p_table_name => p_table_name
+        , p_column_name => p_existing_column_name
+        , p_extra => -- must be an expression, not just the column so add an empty string or zero seconds
+                     utl_lms.format_message
+                     ( 'GENERATED ALWAYS AS (%s%s) VIRTUAL'
+                     , p_audit_column_name
+                     , case l_column_tab(p_audit_column_name).data_type
+                         when 'DATE'
+                         then ' + 0' -- add 0 seconds
+                         when 'VARCHAR2'
+                         then ' || NULL' -- append NULL
+                         else -- timestamp
+                              q'< + INTERVAL '0' SECOND>' -- add 0 seconds
+                       end
+                     )
+        );
+        get_column_info; -- refresh
+      end if;
+    end if;
+
+    if not(l_column_tab.exists(p_audit_column_name))
+    then
       cfg_install_ddl_pkg.column_ddl
       ( p_operation => 'ADD'
       , p_table_name => p_table_name
-      , p_column_name => p_column_name
+      , p_column_name => p_audit_column_name
       , p_extra => l_data_type
       );
     end if;
@@ -60,12 +149,12 @@ is
 /*DBUG*/
   end;
 begin
-  add_colum(p_column_aud$ins$who, 'AUD$INS$WHO');
-  add_colum(p_column_aud$ins$when, 'AUD$INS$WHEN');
-  add_colum(p_column_aud$ins$where, 'AUD$INS$WHERE');
-  add_colum(p_column_aud$upd$who, 'AUD$UPD$WHO');
-  add_colum(p_column_aud$upd$when, 'AUD$UPD$WHEN');
-  add_colum(p_column_aud$upd$where, 'AUD$UPD$WHERE');
+  add_column(p_column_aud$ins$who, 'AUD$INS$WHO');
+  add_column(p_column_aud$ins$when, 'AUD$INS$WHEN');
+  add_column(p_column_aud$ins$where, 'AUD$INS$WHERE');
+  add_column(p_column_aud$upd$who, 'AUD$UPD$WHO');
+  add_column(p_column_aud$upd$when, 'AUD$UPD$WHEN');
+  add_column(p_column_aud$upd$where, 'AUD$UPD$WHERE');
 end add_columns;
 
 procedure add_trigger
@@ -551,6 +640,42 @@ exception
 /*DBUG*/    
     return null;
 end get_call_info;
+
+procedure add_view
+( p_table_name in user_tab_columns.table_name%type -- The table name
+, p_prefix in varchar2 default 'AUD$EXCL$' -- The view prefix
+, p_suffix in varchar2 default '_V' -- The view suffix
+, p_replace in boolean default false -- Do we create (or replace)?
+)
+is
+  l_table_name_no_qq constant user_tab_columns.table_name%type :=
+    case
+      when p_table_name like '"%"'
+      then replace(substr(p_table_name, 2, length(p_table_name) - 2), '""', '"')
+      else p_table_name
+    end;
+  l_table_name_exact constant naturaln :=
+    case
+      when p_table_name like '"%"'
+      then 1
+      else 0
+    end;
+  l_view_name_no_qq constant user_views.view_name%type :=
+    utl_lms.format_message('%s%s%s', p_prefix, l_table_name_no_qq, p_suffix);
+  l_view_name constant user_views.view_name%type := 
+    case
+      when l_table_name_exact = 1
+      then utl_lms.format_message('"%s"', l_view_name_no_qq)
+      else utl_lms.format_message('%s', l_view_name_no_qq)
+    end;
+begin
+  cfg_install_ddl_pkg.view_ddl
+  ( p_operation => case when p_replace then 'CREATE OR REPLACE' else 'CREATE' end
+  , p_view_name => l_view_name
+  , p_extra => utl_lms.format_message( 'AS
+SELECT * FROM ORACLE_TOOLS.DATA_SHOW_WITHOUT_AUDITING_COLUMNS(%s)', p_table_name )
+  );
+end add_view;
 
 END;
 /
