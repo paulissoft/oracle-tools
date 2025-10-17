@@ -10,7 +10,7 @@ define oracle_tools_password = &&oracle_tools_username
 
 accept oracle_tools_password prompt "PATO password [&&oracle_tools_password] ? " default "&&oracle_tools_password" hide
 
-define tablespace_users = USERS
+define tablespace_users = DATA
 
 accept tablespace_users prompt "Default tablespace [&&tablespace_users] ? " default "&&tablespace_users"
 
@@ -18,14 +18,26 @@ define tablespace_temp = TEMP
 
 accept tablespace_temp prompt "Temporary tablespace [&&tablespace_temp] ? " default "&&tablespace_temp"
 
-create user &&oracle_tools_username -
-identified by "&&oracle_tools_password" -
-default tablespace &&tablespace_users -
-temporary tablespace &&tablespace_temp;
+-- create user &&oracle_tools_username
+declare
+  -- ORA-01920: user name 'ORACLE_TOOLS' conflicts with another user or role name
+  e_user_already_exists exception;
+  pragma exception_init(e_user_already_exists, -1920);
+begin
+  execute immediate 'create user &&oracle_tools_username
+identified by "&&oracle_tools_password"
+default tablespace &&tablespace_users
+temporary tablespace &&tablespace_temp';
 
-alter user &&oracle_tools_username -
-quota unlimited on &&tablespace_users;
+  execute immediate 'alter user &&oracle_tools_username
+quota unlimited on &&tablespace_users';
+exception
+  when e_user_already_exists
+  then null;
+end;
+/
 
+-- create user EMPTY
 declare
   l_found pls_integer;
 begin
@@ -34,8 +46,16 @@ begin
     select  1
     into    l_found
     from    all_procedures
-    where   ( object_name = 'UT' and procedure_name = 'VERSION' )
-    or      ( object_name = 'UTCONFIG' and procedure_name = 'SHOWFAILURESONLY' );
+    where   ( ( object_name = 'UT' and procedure_name = 'VERSION' ) or
+              ( object_name = 'UTCONFIG' and procedure_name = 'SHOWFAILURESONLY' )
+            )
+    and     not
+            ( exists
+              ( select  1
+                from    all_users u
+                where   u.username = 'EMPTY'
+              )
+            );
 
   exception
     when no_data_found

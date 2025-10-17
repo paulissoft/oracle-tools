@@ -20,7 +20,11 @@
     <db.schema>${project.artifactId}</db.schema>
     <db.username>${db.schema}</db.username>
     <db.object.names.include>1</db.object.names.include>
-    <db.object.names>ADMIN_SYSTEM_PKG,ADMIN_SCHEDULER_PKG</db.object.names>
+    <db.object.names>
+      ADMIN_RECOMPILE_PKG,
+      ADMIN_SCHEDULER_PKG,
+      ADMIN_SYSTEM_PKG,
+    </db.object.names>
   </properties>
 
   <build>
