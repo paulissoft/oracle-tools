@@ -1,4 +1,5 @@
-alter session set current_schema = ADMIN;
+alter session set current_schema = ADMIN
+/
 
 @@src/full/R__00.PUBLIC_SYNONYM.ADMIN_RECOMPILE_PKG.sql
 
