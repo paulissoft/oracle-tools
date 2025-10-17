@@ -21,6 +21,7 @@
     <db.username>${db.schema}</db.username>
     <db.object.names.include>1</db.object.names.include>
     <db.object.names>
+      ADMIN_INSTALL_PKG,
       ADMIN_RECOMPILE_PKG,
       ADMIN_SCHEDULER_PKG,
       ADMIN_SYSTEM_PKG,
