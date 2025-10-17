@@ -192,11 +192,19 @@ procedure install_project
 , p_stop_on_error in boolean default true -- Must we stop on error?
 )
 is
+  l_file_contents clob := null;
 begin
   for r in
   ( select  id
     ,       name
     ,       bytes
+    ,       case
+              when instr(name, '/src/callbacks/') > 0 then 0
+              when instr(name, '/src/incr/') > 0 then 1
+              when instr(name, '/src/full/') > 0 then 2
+              when instr(name, '/src/dml/') > 0 then 3
+              when instr(name, '/src/ords/') > 0 then 4
+            end as file_type
     from    table
             ( dbms_cloud_repo.list_files
               ( repo => g_repo
@@ -208,15 +216,35 @@ begin
             )
     where   ( name like '%R\_\_%.sql' escape '\' -- Flyway replaceable scripts
               or
-              name like '%V%\_\_%.sql' escape '\' -- Flyway incremental scripts
+              name like '%V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
             )
     and     name not like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never install this package (body) by itself
+    order by
+            file_type
+    ,       name        
   )
   loop
+    /*DBUG
     dbms_output.put_line('id: ' || r.id);
     dbms_output.put_line('name: ' || r.name);
     dbms_output.put_line('bytes: ' || r.bytes);
+    dbms_output.put_line('file_type: ' || r.file_type);
+    /*DBUG*/
+    l_file_contents := l_file_contents || '@' || r.name || chr(10);
   end loop;
+
+  if l_file_contents is not null
+  then
+    install_file
+    ( p_schema => p_schema
+    , p_file_path => p_path || '/install.sql'
+    , p_content => l_file_contents
+    , p_branch_name => p_branch_name 
+    , p_tag_name => p_tag_name
+    , p_commit_id => p_commit_id
+    , p_stop_on_error => p_stop_on_error
+    );
+  end if;
 end install_project;
 
 procedure install_file
@@ -273,9 +301,9 @@ begin
   loop
     l_first_char := dbms_lob.substr(p_content, amount => 1, offset => 1);
 
-    --/*DBUG
+    /*DBUG
     dbms_output.put_line('l_first_char: "' || l_first_char || '"');
-    --/*DBUG*/
+    /*DBUG*/
     
     if l_first_char = '@'
     then
@@ -287,17 +315,17 @@ begin
       , l_line_tab
       );
       
-      --/*DBUG
+      /*DBUG
       dbms_output.put_line('l_line_tab.count: ' || l_line_tab.count);
-      --/*DBUG*/
+      /*DBUG*/
       
       if l_line_tab.count > 0
       then
         for i_idx in l_line_tab.first .. l_line_tab.last
         loop
-          --/*DBUG
+          /*DBUG
           dbms_output.put_line('line ' || i_idx || ': "' || l_line_tab(i_idx) || '"');
-          --/*DBUG*/
+          /*DBUG*/
           
           if l_line_tab(i_idx) is null or
              substr(l_line_tab(i_idx), 1, 1) = '@' or
@@ -334,9 +362,9 @@ begin
 
           if l_root_file_path is not null
           then
-            --/*DBUG
+            /*DBUG
             dbms_output.put_line('SQL include file: ' || l_root_file_path);
-            --/*DBUG*/
+            /*DBUG*/
 
             -- recursively install everything
             install_file
@@ -365,9 +393,9 @@ begin
     exit sql_include_file_loop;
   end loop sql_include_file_loop;
 
-  --/*DBUG
+  /*DBUG
   dbms_output.put_line('Not a simple SQL include file');
-  --/*DBUG*/
+  /*DBUG*/
 
   -- assume this is a SQL file (without includes)
   install_sql
@@ -417,6 +445,10 @@ is
   )
   is
   begin
+    --/*DBUG
+    dbms_output.put_line('Installing file ' || p_file_path  || case when p_statement_nr is not null then '; statement ' || p_statement_nr end );
+    --/*DBUG*/
+
     dbms_application_info.set_module
     ( module_name => l_base_name
     , action_name => 'installing SQL' || case when p_statement_nr is not null then ' statement ' || p_statement_nr end
@@ -472,10 +504,6 @@ begin
   end loop;
 
   -- normal handling
-  --/*DBUG
-  dbms_output.put_line('Installing file ' || p_file_path);
-  --/*DBUG*/
-
   install_sql
   ( p_content => p_content
   , p_stop_on_error => p_stop_on_error
