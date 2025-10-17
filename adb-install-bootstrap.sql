@@ -18,10 +18,8 @@ prompt @@db/src/admin/create.sql
 prompt @@db/src/admin/grant.sql
 @@db/src/admin/grant.sql
 
-alter session set current_schema = ADMIN;
-
-promp t@@db/app/admin/adb-install.sql
-@@db/app/admin/adb-install.sql
+prompt @@db/app/admin/adb-install-bootstrap.sql
+@@db/app/admin/adb-install-bootstrap.sql
 
 alter session set current_schema = ORACLE_TOOLS;
 
