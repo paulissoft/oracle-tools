@@ -14,6 +14,6 @@ begin
     , p_path => 'db/app/' || l_modules(i_idx)
     , p_schema => 'ORACLE_TOOLS'
     );
-  end if;
+  end loop;
 end;
 /
