@@ -2,15 +2,55 @@ create or replace package body admin_install_pkg is
 
 -- LOCAL
 
-g_repo clob := null;
-g_repo_id varchar2(128 char);
-g_current_schema all_users.username%type := null;
+-- TYPES
+
+type project_rec_t is record
+( project_type varchar2(4 byte) -- db/apex
+, db_schema varchar(128 char) -- The database schema
+, parent_github_access_handle github_access_handle_t default null -- The parent GitHub access handle
+, parent_path varchar2(1000 char) default null -- The parent repository file path
+, modules sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
+, src_callbacks varchar2(1000 char)
+, src_incr varchar2(1000 char)
+, src_full varchar2(1000 char)
+, src_dml varchar2(1000 char)
+, src_ords varchar2(1000 char)
+, application_id integer
+);
+
+subtype project_handle_t is varchar2(512 char); -- <repo owner>/<repo name>:<path>
+
+type project_tab_t is table of project_rec_t index by project_handle_t;
+
+type github_access_tab_t is table of github_access_rec_t index by github_access_handle_t;
 
 -- copy from pkg_str_util
 
 subtype t_max_varchar2 is varchar2(32767);
+
+-- CONSTANTS
+
 c_max_varchar2_size constant pls_integer := 32767;
 
+-- VARIABLES
+
+g_project_tab project_tab_t;
+
+g_github_access_tab github_access_tab_t;
+
+-- ROUTINES
+
+function get_project_handle
+( p_github_access_handle in github_access_handle_t -- The GitHub access handle
+, p_path in varchar2 -- The repository file path
+)
+return project_handle_t
+deterministic
+is
+begin
+  return p_github_access_handle || ':' || p_path;
+end get_project_handle;
+  
 function dbms_lob_substr
 ( p_clob in clob
 , p_amount in naturaln
@@ -141,82 +181,180 @@ end base_name;
 
 -- PUBLIC
 
-procedure init
+procedure set_github_access
 ( p_repo_owner in varchar2
 , p_repo_name in varchar2
+, p_branch_name in varchar2
+, p_tag_name in varchar2
+, p_commit_id in varchar2
+, p_github_access_handle out nocopy github_access_handle_t
 )
 is
-  l_credential_name dba_credentials.credential_name%type := null;
+  l_github_access_rec github_access_rec_t;
 begin
+  p_github_access_handle := p_repo_owner || '/' || p_repo_name;
+  
+  if g_github_access_tab.exists(p_github_access_handle)
+  then
+    raise dup_val_on_index;
+  end if;
+  
+  l_github_access_rec.repo_owner := p_repo_owner;
+  l_github_access_rec.repo_name := p_repo_name;
+  l_github_access_rec.branch_name := p_branch_name;
+  l_github_access_rec.tag_name := p_tag_name;
+  l_github_access_rec.commit_id := p_commit_id;
+  
   select  c.credential_name
-  into    l_credential_name
+  into    l_github_access_rec.credential_name
   from    dba_credentials c
   where   c.owner = 'ADMIN'
   and     c.credential_name like '%GITHUB%';
 
-  g_repo :=
+  l_github_access_rec.repo :=
     dbms_cloud_repo.init_github_repo
-    ( credential_name => l_credential_name
-    , repo_name => p_repo_name
-    , owner => p_repo_owner
+    ( credential_name => l_github_access_rec.credential_name
+    , repo_name => l_github_access_rec.repo_name
+    , owner => l_github_access_rec.repo_owner
     );
 
   -- check it does exist
   select  t.id
-  into    g_repo_id
-  from    table(dbms_cloud_repo.list_repositories(repo => g_repo)) t
-  where   t.owner = p_repo_owner
-  and     t.name = p_repo_name;
+  into    l_github_access_rec.repo_id
+  from    table(dbms_cloud_repo.list_repositories(repo => l_github_access_rec.repo)) t
+  where   t.owner = l_github_access_rec.repo_owner
+  and     t.name = l_github_access_rec.repo_name;
 
-  g_current_schema := sys_context('userenv', 'current_schema');
-end init;
+  l_github_access_rec.current_schema := sys_context('userenv', 'current_schema');
 
-procedure done
+  g_github_access_tab(p_github_access_handle) := l_github_access_rec;
+end set_github_access;
+
+procedure get_github_access
+( p_github_access_handle in github_access_handle_t -- The GitHub repository handle as returned from set_github_access()
+, p_github_access_rec out nocopy github_access_rec_t
+)
 is
 begin
-  g_repo := null;
-  g_repo_id := null;
-  if g_current_schema is not null
+  p_github_access_rec := g_github_access_tab(p_github_access_handle);
+end get_github_access;
+
+procedure delete_github_access
+( p_github_access_handle in github_access_handle_t -- The GitHub repository handle as returned from set_github_access()
+)
+is
+  l_github_access_rec github_access_rec_t;
+begin
+  l_github_access_rec := g_github_access_tab(p_github_access_handle);
+  g_github_access_tab.delete(p_github_access_handle);
+  if l_github_access_rec.current_schema is not null
   then
-    execute immediate 'alter session set current_schema = ' || g_current_schema;
-    g_current_schema := null;
+    execute immediate 'alter session set current_schema = ' || l_github_access_rec.current_schema;
   end if;
-end done;
+end delete_github_access;
+
+procedure define_project_db
+( p_github_access_handle in github_access_handle_t -- The GitHub access handle
+, p_path in varchar2 -- The repository file path
+, p_db_schema in varchar -- The database schema
+, p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
+, p_parent_path in varchar2 default null -- The parent repository file path
+, p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
+, p_src_callbacks in varchar2 default '/src/callbacks/'
+, p_src_incr in varchar2 default '/src/incr/'
+, p_src_full in varchar2 default '/src/full/'
+, p_src_dml in varchar2 default '/src/dml/'
+, p_src_ords in varchar2 default '/src/ords/'
+)
+is
+  l_project_handle constant project_handle_t := get_project_handle(p_github_access_handle, p_path);
+  l_project_rec project_rec_t;
+begin
+  if g_project_tab.exists(l_project_handle) then raise dup_val_on_index; end if;
+  
+  l_project_rec.project_type := 'db';
+  l_project_rec.db_schema := p_db_schema;
+  l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
+  l_project_rec.parent_path := p_parent_path;
+  l_project_rec.modules := p_modules;
+  l_project_rec.src_callbacks := p_src_callbacks;
+  l_project_rec.src_incr := p_src_incr;
+  l_project_rec.src_full := p_src_full;
+  l_project_rec.src_dml := p_src_dml;
+  l_project_rec.src_ords := p_src_ords;
+
+  g_project_tab(l_project_handle) := l_project_rec;
+end define_project_db;
+
+procedure define_project_apex
+( p_github_access_handle in github_access_handle_t -- The GitHub access handle
+, p_path in varchar2 -- The repository file path
+, p_db_schema in varchar -- The database schema
+, p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
+, p_parent_path in varchar2 default null -- The parent repository file path
+, p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
+, p_application_id in integer default null -- The APEX application id
+)
+is
+  l_project_handle constant project_handle_t := get_project_handle(p_github_access_handle, p_path);
+  l_project_rec project_rec_t;
+begin
+  if g_project_tab.exists(l_project_handle) then raise dup_val_on_index; end if;
+  
+  l_project_rec.project_type := 'apex';
+  l_project_rec.db_schema := p_db_schema;
+  l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
+  l_project_rec.parent_path := p_parent_path;
+  l_project_rec.modules := p_modules;
+  l_project_rec.application_id := p_application_id;
+
+  g_project_tab(l_project_handle) := l_project_rec;
+end define_project_apex;
 
 procedure install_project
-( p_schema in varchar -- The database schema to install into
+( p_github_access_handle in github_access_handle_t
 , p_path in varchar2 -- The repository file path
-, p_branch_name in varchar2 default null -- The branch
-, p_tag_name in varchar2 default null -- The tag
-, p_commit_id in varchar2 default null -- The commit
 , p_stop_on_error in boolean default true -- Must we stop on error?
 )
 is
   l_file_contents clob := null;
+  l_github_access_rec github_access_rec_t;
+  l_project_handle constant project_handle_t := get_project_handle(p_github_access_handle, p_path);
+  l_project_rec project_rec_t;
 begin
+  l_github_access_rec := g_github_access_tab(p_github_access_handle);
+  l_project_rec := g_project_tab(l_project_handle);
+
+  -- APEX not implemented yet
+  if l_project_rec.project_type = 'db' then null; else raise program_error; end if;
+
   for r in
   ( select  id
     ,       name
     ,       bytes
     ,       case
-              when instr(name, '/src/callbacks/') > 0 then 0
-              when instr(name, '/src/incr/') > 0 then 1
-              when instr(name, '/src/full/') > 0 then 2
-              when instr(name, '/src/dml/') > 0 then 3
-              when instr(name, '/src/ords/') > 0 then 4
+              when instr(name, l_project_rec.src_callbacks) > 0 then 0
+              when instr(name, l_project_rec.src_incr) > 0 then 1
+              when instr(name, l_project_rec.src_full) > 0 then 2
+              when instr(name, l_project_rec.src_dml) > 0 then 3
+              when instr(name, l_project_rec.src_ords) > 0 then 4
             end as file_type
     from    table
             ( dbms_cloud_repo.list_files
-              ( repo => g_repo
+              ( repo => l_github_access_rec.repo
               , path => p_path
-              , branch_name => p_branch_name
-              , tag_name => p_tag_name
-              , commit_id => p_commit_id
+              , branch_name => l_github_access_rec.branch_name
+              , tag_name => l_github_access_rec.tag_name
+              , commit_id => l_github_access_rec.commit_id
               )
             )
-    where   ( name like '%R\_\_%.sql' escape '\' -- Flyway replaceable scripts
+    where   ( name like 'R\_\_%.sql' escape '\' -- Flyway repeatable scripts
               or
-              name like '%V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
+              name like '%/R\_\_%.sql' escape '\' -- Flyway repeatable scripts
+              or
+              name like 'V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
+              or
+              name like '%/V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
             )
     and     name not like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never install this package (body) by itself
     order by
@@ -236,51 +374,46 @@ begin
   if l_file_contents is not null
   then
     install_file
-    ( p_schema => p_schema
+    ( p_github_access_handle => p_github_access_handle
+    , p_schema => l_project_rec.db_schema
     , p_file_path => p_path || '/install.sql'
     , p_content => l_file_contents
-    , p_branch_name => p_branch_name 
-    , p_tag_name => p_tag_name
-    , p_commit_id => p_commit_id
     , p_stop_on_error => p_stop_on_error
     );
   end if;
 end install_project;
 
 procedure install_file
-( p_schema in varchar -- The database schema to install into
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar -- The database schema to install into
 , p_file_path in varchar2 -- The repository file path
-, p_branch_name in varchar2 default null -- The branch
-, p_tag_name in varchar2 default null -- The tag
-, p_commit_id in varchar2 default null -- The commit
 , p_stop_on_error in boolean default true -- Must we stop on error?
 )
 is
+  l_github_access_rec github_access_rec_t;
 begin
+  l_github_access_rec := g_github_access_tab(p_github_access_handle);
+
   install_file
-  ( p_schema => p_schema
+  ( p_github_access_handle => p_github_access_handle
+  , p_schema => p_schema
   , p_file_path => p_file_path
   , p_content => dbms_cloud_repo.get_file
-                 ( repo => g_repo
+                 ( repo => l_github_access_rec.repo
                  , file_path => p_file_path
-                 , branch_name => p_branch_name
-                 , tag_name => p_tag_name
-                 , commit_id => p_commit_id
+                 , branch_name => l_github_access_rec.branch_name
+                 , tag_name => l_github_access_rec.tag_name
+                 , commit_id => l_github_access_rec.commit_id
                  )
-  , p_branch_name => p_branch_name
-  , p_tag_name => p_tag_name
-  , p_commit_id => p_commit_id
   , p_stop_on_error => p_stop_on_error
   );
 end install_file;
 
 procedure install_file
-( p_schema in varchar -- The database schema to install into
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar -- The database schema to install into
 , p_file_path in varchar2 -- The repository file path
 , p_content in clob -- The content from the repository file
-, p_branch_name in varchar2 default null -- The branch
-, p_tag_name in varchar2 default null -- The tag
-, p_commit_id in varchar2 default null -- The commit
 , p_stop_on_error in boolean default true -- Must we stop on error?
 )
 is
@@ -288,7 +421,10 @@ is
   l_first_char varchar2(1 byte);
   l_root_file_path varchar2(32767 byte);
   l_line_tab dbms_sql.varchar2a;
+  l_github_access_rec github_access_rec_t;
 begin
+  l_github_access_rec := g_github_access_tab(p_github_access_handle);
+
   dbms_application_info.set_module(module_name => l_base_name, action_name => 'installing');
    
   if p_schema is not null
@@ -368,18 +504,16 @@ begin
 
             -- recursively install everything
             install_file
-            ( p_schema => p_schema
+            ( p_github_access_handle => p_github_access_handle
+            , p_schema => p_schema
             , p_file_path => l_root_file_path
             , p_content => dbms_cloud_repo.get_file
-                           ( repo => g_repo
+                           ( repo => l_github_access_rec.repo
                            , file_path => l_root_file_path
-                           , branch_name => p_branch_name
-                           , tag_name => p_tag_name
-                           , commit_id => p_commit_id
+                           , branch_name => l_github_access_rec.branch_name
+                           , tag_name => l_github_access_rec.tag_name
+                           , commit_id => l_github_access_rec.commit_id
                            )
-            , p_branch_name => p_branch_name
-            , p_tag_name => p_tag_name
-            , p_commit_id => p_commit_id
             , p_stop_on_error => p_stop_on_error
             );
           end if;
@@ -399,7 +533,8 @@ begin
 
   -- assume this is a SQL file (without includes)
   install_sql
-  ( p_file_path => p_file_path
+  ( p_github_access_handle => p_github_access_handle
+  , p_file_path => p_file_path
   , p_content => p_content
   , p_stop_on_error => p_stop_on_error
   );
@@ -413,7 +548,8 @@ exception
 end install_file;
 
 procedure install_sql
-( p_file_path in varchar2 -- The repository file path, for reference only
+( p_github_access_handle in github_access_handle_t
+, p_file_path in varchar2 -- The repository file path, for reference only
 , p_content in clob -- The content from the repository file
 , p_stop_on_error in boolean default true -- Must we stop on error?
 )
