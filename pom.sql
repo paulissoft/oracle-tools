@@ -1,7 +1,11 @@
 begin
-  admin_install_pkg.process_root_project
+  admin_install_pkg.process_project
   ( p_github_access_handle => 'paulissoft/oracle-tools'
-  , p_modules => sys.odcivarchar2list('db/app', 'apex/app')
+  , p_path => 'db/app'
+  );
+  admin_install_pkg.process_project
+  ( p_github_access_handle => 'paulissoft/oracle-tools'
+  , p_path => 'apex/app'
   );
 end;
 /

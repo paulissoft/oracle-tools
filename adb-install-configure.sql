@@ -30,9 +30,8 @@ begin
   , p_branch_name => 'development'
   , p_github_access_handle => l_github_access_handle
   );
-  admin_install_pkg.process_project
+  admin_install_pkg.process_root_project
   ( p_github_access_handle => l_github_access_handle
-  , p_path => null
   , p_operation => 'install'
   );
   cleanup;

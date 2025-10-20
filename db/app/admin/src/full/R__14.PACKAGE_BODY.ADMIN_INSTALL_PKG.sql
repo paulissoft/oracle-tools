@@ -253,10 +253,10 @@ begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
   -- APEX not implemented yet
-  if p_project_rec.project_type = 'apex' then raise program_error; end if;
+  if p_project_rec.project_type = 'db' then null; else raise value_error; end if;
 
   -- export not implemented yet
-  if p_project_rec.operation = 'export' then raise program_error; end if;
+  if p_project_rec.operation = 'install' then null; else raise value_error; end if;
 
   for r in
   ( select  id
@@ -462,11 +462,36 @@ begin
   );
 end process_project_apex;
 
+procedure process_project
+( p_github_access_handle in github_access_handle_t -- The GitHub access handle
+, p_path in varchar2 -- The repository file path
+, p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
+, p_parent_path in varchar2 default null -- The parent repository file path
+)
+is
+  l_project_rec project_rec_t;
+begin
+  l_project_rec.project_type := null;
+  l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
+  l_project_rec.parent_path := p_parent_path;
+  l_project_rec.operation := g_root_project_rec.operation;
+  l_project_rec.stop_on_error := g_root_project_rec.stop_on_error;
+
+  -- process the pom.sql inside
+  PRAGMA INLINE(normalize_file_name, 'YES');
+  process_file
+  ( p_github_access_handle => p_github_access_handle
+  , p_schema => null
+  , p_file_path => normalize_file_name(p_path || '/' || 'pom.sql')
+  , p_operation => l_project_rec.operation
+  , p_stop_on_error => l_project_rec.stop_on_error
+  );
+end process_project;
+
 procedure process_root_project
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_parent_github_access_handle in github_access_handle_t
 , p_parent_path in varchar2
-, p_modules in sys.odcivarchar2list
 , p_operation in varchar2
 , p_stop_on_error in boolean
 )
@@ -478,34 +503,31 @@ begin
   g_root_project_rec.operation := p_operation;
   g_root_project_rec.stop_on_error := p_stop_on_error;
 
-  -- process the modules recursively
-  if p_modules is null or p_modules.count = 0
-  then
-    raise value_error;
-  end if;
-  
-  for i_idx in p_modules.first .. p_modules.last
-  loop
-    PRAGMA INLINE(normalize_file_name, 'YES');
-    process_file
-    ( p_github_access_handle => p_github_access_handle
-    , p_schema => null
-    , p_file_path => normalize_file_name(p_modules(i_idx) || '/' || 'pom.sql')
-    , p_stop_on_error => p_stop_on_error
-    );
-  end loop;
+  -- process the pom.sql inside
+  PRAGMA INLINE(normalize_file_name, 'YES');
+  process_file
+  ( p_github_access_handle => p_github_access_handle
+  , p_schema => null
+  , p_file_path => normalize_file_name('pom.sql')
+  , p_operation => p_operation
+  , p_stop_on_error => p_stop_on_error
+  );
 end process_root_project;
 
 procedure process_file
 ( p_github_access_handle in github_access_handle_t
 , p_schema in varchar -- The database schema 
 , p_file_path in varchar2 -- The repository file path
+, p_operation in varchar2 -- Must be 'install' or 'export'
 , p_stop_on_error in boolean
 )
 is
   l_github_access_rec github_access_rec_t;
 begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
+
+  -- only 'install' implemented
+  if p_operation = 'install' then null; else raise value_error; end if;
 
   process_file
   ( p_github_access_handle => p_github_access_handle

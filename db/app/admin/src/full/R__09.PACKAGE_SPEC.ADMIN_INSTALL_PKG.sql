@@ -7,10 +7,11 @@ A package based on DBMS_CLOUD_REPO in order to:
 
 In order to mimic this Maven POM behaviour:
 - there will be `pom.sql` files in folders with a `pom.xml` defining the most important properties using:
-  * `process_project_db`
-  * `process_project_apex`
-- these project definition routines will recursively define sub folder modules (each expecting a pom.sql along the pom.xml)
-- the root folder will thus contain at most two invocations: one to the root database folder and one to the root apex folder
+  * `process_root_project` (node)
+  * `process_project` (node)
+  * `process_project_db` (leaf)
+  * `process_project_apex` (leaf)
+- the node routines (`process_root_project` and `process_project`) must have a pom.sql in that folder
 **/
 
 type github_access_rec_t is record
@@ -89,11 +90,22 @@ Will be used to define the project in internal memory so it can be used by proce
 Can be used in pom.sql.
 **/
 
+procedure process_project
+( p_github_access_handle in github_access_handle_t -- The GitHub access handle
+, p_path in varchar2 -- The repository file path
+, p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
+, p_parent_path in varchar2 default null -- The parent repository file path
+);
+/**
+A loose representation of an aggregator POM in folder p_path (i.e. <p_path>/pom.xml).
+Will be used to define the project in internal memory so it can be used by process_project.
+Can be used in pom.sql.
+**/
+
 procedure process_root_project
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
-, p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
 , p_operation in varchar2 default null -- top level must be 'install' or 'export'
 , p_stop_on_error in boolean default true -- Must we stop on error?
 );
@@ -107,6 +119,7 @@ procedure process_file
 ( p_github_access_handle in github_access_handle_t
 , p_schema in varchar -- The database schema 
 , p_file_path in varchar2 -- The repository file path
+, p_operation in varchar2 -- Must be 'install' or 'export'
 , p_stop_on_error in boolean default true -- Must we stop on error?
 );
 /**
