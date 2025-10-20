@@ -261,10 +261,17 @@ procedure add_project
 , p_project_rec in project_rec_t
 )
 is
+  l_call constant varchar2(4000 byte) :=
+    utl_lms.format_message
+    ( 'add_project(p_github_access_handle => "%s", p_path => "%s", p_schema => "%s")'
+    , p_github_access_handle
+    , p_path
+    , p_project_rec.schema
+    );
   l_project_handle constant project_handle_t := get_project_handle(p_github_access_handle, p_path);
 begin
   --/*DBUG
-  dbms_output.put_line(utl_lms.format_message('add_project("%s", "%s")', p_github_access_handle, p_path));
+  dbms_output.put_line(l_call);
   --/*DBUG*/
 
   if g_project_tab.exists(l_project_handle) then raise dup_val_on_index; end if;
@@ -286,7 +293,7 @@ begin
   end if;
 exception
   when others
-  then raise_application_error(-20000, utl_lms.format_message('add_project("%s", "%s")', p_github_access_handle, p_path), true);
+  then raise_application_error(-20000, l_call, true);
 end add_project;
 
 -- PUBLIC
