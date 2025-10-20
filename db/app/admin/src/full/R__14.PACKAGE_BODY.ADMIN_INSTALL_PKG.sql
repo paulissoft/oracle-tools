@@ -501,7 +501,7 @@ procedure process_project
 , p_project_rec in project_rec_t
 )
 is
-  l_file_contents clob := null;
+--  l_file_contents clob := null;
   l_github_access_rec github_access_rec_t;
 begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
@@ -551,9 +551,15 @@ begin
         dbms_output.put_line('bytes: ' || r.bytes);
         dbms_output.put_line('file_type: ' || r.file_type);
         /*DBUG*/
-        l_file_contents := l_file_contents || '@' || r.name || chr(10);
+        -- l_file_contents := l_file_contents || '@' || r.name || chr(10);
+        process_file
+        ( p_github_access_handle => p_github_access_handle
+        , p_schema => p_project_rec.schema
+        , p_file_path => r.name
+        );
       end loop;
 
+      /*
       if l_file_contents is not null
       then
         process_file
@@ -563,6 +569,7 @@ begin
         , p_content => l_file_contents
         );
       end if;
+      */
     else
       raise value_error;
     end if;
