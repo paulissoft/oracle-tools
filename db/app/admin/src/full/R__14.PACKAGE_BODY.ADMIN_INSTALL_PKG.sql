@@ -34,9 +34,9 @@ c_max_varchar2_size constant pls_integer := 32767;
 
 -- VARIABLES
 
-g_project_tab project_tab_t;
-
 g_github_access_tab github_access_tab_t;
+
+g_project_tab project_tab_t; -- when github_access is removed, remove also its projects
 
 -- ROUTINES
 
@@ -264,14 +264,7 @@ is
   l_project_handle constant project_handle_t := get_project_handle(p_github_access_handle, p_path);
 begin
   --/*DBUG
-  dbms_output.put_line
-  ( utl_lms.format_message
-    ( 'add_project("%s", "%s", "%s")'
-    , p_github_access_handle
-    , p_path
-    , l_project_handle
-    )
-  );
+  dbms_output.put_line(utl_lms.format_message('add_project("%s", "%s")', p_github_access_handle, p_path));
   --/*DBUG*/
 
   if g_project_tab.exists(l_project_handle) then raise dup_val_on_index; end if;
@@ -291,6 +284,9 @@ begin
       );
     end loop;
   end if;
+exception
+  when others
+  then raise_application_error(-20000, utl_lms.format_message('add_project("%s", "%s")', p_github_access_handle, p_path), true);
 end add_project;
 
 -- PUBLIC
@@ -342,6 +338,20 @@ begin
   l_github_access_rec.current_schema := sys_context('USERENV', 'CURRENT_SCHEMA');
 
   g_github_access_tab(p_github_access_handle) := l_github_access_rec;
+exception
+  when others
+  then raise_application_error
+       ( -20000
+       , utl_lms.format_message
+         ( 'set_github_access("%s", "%s", "%s", "%s", "%s")'
+         , p_repo_owner
+         , p_repo_name
+         , p_branch_name
+         , p_tag_name
+         , p_commit_id
+         )
+       , true
+       );
 end set_github_access;
 
 procedure get_github_access
@@ -358,9 +368,22 @@ procedure delete_github_access
 )
 is
   l_github_access_rec github_access_rec_t;
+  l_project_handle project_handle_t;
+  l_project_handle_next project_handle_t;
 begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
   g_github_access_tab.delete(p_github_access_handle);
+
+  l_project_handle := g_project_tab.first;
+  while l_project_handle is not null
+  loop
+    l_project_handle_next := g_project_tab.next(l_project_handle);
+    if l_project_handle like p_github_access_handle || ':%'
+    then
+      g_project_tab.delete(l_project_handle);
+    end if;
+    l_project_handle := l_project_handle_next;
+  end loop;
   if l_github_access_rec.current_schema is not null
   then
     execute immediate 'alter session set current_schema = ' || l_github_access_rec.current_schema;

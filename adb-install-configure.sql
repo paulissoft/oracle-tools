@@ -6,8 +6,23 @@
 -- Remark: Verify by https://github.com/&1/&2
 */
 
+set serveroutput on size unlimited format trunc
+set feedback off verify off
+
 declare
-  l_github_access_handle admin_install_pkg.github_access_handle_t;
+  l_github_access_handle admin_install_pkg.github_access_handle_t := null;
+
+  procedure cleanup
+  is
+  begin
+    if l_github_access_handle is not null
+    then
+      admin_install_pkg.delete_github_access
+      ( p_github_access_handle => l_github_access_handle
+      );
+      l_github_access_handle := null;
+    end if;
+  end;
 begin
   admin_install_pkg.set_github_access
   ( p_repo_owner => '&1'
@@ -20,6 +35,12 @@ begin
   , p_schema => null
   , p_file_path => 'pom.sql'
   );
+  cleanup;
+exception
+  when others
+  then
+    cleanup;
+    raise;
 end;
 /
 
