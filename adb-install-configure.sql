@@ -30,10 +30,10 @@ begin
   , p_branch_name => 'development'
   , p_github_access_handle => l_github_access_handle
   );
-  admin_install_pkg.process_file
+  admin_install_pkg.process_project
   ( p_github_access_handle => l_github_access_handle
-  , p_schema => null
-  , p_file_path => 'pom.sql'
+  , p_path => null
+  , p_operation => 'install'
   );
   cleanup;
 exception

@@ -283,6 +283,7 @@ begin
   then
     for i_idx in p_project_rec.modules.first .. p_project_rec.modules.last
     loop
+      PRAGMA INLINE(normalize_file_name, 'YES');
       process_file
       ( p_github_access_handle => p_github_access_handle
       , p_schema => p_project_rec.schema
@@ -460,10 +461,10 @@ end define_project_apex;
 procedure define_project
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
-, p_schema in varchar default null -- The database schema
-, p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
-, p_parent_path in varchar2 default null -- The parent repository file path
-, p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
+, p_schema in varchar
+, p_parent_github_access_handle in github_access_handle_t
+, p_parent_path in varchar2
+, p_modules in sys.odcivarchar2list
 )
 is
   l_project_rec project_rec_t;
@@ -494,6 +495,15 @@ is
   l_project_rec project_rec_t;
 begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
+
+  -- process the pom.sql (recursively)
+  PRAGMA INLINE(normalize_file_name, 'YES');
+  process_file
+  ( p_github_access_handle => p_github_access_handle
+  , p_schema => null
+  , p_file_path => normalize_file_name(p_path || '/' || 'pom.sql')
+  );
+  
   l_project_rec := g_project_tab(l_project_handle);
 
   -- APEX not implemented yet
