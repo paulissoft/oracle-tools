@@ -247,6 +247,25 @@ begin
   return trim('/' from replace(p_file_path, '//', '/'));
 end normalize_file_name;
 
+procedure set_current_schema
+( p_schema in varchar2
+)
+is
+begin
+  if upper(p_schema) <> upper(sys_context('USERENV', 'CURRENT_SCHEMA'))
+  then
+    dbms_output.put_line
+    ( utl_lms.format_message
+      ( '[%s] Switching from schema %s to %s'
+      , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+      , upper(sys_context('USERENV', 'CURRENT_SCHEMA'))
+      , upper(p_schema)
+      )
+    );
+    execute immediate 'alter session set current_schema = ' || upper(p_schema);
+  end if;
+end set_current_schema;
+
 procedure process_sql
 ( p_github_access_handle in github_access_handle_t
 , p_schema in varchar2
@@ -270,7 +289,8 @@ is
       ' Processing file ' ||
       p_file_path  ||
       case when p_statement_nr is not null then '; statement ' || p_statement_nr end ||
-      case when p_schema is not null then '; schema ' || p_schema end
+      '; target schema ' || p_schema ||
+      '; current schema ' || sys_context('USERENV', 'CURRENT_SCHEMA')
     );
     --/*DBUG*/
 
@@ -295,6 +315,8 @@ begin
   then
     return;
   end if;
+
+  set_current_schema(p_schema);
 
   PRAGMA INLINE(sql_statement_terminator, 'YES');
   if sql_statement_terminator(p_file_path) = ';'
@@ -349,11 +371,6 @@ begin
 
   dbms_application_info.set_module(module_name => l_base_name, action_name => 'processing');
    
-  if p_schema is not null
-  then
-    execute immediate 'alter session set current_schema = ' || p_schema;
-  end if;
-
   -- first character @ ?
   <<sql_include_file_loop>>
   loop
@@ -505,6 +522,16 @@ is
   l_github_access_rec github_access_rec_t;
 begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
+
+  --/*DBUG
+  dbms_output.put_line
+  ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
+    ' Processing project ' ||
+    p_path  ||
+    '; target schema ' || p_project_rec.schema ||
+    '; current schema ' || sys_context('USERENV', 'CURRENT_SCHEMA')
+  );
+  --/*DBUG*/
 
   if p_project_rec.project_type = 'db'
   then
@@ -674,10 +701,7 @@ begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
   g_github_access_tab.delete(p_github_access_handle);
 
-  if l_github_access_rec.current_schema is not null
-  then
-    execute immediate 'alter session set current_schema = ' || l_github_access_rec.current_schema;
-  end if;
+  set_current_schema(l_github_access_rec.current_schema);
 end delete_github_access;
 
 procedure process_project_db
