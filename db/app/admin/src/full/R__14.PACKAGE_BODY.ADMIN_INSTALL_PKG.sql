@@ -6,7 +6,7 @@ create or replace package body admin_install_pkg is
 
 type project_rec_t is record
 ( project_type varchar2(4 byte) -- db/apex
-, db_schema varchar(128 char) -- The database schema
+, schema varchar(128 char) -- The database schema
 , parent_github_access_handle github_access_handle_t default null -- The parent GitHub access handle
 , parent_path varchar2(1000 char) default null -- The parent repository file path
 , modules sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
@@ -256,7 +256,7 @@ end delete_github_access;
 procedure define_project_db
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
-, p_db_schema in varchar -- The database schema
+, p_schema in varchar -- The database schema
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
 , p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
@@ -273,7 +273,7 @@ begin
   if g_project_tab.exists(l_project_handle) then raise dup_val_on_index; end if;
   
   l_project_rec.project_type := 'db';
-  l_project_rec.db_schema := p_db_schema;
+  l_project_rec.schema := p_schema;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
   l_project_rec.modules := p_modules;
@@ -289,7 +289,7 @@ end define_project_db;
 procedure define_project_apex
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
-, p_db_schema in varchar -- The database schema
+, p_schema in varchar -- The database schema
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
 , p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
@@ -302,7 +302,7 @@ begin
   if g_project_tab.exists(l_project_handle) then raise dup_val_on_index; end if;
   
   l_project_rec.project_type := 'apex';
-  l_project_rec.db_schema := p_db_schema;
+  l_project_rec.schema := p_schema;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
   l_project_rec.modules := p_modules;
@@ -311,7 +311,7 @@ begin
   g_project_tab(l_project_handle) := l_project_rec;
 end define_project_apex;
 
-procedure install_project
+procedure process_project
 ( p_github_access_handle in github_access_handle_t
 , p_path in varchar2 -- The repository file path
 , p_stop_on_error in boolean default true -- Must we stop on error?
@@ -356,7 +356,7 @@ begin
               or
               name like '%/V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
             )
-    and     name not like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never install this package (body) by itself
+    and     name not like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
     order by
             file_type
     ,       name        
@@ -373,19 +373,19 @@ begin
 
   if l_file_contents is not null
   then
-    install_file
+    process_file
     ( p_github_access_handle => p_github_access_handle
-    , p_schema => l_project_rec.db_schema
-    , p_file_path => p_path || '/install.sql'
+    , p_schema => l_project_rec.schema
+    , p_file_path => p_path || '/process.sql'
     , p_content => l_file_contents
     , p_stop_on_error => p_stop_on_error
     );
   end if;
-end install_project;
+end process_project;
 
-procedure install_file
+procedure process_file
 ( p_github_access_handle in github_access_handle_t
-, p_schema in varchar -- The database schema to install into
+, p_schema in varchar -- The database schema 
 , p_file_path in varchar2 -- The repository file path
 , p_stop_on_error in boolean default true -- Must we stop on error?
 )
@@ -394,7 +394,7 @@ is
 begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
-  install_file
+  process_file
   ( p_github_access_handle => p_github_access_handle
   , p_schema => p_schema
   , p_file_path => p_file_path
@@ -407,11 +407,11 @@ begin
                  )
   , p_stop_on_error => p_stop_on_error
   );
-end install_file;
+end process_file;
 
-procedure install_file
+procedure process_file
 ( p_github_access_handle in github_access_handle_t
-, p_schema in varchar -- The database schema to install into
+, p_schema in varchar -- The database schema
 , p_file_path in varchar2 -- The repository file path
 , p_content in clob -- The content from the repository file
 , p_stop_on_error in boolean default true -- Must we stop on error?
@@ -425,7 +425,7 @@ is
 begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
-  dbms_application_info.set_module(module_name => l_base_name, action_name => 'installing');
+  dbms_application_info.set_module(module_name => l_base_name, action_name => 'processing');
    
   if p_schema is not null
   then
@@ -477,7 +477,7 @@ begin
         for i_idx in l_line_tab.first .. l_line_tab.last
         loop
           /*
-          -- You can install SQL statements containing nested SQL from a Cloud Code repository file using the following:
+          -- You can process SQL statements containing nested SQL from a Cloud Code repository file using the following:
           -- @: includes a SQL file with a relative path to the ROOT of the repository.
           -- @@: includes a SQL file with a path relative to the current file.
           */
@@ -502,8 +502,8 @@ begin
             dbms_output.put_line('SQL include file: ' || l_root_file_path);
             /*DBUG*/
 
-            -- recursively install everything
-            install_file
+            -- recursively process everything
+            process_file
             ( p_github_access_handle => p_github_access_handle
             , p_schema => p_schema
             , p_file_path => l_root_file_path
@@ -532,22 +532,22 @@ begin
   /*DBUG*/
 
   -- assume this is a SQL file (without includes)
-  install_sql
+  process_sql
   ( p_github_access_handle => p_github_access_handle
   , p_file_path => p_file_path
   , p_content => p_content
   , p_stop_on_error => p_stop_on_error
   );
 
-  dbms_application_info.set_module(module_name => l_base_name, action_name => 'installed');
+  dbms_application_info.set_module(module_name => l_base_name, action_name => 'processed');
 exception
   when others
   then
-    dbms_application_info.set_module(module_name => l_base_name, action_name => 'error while installing');
-    raise_application_error(-20000, 'Error installing ' || p_file_path, true);
-end install_file;
+    dbms_application_info.set_module(module_name => l_base_name, action_name => 'error while processing');
+    raise_application_error(-20000, 'Error processing ' || p_file_path, true);
+end process_file;
 
-procedure install_sql
+procedure process_sql
 ( p_github_access_handle in github_access_handle_t
 , p_file_path in varchar2 -- The repository file path, for reference only
 , p_content in clob -- The content from the repository file
@@ -574,7 +574,7 @@ is
     );
   l_statement_tab dbms_sql.varchar2a;
 
-  procedure install_sql
+  procedure process_sql
   ( p_content in clob -- The content from the repository file
   , p_stop_on_error in boolean default true -- Must we stop on error?
   , p_statement_nr in positive default null
@@ -582,12 +582,12 @@ is
   is
   begin
     --/*DBUG
-    dbms_output.put_line('Installing file ' || p_file_path  || case when p_statement_nr is not null then '; statement ' || p_statement_nr end );
+    dbms_output.put_line('Processing file ' || p_file_path  || case when p_statement_nr is not null then '; statement ' || p_statement_nr end );
     --/*DBUG*/
 
     dbms_application_info.set_module
     ( module_name => l_base_name
-    , action_name => 'installing SQL' || case when p_statement_nr is not null then ' statement ' || p_statement_nr end
+    , action_name => 'processing SQL' || case when p_statement_nr is not null then ' statement ' || p_statement_nr end
     );
     dbms_cloud_repo.install_sql
     ( content => p_content
@@ -595,11 +595,11 @@ is
     );
     dbms_application_info.set_module
     ( module_name => l_base_name
-    , action_name => 'installed SQL' || case when p_statement_nr is not null then ' statement ' || p_statement_nr end
+    , action_name => 'processed SQL' || case when p_statement_nr is not null then ' statement ' || p_statement_nr end
     );
-  end install_sql;
+  end process_sql;
 begin
-  if p_file_path like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never install this package (body) by itself
+  if p_file_path like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
   then
     return;
   end if;
@@ -624,7 +624,7 @@ begin
           then
             null;
           else
-            install_sql
+            process_sql
             ( p_content => to_clob(l_statement_tab(i_statement_idx))
             , p_stop_on_error => p_stop_on_error
             , p_statement_nr => i_statement_idx
@@ -640,11 +640,11 @@ begin
   end loop;
 
   -- normal handling
-  install_sql
+  process_sql
   ( p_content => p_content
   , p_stop_on_error => p_stop_on_error
   );
-end install_sql;
+end process_sql;
 
 end;
 /

@@ -1,5 +1,18 @@
 create or replace package admin_install_pkg authid definer is
 
+/**
+A package based on DBMS_CLOUD_REPO in order to:
+- install files (database/APEX) from a repository like the PATO does with Maven POM files using Flyway.
+- export (database/APEX) scripts to a repository like the PATO does with Maven POM files.
+
+In order to mimic this Maven POM behaviour:
+- there will be `pom.sql` files in folders with a `pom.xml` defining the most important properties using:
+  * `define_project_db`
+  * `define_project_apex`
+- these project definition routines will recursively define sub folder modules (each expecting a pom.sql along the pom.xml)
+- the root folder will thus contain at most two invocations: one to the root database folder and one to the root apex folder
+**/
+
 type github_access_rec_t is record
 ( repo_owner varchar2(128 char)
 , repo_name varchar2(128 char)
@@ -47,7 +60,7 @@ procedure delete_github_access
 procedure define_project_db
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
-, p_db_schema in varchar -- The database schema
+, p_schema in varchar -- The database schema
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
 , p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
@@ -66,7 +79,7 @@ This procedure can be used in pom.sql.
 procedure define_project_apex
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
-, p_db_schema in varchar -- The database schema
+, p_schema in varchar -- The database schema
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
 , p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
@@ -74,47 +87,47 @@ procedure define_project_apex
 );
 /**
 A loose representation of an APEX POM in folder p_path (i.e. <p_path>/po.xml).
-Will be used to define the project in internal memory so it can be used by install_project.
+Will be used to define the project in internal memory so it can be used by process_project.
 Can be used in pom.sql.
 **/
 
-procedure install_project
+procedure process_project
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
 , p_stop_on_error in boolean default true -- Must we stop on error?
 );
 /** The project must have been defined by define_project_db or define_project_apex. **/
 
-procedure install_file
+procedure process_file
 ( p_github_access_handle in github_access_handle_t
-, p_schema in varchar -- The database schema to install into
+, p_schema in varchar -- The database schema 
 , p_file_path in varchar2 -- The repository file path
 , p_stop_on_error in boolean default true -- Must we stop on error?
 );
 /**
 An enhanced version of DBMS_CLOUD_REPO.INSTALL_FILE.
 
-Will retrieve the file contents via DBMS_CLOUD_REPO.GET_FILE and then invoke the second variant of INSTALL_FILE, see below.
+Will retrieve the file contents via DBMS_CLOUD_REPO.GET_FILE and then invoke the second variant of PROCESS_FILE, see below.
 **/
 
-procedure install_file
+procedure process_file
 ( p_github_access_handle in github_access_handle_t
-, p_schema in varchar -- The database schema to install into
+, p_schema in varchar -- The database schema 
 , p_file_path in varchar2 -- The repository file path, for reference only
 , p_content in clob -- The content from the repository file
 , p_stop_on_error in boolean default true -- Must we stop on error?
 );
 /**
 An enhanced version of DBMS_CLOUD_REPO.INSTALL_FILE:
-1) you must specify the schema to install into (alter sesison set current_schema = <p_schema>)
+1) you must specify the schema (alter sesison set current_schema = <p_schema>)
 2) when the first line starts with a @ (or @@), the file is assumed to be a simple SQL include file from the same repository (and same branch/tag/commit)
-   a) now every line starting with @ (or @@) will be installed by ADMIN_INSTALL_PKG.INSTALL_FILE
+   a) now every line starting with @ (or @@) will be processed by ADMIN_INSTALL_PKG.PROCESS_FILE
    b) after getting its contents from DBMS_CLOUD_REPO.GET_FILE and setting the new file path
-3) else, just use ADMIN_INSTALL_PKG.INSTALL_SQL
+3) else, just use ADMIN_INSTALL_PKG.PROCESS_SQL
 
 **/
 
-procedure install_sql
+procedure process_sql
 ( p_github_access_handle in github_access_handle_t
 , p_file_path in varchar2 -- The repository file path, for reference only
 , p_content in clob -- The content from the repository file
