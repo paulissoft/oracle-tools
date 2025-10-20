@@ -4,6 +4,12 @@ create or replace package body admin_install_pkg is
 
 -- TYPES
 
+type options_rec_t is record
+( operation varchar2(10)
+, stop_on_error boolean
+, dry_run boolean
+);
+
 type project_rec_t is record
 ( project_type varchar2(4 byte) -- db/apex
 , schema varchar(128 char) -- The database schema
@@ -15,8 +21,6 @@ type project_rec_t is record
 , src_dml varchar2(1000 char)
 , src_ords varchar2(1000 char)
 , application_id integer
-, operation varchar2(10 byte) -- install/export
-, stop_on_error boolean
 );
 
 type github_access_tab_t is table of github_access_rec_t index by github_access_handle_t;
@@ -32,6 +36,8 @@ c_max_varchar2_size constant pls_integer := 32767;
 -- VARIABLES
 
 g_github_access_tab github_access_tab_t;
+
+g_options_rec options_rec_t;
 
 g_root_project_rec project_rec_t;
 
@@ -241,6 +247,253 @@ begin
   return trim('/' from replace(p_file_path, '//', '/'));
 end normalize_file_name;
 
+procedure process_sql
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar2
+, p_file_path in varchar2 -- The repository file path, for reference only
+, p_content in clob -- The content from the repository file
+)
+is
+  l_base_name constant varchar2(48 char) := substr(base_name(p_file_path), 1, 48);
+  
+  l_statement_tab dbms_sql.varchar2a;
+
+  procedure process_sql
+  ( p_content in clob -- The content from the repository file
+  , p_statement_nr in positive default null
+  )
+  is
+  begin
+    --/*DBUG
+    dbms_output.put_line
+    ( 'Processing file ' ||
+      p_file_path  ||
+      case when p_statement_nr is not null then '; statement ' || p_statement_nr end ||
+      case when p_schema is not null then '; schema ' || p_schema end
+    );
+    --/*DBUG*/
+
+    dbms_application_info.set_module
+    ( module_name => l_base_name
+    , action_name => 'processing SQL' || case when p_statement_nr is not null then ' statement ' || p_statement_nr end
+    );
+    if not(g_options_rec.dry_run) or base_name(p_file_path) = 'pom.sql'
+    then
+      dbms_cloud_repo.install_sql
+      ( content => p_content
+      , stop_on_error => g_options_rec.stop_on_error
+      );
+    end if;
+    dbms_application_info.set_module
+    ( module_name => l_base_name
+    , action_name => 'processed SQL' || case when p_statement_nr is not null then ' statement ' || p_statement_nr end
+    );
+  end process_sql;
+begin
+  if p_file_path like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
+  then
+    return;
+  end if;
+
+  PRAGMA INLINE(sql_statement_terminator, 'YES');
+  if sql_statement_terminator(p_file_path) = ';'
+  then
+    -- special handling
+    PRAGMA INLINE (split, 'YES');
+    split
+    ( p_content
+    , ';' || chr(10) -- line ends with ;
+    , l_statement_tab
+    );
+    if l_statement_tab.count > 0
+    then
+      for i_statement_idx in l_statement_tab.first .. l_statement_tab.last
+      loop
+        if l_statement_tab(i_statement_idx) is null or
+           l_statement_tab(i_statement_idx) = chr(10)          
+        then
+          null;
+        else
+          process_sql
+          ( p_content => to_clob(l_statement_tab(i_statement_idx))
+          , p_statement_nr => i_statement_idx
+          );
+        end if;
+      end loop;
+      
+      return; -- finished
+    end if;
+  end if;
+  
+  -- normal handling
+  process_sql
+  ( p_content => p_content
+  );
+end process_sql;
+
+procedure process_file
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar -- The database schema
+, p_file_path in varchar2 -- The repository file path
+, p_content in clob -- The content from the repository file
+)
+is
+  l_base_name constant varchar2(48 char) := substr(base_name(p_file_path), 1, 48);
+  l_first_char varchar2(1 byte);
+  l_root_file_path varchar2(32767 byte);
+  l_line_tab dbms_sql.varchar2a;
+  l_github_access_rec github_access_rec_t;
+begin
+  l_github_access_rec := g_github_access_tab(p_github_access_handle);
+
+  dbms_application_info.set_module(module_name => l_base_name, action_name => 'processing');
+   
+  if p_schema is not null
+  then
+    execute immediate 'alter session set current_schema = ' || p_schema;
+  end if;
+
+  -- first character @ ?
+  <<sql_include_file_loop>>
+  loop
+    l_first_char := dbms_lob.substr(p_content, amount => 1, offset => 1);
+
+    /*DBUG
+    dbms_output.put_line('l_first_char: "' || l_first_char || '"');
+    /*DBUG*/
+    
+    if l_first_char = '@'
+    then
+      -- do all lines start with @ (or @@) (ir comment or PROMPT)?
+      PRAGMA INLINE (split, 'YES');
+      split
+      ( p_content
+      , chr(10)
+      , l_line_tab
+      );
+      
+      /*DBUG
+      dbms_output.put_line('l_line_tab.count: ' || l_line_tab.count);
+      /*DBUG*/
+      
+      if l_line_tab.count > 0
+      then
+        for i_idx in l_line_tab.first .. l_line_tab.last
+        loop
+          /*DBUG
+          dbms_output.put_line('line ' || i_idx || ': "' || l_line_tab(i_idx) || '"');
+          /*DBUG*/
+          
+          if l_line_tab(i_idx) is null or
+             substr(l_line_tab(i_idx), 1, 1) = '@' or
+             substr(l_line_tab(i_idx), 1, 2) = '--' or -- comment line
+             upper(substr(l_line_tab(i_idx), 1, 6)) = 'PROMPT' 
+          then
+            null;
+          else
+            exit sql_include_file_loop;
+          end if;
+        end loop;
+
+        for i_idx in l_line_tab.first .. l_line_tab.last
+        loop
+          /*
+          -- You can process SQL statements containing nested SQL from a Cloud Code repository file using the following:
+          -- @: includes a SQL file with a relative path to the ROOT of the repository.
+          -- @@: includes a SQL file with a path relative to the current file.
+          */
+          if l_line_tab(i_idx) is null or
+             substr(l_line_tab(i_idx), 1, 2) = '--' or -- comment line
+             upper(substr(l_line_tab(i_idx), 1, 6)) = 'PROMPT' 
+          then
+            l_root_file_path := null;
+          elsif substr(l_line_tab(i_idx), 1, 2) = '@@'
+          then
+            -- relative to the current file directory
+            PRAGMA INLINE (directory_name, 'YES');
+            l_root_file_path := directory_name(p_file_path) || trim(substr(l_line_tab(i_idx), 3));
+          else -- it starts with @
+            -- relative to the ROOT of the repository, i.e. absolute
+            l_root_file_path := trim(substr(l_line_tab(i_idx), 2));
+          end if;
+
+          if l_root_file_path is not null
+          then
+            /*DBUG
+            dbms_output.put_line('SQL include file: ' || l_root_file_path);
+            /*DBUG*/
+
+            -- recursively process everything
+            process_file
+            ( p_github_access_handle => p_github_access_handle
+            , p_schema => p_schema
+            , p_file_path => l_root_file_path
+            , p_content => dbms_cloud_repo.get_file
+                           ( repo => l_github_access_rec.repo
+                           , file_path => l_root_file_path
+                           , branch_name => l_github_access_rec.branch_name
+                           , tag_name => l_github_access_rec.tag_name
+                           , commit_id => l_github_access_rec.commit_id
+                           )
+            );
+          end if;
+        end loop;
+
+        return;
+      end if;
+    end if;
+
+    -- it is not a real loop: just once
+    exit sql_include_file_loop;
+  end loop sql_include_file_loop;
+
+  /*DBUG
+  dbms_output.put_line('Not a simple SQL include file');
+  /*DBUG*/
+
+  -- assume this is a SQL file (without includes)
+  process_sql
+  ( p_github_access_handle => p_github_access_handle
+  , p_schema => p_schema
+  , p_file_path => p_file_path
+  , p_content => p_content
+  );
+
+  dbms_application_info.set_module(module_name => l_base_name, action_name => 'processed');
+exception
+  when others
+  then
+    dbms_application_info.set_module(module_name => l_base_name, action_name => 'error while processing');
+    raise_application_error(-20000, 'Error processing ' || p_file_path, true);
+end process_file;
+
+procedure process_file
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar -- The database schema 
+, p_file_path in varchar2 -- The repository file path
+)
+is
+  l_github_access_rec github_access_rec_t;
+begin
+  l_github_access_rec := g_github_access_tab(p_github_access_handle);
+
+  -- only 'install' implemented
+  if g_options_rec.operation = 'install' then null; else raise value_error; end if;
+
+  process_file
+  ( p_github_access_handle => p_github_access_handle
+  , p_schema => p_schema
+  , p_file_path => p_file_path
+  , p_content => dbms_cloud_repo.get_file
+                 ( repo => l_github_access_rec.repo
+                 , file_path => p_file_path
+                 , branch_name => l_github_access_rec.branch_name
+                 , tag_name => l_github_access_rec.tag_name
+                 , commit_id => l_github_access_rec.commit_id
+                 )
+  );
+end process_file;
+
 procedure process_project
 ( p_github_access_handle in github_access_handle_t
 , p_path in varchar2 -- The repository file path
@@ -256,7 +509,7 @@ begin
   if p_project_rec.project_type = 'db' then null; else raise value_error; end if;
 
   -- export not implemented yet
-  if p_project_rec.operation = 'install' then null; else raise value_error; end if;
+  if g_options_rec.operation = 'install' then null; else raise value_error; end if;
 
   for r in
   ( select  id
@@ -308,7 +561,6 @@ begin
     , p_schema => p_project_rec.schema
     , p_file_path => p_path || '/process.sql'
     , p_content => l_file_contents
-    , p_stop_on_error => p_project_rec.stop_on_error
     );
   end if;
 end process_project;
@@ -426,8 +678,6 @@ begin
   l_project_rec.src_full := p_src_full;
   l_project_rec.src_dml := p_src_dml;
   l_project_rec.src_ords := p_src_ords;
-  l_project_rec.operation := g_root_project_rec.operation;
-  l_project_rec.stop_on_error := g_root_project_rec.stop_on_error;
 
   process_project
   ( p_github_access_handle => p_github_access_handle
@@ -452,8 +702,6 @@ begin
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
   l_project_rec.application_id := p_application_id;
-  l_project_rec.operation := g_root_project_rec.operation;
-  l_project_rec.stop_on_error := g_root_project_rec.stop_on_error;
 
   process_project
   ( p_github_access_handle => p_github_access_handle
@@ -474,8 +722,6 @@ begin
   l_project_rec.project_type := null;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
-  l_project_rec.operation := g_root_project_rec.operation;
-  l_project_rec.stop_on_error := g_root_project_rec.stop_on_error;
 
   -- process the pom.sql inside
   PRAGMA INLINE(normalize_file_name, 'YES');
@@ -483,8 +729,6 @@ begin
   ( p_github_access_handle => p_github_access_handle
   , p_schema => null
   , p_file_path => normalize_file_name(p_path || '/' || 'pom.sql')
-  , p_operation => l_project_rec.operation
-  , p_stop_on_error => l_project_rec.stop_on_error
   );
 end process_project;
 
@@ -494,14 +738,16 @@ procedure process_root_project
 , p_parent_path in varchar2
 , p_operation in varchar2
 , p_stop_on_error in boolean
+, p_dry_run in boolean
 )
 is
 begin
   g_root_project_rec.project_type := null;
   g_root_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   g_root_project_rec.parent_path := p_parent_path;
-  g_root_project_rec.operation := p_operation;
-  g_root_project_rec.stop_on_error := p_stop_on_error;
+  g_options_rec.operation := p_operation;
+  g_options_rec.stop_on_error := p_stop_on_error;
+  g_options_rec.dry_run := p_dry_run;
 
   -- process the pom.sql inside
   PRAGMA INLINE(normalize_file_name, 'YES');
@@ -509,257 +755,8 @@ begin
   ( p_github_access_handle => p_github_access_handle
   , p_schema => null
   , p_file_path => normalize_file_name('pom.sql')
-  , p_operation => p_operation
-  , p_stop_on_error => p_stop_on_error
   );
 end process_root_project;
-
-procedure process_file
-( p_github_access_handle in github_access_handle_t
-, p_schema in varchar -- The database schema 
-, p_file_path in varchar2 -- The repository file path
-, p_operation in varchar2 -- Must be 'install' or 'export'
-, p_stop_on_error in boolean
-)
-is
-  l_github_access_rec github_access_rec_t;
-begin
-  l_github_access_rec := g_github_access_tab(p_github_access_handle);
-
-  -- only 'install' implemented
-  if p_operation = 'install' then null; else raise value_error; end if;
-
-  process_file
-  ( p_github_access_handle => p_github_access_handle
-  , p_schema => p_schema
-  , p_file_path => p_file_path
-  , p_content => dbms_cloud_repo.get_file
-                 ( repo => l_github_access_rec.repo
-                 , file_path => p_file_path
-                 , branch_name => l_github_access_rec.branch_name
-                 , tag_name => l_github_access_rec.tag_name
-                 , commit_id => l_github_access_rec.commit_id
-                 )
-  , p_stop_on_error => p_stop_on_error
-  );
-end process_file;
-
-procedure process_file
-( p_github_access_handle in github_access_handle_t
-, p_schema in varchar -- The database schema
-, p_file_path in varchar2 -- The repository file path
-, p_content in clob -- The content from the repository file
-, p_stop_on_error in boolean
-)
-is
-  l_base_name constant varchar2(48 char) := substr(base_name(p_file_path), 1, 48);
-  l_first_char varchar2(1 byte);
-  l_root_file_path varchar2(32767 byte);
-  l_line_tab dbms_sql.varchar2a;
-  l_github_access_rec github_access_rec_t;
-begin
-  l_github_access_rec := g_github_access_tab(p_github_access_handle);
-
-  dbms_application_info.set_module(module_name => l_base_name, action_name => 'processing');
-   
-  if p_schema is not null
-  then
-    execute immediate 'alter session set current_schema = ' || p_schema;
-  end if;
-
-  -- first character @ ?
-  <<sql_include_file_loop>>
-  loop
-    l_first_char := dbms_lob.substr(p_content, amount => 1, offset => 1);
-
-    /*DBUG
-    dbms_output.put_line('l_first_char: "' || l_first_char || '"');
-    /*DBUG*/
-    
-    if l_first_char = '@'
-    then
-      -- do all lines start with @ (or @@) (ir comment or PROMPT)?
-      PRAGMA INLINE (split, 'YES');
-      split
-      ( p_content
-      , chr(10)
-      , l_line_tab
-      );
-      
-      /*DBUG
-      dbms_output.put_line('l_line_tab.count: ' || l_line_tab.count);
-      /*DBUG*/
-      
-      if l_line_tab.count > 0
-      then
-        for i_idx in l_line_tab.first .. l_line_tab.last
-        loop
-          /*DBUG
-          dbms_output.put_line('line ' || i_idx || ': "' || l_line_tab(i_idx) || '"');
-          /*DBUG*/
-          
-          if l_line_tab(i_idx) is null or
-             substr(l_line_tab(i_idx), 1, 1) = '@' or
-             substr(l_line_tab(i_idx), 1, 2) = '--' or -- comment line
-             upper(substr(l_line_tab(i_idx), 1, 6)) = 'PROMPT' 
-          then
-            null;
-          else
-            exit sql_include_file_loop;
-          end if;
-        end loop;
-
-        for i_idx in l_line_tab.first .. l_line_tab.last
-        loop
-          /*
-          -- You can process SQL statements containing nested SQL from a Cloud Code repository file using the following:
-          -- @: includes a SQL file with a relative path to the ROOT of the repository.
-          -- @@: includes a SQL file with a path relative to the current file.
-          */
-          if l_line_tab(i_idx) is null or
-             substr(l_line_tab(i_idx), 1, 2) = '--' or -- comment line
-             upper(substr(l_line_tab(i_idx), 1, 6)) = 'PROMPT' 
-          then
-            l_root_file_path := null;
-          elsif substr(l_line_tab(i_idx), 1, 2) = '@@'
-          then
-            -- relative to the current file directory
-            PRAGMA INLINE (directory_name, 'YES');
-            l_root_file_path := directory_name(p_file_path) || trim(substr(l_line_tab(i_idx), 3));
-          else -- it starts with @
-            -- relative to the ROOT of the repository, i.e. absolute
-            l_root_file_path := trim(substr(l_line_tab(i_idx), 2));
-          end if;
-
-          if l_root_file_path is not null
-          then
-            /*DBUG
-            dbms_output.put_line('SQL include file: ' || l_root_file_path);
-            /*DBUG*/
-
-            -- recursively process everything
-            process_file
-            ( p_github_access_handle => p_github_access_handle
-            , p_schema => p_schema
-            , p_file_path => l_root_file_path
-            , p_content => dbms_cloud_repo.get_file
-                           ( repo => l_github_access_rec.repo
-                           , file_path => l_root_file_path
-                           , branch_name => l_github_access_rec.branch_name
-                           , tag_name => l_github_access_rec.tag_name
-                           , commit_id => l_github_access_rec.commit_id
-                           )
-            , p_stop_on_error => p_stop_on_error
-            );
-          end if;
-        end loop;
-
-        return;
-      end if;
-    end if;
-
-    -- it is not a real loop: just once
-    exit sql_include_file_loop;
-  end loop sql_include_file_loop;
-
-  /*DBUG
-  dbms_output.put_line('Not a simple SQL include file');
-  /*DBUG*/
-
-  -- assume this is a SQL file (without includes)
-  process_sql
-  ( p_github_access_handle => p_github_access_handle
-  , p_file_path => p_file_path
-  , p_content => p_content
-  , p_stop_on_error => p_stop_on_error
-  );
-
-  dbms_application_info.set_module(module_name => l_base_name, action_name => 'processed');
-exception
-  when others
-  then
-    dbms_application_info.set_module(module_name => l_base_name, action_name => 'error while processing');
-    raise_application_error(-20000, 'Error processing ' || p_file_path, true);
-end process_file;
-
-procedure process_sql
-( p_github_access_handle in github_access_handle_t
-, p_file_path in varchar2 -- The repository file path, for reference only
-, p_content in clob -- The content from the repository file
-, p_stop_on_error in boolean
-)
-is
-  l_base_name constant varchar2(48 char) := substr(base_name(p_file_path), 1, 48);
-  
-  l_statement_tab dbms_sql.varchar2a;
-
-  procedure process_sql
-  ( p_content in clob -- The content from the repository file
-  , p_stop_on_error in boolean
-  , p_statement_nr in positive default null
-  )
-  is
-  begin
-    --/*DBUG
-    dbms_output.put_line('Processing file ' || p_file_path  || case when p_statement_nr is not null then '; statement ' || p_statement_nr end );
-    --/*DBUG*/
-
-    dbms_application_info.set_module
-    ( module_name => l_base_name
-    , action_name => 'processing SQL' || case when p_statement_nr is not null then ' statement ' || p_statement_nr end
-    );
-    dbms_cloud_repo.install_sql
-    ( content => p_content
-    , stop_on_error => p_stop_on_error
-    );
-    dbms_application_info.set_module
-    ( module_name => l_base_name
-    , action_name => 'processed SQL' || case when p_statement_nr is not null then ' statement ' || p_statement_nr end
-    );
-  end process_sql;
-begin
-  if p_file_path like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
-  then
-    return;
-  end if;
-
-  PRAGMA INLINE(sql_statement_terminator, 'YES');
-  if sql_statement_terminator(p_file_path) = ';'
-  then
-    -- special handling
-    PRAGMA INLINE (split, 'YES');
-    split
-    ( p_content
-    , ';' || chr(10) -- line ends with ;
-    , l_statement_tab
-    );
-    if l_statement_tab.count > 0
-    then
-      for i_statement_idx in l_statement_tab.first .. l_statement_tab.last
-      loop
-        if l_statement_tab(i_statement_idx) is null or
-           l_statement_tab(i_statement_idx) = chr(10)          
-        then
-          null;
-        else
-          process_sql
-          ( p_content => to_clob(l_statement_tab(i_statement_idx))
-          , p_stop_on_error => p_stop_on_error
-          , p_statement_nr => i_statement_idx
-          );
-        end if;
-      end loop;
-      
-      return; -- finished
-    end if;
-  end if;
-  
-  -- normal handling
-  process_sql
-  ( p_content => p_content
-  , p_stop_on_error => p_stop_on_error
-  );
-end process_sql;
 
 end;
 /

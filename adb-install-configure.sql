@@ -3,6 +3,9 @@
 -- Goal  : A SQL*Plus script to return the repo handle from DBMS_CLOUD_REPO.INIT_GITHUB_REPO
 -- Input : 1) The repo owner (case sensitive)
 --         2) The repo name (case sensitive)
+--         3) The operation (install/export)
+--         4) Stop on error? (true/false)
+--         5) Do we perform a dry run? (true/false)
 -- Remark: Verify by https://github.com/&1/&2
 */
 
@@ -32,7 +35,9 @@ begin
   );
   admin_install_pkg.process_root_project
   ( p_github_access_handle => l_github_access_handle
-  , p_operation => 'install'
+  , p_operation => '&3'
+  , p_stop_on_error => &4
+  , p_dry_run => &5
   );
   cleanup;
 exception
