@@ -266,7 +266,8 @@ is
   begin
     --/*DBUG
     dbms_output.put_line
-    ( 'Processing file ' ||
+    ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
+      ' Processing file ' ||
       p_file_path  ||
       case when p_statement_nr is not null then '; statement ' || p_statement_nr end ||
       case when p_schema is not null then '; schema ' || p_schema end
@@ -505,63 +506,81 @@ is
 begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
-  -- APEX not implemented yet
-  if p_project_rec.project_type = 'db' then null; else raise value_error; end if;
-
-  -- export not implemented yet
-  if g_options_rec.operation = 'install' then null; else raise value_error; end if;
-
-  for r in
-  ( select  id
-    ,       name
-    ,       bytes
-    ,       case
-              when instr(name, p_project_rec.src_callbacks) > 0 then 0
-              when instr(name, p_project_rec.src_incr) > 0 then 1
-              when instr(name, p_project_rec.src_full) > 0 then 2
-              when instr(name, p_project_rec.src_dml) > 0 then 3
-              when instr(name, p_project_rec.src_ords) > 0 then 4
-            end as file_type
-    from    table
-            ( dbms_cloud_repo.list_files
-              ( repo => l_github_access_rec.repo
-              , path => p_path
-              , branch_name => l_github_access_rec.branch_name
-              , tag_name => l_github_access_rec.tag_name
-              , commit_id => l_github_access_rec.commit_id
-              )
-            )
-    where   ( name like 'R\_\_%.sql' escape '\' -- Flyway repeatable scripts
-              or
-              name like '%/R\_\_%.sql' escape '\' -- Flyway repeatable scripts
-              or
-              name like 'V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
-              or
-              name like '%/V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
-            )
-    and     name not like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
-    order by
-            file_type
-    ,       name        
-  )
-  loop
-    /*DBUG
-    dbms_output.put_line('id: ' || r.id);
-    dbms_output.put_line('name: ' || r.name);
-    dbms_output.put_line('bytes: ' || r.bytes);
-    dbms_output.put_line('file_type: ' || r.file_type);
-    /*DBUG*/
-    l_file_contents := l_file_contents || '@' || r.name || chr(10);
-  end loop;
-
-  if l_file_contents is not null
+  if p_project_rec.project_type = 'db'
   then
-    process_file
-    ( p_github_access_handle => p_github_access_handle
-    , p_schema => p_project_rec.schema
-    , p_file_path => p_path || '/process.sql'
-    , p_content => l_file_contents
-    );
+    -- export not implemented yet
+    if g_options_rec.operation = 'install'
+    then
+      for r in
+      ( select  id
+        ,       name
+        ,       bytes
+        ,       case
+                  when instr(name, p_project_rec.src_callbacks) > 0 then 0
+                  when instr(name, p_project_rec.src_incr) > 0 then 1
+                  when instr(name, p_project_rec.src_full) > 0 then 2
+                  when instr(name, p_project_rec.src_dml) > 0 then 3
+                  when instr(name, p_project_rec.src_ords) > 0 then 4
+                end as file_type
+        from    table
+                ( dbms_cloud_repo.list_files
+                  ( repo => l_github_access_rec.repo
+                  , path => p_path
+                  , branch_name => l_github_access_rec.branch_name
+                  , tag_name => l_github_access_rec.tag_name
+                  , commit_id => l_github_access_rec.commit_id
+                  )
+                )
+        where   ( name like 'R\_\_%.sql' escape '\' -- Flyway repeatable scripts
+                  or
+                  name like '%/R\_\_%.sql' escape '\' -- Flyway repeatable scripts
+                  or
+                  name like 'V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
+                  or
+                  name like '%/V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
+                )
+        and     name not like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
+        order by
+                file_type
+        ,       name        
+      )
+      loop
+        /*DBUG
+        dbms_output.put_line('id: ' || r.id);
+        dbms_output.put_line('name: ' || r.name);
+        dbms_output.put_line('bytes: ' || r.bytes);
+        dbms_output.put_line('file_type: ' || r.file_type);
+        /*DBUG*/
+        l_file_contents := l_file_contents || '@' || r.name || chr(10);
+      end loop;
+
+      if l_file_contents is not null
+      then
+        process_file
+        ( p_github_access_handle => p_github_access_handle
+        , p_schema => p_project_rec.schema
+        , p_file_path => p_path || '/process.sql'
+        , p_content => l_file_contents
+        );
+      end if;
+    else
+      raise value_error;
+    end if;
+  elsif p_project_rec.project_type = 'apex'
+  then
+    -- export not implemented yet
+    if g_options_rec.operation = 'install'
+    then 
+      process_file
+      ( p_github_access_handle => p_github_access_handle
+      , p_schema => p_project_rec.schema
+      , p_file_path => p_path || '/src/export/install.sql'
+      );
+    else
+      raise value_error;
+    end if;
+  else
+    raise value_error;
   end if;
 end process_project;
 
