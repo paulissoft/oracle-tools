@@ -450,6 +450,30 @@ begin
   );
 end define_project_apex;
 
+procedure define_project
+( p_github_access_handle in github_access_handle_t -- The GitHub access handle
+, p_path in varchar2 -- The repository file path
+, p_schema in varchar default null -- The database schema
+, p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
+, p_parent_path in varchar2 default null -- The parent repository file path
+, p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
+)
+is
+  l_project_rec project_rec_t;
+begin
+  l_project_rec.project_type := null;
+  l_project_rec.schema := p_schema;
+  l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
+  l_project_rec.parent_path := p_parent_path;
+  l_project_rec.modules := p_modules;
+
+  add_project
+  ( p_github_access_handle => p_github_access_handle
+  , p_path => p_path
+  , p_project_rec => l_project_rec
+  );
+end define_project;
+
 procedure process_project
 ( p_github_access_handle in github_access_handle_t
 , p_path in varchar2 -- The repository file path

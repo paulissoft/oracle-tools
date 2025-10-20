@@ -71,7 +71,7 @@ procedure define_project_db
 , p_src_ords in varchar2 default '/src/ords/'
 );
 /**
-A loose representation of a database POM in folder p_path (i.e. <p_path>/po.xml).
+A loose representation of a database POM in folder p_path (i.e. <p_path>/pom.xml).
 Will be used to define the project in internal memory so it can be used by install_project.
 This procedure can be used in pom.sql.
 **/
@@ -86,7 +86,21 @@ procedure define_project_apex
 , p_application_id in integer default null -- The APEX application id
 );
 /**
-A loose representation of an APEX POM in folder p_path (i.e. <p_path>/po.xml).
+A loose representation of an APEX POM in folder p_path (i.e. <p_path>/pom.xml).
+Will be used to define the project in internal memory so it can be used by process_project.
+Can be used in pom.sql.
+**/
+
+procedure define_project
+( p_github_access_handle in github_access_handle_t -- The GitHub access handle
+, p_path in varchar2 -- The repository file path
+, p_schema in varchar default null -- The database schema
+, p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
+, p_parent_path in varchar2 default null -- The parent repository file path
+, p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
+);
+/**
+A loose representation of an aggregator POM in folder p_path (i.e. <p_path>/pom.xml).
 Will be used to define the project in internal memory so it can be used by process_project.
 Can be used in pom.sql.
 **/
