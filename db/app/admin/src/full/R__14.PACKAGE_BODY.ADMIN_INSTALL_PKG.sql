@@ -179,6 +179,50 @@ begin
   return substr(p_file_path, 1 + nvl(length(directory_name(p_file_path)), 0));
 end base_name;
 
+function having_sql_statements_ending_with_semi_colon
+( p_file_path in varchar2
+)
+return boolean
+deterministic
+is
+  l_object_types constant sys.odcivarchar2list :=
+    sys.odcivarchar2list
+    ( 'SEQUENCE'
+    , 'CLUSTER'
+    , 'TABLE'
+    , 'VIEW'
+    , 'MATERIALIZED_VIEW'
+    , 'MATERIALIZED_VIEW_LOG'
+    , 'INDEX'
+    , 'OBJECT_GRANT'
+    , 'CONSTRAINT'
+    , 'REF_CONSTRAINT'
+    , 'PUBLIC_SYNONYM'
+    , 'SYNONYM'
+    , 'COMMENT'
+    );
+begin
+  for i_object_type_idx in l_object_types.first .. l_object_types.last
+  loop
+    if instr(p_file_path, '.' || l_object_types(i_object_type_idx) || '.') > 0
+    then
+      return true;
+    end if;  
+  end loop;
+  return false;
+end having_sql_statements_ending_with_semi_colon;   
+
+function normalize_file_name
+( p_file_path in varchar2
+)
+return varchar2
+deterministic
+is
+begin
+  -- a//b => a/b, a/ => a
+  return rtrim(replace(p_file_path, '//', '/'), '/');
+end normalize_file_name;
+
 -- PUBLIC
 
 procedure set_github_access
@@ -284,6 +328,20 @@ begin
   l_project_rec.src_ords := p_src_ords;
 
   g_project_tab(l_project_handle) := l_project_rec;
+
+  -- process the modules recursively
+  if p_modules is not null and p_modules.count > 0
+  then
+    for i_idx in p_modules.first .. p_modules.last
+    loop
+      process_file
+      ( p_github_access_handle => p_github_access_handle
+      , p_schema => p_schema
+      , p_file_path => normalize_file_name(p_path || '/' || p_modules(i_idx) || '/' || 'pom.sql')
+      , p_stop_on_error => true
+      );
+    end loop;
+  end if;
 end define_project_db;
 
 procedure define_project_apex
@@ -309,6 +367,20 @@ begin
   l_project_rec.application_id := p_application_id;
 
   g_project_tab(l_project_handle) := l_project_rec;
+
+  -- process the modules recursively
+  if p_modules is not null and p_modules.count > 0
+  then
+    for i_idx in p_modules.first .. p_modules.last
+    loop
+      process_file
+      ( p_github_access_handle => p_github_access_handle
+      , p_schema => p_schema
+      , p_file_path => normalize_file_name(p_path || '/' || p_modules(i_idx) || '/' || 'pom.sql')
+      , p_stop_on_error => true
+      );
+    end loop;
+  end if;
 end define_project_apex;
 
 procedure process_project
@@ -556,22 +628,6 @@ procedure process_sql
 is
   l_base_name constant varchar2(48 char) := substr(base_name(p_file_path), 1, 48);
   
-  l_object_types constant sys.odcivarchar2list :=
-    sys.odcivarchar2list
-    ( 'SEQUENCE'
-    , 'CLUSTER'
-    , 'TABLE'
-    , 'VIEW'
-    , 'MATERIALIZED_VIEW'
-    , 'MATERIALIZED_VIEW_LOG'
-    , 'INDEX'
-    , 'OBJECT_GRANT'
-    , 'CONSTRAINT'
-    , 'REF_CONSTRAINT'
-    , 'PUBLIC_SYNONYM'
-    , 'SYNONYM'
-    , 'COMMENT'
-    );
   l_statement_tab dbms_sql.varchar2a;
 
   procedure process_sql
@@ -603,42 +659,37 @@ begin
   then
     return;
   end if;
-  
-  for i_object_type_idx in l_object_types.first .. l_object_types.last
-  loop
-    if instr(p_file_path, '.' || l_object_types(i_object_type_idx) || '.') > 0
-    then
-      -- special handling
-      PRAGMA INLINE (split, 'YES');
-      split
-      ( p_content
-      , ';' || chr(10) -- line ends with ;
-      , l_statement_tab
-      );
-      if l_statement_tab.count > 0
-      then
-        for i_statement_idx in l_statement_tab.first .. l_statement_tab.last
-        loop
-          if l_statement_tab(i_statement_idx) is null or
-             l_statement_tab(i_statement_idx) = chr(10)          
-          then
-            null;
-          else
-            process_sql
-            ( p_content => to_clob(l_statement_tab(i_statement_idx))
-            , p_stop_on_error => p_stop_on_error
-            , p_statement_nr => i_statement_idx
-            );
-          end if;
-        end loop;
-        
-        return; -- finished
-      end if;
-    else
-      null;
-    end if;
-  end loop;
 
+  if having_sql_statements_ending_with_semi_colon(p_file_path)
+  then
+    -- special handling
+    PRAGMA INLINE (split, 'YES');
+    split
+    ( p_content
+    , ';' || chr(10) -- line ends with ;
+    , l_statement_tab
+    );
+    if l_statement_tab.count > 0
+    then
+      for i_statement_idx in l_statement_tab.first .. l_statement_tab.last
+      loop
+        if l_statement_tab(i_statement_idx) is null or
+           l_statement_tab(i_statement_idx) = chr(10)          
+        then
+          null;
+        else
+          process_sql
+          ( p_content => to_clob(l_statement_tab(i_statement_idx))
+          , p_stop_on_error => p_stop_on_error
+          , p_statement_nr => i_statement_idx
+          );
+        end if;
+      end loop;
+      
+      return; -- finished
+    end if;
+  end if;
+  
   -- normal handling
   process_sql
   ( p_content => p_content
