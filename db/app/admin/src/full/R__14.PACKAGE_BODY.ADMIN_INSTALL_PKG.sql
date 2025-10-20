@@ -179,15 +179,16 @@ begin
   return substr(p_file_path, 1 + nvl(length(directory_name(p_file_path)), 0));
 end base_name;
 
-function having_sql_statements_ending_with_semi_colon
+function sql_statement_terminator
 ( p_file_path in varchar2
 )
-return boolean
+return varchar2
 deterministic
 is
   l_object_types constant sys.odcivarchar2list :=
     sys.odcivarchar2list
-    ( 'SEQUENCE'
+    ( -- PATO generated files end with ';'
+      'SEQUENCE'
     , 'CLUSTER'
     , 'TABLE'
     , 'VIEW'
@@ -200,17 +201,48 @@ is
     , 'PUBLIC_SYNONYM'
     , 'SYNONYM'
     , 'COMMENT'
+      -- PATO generated files end with /
+    , 'TYPE_SPEC'
+    , 'FUNCTION'
+    , 'PACKAGE_SPEC'
+    , 'PROCEDURE'
+    , 'PACKAGE_BODY'
+    , 'TYPE_BODY'
+    , 'TRIGGER'
+    , 'JAVA_SOURCE'
+    , 'REFRESH_GROUP'
+    , 'PROCOBJ'
     );
+  l_base_name constant varchar2(1000 byte) := base_name(p_file_path);
 begin
-  for i_object_type_idx in l_object_types.first .. l_object_types.last
-  loop
-    if instr(p_file_path, '.' || l_object_types(i_object_type_idx) || '.') > 0
-    then
-      return true;
-    end if;  
-  end loop;
-  return false;
-end having_sql_statements_ending_with_semi_colon;   
+  -- Is it a R__*.sql file?
+  if substr(l_base_name, 1, 3) = 'R__' and substr(l_base_name, -4) = '.sql'
+  then 
+    for i_object_type_idx in l_object_types.first .. l_object_types.last
+    loop
+      if instr(l_base_name, '.' || l_object_types(i_object_type_idx) || '.') > 0
+      then
+        return case
+                 when l_object_types(i_object_type_idx) in
+                      ( 'TYPE_SPEC'
+                      , 'FUNCTION'
+                      , 'PACKAGE_SPEC'
+                      , 'PROCEDURE'
+                      , 'PACKAGE_BODY'
+                      , 'TYPE_BODY'
+                      , 'TRIGGER'
+                      , 'JAVA_SOURCE'
+                      , 'REFRESH_GROUP'
+                      , 'PROCOBJ'
+                      )
+                 then '/'
+                 else ';'
+               end;
+      end if;  
+    end loop;
+  end if;
+  return null;
+end sql_statement_terminator;
 
 function normalize_file_name
 ( p_file_path in varchar2
@@ -219,9 +251,47 @@ return varchar2
 deterministic
 is
 begin
-  -- a//b => a/b, a/ => a
-  return rtrim(replace(p_file_path, '//', '/'), '/');
+  -- a//b => a/b, a/ => a, /a => a
+  return trim('/' from replace(p_file_path, '//', '/'));
 end normalize_file_name;
+
+procedure add_project
+( p_github_access_handle in github_access_handle_t -- The GitHub access handle
+, p_path in varchar2 -- The repository file path
+, p_project_rec in project_rec_t
+)
+is
+  l_project_handle constant project_handle_t := get_project_handle(p_github_access_handle, p_path);
+begin
+  --/*DBUG
+  dbms_output.put_line
+  ( utl_lms.format_message
+    ( 'add_project("%s", "%s", "%s")'
+    , p_github_access_handle
+    , p_path
+    , l_project_handle
+    )
+  );
+  --/*DBUG*/
+
+  if g_project_tab.exists(l_project_handle) then raise dup_val_on_index; end if;
+
+  g_project_tab(l_project_handle) := p_project_rec;
+
+  -- process the modules recursively
+  if p_project_rec.modules is not null and p_project_rec.modules.count > 0
+  then
+    for i_idx in p_project_rec.modules.first .. p_project_rec.modules.last
+    loop
+      process_file
+      ( p_github_access_handle => p_github_access_handle
+      , p_schema => p_project_rec.schema
+      , p_file_path => normalize_file_name(p_path || '/' || p_project_rec.modules(i_idx) || '/' || 'pom.sql')
+      , p_stop_on_error => true
+      );
+    end loop;
+  end if;
+end add_project;
 
 -- PUBLIC
 
@@ -269,7 +339,7 @@ begin
   where   t.owner = l_github_access_rec.repo_owner
   and     t.name = l_github_access_rec.repo_name;
 
-  l_github_access_rec.current_schema := sys_context('userenv', 'current_schema');
+  l_github_access_rec.current_schema := sys_context('USERENV', 'CURRENT_SCHEMA');
 
   g_github_access_tab(p_github_access_handle) := l_github_access_rec;
 end set_github_access;
@@ -301,21 +371,18 @@ procedure define_project_db
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
 , p_schema in varchar -- The database schema
-, p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
-, p_parent_path in varchar2 default null -- The parent repository file path
-, p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
-, p_src_callbacks in varchar2 default '/src/callbacks/'
-, p_src_incr in varchar2 default '/src/incr/'
-, p_src_full in varchar2 default '/src/full/'
-, p_src_dml in varchar2 default '/src/dml/'
-, p_src_ords in varchar2 default '/src/ords/'
+, p_parent_github_access_handle in github_access_handle_t
+, p_parent_path in varchar2
+, p_modules in sys.odcivarchar2list
+, p_src_callbacks in varchar2
+, p_src_incr in varchar2
+, p_src_full in varchar2
+, p_src_dml in varchar2
+, p_src_ords in varchar2
 )
 is
-  l_project_handle constant project_handle_t := get_project_handle(p_github_access_handle, p_path);
   l_project_rec project_rec_t;
 begin
-  if g_project_tab.exists(l_project_handle) then raise dup_val_on_index; end if;
-  
   l_project_rec.project_type := 'db';
   l_project_rec.schema := p_schema;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
@@ -327,38 +394,25 @@ begin
   l_project_rec.src_dml := p_src_dml;
   l_project_rec.src_ords := p_src_ords;
 
-  g_project_tab(l_project_handle) := l_project_rec;
-
-  -- process the modules recursively
-  if p_modules is not null and p_modules.count > 0
-  then
-    for i_idx in p_modules.first .. p_modules.last
-    loop
-      process_file
-      ( p_github_access_handle => p_github_access_handle
-      , p_schema => p_schema
-      , p_file_path => normalize_file_name(p_path || '/' || p_modules(i_idx) || '/' || 'pom.sql')
-      , p_stop_on_error => true
-      );
-    end loop;
-  end if;
+  add_project
+  ( p_github_access_handle => p_github_access_handle
+  , p_path => p_path
+  , p_project_rec => l_project_rec
+  );
 end define_project_db;
 
 procedure define_project_apex
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
 , p_schema in varchar -- The database schema
-, p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
-, p_parent_path in varchar2 default null -- The parent repository file path
-, p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
-, p_application_id in integer default null -- The APEX application id
+, p_parent_github_access_handle in github_access_handle_t
+, p_parent_path in varchar2
+, p_modules in sys.odcivarchar2list
+, p_application_id in integer
 )
 is
-  l_project_handle constant project_handle_t := get_project_handle(p_github_access_handle, p_path);
   l_project_rec project_rec_t;
 begin
-  if g_project_tab.exists(l_project_handle) then raise dup_val_on_index; end if;
-  
   l_project_rec.project_type := 'apex';
   l_project_rec.schema := p_schema;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
@@ -366,27 +420,18 @@ begin
   l_project_rec.modules := p_modules;
   l_project_rec.application_id := p_application_id;
 
-  g_project_tab(l_project_handle) := l_project_rec;
-
-  -- process the modules recursively
-  if p_modules is not null and p_modules.count > 0
-  then
-    for i_idx in p_modules.first .. p_modules.last
-    loop
-      process_file
-      ( p_github_access_handle => p_github_access_handle
-      , p_schema => p_schema
-      , p_file_path => normalize_file_name(p_path || '/' || p_modules(i_idx) || '/' || 'pom.sql')
-      , p_stop_on_error => true
-      );
-    end loop;
-  end if;
+  add_project
+  ( p_github_access_handle => p_github_access_handle
+  , p_path => p_path
+  , p_project_rec => l_project_rec
+  );
 end define_project_apex;
 
 procedure process_project
 ( p_github_access_handle in github_access_handle_t
 , p_path in varchar2 -- The repository file path
-, p_stop_on_error in boolean default true -- Must we stop on error?
+, p_operation in varchar2
+, p_stop_on_error in boolean
 )
 is
   l_file_contents clob := null;
@@ -399,6 +444,9 @@ begin
 
   -- APEX not implemented yet
   if l_project_rec.project_type = 'db' then null; else raise program_error; end if;
+
+  -- export not implemented yet
+  if p_operation = 'install' then null; else raise program_error; end if;
 
   for r in
   ( select  id
@@ -459,7 +507,7 @@ procedure process_file
 ( p_github_access_handle in github_access_handle_t
 , p_schema in varchar -- The database schema 
 , p_file_path in varchar2 -- The repository file path
-, p_stop_on_error in boolean default true -- Must we stop on error?
+, p_stop_on_error in boolean
 )
 is
   l_github_access_rec github_access_rec_t;
@@ -486,7 +534,7 @@ procedure process_file
 , p_schema in varchar -- The database schema
 , p_file_path in varchar2 -- The repository file path
 , p_content in clob -- The content from the repository file
-, p_stop_on_error in boolean default true -- Must we stop on error?
+, p_stop_on_error in boolean
 )
 is
   l_base_name constant varchar2(48 char) := substr(base_name(p_file_path), 1, 48);
@@ -623,7 +671,7 @@ procedure process_sql
 ( p_github_access_handle in github_access_handle_t
 , p_file_path in varchar2 -- The repository file path, for reference only
 , p_content in clob -- The content from the repository file
-, p_stop_on_error in boolean default true -- Must we stop on error?
+, p_stop_on_error in boolean
 )
 is
   l_base_name constant varchar2(48 char) := substr(base_name(p_file_path), 1, 48);
@@ -632,7 +680,7 @@ is
 
   procedure process_sql
   ( p_content in clob -- The content from the repository file
-  , p_stop_on_error in boolean default true -- Must we stop on error?
+  , p_stop_on_error in boolean
   , p_statement_nr in positive default null
   )
   is
@@ -660,7 +708,8 @@ begin
     return;
   end if;
 
-  if having_sql_statements_ending_with_semi_colon(p_file_path)
+  PRAGMA INLINE(sql_statement_terminator, 'YES');
+  if sql_statement_terminator(p_file_path) = ';'
   then
     -- special handling
     PRAGMA INLINE (split, 'YES');

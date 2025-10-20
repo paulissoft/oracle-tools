@@ -6,8 +6,20 @@
 -- Remark: Verify by https://github.com/&1/&2
 */
 
+declare
+  l_github_access_handle admin_install_pkg.github_access_handle_t;
 begin
-  admin_install_pkg.init(p_repo_owner => '&1', p_repo_name => '&2');
+  admin_install_pkg.set_github_access
+  ( p_repo_owner => '&1'
+  , p_repo_name => '&2'
+  , p_branch_name => 'development'
+  , p_github_access_handle => l_github_access_handle
+  );
+  admin_install_pkg.process_file
+  ( p_github_access_handle => l_github_access_handle
+  , p_schema => null
+  , p_file_path => 'pom.sql'
+  );
 end;
 /
 

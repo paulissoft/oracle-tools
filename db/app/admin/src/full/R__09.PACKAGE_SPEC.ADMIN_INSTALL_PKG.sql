@@ -60,7 +60,7 @@ procedure delete_github_access
 procedure define_project_db
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
-, p_schema in varchar -- The database schema
+, p_schema in varchar default null -- The database schema
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
 , p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
@@ -79,7 +79,7 @@ This procedure can be used in pom.sql.
 procedure define_project_apex
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
-, p_schema in varchar -- The database schema
+, p_schema in varchar default null -- The database schema
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
 , p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
@@ -94,6 +94,7 @@ Can be used in pom.sql.
 procedure process_project
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
+, p_operation in varchar2 default 'install' -- install/export
 , p_stop_on_error in boolean default true -- Must we stop on error?
 );
 /** The project must have been defined by define_project_db or define_project_apex. **/
