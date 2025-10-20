@@ -9,18 +9,15 @@ type project_rec_t is record
 , schema varchar(128 char) -- The database schema
 , parent_github_access_handle github_access_handle_t default null -- The parent GitHub access handle
 , parent_path varchar2(1000 char) default null -- The parent repository file path
-, modules sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
 , src_callbacks varchar2(1000 char)
 , src_incr varchar2(1000 char)
 , src_full varchar2(1000 char)
 , src_dml varchar2(1000 char)
 , src_ords varchar2(1000 char)
 , application_id integer
+, operation varchar2(10 byte) -- install/export
+, stop_on_error boolean
 );
-
-subtype project_handle_t is varchar2(512 char); -- <repo owner>/<repo name>:<path>
-
-type project_tab_t is table of project_rec_t index by project_handle_t;
 
 type github_access_tab_t is table of github_access_rec_t index by github_access_handle_t;
 
@@ -36,21 +33,10 @@ c_max_varchar2_size constant pls_integer := 32767;
 
 g_github_access_tab github_access_tab_t;
 
-g_project_tab project_tab_t; -- when github_access is removed, remove also its projects
+g_root_project_rec project_rec_t;
 
 -- ROUTINES
 
-function get_project_handle
-( p_github_access_handle in github_access_handle_t -- The GitHub access handle
-, p_path in varchar2 -- The repository file path
-)
-return project_handle_t
-deterministic
-is
-begin
-  return p_github_access_handle || ':' || p_path;
-end get_project_handle;
-  
 function dbms_lob_substr
 ( p_clob in clob
 , p_amount in naturaln
@@ -255,47 +241,77 @@ begin
   return trim('/' from replace(p_file_path, '//', '/'));
 end normalize_file_name;
 
-procedure add_project
-( p_github_access_handle in github_access_handle_t -- The GitHub access handle
+procedure process_project
+( p_github_access_handle in github_access_handle_t
 , p_path in varchar2 -- The repository file path
 , p_project_rec in project_rec_t
 )
 is
-  l_call constant varchar2(4000 byte) :=
-    utl_lms.format_message
-    ( 'add_project(p_github_access_handle => "%s", p_path => "%s", p_schema => "%s")'
-    , p_github_access_handle
-    , p_path
-    , p_project_rec.schema
-    );
-  l_project_handle constant project_handle_t := get_project_handle(p_github_access_handle, p_path);
+  l_file_contents clob := null;
+  l_github_access_rec github_access_rec_t;
 begin
-  --/*DBUG
-  dbms_output.put_line(l_call);
-  --/*DBUG*/
+  l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
-  if g_project_tab.exists(l_project_handle) then raise dup_val_on_index; end if;
+  -- APEX not implemented yet
+  if p_project_rec.project_type = 'apex' then raise program_error; end if;
 
-  g_project_tab(l_project_handle) := p_project_rec;
+  -- export not implemented yet
+  if p_project_rec.operation = 'export' then raise program_error; end if;
 
-  -- process the modules recursively
-  if p_project_rec.modules is not null and p_project_rec.modules.count > 0
+  for r in
+  ( select  id
+    ,       name
+    ,       bytes
+    ,       case
+              when instr(name, p_project_rec.src_callbacks) > 0 then 0
+              when instr(name, p_project_rec.src_incr) > 0 then 1
+              when instr(name, p_project_rec.src_full) > 0 then 2
+              when instr(name, p_project_rec.src_dml) > 0 then 3
+              when instr(name, p_project_rec.src_ords) > 0 then 4
+            end as file_type
+    from    table
+            ( dbms_cloud_repo.list_files
+              ( repo => l_github_access_rec.repo
+              , path => p_path
+              , branch_name => l_github_access_rec.branch_name
+              , tag_name => l_github_access_rec.tag_name
+              , commit_id => l_github_access_rec.commit_id
+              )
+            )
+    where   ( name like 'R\_\_%.sql' escape '\' -- Flyway repeatable scripts
+              or
+              name like '%/R\_\_%.sql' escape '\' -- Flyway repeatable scripts
+              or
+              name like 'V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
+              or
+              name like '%/V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
+            )
+    and     name not like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
+    order by
+            file_type
+    ,       name        
+  )
+  loop
+    /*DBUG
+    dbms_output.put_line('id: ' || r.id);
+    dbms_output.put_line('name: ' || r.name);
+    dbms_output.put_line('bytes: ' || r.bytes);
+    dbms_output.put_line('file_type: ' || r.file_type);
+    /*DBUG*/
+    l_file_contents := l_file_contents || '@' || r.name || chr(10);
+  end loop;
+
+  if l_file_contents is not null
   then
-    for i_idx in p_project_rec.modules.first .. p_project_rec.modules.last
-    loop
-      PRAGMA INLINE(normalize_file_name, 'YES');
-      process_file
-      ( p_github_access_handle => p_github_access_handle
-      , p_schema => p_project_rec.schema
-      , p_file_path => normalize_file_name(p_path || '/' || p_project_rec.modules(i_idx) || '/' || 'pom.sql')
-      , p_stop_on_error => true
-      );
-    end loop;
+    process_file
+    ( p_github_access_handle => p_github_access_handle
+    , p_schema => p_project_rec.schema
+    , p_file_path => p_path || '/process.sql'
+    , p_content => l_file_contents
+    , p_stop_on_error => p_project_rec.stop_on_error
+    );
   end if;
-exception
-  when others
-  then raise_application_error(-20000, l_call, true);
-end add_project;
+end process_project;
 
 -- PUBLIC
 
@@ -376,35 +392,22 @@ procedure delete_github_access
 )
 is
   l_github_access_rec github_access_rec_t;
-  l_project_handle project_handle_t;
-  l_project_handle_next project_handle_t;
 begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
   g_github_access_tab.delete(p_github_access_handle);
 
-  l_project_handle := g_project_tab.first;
-  while l_project_handle is not null
-  loop
-    l_project_handle_next := g_project_tab.next(l_project_handle);
-    if l_project_handle like p_github_access_handle || ':%'
-    then
-      g_project_tab.delete(l_project_handle);
-    end if;
-    l_project_handle := l_project_handle_next;
-  end loop;
   if l_github_access_rec.current_schema is not null
   then
     execute immediate 'alter session set current_schema = ' || l_github_access_rec.current_schema;
   end if;
 end delete_github_access;
 
-procedure define_project_db
+procedure process_project_db
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
 , p_schema in varchar -- The database schema
 , p_parent_github_access_handle in github_access_handle_t
 , p_parent_path in varchar2
-, p_modules in sys.odcivarchar2list
 , p_src_callbacks in varchar2
 , p_src_incr in varchar2
 , p_src_full in varchar2
@@ -418,27 +421,27 @@ begin
   l_project_rec.schema := p_schema;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
-  l_project_rec.modules := p_modules;
   l_project_rec.src_callbacks := p_src_callbacks;
   l_project_rec.src_incr := p_src_incr;
   l_project_rec.src_full := p_src_full;
   l_project_rec.src_dml := p_src_dml;
   l_project_rec.src_ords := p_src_ords;
+  l_project_rec.operation := g_root_project_rec.operation;
+  l_project_rec.stop_on_error := g_root_project_rec.stop_on_error;
 
-  add_project
+  process_project
   ( p_github_access_handle => p_github_access_handle
   , p_path => p_path
   , p_project_rec => l_project_rec
   );
-end define_project_db;
+end process_project_db;
 
-procedure define_project_apex
+procedure process_project_apex
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
 , p_schema in varchar -- The database schema
 , p_parent_github_access_handle in github_access_handle_t
 , p_parent_path in varchar2
-, p_modules in sys.odcivarchar2list
 , p_application_id in integer
 )
 is
@@ -448,124 +451,50 @@ begin
   l_project_rec.schema := p_schema;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
-  l_project_rec.modules := p_modules;
   l_project_rec.application_id := p_application_id;
+  l_project_rec.operation := g_root_project_rec.operation;
+  l_project_rec.stop_on_error := g_root_project_rec.stop_on_error;
 
-  add_project
+  process_project
   ( p_github_access_handle => p_github_access_handle
   , p_path => p_path
   , p_project_rec => l_project_rec
   );
-end define_project_apex;
+end process_project_apex;
 
-procedure define_project
+procedure process_root_project
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
-, p_path in varchar2 -- The repository file path
-, p_schema in varchar
 , p_parent_github_access_handle in github_access_handle_t
 , p_parent_path in varchar2
 , p_modules in sys.odcivarchar2list
-)
-is
-  l_project_rec project_rec_t;
-begin
-  l_project_rec.project_type := null;
-  l_project_rec.schema := p_schema;
-  l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
-  l_project_rec.parent_path := p_parent_path;
-  l_project_rec.modules := p_modules;
-
-  add_project
-  ( p_github_access_handle => p_github_access_handle
-  , p_path => p_path
-  , p_project_rec => l_project_rec
-  );
-end define_project;
-
-procedure process_project
-( p_github_access_handle in github_access_handle_t
-, p_path in varchar2 -- The repository file path
 , p_operation in varchar2
 , p_stop_on_error in boolean
 )
 is
-  l_file_contents clob := null;
-  l_github_access_rec github_access_rec_t;
-  l_project_handle constant project_handle_t := get_project_handle(p_github_access_handle, p_path);
-  l_project_rec project_rec_t;
 begin
-  l_github_access_rec := g_github_access_tab(p_github_access_handle);
+  g_root_project_rec.project_type := null;
+  g_root_project_rec.parent_github_access_handle := p_parent_github_access_handle;
+  g_root_project_rec.parent_path := p_parent_path;
+  g_root_project_rec.operation := p_operation;
+  g_root_project_rec.stop_on_error := p_stop_on_error;
 
-  -- process the pom.sql (recursively)
-  PRAGMA INLINE(normalize_file_name, 'YES');
-  process_file
-  ( p_github_access_handle => p_github_access_handle
-  , p_schema => null
-  , p_file_path => normalize_file_name(p_path || '/' || 'pom.sql')
-  );
-  
-  l_project_rec := g_project_tab(l_project_handle);
-
-  -- APEX not implemented yet
-  if l_project_rec.project_type = 'db' then null; else raise program_error; end if;
-
-  -- export not implemented yet
-  if p_operation = 'install' then null; else raise program_error; end if;
-
-  for r in
-  ( select  id
-    ,       name
-    ,       bytes
-    ,       case
-              when instr(name, l_project_rec.src_callbacks) > 0 then 0
-              when instr(name, l_project_rec.src_incr) > 0 then 1
-              when instr(name, l_project_rec.src_full) > 0 then 2
-              when instr(name, l_project_rec.src_dml) > 0 then 3
-              when instr(name, l_project_rec.src_ords) > 0 then 4
-            end as file_type
-    from    table
-            ( dbms_cloud_repo.list_files
-              ( repo => l_github_access_rec.repo
-              , path => p_path
-              , branch_name => l_github_access_rec.branch_name
-              , tag_name => l_github_access_rec.tag_name
-              , commit_id => l_github_access_rec.commit_id
-              )
-            )
-    where   ( name like 'R\_\_%.sql' escape '\' -- Flyway repeatable scripts
-              or
-              name like '%/R\_\_%.sql' escape '\' -- Flyway repeatable scripts
-              or
-              name like 'V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
-              or
-              name like '%/V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
-            )
-    and     name not like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
-    order by
-            file_type
-    ,       name        
-  )
-  loop
-    /*DBUG
-    dbms_output.put_line('id: ' || r.id);
-    dbms_output.put_line('name: ' || r.name);
-    dbms_output.put_line('bytes: ' || r.bytes);
-    dbms_output.put_line('file_type: ' || r.file_type);
-    /*DBUG*/
-    l_file_contents := l_file_contents || '@' || r.name || chr(10);
-  end loop;
-
-  if l_file_contents is not null
+  -- process the modules recursively
+  if p_modules is null or p_modules.count = 0
   then
+    raise value_error;
+  end if;
+  
+  for i_idx in p_modules.first .. p_modules.last
+  loop
+    PRAGMA INLINE(normalize_file_name, 'YES');
     process_file
     ( p_github_access_handle => p_github_access_handle
-    , p_schema => l_project_rec.schema
-    , p_file_path => p_path || '/process.sql'
-    , p_content => l_file_contents
+    , p_schema => null
+    , p_file_path => normalize_file_name(p_modules(i_idx) || '/' || 'pom.sql')
     , p_stop_on_error => p_stop_on_error
     );
-  end if;
-end process_project;
+  end loop;
+end process_root_project;
 
 procedure process_file
 ( p_github_access_handle in github_access_handle_t

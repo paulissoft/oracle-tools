@@ -7,8 +7,8 @@ A package based on DBMS_CLOUD_REPO in order to:
 
 In order to mimic this Maven POM behaviour:
 - there will be `pom.sql` files in folders with a `pom.xml` defining the most important properties using:
-  * `define_project_db`
-  * `define_project_apex`
+  * `process_project_db`
+  * `process_project_apex`
 - these project definition routines will recursively define sub folder modules (each expecting a pom.sql along the pom.xml)
 - the root folder will thus contain at most two invocations: one to the root database folder and one to the root apex folder
 **/
@@ -57,13 +57,12 @@ procedure delete_github_access
 );
 /** Will remove this handle from internal memory and restore the current schema to the schema before invoking set_github_access(). **/
 
-procedure define_project_db
+procedure process_project_db
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
 , p_schema in varchar default null -- The database schema
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
-, p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
 , p_src_callbacks in varchar2 default '/src/callbacks/'
 , p_src_incr in varchar2 default '/src/incr/'
 , p_src_full in varchar2 default '/src/full/'
@@ -76,13 +75,12 @@ Will be used to define the project in internal memory so it can be used by insta
 This procedure can be used in pom.sql.
 **/
 
-procedure define_project_apex
+procedure process_project_apex
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
 , p_schema in varchar default null -- The database schema
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
-, p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
 , p_application_id in integer default null -- The APEX application id
 );
 /**
@@ -91,27 +89,19 @@ Will be used to define the project in internal memory so it can be used by proce
 Can be used in pom.sql.
 **/
 
-procedure define_project
+procedure process_root_project
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
-, p_path in varchar2 -- The repository file path
-, p_schema in varchar default null -- The database schema
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
 , p_modules in sys.odcivarchar2list default null -- The sub module paths to process when the POM is a container
+, p_operation in varchar2 default null -- top level must be 'install' or 'export'
+, p_stop_on_error in boolean default true -- Must we stop on error?
 );
 /**
 A loose representation of an aggregator POM in folder p_path (i.e. <p_path>/pom.xml).
 Will be used to define the project in internal memory so it can be used by process_project.
 Can be used in pom.sql.
 **/
-
-procedure process_project
-( p_github_access_handle in github_access_handle_t -- The GitHub access handle
-, p_path in varchar2 -- The repository file path
-, p_operation in varchar2 default 'install' -- install/export
-, p_stop_on_error in boolean default true -- Must we stop on error?
-);
-/** The project must have been defined by define_project_db or define_project_apex. **/
 
 procedure process_file
 ( p_github_access_handle in github_access_handle_t

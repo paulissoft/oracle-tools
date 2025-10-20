@@ -1,5 +1,5 @@
 begin
-  admin_install_pkg.define_project_apex
+  admin_install_pkg.process_project_apex
   ( p_github_access_handle => 'paulissoft/oracle-tools'
   , p_path => 'apex/app'
   , p_schema => 'ORACLE_TOOLS'
