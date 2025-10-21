@@ -6,7 +6,7 @@ begin
   from    user_tablespaces ts
   where   ts.tablespace_name in ('USERS', 'DATA');
 
-  execute immediate utl-lsm.format_message(q'<
+  execute immediate utl_lms.format_message(q'<
 create table generated_ddls
 ( id integer generated always as identity
   constraint generated_ddls$nnc$id not null
