@@ -1,0 +1,154 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="0146E4B6-01D5-4B33-10E7-B444CF7F84F8" schemaObject="3205455A-AABF-566A-AF17-A705FC74D907" name="GITHUB_INSTALLED_PROJECTS">
+<sourceConnName>admin@knpv_dev</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>github_installed_projects</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:46:28 UTC</createdTime>
+<comment><![CDATA[GitHub installed projects.]]></comment>
+<commentInRDBMS><![CDATA[GitHub installed projects.]]></commentInRDBMS>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+<importedID>711C0263-614C-070C-E32B-473F21F2426B</importedID>
+<abbreviation>GITHUB_INSTALLED_PROJECTS</abbreviation>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<propertyMap>
+<property name="applyStandards" value="1"/>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+<property name="createIndexOnFK" value="1"/>
+<property name="setAutoIncrement" value="1"/>
+<property name="setColumnsOrder" value="1"/>
+<property name="setSecurityOptions" value="1"/>
+<property name="setTableAbbreviation" value="1"/>
+<property name="setUseDomainConstraints" value="1"/>
+<property name="tableToUpperCase" value="1"/>
+</propertyMap>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID" id="ED975DA2-BD13-0098-3DA0-53924952F42D">
+<sourceConnName>admin@knpv_dev</sourceConnName>
+<sourceObjSchema>github_installed_projects</sourceObjSchema>
+<sourceObjName>id</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:46:28 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+<importedID>96C9DC69-10EB-18B4-3BF6-87B4EBB1321D</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<defaultValue>GITHUB_INSTALLED_PROJECTS_SEQ.NEXTVAL</defaultValue>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementColumn>true</autoIncrementColumn>
+<defaultOntNull>true</defaultOntNull>
+<autoIncrementCycle>false</autoIncrementCycle>
+<autoIncrementSequenceName>GITHUB_INSTALLED_PROJECTS_SEQ</autoIncrementSequenceName>
+<autoIncrementGenerateTrigger>false</autoIncrementGenerateTrigger>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_PROJECTS_GITHUB_INSTALLED_PROJECTS_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="GITHUB_REPO" id="570ED983-52B4-0C30-78F2-EED03D3A777B">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:49:07 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>256</dataTypeSize>
+<ownDataTypeParameters>256,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_PROJECTS_GITHUB_REPO</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="DIRECTORY_NAME" id="13BF9C47-066C-D013-CF17-488D401F09E2">
+<sourceConnName>admin@knpv_dev</sourceConnName>
+<sourceObjSchema>github_installed_projects</sourceObjSchema>
+<sourceObjName>directory_name</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:46:28 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+<importedID>DF49ECA4-ED7A-33B3-ED69-74465EEDA055</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>4000 BYTE</dataTypeSize>
+<ownDataTypeParameters>4000 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_PROJECTS_DIRECTORY_NAME</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="OWNER" id="622DFBF1-FC64-E88B-C778-BBDA57799091">
+<sourceConnName>admin@knpv_dev</sourceConnName>
+<sourceObjSchema>github_installed_projects</sourceObjSchema>
+<sourceObjName>schema</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:46:28 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+<importedID>7B0FB1DA-EBC1-F0CA-2D26-0B21BF48046B</importedID>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>128</dataTypeSize>
+<ownDataTypeParameters>128,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_PROJECTS_OWNER</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="A430B97F-36CA-3FFD-9173-0AD70E489042" name="GITHUB_INSTALLED_PROJECTS_PK">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:48:14 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="ED975DA2-BD13-0098-3DA0-53924952F42D"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="358F8F23-3FCB-F59E-C6FC-3BB2D118A1FA" name="GITHUB_INSTALLED_PROJECTS_UK">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:48:41 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<indexState>Unique Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="570ED983-52B4-0C30-78F2-EED03D3A777B"/>
+<colUsage columnID="13BF9C47-066C-D013-CF17-488D401F09E2"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

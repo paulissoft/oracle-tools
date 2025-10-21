@@ -1,0 +1,20 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="7B084565-5BC1-8C07-1F93-985729107F3B" containerWithKeyObject="7320516D-B227-5BDC-F782-A669FC271FAE" localFKIndex="83C71446-8347-1574-8FC9-2D33F3B60325" name="GITHUB_INSTALLED_VERSIONS_FK">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 08:17:29 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<referredTableLongName>ADMIN.GITHUB_INSTALLED_VERSIONS</referredTableLongName>
+<deleteRule>NO ACTION</deleteRule>
+<referredTableID>73A05CAF-3886-C92C-8006-14C1D69B982C</referredTableID>
+<keyObject>CAF7FE5D-C3ED-BDF0-2E5F-646C6C0538CF</keyObject>
+<referredKeyID>CAF7FE5D-C3ED-BDF0-2E5F-646C6C0538CF</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>ID</refColNames>
+<transferable>false</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</FKIndexAssociation>

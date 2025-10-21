@@ -1,0 +1,59 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TableProxyOraclev12c class="oracle.dbtools.crest.model.design.storage.oracle.v12c.TableProxyOraclev12c" name="GITHUB_INSTALLED_PROJECTS" directorySegmentName="seg_0" id="0146E4B6-01D5-4B33-10E7-B444CF7F84F8">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:46:28 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+<schemaObject>3205455A-AABF-566A-AF17-A705FC74D907</schemaObject>
+<logging>YES</logging>
+<partitionedRowMovement>DISABLE</partitionedRowMovement>
+<temporaryChanged>false</temporaryChanged>
+<accessDriverType>oracle_loader</accessDriverType>
+<rejectLimit></rejectLimit>
+<propertyMap>
+<property name="setAutoIncrement" value="1"/>
+</propertyMap>
+<columnProxies itemClass="oracle.dbtools.crest.model.design.storage.oracle.v12c.ColumnProxyOraclev12c">
+<ColumnProxy name="DIRECTORY_NAME" id="13BF9C47-066C-D013-CF17-488D401F09E2">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:46:28 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+</ColumnProxy>
+<ColumnProxy name="GITHUB_REPO" id="570ED983-52B4-0C30-78F2-EED03D3A777B">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:49:07 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="OWNER" id="622DFBF1-FC64-E88B-C778-BBDA57799091">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:46:28 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+</ColumnProxy>
+<ColumnProxy name="ID" id="ED975DA2-BD13-0098-3DA0-53924952F42D">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:46:28 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+<autoIncrementDDL>DEFAULT_CLAUSE</autoIncrementDDL>
+<defaultValue>GITHUB_INSTALLED_PROJECTS_SEQ.NEXTVAL</defaultValue>
+</ColumnProxy>
+</columnProxies>
+<primaryKeys>
+<PrimaryKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.PKProxyOraclev10g" name="GITHUB_INSTALLED_PROJECTS_PK" id="A430B97F-36CA-3FFD-9173-0AD70E489042">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:48:14 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<indexSort>SORTED</indexSort>
+</PrimaryKey>
+</primaryKeys>
+<uniqueKeys>
+<UniqueKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.UniqueOraclev10g" name="GITHUB_INSTALLED_PROJECTS_UK1" id="358F8F23-3FCB-F59E-C6FC-3BB2D118A1FA">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:48:41 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<indexSort>SORTED</indexSort>
+</UniqueKey>
+</uniqueKeys>
+</TableProxyOraclev12c>

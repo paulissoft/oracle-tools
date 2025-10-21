@@ -1,0 +1,32 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TableSpaceOraclev10g class="oracle.dbtools.crest.model.design.storage.oracle.v10g.TableSpaceOraclev10g" name="DATA" directorySegmentName="seg_0" id="40FD14CD-17FA-68E0-6E0C-F9D61BBE67F7">
+<sourceConnName>admin@knpv_dev</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>DATA</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:42:58 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<dsInitialExtent>65536</dsInitialExtent>
+<dsMaxExtents>2147483645</dsMaxExtents>
+<emUniformSize>0</emUniformSize>
+<extentManagement>LOCAL</extentManagement>
+<minExtLen>65536</minExtLen>
+<dsCompression>NOCOMPRESS</dsCompression>
+<encrypt>YES</encrypt>
+<fileType>BIGFILE</fileType>
+<inMemory>NO</inMemory>
+<dataFiles>
+<DataFile class="oracle.dbtools.crest.model.design.storage.oracle.v10g.DataFileOraclev10g" name="data.1222.1211960517" id="1BBF13DC-D19E-D7B9-0682-FFDA371E64CD">
+<sourceConnName>admin@knpv_dev</sourceConnName>
+<sourceObjName>+DATA/FCEXDAJP/3EE70AF2B6B7FE14E063A658000A1C6C/DATAFILE/data.1222.1211960517</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:46:28 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<autoextend>ON</autoextend>
+<fileName>+DATA/FCEXDAJP/3EE70AF2B6B7FE14E063A658000A1C6C/DATAFILE/data.1222.1211960517</fileName>
+<maxSize>3</maxSize>
+<nextBlockSize>2097152</nextBlockSize>
+<size>7442432</size>
+</DataFile>
+</dataFiles>
+</TableSpaceOraclev10g>

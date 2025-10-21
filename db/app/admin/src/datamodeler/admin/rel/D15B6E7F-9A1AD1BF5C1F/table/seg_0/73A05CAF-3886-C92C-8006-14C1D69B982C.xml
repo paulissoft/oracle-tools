@@ -1,0 +1,232 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="73A05CAF-3886-C92C-8006-14C1D69B982C" schemaObject="3205455A-AABF-566A-AF17-A705FC74D907" name="GITHUB_INSTALLED_VERSIONS">
+<sourceConnName>admin@knpv_dev</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>github_installation_history</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:42:58 UTC</createdTime>
+<comment><![CDATA[GitHub installation history.]]></comment>
+<commentInRDBMS><![CDATA[GitHub installation history.]]></commentInRDBMS>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+<ordsAlias>github_installation_history</ordsAlias>
+<abbreviation>GITHUB_INSTALLED_VERSIONS</abbreviation>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<propertyMap>
+<property name="applyStandards" value="1"/>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+<property name="createIndexOnFK" value="1"/>
+<property name="setAutoIncrement" value="1"/>
+<property name="setColumnsOrder" value="1"/>
+<property name="setSecurityOptions" value="1"/>
+<property name="setTableAbbreviation" value="1"/>
+<property name="setUseDomainConstraints" value="1"/>
+<property name="tableToUpperCase" value="1"/>
+</propertyMap>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID" id="FDC4CBA0-70F6-B7C7-9252-33DAA4DB5522">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 08:16:14 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT011</logicalDatatype>
+<defaultValue>GITHUB_INSTALLED_VERSIONS_SEQ.NEXTVAL</defaultValue>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementColumn>true</autoIncrementColumn>
+<defaultOntNull>true</defaultOntNull>
+<autoIncrementCycle>false</autoIncrementCycle>
+<autoIncrementSequenceName>GITHUB_INSTALLED_VERSIONS_SEQ</autoIncrementSequenceName>
+<autoIncrementGenerateTrigger>false</autoIncrementGenerateTrigger>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="GITHUB_INSTALLED_PROJECTS_ID" id="E20102EF-64E4-57D1-0726-60ECC0AEBD13">
+<sourceConnName>admin@knpv_dev</sourceConnName>
+<sourceObjSchema>github_installation_history</sourceObjSchema>
+<sourceObjName>project_id</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:42:59 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_PROJECT_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+<associations>
+<colAssociation fkAssociation="FC3439A0-75C1-9A74-34DA-3DEC18A08EB3" referredColumn="ED975DA2-BD13-0098-3DA0-53924952F42D"/>
+</associations>
+</Column>
+<Column name="BASE_NAME" id="521AA14C-2D85-D6CA-552D-48C9C4CD8C81">
+<sourceConnName>admin@knpv_dev</sourceConnName>
+<sourceObjSchema>github_installation_history</sourceObjSchema>
+<sourceObjName>base_name</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:42:59 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>4000 BYTE</dataTypeSize>
+<ownDataTypeParameters>4000 BYTE,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_BASE_NAME</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="DATE_CREATED" id="761D6302-D18B-67E6-BDBC-A10F1BA27A4B">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:56:35 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT007</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_DATE_CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="CHECKSUM" id="E5D31399-7150-0566-29EF-A2199CF56425">
+<sourceConnName>admin@knpv_dev</sourceConnName>
+<sourceObjSchema>github_installation_history</sourceObjSchema>
+<sourceObjName>id</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:42:59 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>128</dataTypeSize>
+<ownDataTypeParameters>128,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_CHECKSUM</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="BYTES" id="7B3B19F8-EC98-6298-6077-31136CF1AFAE">
+<sourceConnName>admin@knpv_dev</sourceConnName>
+<sourceObjSchema>github_installation_history</sourceObjSchema>
+<sourceObjName>bytes</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:42:59 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+<constraintName>CK_GITHUB_INSTALLED_VERSIONS_BYTES</constraintName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT011</logicalDatatype>
+<checkConstraint>
+<implementationDef dbType="Oracle Database 12cR2" definition="&quot;BYTES&quot; &gt;= 0"/>
+</checkConstraint>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_BYTES</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="SUCCESS" id="5617B55A-C045-D270-2598-7E5A95AA8944">
+<sourceConnName>admin@knpv_dev</sourceConnName>
+<sourceObjSchema>github_installation_history</sourceObjSchema>
+<sourceObjName>success</sourceObjName>
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:42:59 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<nameHasQuotes>true</nameHasQuotes>
+<constraintName>CK_GITHUB_INSTALLED_VERSIONS_SUCCESS</constraintName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<dataTypePrecision>1</dataTypePrecision>
+<checkConstraint>
+<implementationDef dbType="Oracle Database 12cR2" definition="&quot;SUCCESS&quot; IN (0, 1)"/>
+</checkConstraint>
+<ownDataTypeParameters>,1,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_SUCCESS</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="CAF7FE5D-C3ED-BDF0-2E5F-646C6C0538CF" name="GITHUB_INSTALLED_VERSIONS_PK">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 07:55:27 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="FDC4CBA0-70F6-B7C7-9252-33DAA4DB5522"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="EFD26AAA-FE14-658C-F037-2BD4BDD87E5C" name="GITHUB_INSTALLED_VERSIONS_UK">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 08:16:42 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<indexState>Unique Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+<indexColumnUsage>
+<colUsage columnID="E20102EF-64E4-57D1-0726-60ECC0AEBD13"/>
+<colUsage columnID="521AA14C-2D85-D6CA-552D-48C9C4CD8C81"/>
+<colUsage columnID="761D6302-D18B-67E6-BDBC-A10F1BA27A4B"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="F242B315-3254-BCFC-1758-F745A2BAF797" name="GITHUB_INSTALLED_PROJECTS_FK">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 08:07:57 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="E20102EF-64E4-57D1-0726-60ECC0AEBD13"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>
