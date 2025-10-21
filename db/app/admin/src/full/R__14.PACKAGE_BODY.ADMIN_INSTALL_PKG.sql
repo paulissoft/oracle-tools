@@ -33,6 +33,36 @@ subtype t_max_varchar2 is varchar2(32767);
 
 c_max_varchar2_size constant pls_integer := 32767;
 
+-- DBMS_METADATA object types
+g_md_object_types constant sys.odcivarchar2list :=
+    sys.odcivarchar2list
+    ( -- PATO generated files end with ';'
+      'SEQUENCE'
+    , 'CLUSTER'
+    , 'TABLE'
+    , 'VIEW'
+    , 'MATERIALIZED_VIEW'
+    , 'MATERIALIZED_VIEW_LOG'
+    , 'INDEX'
+    , 'OBJECT_GRANT'
+    , 'CONSTRAINT'
+    , 'REF_CONSTRAINT'
+    , 'PUBLIC_SYNONYM'
+    , 'SYNONYM'
+    , 'COMMENT'
+      -- PATO generated files end with /
+    , 'TYPE_SPEC'
+    , 'FUNCTION'
+    , 'PACKAGE_SPEC'
+    , 'PROCEDURE'
+    , 'PACKAGE_BODY'
+    , 'TYPE_BODY'
+    , 'TRIGGER'
+    , 'JAVA_SOURCE'
+    , 'REFRESH_GROUP'
+    , 'PROCOBJ'
+    );
+
 -- VARIABLES
 
 g_github_access_tab github_access_tab_t;
@@ -171,6 +201,26 @@ begin
   return substr(p_file_path, 1 + nvl(length(directory_name(p_file_path)), 0));
 end base_name;
 
+function flyway_file_type
+( p_file_path in varchar2
+)
+return varchar2
+deterministic
+is
+begin
+  return
+    case
+      when p_file_path like 'R\_\_%.sql' escape '\' -- Flyway repeatable scripts
+           or
+           p_file_path like '%/R\_\_%.sql' escape '\' -- Flyway repeatable scripts
+      then 'R'
+      when p_file_path like 'V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
+           or
+           p_file_path like '%/V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
+      then 'V'
+    end;
+end flyway_file_type;
+
 function is_flyway_file
 ( p_file_path in varchar2
 )
@@ -178,15 +228,59 @@ return boolean
 deterministic
 is
 begin
-  return p_file_path like 'R\_\_%.sql' escape '\' -- Flyway repeatable scripts
-         or
-         p_file_path like '%/R\_\_%.sql' escape '\' -- Flyway repeatable scripts
-         or
-         p_file_path like 'V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
-         or
-         p_file_path like '%/V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
-  ;
+  PRAGMA INLINE (flyway_file_type, 'YES');
+  return case when flyway_file_type(p_file_path) in ('R', 'V') then true else false end;
 end is_flyway_file;
+
+procedure parse_repeatable_file
+( p_file_path in varchar2
+, p_owner in out nocopy varchar2
+, p_object_type out nocopy varchar2
+, p_object_name out nocopy varchar2
+)
+is
+  l_base_name constant varchar2(1000 byte) := base_name(p_file_path);
+  l_parts_tab dbms_sql.varchar2a;
+begin
+  PRAGMA INLINE (flyway_file_type, 'YES');
+  if flyway_file_type(l_base_name) = 'R'
+  then
+    split
+    ( p_str => to_clob(l_base_name)
+    , p_delimiter => '.'
+    , p_str_tab => l_parts_tab
+    );
+    
+    case l_parts_tab.count
+      when 4 -- R__00.PUBLIC_SYNONYM.ADMIN_RECOMPILE_PKG.sql
+      then
+        p_object_type := l_parts_tab(l_parts_tab.first + 1);
+        p_object_name := l_parts_tab(l_parts_tab.first + 2);
+        
+      when 5 -- R__18.ORACLE_TOOLS.OBJECT_GRANT.V_MY_SCHEMA_OBJECTS.sql
+      then
+        p_owner := l_parts_tab(l_parts_tab.first + 1);
+        p_object_type := l_parts_tab(l_parts_tab.first + 2);
+        p_object_name := l_parts_tab(l_parts_tab.first + 3);
+      
+    end case;
+    
+    if p_object_type = 'PUBLIC_SYNONYM'
+    then
+      p_owner := 'PUBLIC';
+      p_object_type := 'SYNONYM';
+    else
+      p_object_type :=
+        case p_object_type
+          when 'TYPE_SPEC'
+          then 'TYPE'
+          when 'PACKAGE_SPEC'
+          then 'PACKAGE'
+          else replace(p_object_type, '_', ' ')
+        end;
+    end if;
+  end if;
+end parse_repeatable_file;
 
 function sql_statement_terminator
 ( p_file_path in varchar2
@@ -194,45 +288,17 @@ function sql_statement_terminator
 return varchar2
 deterministic
 is
-  l_object_types constant sys.odcivarchar2list :=
-    sys.odcivarchar2list
-    ( -- PATO generated files end with ';'
-      'SEQUENCE'
-    , 'CLUSTER'
-    , 'TABLE'
-    , 'VIEW'
-    , 'MATERIALIZED_VIEW'
-    , 'MATERIALIZED_VIEW_LOG'
-    , 'INDEX'
-    , 'OBJECT_GRANT'
-    , 'CONSTRAINT'
-    , 'REF_CONSTRAINT'
-    , 'PUBLIC_SYNONYM'
-    , 'SYNONYM'
-    , 'COMMENT'
-      -- PATO generated files end with /
-    , 'TYPE_SPEC'
-    , 'FUNCTION'
-    , 'PACKAGE_SPEC'
-    , 'PROCEDURE'
-    , 'PACKAGE_BODY'
-    , 'TYPE_BODY'
-    , 'TRIGGER'
-    , 'JAVA_SOURCE'
-    , 'REFRESH_GROUP'
-    , 'PROCOBJ'
-    );
   l_base_name constant varchar2(1000 byte) := base_name(p_file_path);
 begin
   -- Is it a R__*.sql file?
   if substr(l_base_name, 1, 3) = 'R__' and substr(l_base_name, -4) = '.sql'
   then 
-    for i_object_type_idx in l_object_types.first .. l_object_types.last
+    for i_object_type_idx in g_md_object_types.first .. g_md_object_types.last
     loop
-      if instr(l_base_name, '.' || l_object_types(i_object_type_idx) || '.') > 0
+      if instr(l_base_name, '.' || g_md_object_types(i_object_type_idx) || '.') > 0
       then
         return case
-                 when l_object_types(i_object_type_idx) in
+                 when g_md_object_types(i_object_type_idx) in
                       ( 'TYPE_SPEC'
                       , 'FUNCTION'
                       , 'PACKAGE_SPEC'
@@ -266,6 +332,39 @@ begin
   -- a//b => a/b, a/ => a, /a => a
   return trim('/' from replace(p_file_path, '//', '/'));
 end normalize_file_name;
+
+function do_not_install_file
+( p_github_access_handle in github_access_handle_t
+, p_file_path in varchar2 -- The repository file path, for reference only
+)
+return boolean
+deterministic
+is
+begin
+  if p_github_access_handle = 'paulissoft/oracle-tools'
+  then
+    -- files mentioned in ../../adb-install-bootstrap.sql
+    return
+      case p_file_path
+        when 'db/app/admin/src/incr/V20251021102600__create_GITHUB_INSTALLED_PROJECTS.sql'
+        then true
+        when 'db/app/admin/src/incr/V20251021102600__create_GITHUB_INSTALLED_PROJECTS.sql'
+        then true
+        when 'db/app/admin/src/incr/V20251021103000__create_GITHUB_INSTALLED_VERSIONS.sql'
+        then true
+        when 'db/app/admin/src/incr/V20251021103400__create_GITHUB_INSTALLED_VERSIONS_OBJECTS.sql'
+        then true
+        when 'db/app/admin/src/full/R__09.PACKAGE_SPEC.ADMIN_INSTALL_PKG.sql'
+        then true
+        when 'db/app/admin/src/full/R__10.VIEW.GITHUB_INSTALLED_VERSIONS_V.sql'
+        then true
+        when 'db/app/admin/src/full/R__14.PACKAGE_BODY.ADMIN_INSTALL_PKG.sql'
+        then true
+        else false
+      end;
+  end if;
+  return false;
+end do_not_install_file;
 
 procedure process_sql
 ( p_github_access_handle in github_access_handle_t
@@ -327,7 +426,7 @@ end;
     );
   end process_sql;
 begin
-  if p_file_path like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
+  if do_not_install_file(p_github_access_handle, p_file_path)
   then
     return;
   end if;
@@ -376,7 +475,7 @@ procedure install_file
 )
 is
 begin
-  if p_file_path like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
+  if do_not_install_file(p_github_access_handle, p_file_path)
   then
     return;
   end if;
@@ -439,7 +538,7 @@ is
   pragma autonomous_transaction;
 
   -- Only issue DML for PATO generated files
-  l_github_installed_dml constant boolean :=
+  l_github_installed_dml boolean :=
     p_github_access_handle is not null and
     p_schema is not null and
     p_file_path is not null and
@@ -454,10 +553,11 @@ is
   l_github_installed_versions_id github_installed_versions.id%type;
   l_base_name constant github_installed_versions.base_name%type := base_name(p_file_path);
   l_error_msg github_installed_versions.error_msg%type;
-  l_start_ddl_time date;
-  l_end_ddl_time date;
+  l_owner all_objects.owner%type := upper(p_schema);
+  l_object_type all_objects.object_type%type;
+  l_object_name all_objects.object_name%type;
 begin
-  if p_file_path like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
+  if do_not_install_file(p_github_access_handle, p_file_path)
   then
     return;
   end if;
@@ -480,8 +580,6 @@ begin
   then
     if l_github_installed_dml
     then
-      l_start_ddl_time := sysdate;
-
       -- Update GITHUB tables
 
       -- insert/select github_installed_projects first
@@ -505,19 +603,80 @@ begin
       and     p.owner in (p_schema, upper(p_schema));
 
       -- github_installed_versions next
+
+      -- Is the last creation of this exact file (and checksum and # bytes) there?
+      select  max(v.id)
+      into    l_github_installed_versions_id
+      from    github_installed_versions_v v
+      where   v.github_installed_projects_id = l_github_installed_projects_id
+      and     v.base_name = l_base_name      
+      and     v.installed_rank = -1 /* last date_created */
+      and     v.checksum = p_file_id
+      and     v.bytes = p_bytes
+      and     v.error_msg is null;
+
+      --/*DBUG
+      dbms_output.put_line
+      ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
+        ' Previous installed version id: ' || l_github_installed_versions_id
+      );
+      --/*DBUG*/
+
+      if l_github_installed_versions_id is not null
+      then
+        -- check whether all the stored objects are still there with the same value for CREATED
+        <<check_difference_loop>>
+        for r in
+        ( select  o.owner
+          ,       o.object_type
+          ,       o.object_name
+          ,       o.created
+          from    github_installed_versions_objects o
+          where   o.github_installed_versions_id = l_github_installed_versions_id
+          minus
+          select  o.owner
+          ,       o.object_type
+          ,       o.object_name
+          ,       o.created
+          from    all_objects o
+        )
+        loop
+          --/*DBUG
+          dbms_output.put_line
+          ( utl_lms.format_message
+            ( '[%s] Must re-install due to %s "%s"."%s" with creation date "%s"'
+            , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+            , r.object_type
+            , r.owner
+            , r.object_name
+            , to_char(r.created, 'yyyy-mm-dd hh24:mi:ss')
+            )
+          );
+          --/*DBUG*/
+          
+          -- there is at least one difference: stop and recreate again
+          l_github_installed_versions_id := null;
+          exit check_difference_loop;
+        end loop check_difference_loop;
+
+        l_github_installed_dml := l_github_installed_versions_id is null;
+      end if; -- if l_github_installed_versions_id is not null
     end if; -- if l_github_installed_dml
 
     begin
-      install_file
-      ( p_github_access_handle => p_github_access_handle
-      , p_schema => p_schema
-      , p_repo => l_github_access_rec.repo
-      , p_file_path => p_file_path
-      , p_branch_name => l_github_access_rec.branch_name
-      , p_tag_name => l_github_access_rec.tag_name
-      , p_commit_id => l_github_access_rec.commit_id
-      , p_stop_on_error => g_options_rec.stop_on_error
-      );
+      if l_github_installed_versions_id is null
+      then
+        install_file
+        ( p_github_access_handle => p_github_access_handle
+        , p_schema => p_schema
+        , p_repo => l_github_access_rec.repo
+        , p_file_path => p_file_path
+        , p_branch_name => l_github_access_rec.branch_name
+        , p_tag_name => l_github_access_rec.tag_name
+        , p_commit_id => l_github_access_rec.commit_id
+        , p_stop_on_error => g_options_rec.stop_on_error
+        );
+      end if;
     exception
       when others
       then
@@ -544,11 +703,11 @@ begin
         raise;
     end;
 
-    -- everything went fine
+    -- everything went fine and there is something to insert
     if l_github_installed_dml
     then
-      l_end_ddl_time := sysdate;
-
+      if l_github_installed_versions_id is not null then raise program_error; end if;
+      
       insert into github_installed_versions
       ( github_installed_projects_id
       , base_name
@@ -559,39 +718,46 @@ begin
       values
       ( l_github_installed_projects_id
       , l_base_name
-      , l_end_ddl_time
+      , sysdate
       , p_file_id
       , p_bytes
       )
       returning id into l_github_installed_versions_id;
 
+      -- determine object
+      parse_repeatable_file
+      ( p_file_path => p_file_path
+      , p_owner => l_owner
+      , p_object_type => l_object_type
+      , p_object_name => l_object_name
+      );
+
       -- github_installed_versions_objects next:
-      -- add the objects created between l_start_ddl_time and l_end_ddl_time for this schema
+      -- add the object based on the file name
       insert into github_installed_versions_objects
       ( github_installed_versions_id
+      , owner
       , object_type
       , object_name
-      , last_ddl_time
+      , created
       )
         select  l_github_installed_versions_id as github_installed_versions_id
+        ,       o.owner
         ,       o.object_type
         ,       o.object_name
-        ,       o.last_ddl_time
+        ,       o.created
         from    all_objects o
-        where   o.owner in (p_schema, upper(p_schema))
-        and     o.last_ddl_time between l_start_ddl_time and l_end_ddl_time;
-
-      commit;
+        where   o.owner = l_owner
+        and     o.object_type = l_object_type
+        and     o.object_name = l_object_name;
     end if; -- if l_github_installed_dml
   end if;
 
+  commit;
 exception
   when others
   then
-    if l_github_installed_dml
-    then
-      commit;
-    end if;
+    commit;
     raise;
 end process_file;
 
@@ -649,7 +815,6 @@ begin
                   or
                   name like '%/V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
                 )
-        and     name not like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
         order by
                 file_type
         ,       name        

@@ -44,6 +44,26 @@
 <colAssociation fkAssociation="7B084565-5BC1-8C07-1F93-985729107F3B" referredColumn="FDC4CBA0-70F6-B7C7-9252-33DAA4DB5522"/>
 </associations>
 </Column>
+<Column name="OWNER" id="001FAEB2-FEDE-268E-98AA-FF1FA5207E07">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 12:43:21 UTC</createdTime>
+<comment><![CDATA[ALL_OBJECTS.OWNER]]></comment>
+<commentInRDBMS><![CDATA[ALL_OBJECTS.OWNER]]></commentInRDBMS>
+<ownerDesignName>admin</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>128</dataTypeSize>
+<ownDataTypeParameters>128,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_OBJECTS_OWNER</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
 <Column name="OBJECT_TYPE" id="529ED3C0-7C0F-4F30-1830-E68BD01BA75C">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2025-10-21 08:13:25 UTC</createdTime>
@@ -84,11 +104,11 @@
 <property name="copyCommentsInRDBMS" value="1"/>
 </propertyMap>
 </Column>
-<Column name="LAST_DDL_TIME" id="63A6B6B9-672D-1C9A-E199-AA193AE0A518">
+<Column name="CREATED" id="63A6B6B9-672D-1C9A-E199-AA193AE0A518">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2025-10-21 08:14:10 UTC</createdTime>
 <comment><![CDATA[ALL_OBJECTS.LAST_DDL_TIME]]></comment>
-<commentInRDBMS><![CDATA[ALL_OBJECTS.LAST_DDL_TIME]]></commentInRDBMS>
+<commentInRDBMS><![CDATA[ALL_OBJECTS.CREATED]]></commentInRDBMS>
 <ownerDesignName>admin</ownerDesignName>
 <useDomainConstraints>false</useDomainConstraints>
 <use>1</use>
@@ -97,7 +117,7 @@
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
-<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_OBJECTS_LAST_DDL_TIME</notNullConstraintName>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_OBJECTS_CREATED</notNullConstraintName>
 <propertyMap>
 <property name="copyComments" value="1"/>
 <property name="copyCommentsInRDBMS" value="1"/>
@@ -118,6 +138,7 @@
 </propertyMap>
 <indexColumnUsage>
 <colUsage columnID="D98331C9-39EF-BDBB-E5EB-A6E8801B841C"/>
+<colUsage columnID="001FAEB2-FEDE-268E-98AA-FF1FA5207E07"/>
 <colUsage columnID="529ED3C0-7C0F-4F30-1830-E68BD01BA75C"/>
 <colUsage columnID="96ED02AD-ABF2-7408-0166-61B1A906594C"/>
 </indexColumnUsage>
