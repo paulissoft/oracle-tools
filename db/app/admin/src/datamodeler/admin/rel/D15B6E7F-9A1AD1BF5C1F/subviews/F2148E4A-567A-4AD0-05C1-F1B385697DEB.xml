@@ -1,5 +1,5 @@
 <?xml version = '1.0' encoding = 'UTF-8'?>
-<Diagram class="oracle.dbtools.crest.swingui.relational.DPVRelational" name="Relational_1" id="F2148E4A-567A-4AD0-05C1-F1B385697DEB">
+<Diagram class="oracle.dbtools.crest.swingui.relational.DPVRelational" name="ADMIN" id="F2148E4A-567A-4AD0-05C1-F1B385697DEB">
 <createdBy>gpaulissen</createdBy>
 <modifiedBy>gpaulissen</modifiedBy>
 <createdTime>2025-10-21 07:40:28 UTC</createdTime>
@@ -13,4 +13,38 @@
 <diagramColor>-1</diagramColor>
 <display>false</display>
 <notation>1</notation>
+<objectViews>
+<OView class="oracle.dbtools.crest.swingui.relational.TVTable" oid="0146E4B6-01D5-4B33-10E7-B444CF7F84F8" otype="Table" vid="4B0F4611-4686-0A45-0C7A-24FF443509B7">
+<hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
+<bounds x="132" y="45" width="370" height="109"/>
+</OView>
+<OView class="oracle.dbtools.crest.swingui.relational.TVTable" oid="7320516D-B227-5BDC-F782-A669FC271FAE" otype="Table" vid="4B6866C2-BBAE-2606-D6E8-5FE9E96B9610">
+<hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
+<bounds x="766" y="381" width="549" height="115"/>
+</OView>
+<OView class="oracle.dbtools.crest.swingui.relational.TVTable" oid="73A05CAF-3886-C92C-8006-14C1D69B982C" otype="Table" vid="F051D14C-C7DE-ED12-D8BE-9A8AEE09CDDA">
+<hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
+<bounds x="791" y="59" width="503" height="167"/>
+</OView>
+</objectViews>
+<connectors>
+<Connector class="oracle.dbtools.crest.swingui.relational.TVFKRelation" oid="7B084565-5BC1-8C07-1F93-985729107F3B" otype="FKIndexAssociation" vid_source="F051D14C-C7DE-ED12-D8BE-9A8AEE09CDDA" vid_target="4B6866C2-BBAE-2606-D6E8-5FE9E96B9610">
+<hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
+<backgroundColor>-16777216</backgroundColor>
+<lineWidth>1</lineWidth>
+<points>
+<point x="1057" y="226"/>
+<point x="1057" y="381"/>
+</points>
+</Connector>
+<Connector class="oracle.dbtools.crest.swingui.relational.TVFKRelation" oid="FC3439A0-75C1-9A74-34DA-3DEC18A08EB3" otype="FKIndexAssociation" vid_source="4B0F4611-4686-0A45-0C7A-24FF443509B7" vid_target="F051D14C-C7DE-ED12-D8BE-9A8AEE09CDDA">
+<hideElementsInCurrentOnly>false</hideElementsInCurrentOnly>
+<backgroundColor>-16777216</backgroundColor>
+<lineWidth>1</lineWidth>
+<points>
+<point x="502" y="106"/>
+<point x="791" y="106"/>
+</points>
+</Connector>
+</connectors>
 </Diagram>

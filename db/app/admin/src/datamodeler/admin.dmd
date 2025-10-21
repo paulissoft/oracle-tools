@@ -5,4 +5,9 @@
 <ownerDesignName>admin</ownerDesignName>
 <capitalNames>false</capitalNames>
 <designId>36AD9316-1AC5-9874-564C-2C1D72885D82</designId>
+<usedDesignStorageDescriptors>
+<designDescr class="oracle.dbtools.crest.model.design.Design$DesignStorageDesc" id="E93B9996-F5C9-9C20-9C78-A36547575717">
+<designStoragePath>/Users/gpaulissen/dev/oracle-tools/db/app/admin/src/datamodeler</designStoragePath>
+</designDescr>
+</usedDesignStorageDescriptors>
 </OSDM_Design>
