@@ -171,6 +171,23 @@ begin
   return substr(p_file_path, 1 + nvl(length(directory_name(p_file_path)), 0));
 end base_name;
 
+function is_flyway_file
+( p_file_path in varchar2
+)
+return boolean
+deterministic
+is
+begin
+  return p_file_path like 'R\_\_%.sql' escape '\' -- Flyway repeatable scripts
+         or
+         p_file_path like '%/R\_\_%.sql' escape '\' -- Flyway repeatable scripts
+         or
+         p_file_path like 'V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
+         or
+         p_file_path like '%/V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
+  ;
+end is_flyway_file;
+
 function sql_statement_terminator
 ( p_file_path in varchar2
 )
@@ -232,6 +249,9 @@ begin
                end;
       end if;  
     end loop;
+  elsif is_flyway_file(l_base_name)
+  then
+    return '/'; -- incremental scripts should use PL/SQL blocks, not just DML statements ending with a semi-colon
   end if;
   return null;
 end sql_statement_terminator;
@@ -312,34 +332,30 @@ begin
     return;
   end if;
 
-  PRAGMA INLINE(sql_statement_terminator, 'YES');
-  if sql_statement_terminator(p_file_path) = ';'
+  -- special handling
+  PRAGMA INLINE (split, 'YES');
+  split
+  ( p_content
+  , ';' || chr(10) -- line ends with ;
+  , l_statement_tab
+  );
+  if l_statement_tab.count > 0
   then
-    -- special handling
-    PRAGMA INLINE (split, 'YES');
-    split
-    ( p_content
-    , ';' || chr(10) -- line ends with ;
-    , l_statement_tab
-    );
-    if l_statement_tab.count > 0
-    then
-      for i_statement_idx in l_statement_tab.first .. l_statement_tab.last
-      loop
-        if l_statement_tab(i_statement_idx) is null or
-           l_statement_tab(i_statement_idx) = chr(10)          
-        then
-          null;
-        else
-          process_sql
-          ( p_content => to_clob(l_statement_tab(i_statement_idx))
-          , p_statement_nr => i_statement_idx
-          );
-        end if;
-      end loop;
-      
-      return; -- finished
-    end if;
+    for i_statement_idx in l_statement_tab.first .. l_statement_tab.last
+    loop
+      if l_statement_tab(i_statement_idx) is null or
+         l_statement_tab(i_statement_idx) = chr(10)          
+      then
+        null;
+      else
+        process_sql
+        ( p_content => to_clob(l_statement_tab(i_statement_idx))
+        , p_statement_nr => i_statement_idx
+        );
+      end if;
+    end loop;
+    
+    return; -- finished
   end if;
   
   -- normal handling
@@ -347,6 +363,70 @@ begin
   ( p_content => p_content
   );
 end process_sql;
+
+procedure install_file
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar2
+, p_repo in clob
+, p_file_path in varchar2
+, p_branch_name in varchar2
+, p_tag_name in varchar2
+, p_commit_id in varchar2
+, p_stop_on_error in boolean
+)
+is
+begin
+  if p_file_path like '%.PACKAGE%.' || $$PLSQL_UNIT || '.sql' -- never process this package (body) by itself
+  then
+    return;
+  end if;
+  
+  if sql_statement_terminator(p_file_path) = ';'
+  then
+    process_sql
+    ( p_github_access_handle => p_github_access_handle
+    , p_schema => p_schema
+    , p_file_path => p_file_path
+    , p_content => dbms_cloud_repo.get_file
+                   ( repo => p_repo
+                   , file_path => p_file_path
+                   , branch_name => p_branch_name
+                   , tag_name => p_tag_name
+                   , commit_id => p_commit_id
+                   )
+    );  
+  else
+    execute immediate q'[
+declare
+  l_target_schema constant all_objects.owner%type := upper(:b1);
+begin
+  if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
+  then
+    execute immediate 'alter session set current_schema = ' || l_target_schema;
+    if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
+    then
+      raise program_error;
+    end if;
+  end if;
+  dbms_cloud_repo.install_file
+  ( repo => :b2
+  , file_path => :b3
+  , branch_name => :b4
+  , tag_name => :b5
+  , commit_id => :b6
+  , stop_on_error => :b7
+  );
+end;
+]'
+        using in p_schema
+               , p_repo
+               , p_file_path
+               , p_branch_name
+               , p_tag_name
+               , p_commit_id
+               , p_stop_on_error;
+ end if;               
+end install_file;               
 
 procedure process_file
 ( p_github_access_handle in github_access_handle_t
@@ -360,14 +440,20 @@ is
 
   -- Only issue DML for PATO generated files
   l_github_installed_dml constant boolean :=
-    not(g_options_rec.dry_run) and sql_statement_terminator(p_file_path) is not null;
+    p_github_access_handle is not null and
+    p_schema is not null and
+    p_file_path is not null and
+    p_file_id is not null and
+    p_bytes is not null and
+    not(g_options_rec.dry_run) and
+    is_flyway_file(p_file_path);
 
   l_github_access_rec github_access_rec_t;
   l_github_installed_projects_id github_installed_projects.id%type;
   l_directory_name constant github_installed_projects.directory_name%type := directory_name(p_file_path);
   l_github_installed_versions_id github_installed_versions.id%type;
   l_base_name constant github_installed_versions.base_name%type := base_name(p_file_path);
-  l_success github_installed_versions.success%type := 1;
+  l_error_msg github_installed_versions.error_msg%type;
   l_start_ddl_time date;
   l_end_ddl_time date;
 begin
@@ -422,47 +508,29 @@ begin
     end if; -- if l_github_installed_dml
 
     begin
-      execute immediate q'[
-declare
-  l_target_schema constant all_objects.owner%type := upper(:b1);
-begin
-  if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
-  then
-    execute immediate 'alter session set current_schema = ' || l_target_schema;
-    if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
-    then
-      raise program_error;
-    end if;
-  end if;
-  dbms_cloud_repo.install_file
-  ( repo => :b2
-  , file_path => :b3
-  , branch_name => :b4
-  , tag_name => :b5
-  , commit_id => :b6
-  , stop_on_error => (:b7 = 1)
-  );
-end;
-]'
-        using in p_schema
-               , l_github_access_rec.repo
-               , p_file_path
-               , l_github_access_rec.branch_name
-               , l_github_access_rec.tag_name
-               , l_github_access_rec.commit_id
-               , case g_options_rec.stop_on_error when true then 1 else 0 end;
+      install_file
+      ( p_github_access_handle => p_github_access_handle
+      , p_schema => p_schema
+      , p_repo => l_github_access_rec.repo
+      , p_file_path => p_file_path
+      , p_branch_name => l_github_access_rec.branch_name
+      , p_tag_name => l_github_access_rec.tag_name
+      , p_commit_id => l_github_access_rec.commit_id
+      , p_stop_on_error => g_options_rec.stop_on_error
+      );
     exception
       when others
       then
         if l_github_installed_dml
         then
+          l_error_msg := sqlerrm;
           insert into github_installed_versions
           ( github_installed_projects_id
           , base_name
           , date_created
           , checksum
           , bytes
-          , success
+          , error_msg
           )
           values
           ( l_github_installed_projects_id
@@ -470,7 +538,7 @@ end;
           , sysdate
           , p_file_id
           , p_bytes
-          , 0
+          , l_error_msg
           );
         end if; -- if l_github_installed_dml
         raise;
@@ -487,7 +555,6 @@ end;
       , date_created
       , checksum
       , bytes
-      , success
       )
       values
       ( l_github_installed_projects_id
@@ -495,7 +562,6 @@ end;
       , l_end_ddl_time
       , p_file_id
       , p_bytes
-      , 1
       )
       returning id into l_github_installed_versions_id;
 

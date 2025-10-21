@@ -8,7 +8,7 @@ select  V.ID
 ,       V.DATE_CREATED
 ,       V.CHECKSUM
 ,       V.BYTES
-,       V.SUCCESS
+,       V.ERROR_MSG
         /* -1 for INSTALLED_RANK is the latest installed version per project id and base name, then -2, etcetera */
 ,       -1 * (ROW_NUMBER() OVER (PARTITION BY V.GITHUB_INSTALLED_PROJECTS_ID, V.BASE_NAME ORDER BY V.DATE_CREATED DESC)) AS INSTALLED_RANK
 FROM    GITHUB_INSTALLED_VERSIONS V;
