@@ -616,10 +616,13 @@ begin
       and     v.error_msg is null;
 
       --/*DBUG
-      dbms_output.put_line
-      ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
-        ' Previous installed version id: ' || l_github_installed_versions_id
-      );
+      if l_github_installed_versions_id is not null
+      then
+        dbms_output.put_line
+        ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
+          ' Previous installed version id: ' || l_github_installed_versions_id
+        );
+      end if;
       --/*DBUG*/
 
       if l_github_installed_versions_id is not null

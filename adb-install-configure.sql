@@ -25,6 +25,7 @@ declare
       );
       l_github_access_handle := null;
     end if;
+    execute immediate 'alter session set current_schema = ADMIN';
   end;
 begin
   admin_install_pkg.set_github_access
