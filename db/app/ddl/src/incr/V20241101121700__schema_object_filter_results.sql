@@ -1,3 +1,5 @@
+begin
+  execute immediate q'<
 create table schema_object_filter_results
 ( schema_object_filter_id integer
   constraint schema_object_filter_results$nnc$schema_object_filter_id not null
@@ -20,16 +22,24 @@ create table schema_object_filter_results
   foreign key (schema_object_filter_id)
   references schema_object_filters(id) on delete cascade
 )
-;
+>';
 
-alter table schema_object_filter_results nologging;
+  execute immediate q'<
+alter table schema_object_filter_results nologging
+>';
 
 -- foreign key index schema_object_filter_results$fk$1
+  execute immediate q'<
 create index schema_object_filter_results$idx$1
-on schema_object_filter_results(schema_object_id);
+on schema_object_filter_results(schema_object_id)
+>';
 
 -- Foreign key index schema_object_filter_results$fk$2 not necessary
 -- since schema_object_filter_id is first part of primary key index.
 
+  execute immediate q'<
 comment on table schema_object_filter_results is
-    'The schema object filter results, needed because the function matches_schema_object_details is too expensive.';
+    'The schema object filter results, needed because the function matches_schema_object_details is too expensive.'
+>';
+end;
+/

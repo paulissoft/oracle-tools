@@ -1,3 +1,5 @@
+begin
+  execute immediate q'<
 create table generated_ddl_statement_chunks
 ( generated_ddl_id integer -- Primary key #1
   constraint generated_ddl_statement_chunks$nnc$generated_ddl_id not null
@@ -16,11 +18,17 @@ create table generated_ddl_statement_chunks
   foreign key (generated_ddl_id, ddl#)
   references generated_ddl_statements(generated_ddl_id, ddl#) on delete cascade
 )
-;
+>';
 
-alter table generated_ddl_statement_chunks nologging;
+  execute immediate q'<
+alter table generated_ddl_statement_chunks nologging
+>';
 
 -- no need to create foreign key index generated_ddl_statement_chunks$fk$1 since the primary key starts with those columns
 
+  execute immediate q'<
 comment on table generated_ddl_statement_chunks is
-    'The generated DDL statement chunks.';
+    'The generated DDL statement chunks.'
+>';
+end;
+/

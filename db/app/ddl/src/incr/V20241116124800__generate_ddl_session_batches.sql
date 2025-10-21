@@ -1,3 +1,5 @@
+begin
+  execute immediate q'<
 create table generate_ddl_session_batches
 ( session_id number
   constraint generate_ddl_session_batches$nnc$session_id not null -- Primary key #1
@@ -23,11 +25,16 @@ create table generate_ddl_session_batches
   foreign key (session_id)
   references generate_ddl_sessions(session_id) on delete cascade
 )
-;
+>';
 
-alter table generate_ddl_session_batches nologging;
+  execute immediate q'<
+alter table generate_ddl_session_batches nologging
+>';
 
 -- foreign key index generate_ddl_session_batches$fk$1 not necessary
-
+  execute immediate q'<
 comment on table generate_ddl_session_batches is
-    'DDL is generated in batches.';
+    'DDL is generated in batches.'
+>';
+end;
+/

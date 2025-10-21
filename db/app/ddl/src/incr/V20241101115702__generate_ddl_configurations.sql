@@ -1,3 +1,5 @@
+begin
+  execute immediate q'<
 create table generate_ddl_configurations
 ( id integer generated always as identity
   constraint generate_ddl_configurations$nnc$id not null
@@ -17,9 +19,15 @@ create table generate_ddl_configurations
 , constraint generate_ddl_configurations$ck$1
   check (substr(transform_param_list, 1, 1) = ',')
 )
-;
+>';
 
-alter table generate_ddl_configurations nologging;
+  execute immediate q'<
+alter table generate_ddl_configurations nologging
+>';
 
+  execute immediate q'<
 comment on table generate_ddl_configurations is
-    'A DDL generate configuration including DBMS_METADATA tansformation parameters, database and schema version. ';
+    'A DDL generate configuration including DBMS_METADATA tansformation parameters, database and schema version. '
+>';
+end;
+/
