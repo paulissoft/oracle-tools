@@ -14,7 +14,7 @@
 <property name="applyStandards" value="1"/>
 <property name="copyComments" value="1"/>
 <property name="copyCommentsInRDBMS" value="1"/>
-<property name="createIndexOnFK" value="1"/>
+<property name="createIndexOnFK" value="0"/>
 <property name="setAutoIncrement" value="1"/>
 <property name="setColumnsOrder" value="1"/>
 <property name="setSecurityOptions" value="1"/>

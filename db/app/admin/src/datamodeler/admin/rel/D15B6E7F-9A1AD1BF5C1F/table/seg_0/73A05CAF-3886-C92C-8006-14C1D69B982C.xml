@@ -18,7 +18,7 @@
 <property name="applyStandards" value="1"/>
 <property name="copyComments" value="1"/>
 <property name="copyCommentsInRDBMS" value="1"/>
-<property name="createIndexOnFK" value="1"/>
+<property name="createIndexOnFK" value="0"/>
 <property name="setAutoIncrement" value="1"/>
 <property name="setColumnsOrder" value="1"/>
 <property name="setSecurityOptions" value="1"/>
@@ -64,7 +64,7 @@
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
-<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_PROJECT_ID</notNullConstraintName>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_GITHUB_INSTALLED_PROJECTS_ID</notNullConstraintName>
 <propertyMap>
 <property name="copyComments" value="1"/>
 <property name="copyCommentsInRDBMS" value="1"/>
@@ -159,23 +159,23 @@
 <property name="copyCommentsInRDBMS" value="1"/>
 </propertyMap>
 </Column>
-<Column name="SUCCESS" id="5617B55A-C045-D270-2598-7E5A95AA8944">
+<Column name="ERROR_MSG" id="5617B55A-C045-D270-2598-7E5A95AA8944">
 <sourceConnName>admin@knpv_dev</sourceConnName>
 <sourceObjSchema>github_installation_history</sourceObjSchema>
 <sourceObjName>success</sourceObjName>
 <createdBy>gpaulissen</createdBy>
 <createdTime>2025-10-21 07:42:59 UTC</createdTime>
+<comment><![CDATA[The SQLERRM message if there is an error.]]></comment>
+<commentInRDBMS><![CDATA[The SQLERRM message if there is an error.]]></commentInRDBMS>
 <ownerDesignName>admin</ownerDesignName>
 <nameHasQuotes>true</nameHasQuotes>
-<constraintName>CK_GITHUB_INSTALLED_VERSIONS_SUCCESS</constraintName>
+<constraintName>CK_GITHUB_INSTALLED_VERSIONS_ERROR_MSG</constraintName>
+<nullsAllowed>true</nullsAllowed>
 <useDomainConstraints>false</useDomainConstraints>
 <use>1</use>
-<logicalDatatype>LOGDT019</logicalDatatype>
-<dataTypePrecision>1</dataTypePrecision>
-<checkConstraint>
-<implementationDef dbType="Oracle Database 12cR2" definition="&quot;SUCCESS&quot; IN (0, 1)"/>
-</checkConstraint>
-<ownDataTypeParameters>,1,</ownDataTypeParameters>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>4000 BYTE</dataTypeSize>
+<ownDataTypeParameters>4000 BYTE,,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
