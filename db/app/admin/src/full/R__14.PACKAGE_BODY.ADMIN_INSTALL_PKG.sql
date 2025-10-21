@@ -73,6 +73,8 @@ g_root_project_rec project_rec_t;
 
 g_first_error boolean := true;
 
+g_clob clob := null;
+
 -- ROUTINES
 
 function dbms_lob_substr
@@ -381,9 +383,13 @@ procedure process_sql
 is
   l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_sql (1)';
   
-  l_base_name constant varchar2(48 char) := substr(base_name(p_file_path), 1, 48);
-  
+  l_base_name constant varchar2(48 char) := substr(base_name(p_file_path), 1, 48);  
   l_statement_tab dbms_sql.varchar2a;
+  l_owner all_objects.owner%type := upper(p_schema);
+  l_object_type all_objects.object_type%type;
+  l_object_name all_objects.object_name%type;
+
+  l_delimiter constant varchar2(2) := ';' || chr(10);
 
   procedure process_sql
   ( p_content in clob -- The content from the repository file
@@ -455,24 +461,70 @@ begin
   PRAGMA INLINE (split, 'YES');
   split
   ( p_content
-  , ';' || chr(10) -- line ends with ;
+  , l_delimiter -- line ends with ;
   , l_statement_tab
   );
+
   if l_statement_tab.count > 0
   then
-    for i_statement_idx in l_statement_tab.first .. l_statement_tab.last
-    loop
-      if l_statement_tab(i_statement_idx) is null or
-         l_statement_tab(i_statement_idx) = chr(10)          
-      then
-        null;
-      else
-        process_sql
-        ( p_content => to_clob(l_statement_tab(i_statement_idx))
-        , p_statement_nr => i_statement_idx
+    -- Script db/app/ui/src/full/R__10.VIEW.UI_APEX_MESSAGES_V.sql contains a
+    -- 1) CREATE OR REPLACE VIEW definition ending with ';'
+    -- 2) CREATE OR REPLACE TRIGGER "UI_APEX_MESSAGES_TRG" ending with '/'
+
+    -- determine object
+    parse_repeatable_file
+    ( p_file_path => p_file_path
+    , p_owner => l_owner
+    , p_object_type => l_object_type
+    , p_object_name => l_object_name
+    );
+
+    if l_object_type = 'VIEW' and l_statement_tab.count > 2
+    then
+      dbms_lob.trim(g_clob, 0);
+
+      -- l_statement_tab.first is CREATE OR REPLACE VIEW
+      -- l_statement_tab.first + 1 is CREATE OR REPLACE TRIGGER
+      for i_statement_idx in l_statement_tab.first + 1 .. l_statement_tab.last
+      loop
+        dbms_lob.writeappend
+        ( lob_loc => g_clob
+        , amount => length(l_statement_tab(i_statement_idx))
+        , buffer => l_statement_tab(i_statement_idx)
         );
-      end if;
-    end loop;
+        if i_statement_idx < l_statement_tab.last
+        then
+          dbms_lob.writeappend
+          ( lob_loc => g_clob
+          , amount => length(l_delimiter)
+          , buffer => l_delimiter
+          );
+        end if;
+      end loop;
+      
+      process_sql
+      ( p_content => to_clob(l_statement_tab(l_statement_tab.first))
+      , p_statement_nr => l_statement_tab.first
+      );
+      process_sql
+      ( p_content => g_clob
+      , p_statement_nr => l_statement_tab.first + 1
+      );
+    else
+      for i_statement_idx in l_statement_tab.first .. l_statement_tab.last
+      loop
+        if l_statement_tab(i_statement_idx) is null or
+           l_statement_tab(i_statement_idx) = chr(10)          
+        then
+          null;
+        else
+          process_sql
+          ( p_content => to_clob(l_statement_tab(i_statement_idx))
+          , p_statement_nr => i_statement_idx
+          );
+        end if;
+      end loop;
+    end if;
   else
     -- normal handling
     process_sql
@@ -499,7 +551,7 @@ procedure install_file
 , p_stop_on_error in boolean
 )
 is
-  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_file (1)';
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.install_file';
 begin
   if do_not_install_file(p_github_access_handle, p_file_path)
   then
@@ -525,30 +577,8 @@ begin
   else
     execute immediate q'[
 declare
-  l_target_schema all_objects.owner%type;
-  l_repo clob;
-  l_file_path varchar2(4000 byte);
-  l_branch_name varchar2(128 char);
-  l_tag_name varchar2(128 char);
-  l_commit_id varchar2(40 char);
-  l_stop_on_error boolean;
+  l_target_schema constant all_objects.owner%type := upper(:b1);
 begin
-  admin.admin_install_pkg.dbug_print('#1');
-  l_target_schema := upper(:b1);
-  admin.admin_install_pkg.dbug_print('#2');
-  l_repo := :b2;
-  admin.admin_install_pkg.dbug_print('#3');
-  l_file_path := :b3;
-  admin.admin_install_pkg.dbug_print('#4');
-  l_branch_name := :b4;
-  admin.admin_install_pkg.dbug_print('#5');
-  l_tag_name := :b5;
-  admin.admin_install_pkg.dbug_print('#6');
-  l_commit_id := :b6;
-  admin.admin_install_pkg.dbug_print('#7');
-  l_stop_on_error := :b7;
-  admin.admin_install_pkg.dbug_print('#8');
-  
   if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
   then
     execute immediate 'alter session set current_schema = ' || l_target_schema;
@@ -556,20 +586,15 @@ begin
     then
       raise_application_error(-20000, 'Could not switch current user from "' || sys_context('USERENV', 'CURRENT_SCHEMA') || '" to "' || l_target_schema || '"');
     end if;
-  end if;
-  
-  admin.admin_install_pkg.dbug_print('#9');
-  
+  end if;  
   dbms_cloud_repo.install_file
-  ( repo => l_repo
-  , file_path => l_file_path
-  , branch_name => l_branch_name
-  , tag_name => l_tag_name
-  , commit_id => l_commit_id
-  , stop_on_error => l_stop_on_error
+  ( repo => :b2
+  , file_path => :b3
+  , branch_name => :b4
+  , tag_name => :b5
+  , commit_id => :b6
+  , stop_on_error => :b7
   );
-  
-  admin.admin_install_pkg.dbug_print('#10');
 end;
 ]'
         using in p_schema
@@ -599,7 +624,7 @@ procedure process_file
 is
   pragma autonomous_transaction;
 
-  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_file (2)';
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_file (1)';
 
   -- Only issue DML for PATO generated files
   l_github_installed_dml boolean :=
@@ -873,7 +898,7 @@ procedure process_project
 , p_project_rec in project_rec_t
 )
 is
-  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_project';
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_project (1)';
   
   l_github_access_rec github_access_rec_t;
 begin
@@ -1172,7 +1197,7 @@ procedure process_project
 , p_parent_path in varchar2 default null -- The parent repository file path
 )
 is
-  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_project';
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_project (2)';
   l_project_rec project_rec_t;
 begin
   dbug_enter(l_module_name);
@@ -1231,6 +1256,8 @@ exception
     raise;
 end process_root_project;
 
+begin
+  dbms_lob.createtemporary(g_clob, true);
 end;
 /
 
