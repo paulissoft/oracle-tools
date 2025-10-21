@@ -25,8 +25,8 @@ type project_rec_t is record
 
 type github_access_tab_t is table of github_access_rec_t index by github_access_handle_t;
 
--- key is base name, value is full name
-type callbacks_tab_t is table of varchar2(1000 byte) index by varchar2(100 byte);
+-- key is base name, value is file contents
+type callbacks_tab_t is table of clob index by varchar2(100 byte);
 
 -- copy from pkg_str_util
 
@@ -34,7 +34,9 @@ subtype t_max_varchar2 is varchar2(32767);
 
 -- CONSTANTS
 
-"paulissoft/oracle-tools" constant varchar2(100 byte) := 'paulissoft/oracle-tools';
+"paulissoft" constant varchar2(100 byte) := 'paulissoft';
+"oracle-tools" constant varchar2(100 byte) := 'oracle-tools';
+"paulissoft/oracle-tools" constant varchar2(100 byte) := "paulissoft" || '/' || "oracle-tools";
 
 c_max_varchar2_size constant pls_integer := 32767;
 
@@ -79,6 +81,10 @@ g_root_project_rec project_rec_t;
 g_first_error boolean := true;
 
 g_clob clob := null;
+
+g_pato_callbacks_tab callbacks_tab_t;
+
+g_empty_callbacks_tab callbacks_tab_t;
 
 -- ROUTINES
 
@@ -379,6 +385,76 @@ begin
   return false;
 end do_not_install_file;
 
+procedure define_callbacks
+( p_github_access_rec in github_access_rec_t
+, p_path in varchar2 -- full path to callbacks directory
+, p_callbacks_tab out nocopy callbacks_tab_t
+)
+is
+begin
+  /*
+  -- gpaulissen@pc-803 oracle-tools % find . -name callbacks -print -exec ls {} \;
+  -- ./db/app/admin/src/callbacks
+  -- ./db/app/cfg/src/callbacks
+  -- afterMigrate.sql  beforeEachMigrate.sql
+  -- ./db/src/callbacks
+  -- afterMigrate.sql  beforeEachMigrate.sql  beforeMigrate.sql  unused-afterEachMigrate.sql  unused-beforeMigrate.sql
+  */
+  for r in
+  ( select  t.name
+    from    table
+            ( dbms_cloud_repo.list_files
+              ( repo => p_github_access_rec.repo
+              , path => p_path
+              , branch_name => p_github_access_rec.branch_name
+              , tag_name => p_github_access_rec.tag_name
+              , commit_id => p_github_access_rec.commit_id
+              )
+            ) t
+    where   t.name like '%/beforeMigrate.sql'
+    or      t.name like '%/beforeEachMigrate.sql'
+    or      t.name like '%/afterEachMigrate.sql'
+    or      t.name like '%/afterMigrate.sql'
+  )
+  loop
+    p_callbacks_tab(base_name(r.name)) :=
+      dbms_cloud_repo.get_file
+      ( repo => p_github_access_rec.repo
+      , file_path => r.name
+      , branch_name => p_github_access_rec.branch_name
+      , tag_name => p_github_access_rec.tag_name
+      , commit_id => p_github_access_rec.commit_id
+      );
+  end loop;
+end define_callbacks;
+
+procedure install_sql
+( p_schema in varchar2
+, p_content in clob
+)
+is
+begin
+  execute immediate q'[
+declare
+  l_target_schema constant all_objects.owner%type := upper(:b1);
+begin
+  if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
+  then
+    execute immediate 'alter session set current_schema = ' || l_target_schema;
+    if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
+    then
+      raise_application_error(-20000, 'Could not switch current user from "' || sys_context('USERENV', 'CURRENT_SCHEMA') || '" to "' || l_target_schema || '"');
+    end if;
+  end if;
+  dbms_cloud_repo.install_sql
+  ( content => :b2
+  , stop_on_error => :b3
+  );
+end;
+]'
+    using in p_schema, p_content, g_options_rec.stop_on_error;
+end install_sql;
+
 procedure process_sql
 ( p_github_access_handle in github_access_handle_t
 , p_schema in varchar2
@@ -421,25 +497,10 @@ is
     );
     if not(g_options_rec.dry_run) or base_name(p_file_path) = 'pom.sql'
     then
-      execute immediate q'[
-declare
-  l_target_schema constant all_objects.owner%type := upper(:b1);
-begin
-  if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
-  then
-    execute immediate 'alter session set current_schema = ' || l_target_schema;
-    if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
-    then
-      raise_application_error(-20000, 'Could not switch current user from "' || sys_context('USERENV', 'CURRENT_SCHEMA') || '" to "' || l_target_schema || '"');
-    end if;
-  end if;
-  dbms_cloud_repo.install_sql
-  ( content => :b2
-  , stop_on_error => (:b3 = 1)
-  );
-end;
-]'
-        using in p_schema, p_content, case g_options_rec.stop_on_error when true then 1 else 0 end;
+      install_sql
+      ( p_schema => p_schema
+      , p_content => p_content
+      );
     end if;
     
     dbms_application_info.set_module
@@ -625,6 +686,7 @@ procedure process_file
 , p_file_path in varchar2 -- The repository file path
 , p_file_id in varchar2 default null
 , p_bytes in integer default null
+, p_callbacks_tab in callbacks_tab_t default g_empty_callbacks_tab
 )
 is
   pragma autonomous_transaction;
@@ -790,6 +852,16 @@ begin
     begin
       if l_github_installed_versions_id is null
       then
+        -- Run Flyway callback before echo migration
+        if l_flyway_file_type is not null and
+           p_callbacks_tab.exists('beforeEachMigrate.sql')
+        then
+          install_sql
+          ( p_schema => p_schema
+          , p_content => p_callbacks_tab('beforeEachMigrate.sql')
+          );
+        end if;
+      
         install_file
         ( p_github_access_handle => p_github_access_handle
         , p_schema => p_schema
@@ -800,6 +872,16 @@ begin
         , p_commit_id => l_github_access_rec.commit_id
         , p_stop_on_error => g_options_rec.stop_on_error
         );
+        
+        -- Run Flyway callback after each migration
+        if l_flyway_file_type is not null and
+           p_callbacks_tab.exists('afterEachMigrate.sql')
+        then
+          install_sql
+          ( p_schema => p_schema
+          , p_content => p_callbacks_tab('afterEachMigrate.sql')
+          );
+        end if;
       end if;
     exception
       when others
@@ -908,64 +990,6 @@ is
   l_github_access_rec github_access_rec_t;
 
   l_callbacks_tab callbacks_tab_t;
-
-  procedure define_callbacks
-  ( p_github_access_rec in github_access_rec_t
-  , p_project_rec in project_rec_t
-  )
-  is
-    l_pato_project_rec project_rec_t;
-    l_pato_github_access_handle github_access_handle_t;
-  begin
-    /*
-    -- gpaulissen@pc-803 oracle-tools % find . -name callbacks -print -exec ls {} \;
-    -- ./db/app/admin/src/callbacks
-    -- ./db/app/cfg/src/callbacks
-    -- afterMigrate.sql  beforeEachMigrate.sql
-    -- ./db/src/callbacks
-    -- afterMigrate.sql  beforeEachMigrate.sql  beforeMigrate.sql  unused-afterEachMigrate.sql  unused-beforeMigrate.sql
-    */
-    if p_project_rec.src_callbacks is null and p_github_access_handle <> "paulissoft/oracle-tools"
-    then
-      l_pato_project_rec.src_callbacks := 'db/src/callbacks';
-      
-      if not(g_github_access_tab.exists("paulissoft/oracle-tools"))
-      then
-        set_github_access
-        ( p_repo_owner => 'paulissoft'
-        , p_repo_name => 'oracle-tools'
-        , p_github_access_handle => l_pato_github_access_handle
-        );
-      end if;
-
-      define_callbacks
-      ( p_github_access_rec => g_github_access_tab("paulissoft/oracle-tools")
-      , p_project_rec => l_pato_project_rec
-      );
-    else
-      l_callbacks_tab.delete;
-      
-      for r in
-      ( select  t.name
-        from    table
-                ( dbms_cloud_repo.list_files
-                  ( repo => p_github_access_rec.repo
-                  , path => p_path
-                  , branch_name => p_github_access_rec.branch_name
-                  , tag_name => p_github_access_rec.tag_name
-                  , commit_id => p_github_access_rec.commit_id
-                  )
-                ) t
-        where   t.name like '%/afterMigrate.sql'
-        or      t.name like '%/beforeEachMigrate.sql'
-        or      t.name like '%/beforeMigrate.sql'
-        or      t.name like '%/afterEachMigrate.sql'
-      )
-      loop
-        l_callbacks_tab(base_name(r.name)) := r.name;
-      end loop;
-    end if;  
-  end define_callbacks;
 begin
   dbug_enter(l_module_name);
   
@@ -983,10 +1007,16 @@ begin
 
   if p_project_rec.project_type = 'db'
   then
-    define_callbacks
-    ( p_github_access_rec => l_github_access_rec
-    , p_project_rec => p_project_rec
-    );
+    if p_project_rec.src_callbacks is not null
+    then
+      define_callbacks
+      ( p_github_access_rec => l_github_access_rec
+      , p_path => normalize_file_name(p_path || '/' || p_project_rec.src_callbacks)
+      , p_callbacks_tab => l_callbacks_tab
+      );
+    else
+      l_callbacks_tab := g_pato_callbacks_tab;
+    end if;
 
     -- export not implemented yet
     if g_options_rec.operation = 'install'
@@ -995,10 +1025,9 @@ begin
       -- Run Flyway callback before migration
       if l_callbacks_tab.exists('beforeMigrate.sql')
       then
-        process_file
-        ( p_github_access_handle => p_github_access_handle
-        , p_schema => p_project_rec.schema
-        , p_file_path => l_callbacks_tab('beforeMigrate.sql')
+        install_sql
+        ( p_schema => p_project_rec.schema
+        , p_content => l_callbacks_tab('beforeMigrate.sql')
         );
       end if;
 
@@ -1040,16 +1069,16 @@ begin
         , p_file_path => r.name
         , p_file_id => r.id
         , p_bytes => r.bytes
+        , p_callbacks_tab => l_callbacks_tab
         );
       end loop;
       
       -- Run Flyway callback after migration
       if l_callbacks_tab.exists('afterMigrate.sql')
       then
-        process_file
-        ( p_github_access_handle => p_github_access_handle
-        , p_schema => p_project_rec.schema
-        , p_file_path => l_callbacks_tab('afterMigrate.sql')
+        install_sql
+        ( p_schema => p_project_rec.schema
+        , p_content => l_callbacks_tab('afterMigrate.sql')
         );
       end if;
     else
@@ -1099,7 +1128,19 @@ begin
   then
     raise dup_val_on_index;
   end if;
-  
+
+  if g_github_access_tab.count = 0 and p_github_access_handle <> "paulissoft/oracle-tools"
+  then
+    raise_application_error
+    ( -20000
+    , utl_lms.format_message
+      ( 'The first call for set_github_access() must be for repo owner "%s" and repo name "%s"'
+      , "paulissoft"
+      , "oracle-tools"
+      )
+    );
+  end if;
+
   l_github_access_rec.repo_owner := p_repo_owner;
   l_github_access_rec.repo_name := p_repo_name;
   l_github_access_rec.branch_name := p_branch_name;
@@ -1129,6 +1170,27 @@ begin
   l_github_access_rec.current_schema := sys_context('USERENV', 'CURRENT_SCHEMA');
 
   g_github_access_tab(p_github_access_handle) := l_github_access_rec;
+  
+  if g_github_access_tab.count = 1
+  then
+    /*
+    -- gpaulissen@pc-803 oracle-tools % find . -name callbacks -print -exec ls {} \;
+    -- ./db/app/admin/src/callbacks
+    -- ./db/app/cfg/src/callbacks
+    -- afterMigrate.sql  beforeEachMigrate.sql
+    -- ./db/src/callbacks
+    -- afterMigrate.sql  beforeEachMigrate.sql  beforeMigrate.sql  unused-afterEachMigrate.sql  unused-beforeMigrate.sql
+    */
+    define_callbacks
+    ( p_github_access_rec => l_github_access_rec
+    , p_path => 'db/src/callbacks'
+    , p_callbacks_tab => g_pato_callbacks_tab
+    );
+    if g_pato_callbacks_tab.count = 0
+    then
+      raise program_error;
+    end if;
+  end if;
 exception
   when others
   then raise_application_error
