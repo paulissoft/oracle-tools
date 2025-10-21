@@ -30,5 +30,10 @@ ALTER TABLE "ADMIN"."GITHUB_INSTALLED_PROJECTS" ADD CONSTRAINT "GITHUB_INSTALLED
 ALTER TABLE "ADMIN"."GITHUB_INSTALLED_PROJECTS" ADD CONSTRAINT "GITHUB_INSTALLED_PROJECTS_UK" UNIQUE ( "GITHUB_REPO",
                                                                                                        "DIRECTORY_NAME" )
 >';
+exception
+  when others
+  then
+    -- ORA-00955: name is already used by an existing object
+    if sqlcode in (-955) then null; else raise; end if;
 end;
 /

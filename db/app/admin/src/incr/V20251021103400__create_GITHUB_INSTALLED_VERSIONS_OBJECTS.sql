@@ -58,6 +58,8 @@ END;
 
 exception
   when others
-  then raise;
+  then
+    -- ORA-00955: name is already used by an existing object
+    if sqlcode in (-955) then null; else raise; end if;
 end;
 /
