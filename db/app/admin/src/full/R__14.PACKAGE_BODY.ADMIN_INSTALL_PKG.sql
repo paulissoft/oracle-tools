@@ -357,7 +357,11 @@ procedure process_file
 )
 is
   pragma autonomous_transaction;
-  
+
+  -- Only issue DML for PATO generated files
+  l_github_installed_dml constant boolean :=
+    not(g_options_rec.dry_run) and sql_statement_terminator(p_file_path) is not null;
+
   l_github_access_rec github_access_rec_t;
   l_github_installed_projects_id github_installed_projects.id%type;
   l_directory_name constant github_installed_projects.directory_name%type := directory_name(p_file_path);
@@ -388,31 +392,34 @@ begin
   
   if not(g_options_rec.dry_run) or base_name(p_file_path) = 'pom.sql'
   then
-    l_start_ddl_time := sysdate;
+    if l_github_installed_dml
+    then
+      l_start_ddl_time := sysdate;
 
-    -- Update GITHUB tables
+      -- Update GITHUB tables
 
-    -- insert/select github_installed_projects first
-    insert into github_installed_projects(github_repo, directory_name, owner)
-      select  p_github_access_handle
-      ,       l_directory_name
-      ,       u.username
-      from    all_users u
-      where   u.username in (p_schema, upper(p_schema))
-      minus
-      select  p.github_repo
-      ,       p.directory_name
-      ,       p.owner
-      from    github_installed_projects p;
+      -- insert/select github_installed_projects first
+      insert into github_installed_projects(github_repo, directory_name, owner)
+        select  p_github_access_handle
+        ,       l_directory_name
+        ,       u.username
+        from    all_users u
+        where   u.username in (p_schema, upper(p_schema))
+        minus
+        select  p.github_repo
+        ,       p.directory_name
+        ,       p.owner
+        from    github_installed_projects p;
 
-    select  p.id
-    into    l_github_installed_projects_id
-    from    github_installed_projects p
-    where   p.github_repo = p_github_access_handle
-    and     p.directory_name = l_directory_name
-    and     p.owner in (p_schema, upper(p_schema));
+      select  p.id
+      into    l_github_installed_projects_id
+      from    github_installed_projects p
+      where   p.github_repo = p_github_access_handle
+      and     p.directory_name = l_directory_name
+      and     p.owner in (p_schema, upper(p_schema));
 
-    -- github_installed_versions next
+      -- github_installed_versions next
+    end if; -- if l_github_installed_dml
 
     begin
       execute immediate q'[
@@ -447,66 +454,79 @@ end;
     exception
       when others
       then
-        insert into github_installed_versions
-        ( github_installed_projects_id
-        , base_name
-        , date_created
-        , checksum
-        , bytes
-        , success
-        )
-        values
-        ( l_github_installed_projects_id
-        , l_base_name
-        , sysdate
-        , p_file_id
-        , p_bytes
-        , 0
-        );
-        commit;
+        if l_github_installed_dml
+        then
+          insert into github_installed_versions
+          ( github_installed_projects_id
+          , base_name
+          , date_created
+          , checksum
+          , bytes
+          , success
+          )
+          values
+          ( l_github_installed_projects_id
+          , l_base_name
+          , sysdate
+          , p_file_id
+          , p_bytes
+          , 0
+          );
+        end if; -- if l_github_installed_dml
         raise;
     end;
 
     -- everything went fine
+    if l_github_installed_dml
+    then
+      l_end_ddl_time := sysdate;
 
-    l_end_ddl_time := sysdate;
+      insert into github_installed_versions
+      ( github_installed_projects_id
+      , base_name
+      , date_created
+      , checksum
+      , bytes
+      , success
+      )
+      values
+      ( l_github_installed_projects_id
+      , l_base_name
+      , l_end_ddl_time
+      , p_file_id
+      , p_bytes
+      , 1
+      )
+      returning id into l_github_installed_versions_id;
 
-    insert into github_installed_versions
-    ( github_installed_projects_id
-    , base_name
-    , date_created
-    , checksum
-    , bytes
-    , success
-    )
-    values
-    ( l_github_installed_projects_id
-    , l_base_name
-    , l_end_ddl_time
-    , p_file_id
-    , p_bytes
-    , 1
-    )
-    returning id into l_github_installed_versions_id;
+      -- github_installed_versions_objects next:
+      -- add the objects created between l_start_ddl_time and l_end_ddl_time for this schema
+      insert into github_installed_versions_objects
+      ( github_installed_versions_id
+      , object_type
+      , object_name
+      , last_ddl_time
+      )
+        select  l_github_installed_versions_id as github_installed_versions_id
+        ,       o.object_type
+        ,       o.object_name
+        ,       o.last_ddl_time
+        from    all_objects o
+        where   o.owner in (p_schema, upper(p_schema))
+        and     o.last_ddl_time between l_start_ddl_time and l_end_ddl_time;
 
-    -- github_installed_versions_objects next:
-    -- add the objects created between l_start_ddl_time and l_end_ddl_time for this schema
-    insert into github_installed_versions_objects
-    ( github_installed_versions_id
-    , object_type
-    , object_name
-    , last_ddl_time
-    )
-      select  l_github_installed_versions_id as github_installed_versions_id
-      ,       o.object_type
-      ,       o.object_name
-      ,       o.last_ddl_time
-      from    all_objects o
-      where   o.owner in (p_schema, upper(p_schema))
-      and     o.last_ddl_time between l_start_ddl_time and l_end_ddl_time;
+      commit;
+    end if; -- if l_github_installed_dml
   end if;
 
-  commit;
+exception
+  when others
+  then
+    if l_github_installed_dml
+    then
+      commit;
+    end if;
+    raise;
 end process_file;
 
 procedure process_project
