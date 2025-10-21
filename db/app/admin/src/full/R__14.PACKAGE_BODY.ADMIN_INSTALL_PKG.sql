@@ -480,6 +480,7 @@ begin
 declare
   l_target_schema constant all_objects.owner%type := upper(:b1);
 begin
+  admin.admin_install_pkg.dbug_print('#1');
   if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
   then
     execute immediate 'alter session set current_schema = ' || l_target_schema;
@@ -488,10 +489,12 @@ begin
       raise_application_error(-20000, 'Could not switch current user from "' || sys_context('USERENV', 'CURRENT_SCHEMA') || '" to "' || l_target_schema || '"');
     end if;
   end if;
+  admin.admin_install_pkg.dbug_print('#2');
   dbms_cloud_repo.install_sql
   ( content => :b2
   , stop_on_error => :b3
   );
+  admin.admin_install_pkg.dbug_print('#3');
 end;
 ]'
     using in p_schema
