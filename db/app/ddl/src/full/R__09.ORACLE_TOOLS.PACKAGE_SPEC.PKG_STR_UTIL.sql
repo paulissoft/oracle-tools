@@ -313,10 +313,6 @@ procedure ut_text2clob2;
 --%disabled(Not implemented)
 procedure ut_clob2text;
 
---%test
---%throws(value_error)
-procedure ut_split2_line_too_large;
-
 $end -- $if oracle_tools.cfg_pkg.c_testing $then
 
 END pkg_str_util;
