@@ -431,9 +431,51 @@ end define_callbacks;
 procedure install_sql
 ( p_schema in varchar2
 , p_content in clob
+, p_base_name in varchar2
 )
 is
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_sql (1)';
+  l_statement constant clob :=
+    replace
+    ( replace
+      ( replace
+        ( replace
+          ( p_content
+          , '${oracle_tools_schema}'
+          , 'ORACLE_TOOLS'
+          )
+        , '${compile_all}'
+        , 'false'
+        )
+      , '${reuse_settings}'
+      , 'false'
+      )
+    , '${oracle_tools_schema_msg}'
+    , 'ORACLE_TOOLS'
+    );
 begin
+  dbug_enter(l_module_name);
+  dbug_print('schema: ' || p_schema);
+  dbug_print('base name: ' || p_base_name);
+  
+/*
+-- File: db/app/cfg/src/callbacks/afterMigrate.sql
+--
+-- begin
+--   ${oracle_tools_schema}.cfg_install_pkg."afterMigrate"(p_compile_all => ${compile_all}, p_reuse_settings => ${reuse_settings}, p_oracle_tools_schema_msg => '${oracle_tools_schema_msg}');
+-- exception
+--   when others
+--   then null;
+-- end;
+-- /
+--
+-- ./conf/src/docker/flyway-db.conf:1:flyway.placeholders.oracle_tools_schema=${oracle_tools_schema}
+-- ./conf/src/env.properties:2:oracle_tools_schema=ORACLE_TOOLS
+-- ./db/pom.xml:40:    <flyway.placeholders.compile_all>false</flyway.placeholders.compile_all>
+-- ./db/pom.xml:41:    <flyway.placeholders.reuse_settings>false</flyway.placeholders.reuse_settings>
+-- ./conf/src/env.properties:6:oracle_tools_schema_msg=ORACLE_TOOLS
+-- ./conf/src/flyway-app.conf:4:flyway.placeholders.oracle_tools_schema_msg=${oracle_tools_schema_msg}
+*/
   execute immediate q'[
 declare
   l_target_schema constant all_objects.owner%type := upper(:b1);
@@ -452,7 +494,17 @@ begin
   );
 end;
 ]'
-    using in p_schema, p_content, g_options_rec.stop_on_error;
+    using in p_schema
+           , l_statement
+           , g_options_rec.stop_on_error;
+
+  dbug_leave(l_module_name);
+exception
+  when others
+  then
+    dbug_print('statement: ' || dbms_lob.substr(lob_loc => l_statement, amount => 256));
+    dbug_leave(l_module_name);
+    raise;
 end install_sql;
 
 procedure process_sql
@@ -500,6 +552,7 @@ is
       install_sql
       ( p_schema => p_schema
       , p_content => p_content
+      , p_base_name => l_base_name
       );
     end if;
     
@@ -859,6 +912,7 @@ begin
           install_sql
           ( p_schema => p_schema
           , p_content => p_callbacks_tab('beforeEachMigrate.sql')
+          , p_base_name => 'beforeEachMigrate.sql'
           );
         end if;
       
@@ -880,6 +934,7 @@ begin
           install_sql
           ( p_schema => p_schema
           , p_content => p_callbacks_tab('afterEachMigrate.sql')
+          , p_base_name => 'afterEachMigrate.sql'
           );
         end if;
       end if;
@@ -1028,6 +1083,7 @@ begin
         install_sql
         ( p_schema => p_project_rec.schema
         , p_content => l_callbacks_tab('beforeMigrate.sql')
+        , p_base_name => 'beforeMigrate.sql'
         );
       end if;
 
@@ -1079,6 +1135,7 @@ begin
         install_sql
         ( p_schema => p_project_rec.schema
         , p_content => l_callbacks_tab('afterMigrate.sql')
+        , p_base_name => 'afterMigrate.sql'
         );
       end if;
     else
