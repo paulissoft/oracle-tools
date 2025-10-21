@@ -71,6 +71,8 @@ g_options_rec options_rec_t;
 
 g_root_project_rec project_rec_t;
 
+g_first_error boolean := true;
+
 -- ROUTINES
 
 function dbms_lob_substr
@@ -251,19 +253,23 @@ begin
     , p_str_tab => l_parts_tab
     );
     
-    case l_parts_tab.count
-      when 4 -- R__00.PUBLIC_SYNONYM.ADMIN_RECOMPILE_PKG.sql
+    if l_parts_tab.count >= 4
+    then
+      -- R__00.PUBLIC_SYNONYM.ADMIN_RECOMPILE_PKG.sql (4) 
+      -- R__18.ORACLE_TOOLS.OBJECT_GRANT.V_MY_SCHEMA_OBJECTS.sql (5)
+      -- R__10.00.ORACLE_TOOLS.VIEW.V_MY_SCHEMA_OBJECT_FILTER.sql (6)
+      if l_parts_tab.count >= 5
       then
-        p_object_type := l_parts_tab(l_parts_tab.first + 1);
-        p_object_name := l_parts_tab(l_parts_tab.first + 2);
-        
-      when 5 -- R__18.ORACLE_TOOLS.OBJECT_GRANT.V_MY_SCHEMA_OBJECTS.sql
-      then
-        p_owner := l_parts_tab(l_parts_tab.first + 1);
-        p_object_type := l_parts_tab(l_parts_tab.first + 2);
-        p_object_name := l_parts_tab(l_parts_tab.first + 3);
-      
-    end case;
+        p_owner := l_parts_tab(l_parts_tab.last - 3);
+      end if;
+      p_object_type := l_parts_tab(l_parts_tab.last - 2);
+      p_object_name := l_parts_tab(l_parts_tab.last - 1);
+    else
+      raise_application_error
+      ( -20000
+      , 'Base name (' || l_base_name || ') has ' || l_parts_tab.count || ' parts with the dot as the delimiter: should be at least'
+      );
+    end if;
     
     if p_object_type = 'PUBLIC_SYNONYM'
     then
@@ -373,6 +379,8 @@ procedure process_sql
 , p_content in clob -- The content from the repository file
 )
 is
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_sql (1)';
+  
   l_base_name constant varchar2(48 char) := substr(base_name(p_file_path), 1, 48);
   
   l_statement_tab dbms_sql.varchar2a;
@@ -382,9 +390,12 @@ is
   , p_statement_nr in positive default null
   )
   is
+    l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_sql (2)';
   begin
+    dbug_enter(l_module_name);
+    
     --/*DBUG
-    dbms_output.put_line
+    dbug_print
     ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
       ' Processing file ' ||
       p_file_path  ||
@@ -424,12 +435,21 @@ end;
     ( module_name => l_base_name
     , action_name => 'processed SQL' || case when p_statement_nr is not null then ' statement ' || p_statement_nr end
     );
+    
+    dbug_leave(l_module_name);
+  exception
+    when others
+    then
+      dbug_leave(l_module_name);
+      raise;
   end process_sql;
 begin
   if do_not_install_file(p_github_access_handle, p_file_path)
   then
     return;
   end if;
+
+  dbug_enter(l_module_name);
 
   -- special handling
   PRAGMA INLINE (split, 'YES');
@@ -453,14 +473,19 @@ begin
         );
       end if;
     end loop;
-    
-    return; -- finished
+  else
+    -- normal handling
+    process_sql
+    ( p_content => p_content
+    );
   end if;
   
-  -- normal handling
-  process_sql
-  ( p_content => p_content
-  );
+  dbug_leave(l_module_name);
+exception
+  when others
+  then
+    dbug_leave(l_module_name);
+    raise;
 end process_sql;
 
 procedure install_file
@@ -474,12 +499,15 @@ procedure install_file
 , p_stop_on_error in boolean
 )
 is
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_file (1)';
 begin
   if do_not_install_file(p_github_access_handle, p_file_path)
   then
     return;
   end if;
-  
+
+  dbug_enter(l_module_name);
+
   if sql_statement_terminator(p_file_path) = ';'
   then
     process_sql
@@ -497,8 +525,30 @@ begin
   else
     execute immediate q'[
 declare
-  l_target_schema constant all_objects.owner%type := upper(:b1);
+  l_target_schema all_objects.owner%type;
+  l_repo clob;
+  l_file_path varchar2(4000 byte);
+  l_branch_name varchar2(128 char);
+  l_tag_name varchar2(128 char);
+  l_commit_id varchar2(40 char);
+  l_stop_on_error boolean;
 begin
+  admin.admin_install_pkg.dbug_print('#1');
+  l_target_schema := upper(:b1);
+  admin.admin_install_pkg.dbug_print('#2');
+  l_repo := :b2;
+  admin.admin_install_pkg.dbug_print('#3');
+  l_file_path := :b3;
+  admin.admin_install_pkg.dbug_print('#4');
+  l_branch_name := :b4;
+  admin.admin_install_pkg.dbug_print('#5');
+  l_tag_name := :b5;
+  admin.admin_install_pkg.dbug_print('#6');
+  l_commit_id := :b6;
+  admin.admin_install_pkg.dbug_print('#7');
+  l_stop_on_error := :b7;
+  admin.admin_install_pkg.dbug_print('#8');
+  
   if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
   then
     execute immediate 'alter session set current_schema = ' || l_target_schema;
@@ -507,14 +557,19 @@ begin
       raise_application_error(-20000, 'Could not switch current user from "' || sys_context('USERENV', 'CURRENT_SCHEMA') || '" to "' || l_target_schema || '"');
     end if;
   end if;
+  
+  admin.admin_install_pkg.dbug_print('#9');
+  
   dbms_cloud_repo.install_file
-  ( repo => :b2
-  , file_path => :b3
-  , branch_name => :b4
-  , tag_name => :b5
-  , commit_id => :b6
-  , stop_on_error => :b7
+  ( repo => l_repo
+  , file_path => l_file_path
+  , branch_name => l_branch_name
+  , tag_name => l_tag_name
+  , commit_id => l_commit_id
+  , stop_on_error => l_stop_on_error
   );
+  
+  admin.admin_install_pkg.dbug_print('#10');
 end;
 ]'
         using in p_schema
@@ -524,7 +579,14 @@ end;
                , p_tag_name
                , p_commit_id
                , p_stop_on_error;
- end if;               
+  end if;
+
+  dbug_leave(l_module_name);
+exception
+  when others
+  then
+    dbug_leave(l_module_name);
+    raise;
 end install_file;               
 
 procedure process_file
@@ -536,6 +598,8 @@ procedure process_file
 )
 is
   pragma autonomous_transaction;
+
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_file (2)';
 
   -- Only issue DML for PATO generated files
   l_github_installed_dml boolean :=
@@ -562,14 +626,16 @@ begin
   then
     return;
   end if;
-  
+
+  dbug_enter(l_module_name);
+
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
   -- only 'install' implemented
   if g_options_rec.operation = 'install' then null; else raise value_error; end if;
 
   --/*DBUG
-  dbms_output.put_line
+  dbug_print
   ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
     ' Processing file ' ||
     p_file_path  ||
@@ -637,7 +703,7 @@ begin
       --/*DBUG
       if l_github_installed_versions_id is not null
       then
-        dbms_output.put_line
+        dbug_print
         ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
           ' Previous installed version id: ' || l_github_installed_versions_id
         );
@@ -669,7 +735,7 @@ begin
           )
           loop
             --/*DBUG
-            dbms_output.put_line
+            dbug_print
             ( utl_lms.format_message
               ( '[%s] Must re-install due to %s "%s"."%s" with creation date "%s"'
               , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
@@ -791,10 +857,13 @@ begin
   end if;
 
   commit;
+
+  dbug_leave(l_module_name);
 exception
   when others
   then
     commit;
+    dbug_leave(l_module_name);    
     raise;
 end process_file;
 
@@ -804,13 +873,16 @@ procedure process_project
 , p_project_rec in project_rec_t
 )
 is
---  l_file_contents clob := null;
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_project';
+  
   l_github_access_rec github_access_rec_t;
 begin
+  dbug_enter(l_module_name);
+  
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
   --/*DBUG
-  dbms_output.put_line
+  dbug_print
   ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
     ' Processing project ' ||
     p_path  ||
@@ -857,13 +929,6 @@ begin
         ,       name        
       )
       loop
-        /*DBUG
-        dbms_output.put_line('id: ' || r.id);
-        dbms_output.put_line('name: ' || r.name);
-        dbms_output.put_line('bytes: ' || r.bytes);
-        dbms_output.put_line('file_type: ' || r.file_type);
-        /*DBUG*/
-        -- l_file_contents := l_file_contents || '@' || r.name || chr(10);
         process_file
         ( p_github_access_handle => p_github_access_handle
         , p_schema => p_project_rec.schema
@@ -872,18 +937,6 @@ begin
         , p_bytes => r.bytes
         );
       end loop;
-
-      /*
-      if l_file_contents is not null
-      then
-        process_file
-        ( p_github_access_handle => p_github_access_handle
-        , p_schema => p_project_rec.schema
-        , p_file_path => p_path || '/process.sql'
-        , p_content => l_file_contents
-        );
-      end if;
-      */
     else
       raise value_error;
     end if;
@@ -903,6 +956,13 @@ begin
   else
     raise value_error;
   end if;
+
+  dbug_leave(l_module_name);
+exception
+  when others
+  then
+    dbug_leave(l_module_name);
+    raise;
 end process_project;
 
 -- PUBLIC
@@ -989,6 +1049,45 @@ begin
   g_github_access_tab.delete(p_github_access_handle);
 end delete_github_access;
 
+procedure dbug_print
+( p_line in varchar2
+)
+is
+begin
+  dbms_output.put_line(p_line);
+end dbug_print;
+
+procedure dbug_enter
+( p_module in varchar2
+)
+is
+begin
+  dbug_print('>' || p_module);
+end dbug_enter;
+
+procedure dbug_leave
+( p_module in varchar2
+, p_sqlcode in integer default sqlcode
+, p_error_backtrace in varchar2
+, p_call_stack in varchar2
+)
+is
+begin
+  if nvl(p_sqlcode, 0) <> 0
+  then
+    -- display the first error in a call chain
+    if g_first_error
+    then
+      dbug_print('CALL STACK     : ' || p_call_stack);
+      dbug_print('ERROR BACKTRACE: ' || p_error_backtrace);
+      g_first_error := false;
+    end if;
+  else
+    g_first_error := true;
+  end if;
+  dbug_print('<' || p_module);
+end dbug_leave;
+
 procedure process_project_db
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
@@ -1002,8 +1101,11 @@ procedure process_project_db
 , p_src_ords in varchar2
 )
 is
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_project_db';
   l_project_rec project_rec_t;
 begin
+  dbug_enter(l_module_name);
+  
   l_project_rec.project_type := 'db';
   l_project_rec.schema := p_schema;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
@@ -1019,6 +1121,13 @@ begin
   , p_path => p_path
   , p_project_rec => l_project_rec
   );
+
+  dbug_leave(l_module_name);
+exception
+  when others
+  then
+    dbug_leave(l_module_name);
+    raise;
 end process_project_db;
 
 procedure process_project_apex
@@ -1030,8 +1139,12 @@ procedure process_project_apex
 , p_application_id in integer
 )
 is
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_project_apex';
+  
   l_project_rec project_rec_t;
 begin
+  dbug_enter(l_module_name);
+  
   l_project_rec.project_type := 'apex';
   l_project_rec.schema := p_schema;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
@@ -1043,6 +1156,13 @@ begin
   , p_path => p_path
   , p_project_rec => l_project_rec
   );
+
+  dbug_leave(l_module_name);
+exception
+  when others
+  then
+    dbug_leave(l_module_name);
+    raise;
 end process_project_apex;
 
 procedure process_project
@@ -1052,8 +1172,11 @@ procedure process_project
 , p_parent_path in varchar2 default null -- The parent repository file path
 )
 is
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_project';
   l_project_rec project_rec_t;
 begin
+  dbug_enter(l_module_name);
+  
   l_project_rec.project_type := null;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
@@ -1065,6 +1188,13 @@ begin
   , p_schema => null
   , p_file_path => normalize_file_name(p_path || '/' || 'pom.sql')
   );
+
+  dbug_leave(l_module_name);
+exception
+  when others
+  then
+    dbug_leave(l_module_name);
+    raise;
 end process_project;
 
 procedure process_root_project
@@ -1076,6 +1206,7 @@ procedure process_root_project
 , p_dry_run in boolean
 )
 is
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_root_project';
 begin
   g_root_project_rec.project_type := null;
   g_root_project_rec.parent_github_access_handle := p_parent_github_access_handle;
@@ -1091,6 +1222,13 @@ begin
   , p_schema => null
   , p_file_path => normalize_file_name('pom.sql')
   );
+
+  dbug_leave(l_module_name);
+exception
+  when others
+  then
+    dbug_leave(l_module_name);
+    raise;
 end process_root_project;
 
 end;

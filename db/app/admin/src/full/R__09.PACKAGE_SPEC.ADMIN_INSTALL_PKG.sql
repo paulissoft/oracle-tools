@@ -58,6 +58,21 @@ procedure delete_github_access
 );
 /** Will remove this handle from internal memory and restore the current schema to the schema before invoking set_github_access(). **/
 
+procedure dbug_print
+( p_line in varchar2
+);
+
+procedure dbug_enter
+( p_module in varchar2
+);
+
+procedure dbug_leave
+( p_module in varchar2
+, p_sqlcode in integer default sqlcode
+, p_error_backtrace in varchar2 default dbms_utility.format_error_backtrace
+, p_call_stack in varchar2 default dbms_utility.format_call_stack
+);
+
 procedure process_project_db
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
