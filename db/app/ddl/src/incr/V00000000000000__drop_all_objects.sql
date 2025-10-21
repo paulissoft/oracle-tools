@@ -1,4 +1,5 @@
--- set serveroutput on size unlimited
+-- set serveroutput on size unlimited format trunc
+
 declare
   l_type_tab sys.odcivarchar2list :=
     sys.odcivarchar2list
@@ -73,10 +74,38 @@ declare
     );
   l_count pls_integer;
   l_nr_objects_dropped pls_integer;
+  l_statement_tab dbms_sql.varchar2a;
 
   -- ORA-00942: table or view does not exist
   e_table_or_view_does_not_exist exception;
   pragma exception_init(e_table_or_view_does_not_exist, -942);
+
+  -- ORA-02289: sequence does not exist
+  e_sequence_does_not_exist exception;
+  pragma exception_init(e_sequence_does_not_exist, -2289);
+
+  -- ORA-04043: object MATCHES_SCHEMA_OBJECT_FNC does not exist
+  e_object_does_not_exist exception;
+  pragma exception_init(e_object_does_not_exist, -4043);
+
+  procedure execute_immediate(p_statement in varchar2)
+  is
+  begin
+    dbms_output.put_line(p_statement);
+    execute immediate p_statement;
+    l_nr_objects_dropped := l_nr_objects_dropped + 1;
+  exception
+    when e_table_or_view_does_not_exist or
+         e_sequence_does_not_exist or
+         e_object_does_not_exist
+    then 
+      dbms_output.put_line(sqlerrm);
+      null;
+    when others
+    then
+      dbms_output.put_line(sqlerrm);
+      raise; -- null;
+  end;
 begin
   select  count(*)
   into    l_count
@@ -93,75 +122,46 @@ begin
     
     for i_idx in reverse l_table_tab.first .. l_table_tab.last -- in reverse order to mimimize cascade constraints
     loop
-      begin
-        execute immediate 'drop table ' || l_table_tab(i_idx) || ' cascade constraints purge';
-        l_nr_objects_dropped := l_nr_objects_dropped + 1;
-      exception
-        when e_table_or_view_does_not_exist
-        then null;
-        when others
-        then raise; -- null;
-      end;
+      execute_immediate('drop table ' || l_table_tab(i_idx) || ' cascade constraints purge');
     end loop;
     
     for i_idx in l_view_tab.first .. l_view_tab.last
     loop
-      begin
-        execute immediate 'drop view ' || l_view_tab(i_idx);
-        l_nr_objects_dropped := l_nr_objects_dropped + 1;
-      exception
-        when others
-        then null;
-      end;
+      execute_immediate('drop view ' || l_view_tab(i_idx));
     end loop;
     
     for i_idx in l_sequence_tab.first .. l_sequence_tab.last
     loop
-      begin
-        execute immediate 'drop sequence ' || l_sequence_tab(i_idx);
-        l_nr_objects_dropped := l_nr_objects_dropped + 1;
-      exception
-        when others
-        then null;
-      end;
+      execute_immediate('drop sequence ' || l_sequence_tab(i_idx));
     end loop;
 
     for i_idx in l_function_tab.first .. l_function_tab.last
     loop
-      begin
-        execute immediate 'drop function ' || l_function_tab(i_idx);
-        l_nr_objects_dropped := l_nr_objects_dropped + 1;
-      exception
-        when others
-        then null;
-      end;
+      execute_immediate('drop function ' || l_function_tab(i_idx));
     end loop;
 
     for i_idx in l_type_tab.first .. l_type_tab.last
     loop
-      for r in
-      ( select  'drop type ' || type_name || ' force' as cmd
-        from    user_types
-        connect by
-                supertype_name = prior type_name
-        start with
-                type_name = l_type_tab(i_idx)
-        order by
-                level desc
-      )
-      loop
-        begin
-          -- dbms_output.put_line(r.cmd);
-          execute immediate r.cmd;
-          l_nr_objects_dropped := l_nr_objects_dropped + 1;
-        exception
-          when others
-          then
-            -- dbms_output.put_line(sqlerrm);
-            null;
-        end;
-      end loop;
+      select  'drop type ' || type_name || ' force' as cmd
+      bulk collect
+      into    l_statement_tab
+      from    user_types
+      connect by
+              supertype_name = prior type_name
+      start with
+              type_name = l_type_tab(i_idx)
+      order by
+              level desc;
+
+      if l_statement_tab.count > 0
+      then
+        for i_idx in l_statement_tab.first .. l_statement_tab.last
+        loop
+          execute_immediate(l_statement_tab(i_idx));
+        end loop;
+      end if;
     end loop;
+    
     exit when l_nr_objects_dropped = 0;
   end loop while_objects_dropped_loop;
 end;
