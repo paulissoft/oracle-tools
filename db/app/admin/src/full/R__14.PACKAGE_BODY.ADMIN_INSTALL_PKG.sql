@@ -1037,6 +1037,64 @@ exception
     raise;
 end process_file;
 
+procedure process_file_apex
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar -- The database schema 
+, p_file_path in varchar2 -- The repository file path
+)
+is
+  pragma autonomous_transaction;
+
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_file_apex';
+
+  l_github_access_rec github_access_rec_t;
+begin
+  if do_not_install_file(p_github_access_handle, p_file_path)
+  then
+    return;
+  end if;
+
+  dbug_enter(l_module_name);
+
+  l_github_access_rec := g_github_access_tab(p_github_access_handle);
+
+  -- only 'install' implemented
+  if g_options_rec.operation = 'install' then null; else raise value_error; end if;
+
+  --/*DBUG
+  dbug_print
+  ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
+    ' Processing APEX file ' ||
+    p_file_path  ||
+    '; target schema ' || p_schema
+  );
+  --/*DBUG*/
+  
+  if not(g_options_rec.dry_run)
+  then
+    install_file
+    ( p_github_access_handle => p_github_access_handle
+    , p_schema => p_schema
+    , p_repo => l_github_access_rec.repo
+    , p_file_path => p_file_path
+    , p_branch_name => l_github_access_rec.branch_name
+    , p_tag_name => l_github_access_rec.tag_name
+    , p_commit_id => l_github_access_rec.commit_id
+    , p_stop_on_error => g_options_rec.stop_on_error
+    );
+  end if;
+
+  commit;
+
+  dbug_leave(l_module_name);
+exception
+  when others
+  then
+    commit;
+    dbug_leave(l_module_name);    
+    raise;
+end process_file_apex;
+
 procedure process_project
 ( p_github_access_handle in github_access_handle_t
 , p_path in varchar2 -- The repository file path
@@ -1149,7 +1207,7 @@ begin
     -- export not implemented yet
     if g_options_rec.operation = 'install'
     then 
-      process_file
+      process_file_apex
       ( p_github_access_handle => p_github_access_handle
       , p_schema => p_project_rec.schema
       , p_file_path => p_path || '/src/export/install.sql'
