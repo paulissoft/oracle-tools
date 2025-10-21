@@ -92,7 +92,7 @@ begin
   then
     null; -- OK
   else
-    raise program_error;
+    raise_application_error(-20000, 'Parameter p_check (' || p_check || ') should be empty or one of O, L and OL');
   end if;
 
   -- read till this entry is full (during testing I got 32764 instead of c_max_varchar2_size)
@@ -408,7 +408,7 @@ begin
     execute immediate 'alter session set current_schema = ' || l_target_schema;
     if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
     then
-      raise program_error;
+      raise_application_error(-20000, 'Could not switch current user from "' || sys_context('USERENV', 'CURRENT_SCHEMA') || '" to "' || l_target_schema || '"');
     end if;
   end if;
   dbms_cloud_repo.install_sql
@@ -504,7 +504,7 @@ begin
     execute immediate 'alter session set current_schema = ' || l_target_schema;
     if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
     then
-      raise program_error;
+      raise_application_error(-20000, 'Could not switch current user from "' || sys_context('USERENV', 'CURRENT_SCHEMA') || '" to "' || l_target_schema || '"');
     end if;
   end if;
   dbms_cloud_repo.install_file
@@ -556,6 +556,7 @@ is
   l_owner all_objects.owner%type := upper(p_schema);
   l_object_type all_objects.object_type%type;
   l_object_name all_objects.object_name%type;
+  l_flyway_file_type constant varchar2(1) := flyway_file_type(p_file_path); -- R/V
 begin
   if do_not_install_file(p_github_access_handle, p_file_path)
   then
@@ -604,16 +605,34 @@ begin
 
       -- github_installed_versions next
 
-      -- Is the last creation of this exact file (and checksum and # bytes) there?
-      select  max(v.id)
-      into    l_github_installed_versions_id
-      from    github_installed_versions_v v
-      where   v.github_installed_projects_id = l_github_installed_projects_id
-      and     v.base_name = l_base_name      
-      and     v.installed_rank = -1 /* last date_created */
-      and     v.checksum = p_file_id
-      and     v.bytes = p_bytes
-      and     v.error_msg is null;
+      case l_flyway_file_type
+        when 'R' -- repeatable
+        then
+          -- Is the last creation of this exact file (and checksum and # bytes) there?
+          select  max(v.id)
+          into    l_github_installed_versions_id
+          from    github_installed_versions_v v
+          where   v.github_installed_projects_id = l_github_installed_projects_id
+          and     v.base_name = l_base_name      
+          and     v.installed_rank = -1 /* last date_created */
+          and     v.checksum = p_file_id
+          and     v.bytes = p_bytes
+          and     v.error_msg is null;
+
+        when 'V' -- incremental
+        then
+          -- Is the last creation of this exact file there?
+          select  max(v.id)
+          into    l_github_installed_versions_id
+          from    github_installed_versions_v v
+          where   v.github_installed_projects_id = l_github_installed_projects_id
+          and     v.base_name = l_base_name      
+          and     v.installed_rank = -1 /* last date_created */
+          and     v.error_msg is null;
+          
+        else
+          null;
+      end case;
 
       --/*DBUG
       if l_github_installed_versions_id is not null
@@ -627,42 +646,48 @@ begin
 
       if l_github_installed_versions_id is not null
       then
-        -- check whether all the stored objects are still there with the same value for CREATED
-        <<check_difference_loop>>
-        for r in
-        ( select  o.owner
-          ,       o.object_type
-          ,       o.object_name
-          ,       o.created
-          from    github_installed_versions_objects o
-          where   o.github_installed_versions_id = l_github_installed_versions_id
-          minus
-          select  o.owner
-          ,       o.object_type
-          ,       o.object_name
-          ,       o.created
-          from    all_objects o
-        )
-        loop
-          --/*DBUG
-          dbms_output.put_line
-          ( utl_lms.format_message
-            ( '[%s] Must re-install due to %s "%s"."%s" with creation date "%s"'
-            , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
-            , r.object_type
-            , r.owner
-            , r.object_name
-            , to_char(r.created, 'yyyy-mm-dd hh24:mi:ss')
-            )
-          );
-          --/*DBUG*/
-          
-          -- there is at least one difference: stop and recreate again
-          l_github_installed_versions_id := null;
-          exit check_difference_loop;
-        end loop check_difference_loop;
+        if l_flyway_file_type = 'V'
+        then
+          l_github_installed_dml := false; -- skip install once scripts
+        elsif l_flyway_file_type = 'R'
+        then
+          -- check for a repeatable whether all the stored objects are still there with the same value for CREATED
+          <<check_difference_loop>>
+          for r in
+          ( select  o.owner
+            ,       o.object_type
+            ,       o.object_name
+            ,       o.created
+            from    github_installed_versions_objects o
+            where   o.github_installed_versions_id = l_github_installed_versions_id
+            minus
+            select  o.owner
+            ,       o.object_type
+            ,       o.object_name
+            ,       o.created
+            from    all_objects o
+          )
+          loop
+            --/*DBUG
+            dbms_output.put_line
+            ( utl_lms.format_message
+              ( '[%s] Must re-install due to %s "%s"."%s" with creation date "%s"'
+              , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+              , r.object_type
+              , r.owner
+              , r.object_name
+              , to_char(r.created, 'yyyy-mm-dd hh24:mi:ss')
+              )
+            );
+            --/*DBUG*/
+            
+            -- there is at least one difference: stop and recreate again
+            l_github_installed_versions_id := null;
+            exit check_difference_loop;
+          end loop check_difference_loop;
 
-        l_github_installed_dml := l_github_installed_versions_id is null;
+          l_github_installed_dml := l_github_installed_versions_id is null;
+        end if; -- if l_flyway_file_type = 'V'
       end if; -- if l_github_installed_versions_id is not null
     end if; -- if l_github_installed_dml
 
@@ -709,7 +734,16 @@ begin
     -- everything went fine and there is something to insert
     if l_github_installed_dml
     then
-      if l_github_installed_versions_id is not null then raise program_error; end if;
+      if l_github_installed_versions_id is not null
+      then
+        raise_application_error
+        ( -20000
+        , utl_lms.format_message
+          ( 'Expected l_github_installed_versions_id (%s) to be NULL'
+          , to_char(l_github_installed_versions_id)
+          )
+        );
+      end if;
       
       insert into github_installed_versions
       ( github_installed_projects_id

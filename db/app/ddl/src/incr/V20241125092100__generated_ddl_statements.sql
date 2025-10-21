@@ -1,3 +1,12 @@
+declare
+  l_tablespace_name user_tablespaces.tablespace_name%type;
+begin
+  select  max(ts.tablespace_name)
+  into    l_tablespace_name
+  from    user_tablespaces ts
+  where   ts.tablespace_name in ('USERS', 'DATA');
+
+  execute immediate utl_lms.format_message(q'<
 create table generated_ddl_statements
 ( generated_ddl_id integer -- Primary key #1
   constraint generated_ddl_statements$nnc$generated_ddl_id not null
@@ -15,14 +24,19 @@ create table generated_ddl_statements
   references generated_ddls(id) on delete cascade
 )
 organization index
-tablespace users
+tablespace %s
 including verb
-overflow tablespace users
-;
+overflow tablespace %s
+>', l_tablespace_name, l_tablespace_name);
 
-alter table generated_ddl_statements nologging;
+  execute immediate q'<
+alter table generated_ddl_statements nologging
+>';
 
 -- no need to create foreign key index generated_ddl_statements$fk$1 since the primary key starts with that column
-
+  execute immediate q'<
 comment on table generated_ddl_statements is
-    'The generated DDL statements.';
+    'The generated DDL statements.'
+>';
+end;
+/

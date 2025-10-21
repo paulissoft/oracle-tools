@@ -1,6 +1,17 @@
--- 2147483647 is power(2, 31) - 1, the maximum for positiven
-create sequence schema_object_filters$seq minvalue 1 maxvalue 2147483647 start with 1 increment by 1 cycle;
+declare
+  l_tablespace_name user_tablespaces.tablespace_name%type;
+begin
+  -- 2147483647 is power(2, 31) - 1, the maximum for positiven
+  execute immediate q'<
+create sequence schema_object_filters$seq minvalue 1 maxvalue 2147483647 start with 1 increment by 1 cycle
+>';
 
+  select  max(ts.tablespace_name)
+  into    l_tablespace_name
+  from    user_tablespaces ts
+  where   ts.tablespace_name in ('USERS', 'DATA');
+
+  execute immediate utl_lms.format_message(q'<
 create table schema_object_filters
 ( id integer 
   default oracle_tools.schema_object_filters$seq.nextval
@@ -27,12 +38,18 @@ create table schema_object_filters
   unique (hash_bucket, hash_bucket_nr)
 )
 organization index
-tablespace users
+tablespace %s
 including updated
-overflow tablespace users
-;
+overflow tablespace %s
+>', l_tablespace_name, l_tablespace_name);
 
-alter table schema_object_filters nologging;
+  execute immediate q'<
+alter table schema_object_filters nologging
+>';
 
+  execute immediate q'<
 comment on table schema_object_filters is
-    'The filter for schema objects.';
+    'The filter for schema objects.'
+>';
+end;
+/

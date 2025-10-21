@@ -1,3 +1,12 @@
+declare
+  l_tablespace_name user_tablespaces.tablespace_name%type;
+begin
+  select  max(ts.tablespace_name)
+  into    l_tablespace_name
+  from    user_tablespaces ts
+  where   ts.tablespace_name in ('USERS', 'DATA');
+
+  execute immediate utl-lsm.format_message(q'<
 create table generated_ddls
 ( id integer generated always as identity
   constraint generated_ddls$nnc$id not null
@@ -22,17 +31,25 @@ create table generated_ddls
   references schema_objects(id) on delete cascade
 )
 organization index
-tablespace users
+tablespace %s
 including created
-overflow tablespace users
-;
+overflow tablespace %s
+>', l_tablespace_name, l_tablespace_name);
 
-alter table generated_ddls nologging;
+  execute immediate q'<
+alter table generated_ddls nologging
+>';
 
+  execute immediate q'<
 create index generated_ddls$idx$1
-on generated_ddls(generate_ddl_configuration_id);
+on generated_ddls(generate_ddl_configuration_id)
+>';
 
 -- no need to create foreign key index generated_ddls$fk$2 since the unique key starts with that column
 
+  execute immediate q'<
 comment on table generated_ddls is
-    'The generated DDL info for a specific schema object id, last DDL time and configuration.';
+    'The generated DDL info for a specific schema object id, last DDL time and configuration.'
+>';
+end;
+/

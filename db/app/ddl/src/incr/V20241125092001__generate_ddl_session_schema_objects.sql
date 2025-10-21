@@ -1,3 +1,12 @@
+declare
+  l_tablespace_name user_tablespaces.tablespace_name%type;
+begin
+  select  max(ts.tablespace_name)
+  into    l_tablespace_name
+  from    user_tablespaces ts
+  where   ts.tablespace_name in ('USERS', 'DATA');
+
+  execute immediate utl_lms.format_message(q'<
 create table generate_ddl_session_schema_objects
 ( session_id number -- Primary key #1
   constraint generate_ddl_session_schema_objects$nnc$session_id not null
@@ -27,22 +36,34 @@ create table generate_ddl_session_schema_objects
   references generated_ddls(schema_object_id, last_ddl_time, generate_ddl_configuration_id) on delete cascade
 )
 organization index
-tablespace users
-;
+tablespace %s
+>', l_tablespace_name);
 
-alter table generate_ddl_session_schema_objects nologging;
+  execute immediate q'<
+alter table generate_ddl_session_schema_objects nologging
+>';
 
 -- foreign key index generate_ddl_session_schema_objects$fk$1
+  execute immediate q'<
 create index generate_ddl_session_schema_objects$idx$1
-on generate_ddl_session_schema_objects(schema_object_filter_id, schema_object_id);
+on generate_ddl_session_schema_objects(schema_object_filter_id, schema_object_id)
+>';
 
 -- foreign key index generate_ddl_session_schema_objects$fk$2
+  execute immediate q'<
 create index generate_ddl_session_schema_objects$idx$2
-on generate_ddl_session_schema_objects(session_id);
+on generate_ddl_session_schema_objects(session_id)
+>';
 
 -- foreign key index generate_ddl_session_schema_objects$fk$3
+  execute immediate q'<
 create index generate_ddl_session_schema_objects$idx$3
-on generate_ddl_session_schema_objects(schema_object_id, last_ddl_time, generate_ddl_configuration_id);
+on generate_ddl_session_schema_objects(schema_object_id, last_ddl_time, generate_ddl_configuration_id)
+>';
 
+  execute immediate q'<
 comment on table generate_ddl_session_schema_objects is
-    'Information about DDL to generate for schema objects for a specific session.';
+    'Information about DDL to generate for schema objects for a specific session.'
+>';
+end;
+/

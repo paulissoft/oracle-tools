@@ -1,3 +1,12 @@
+declare
+  l_tablespace_name user_tablespaces.tablespace_name%type;
+begin
+  select  max(ts.tablespace_name)
+  into    l_tablespace_name
+  from    user_tablespaces ts
+  where   ts.tablespace_name in ('USERS', 'DATA');
+
+  execute immediate utl_lms.format_message(q'<
 create table generate_ddl_sessions
 ( session_id number
   default to_number(sys_context('USERENV', 'SESSIONID'))
@@ -24,19 +33,30 @@ create table generate_ddl_sessions
   references oracle_tools.generate_ddl_configurations(id) on delete cascade
 )
 organization index
-tablespace users
+tablespace %s
+>', l_tablespace_name);
 ;
 
-alter table generate_ddl_sessions nologging;
+  execute immediate q'<
+alter table generate_ddl_sessions nologging
+>';
 
 -- foreign key index generate_ddl_sessions$fk$1
+  execute immediate q'<
 create index generate_ddl_sessions$idx$1
-on generate_ddl_sessions(schema_object_filter_id);
+on generate_ddl_sessions(schema_object_filter_id)
+>';
 
 -- foreign key index generate_ddl_sessions$fk$2
+  execute immediate q'<
 create index generate_ddl_sessions$idx$2
-on generate_ddl_sessions(generate_ddl_configuration_id);
+on generate_ddl_sessions(generate_ddl_configuration_id)
+>';
 
+  execute immediate q'<
 comment on table generate_ddl_sessions is
-    'Information about DDL generation per session id (sys_context(''USERENV'', ''SESSIONID'')). ';
+    'Information about DDL generation per session id (sys_context(''USERENV'', ''SESSIONID'')). '
+>';
+end;
+/
 
