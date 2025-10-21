@@ -35,7 +35,6 @@ create table generate_ddl_sessions
 organization index
 tablespace %s
 >', l_tablespace_name);
-;
 
   execute immediate q'<
 alter table generate_ddl_sessions nologging
