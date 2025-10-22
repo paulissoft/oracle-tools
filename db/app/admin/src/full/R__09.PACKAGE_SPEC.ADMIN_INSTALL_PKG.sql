@@ -79,7 +79,7 @@ procedure process_project_db
 , p_schema in varchar default null -- The database schema
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
-, p_src_callbacks in varchar2 default '/src/callbacks/'
+, p_src_callbacks in varchar2 default null -- A common option is '/src/callbacks/'
 , p_src_incr in varchar2 default '/src/incr/'
 , p_src_full in varchar2 default '/src/full/'
 , p_src_dml in varchar2 default '/src/dml/'
@@ -124,6 +124,7 @@ procedure process_root_project
 , p_operation in varchar2 default null -- top level must be 'install' or 'export'
 , p_stop_on_error in boolean default true -- Must we stop on error?
 , p_dry_run in boolean default false -- A dry run?
+, p_verbose in boolean default false -- More logging...
 );
 /**
 A loose representation of an aggregator POM in folder p_path (i.e. <p_path>/pom.xml).

@@ -8,14 +8,22 @@ type options_rec_t is record
 ( operation varchar2(10)
 , stop_on_error boolean
 , dry_run boolean
+, verbose boolean
 );
+
+-- key is base name, value is file contents
+type callback_tab_t is table of clob index by varchar2(100 byte);
+
+subtype project_handle_t is varchar2(512); -- github_access_handle || ':' || path
 
 type project_rec_t is record
 ( project_type varchar2(4 byte) -- db/apex
 , schema varchar(128 char) -- The database schema
 , parent_github_access_handle github_access_handle_t default null -- The parent GitHub access handle
 , parent_path varchar2(1000 char) default null -- The parent repository file path
-, src_callbacks varchar2(1000 char)
+, src_callbacks varchar2(1000 char) -- can be empty
+, callbacks_project_handle project_handle_t -- this not and g_project_tab.exists(callbacks_project_handle)
+, callback_tab callback_tab_t -- can inherit from paulissoft/oracle-tools:db/src/callbacks
 , src_incr varchar2(1000 char)
 , src_full varchar2(1000 char)
 , src_dml varchar2(1000 char)
@@ -23,10 +31,9 @@ type project_rec_t is record
 , application_id integer
 );
 
-type github_access_tab_t is table of github_access_rec_t index by github_access_handle_t;
+type project_tab_t is table of project_rec_t index by project_handle_t;
 
--- key is base name, value is file contents
-type callbacks_tab_t is table of clob index by varchar2(100 byte);
+type github_access_tab_t is table of github_access_rec_t index by github_access_handle_t;
 
 -- copy from pkg_str_util
 
@@ -72,21 +79,34 @@ c_md_object_types constant sys.odcivarchar2list :=
 
 -- VARIABLES
 
+g_project_tab project_tab_t;
+
 g_github_access_tab github_access_tab_t;
 
 g_options_rec options_rec_t;
-
-g_root_project_rec project_rec_t;
 
 g_first_error boolean := true;
 
 g_clob clob := null;
 
-g_pato_callbacks_tab callbacks_tab_t;
+g_pato_callbacks_project_handle project_handle_t := null;
 
-g_empty_callbacks_tab callbacks_tab_t;
+g_empty_project_rec project_rec_t; -- do not modify this one
 
 -- ROUTINES
+
+procedure raise_error
+( p_line in integer
+, p_raise_error_statement in varchar2
+)
+is
+begin
+  execute immediate 'begin ' || p_raise_error_statement || '; end;';
+  raise program_error; -- should not come here
+exception
+  when others
+  then raise_application_error(-20100, 'Error raised on line ' || p_line, true);
+end raise_error;
 
 function dbms_lob_substr
 ( p_clob in clob
@@ -107,7 +127,13 @@ begin
   then
     null; -- OK
   else
-    raise_application_error(-20000, 'Parameter p_check (' || p_check || ') should be empty or one of O, L and OL');
+    raise_error
+    ( $$PLSQL_LINE
+    , utl_lms.format_message
+      ( q'[raise_application_error(-20000, 'Parameter p_check (%s) should be empty or one of O, L and OL')]'
+      , p_check
+      )
+    );
   end if;
 
   -- read till this entry is full (during testing I got 32764 instead of c_max_varchar2_size)
@@ -146,7 +172,7 @@ begin
   then
     if nvl(length(l_buffer), 0) = p_amount
     then null; -- buffer length is amount requested, i.e. OK
-    else raise value_error;
+    else raise_error($$PLSQL_LINE, 'raise value_error');
     end if;
   end if;
 
@@ -278,9 +304,13 @@ begin
       p_object_type := l_parts_tab(l_parts_tab.last - 2);
       p_object_name := l_parts_tab(l_parts_tab.last - 1);
     else
-      raise_application_error
-      ( -20000
-      , 'Base name (' || l_base_name || ') has ' || l_parts_tab.count || ' parts with the dot as the delimiter: should be at least'
+      raise_error
+      ( $$PLSQL_LINE
+      , utl_lms.format_message
+        ( q'[raise_application_error(-20000, 'Base name (%s) has %s parts with the dot as the delimiter: should be at least')]'
+        , l_base_name
+        , to_char(l_parts_tab.count)
+        )
       );
     end if;
     
@@ -385,53 +415,11 @@ begin
   return false;
 end do_not_install_file;
 
-procedure define_callbacks
-( p_github_access_rec in github_access_rec_t
-, p_path in varchar2 -- full path to callbacks directory
-, p_callbacks_tab out nocopy callbacks_tab_t
-)
-is
-begin
-  /*
-  -- gpaulissen@pc-803 oracle-tools % find . -name callbacks -print -exec ls {} \;
-  -- ./db/app/admin/src/callbacks
-  -- ./db/app/cfg/src/callbacks
-  -- afterMigrate.sql  beforeEachMigrate.sql
-  -- ./db/src/callbacks
-  -- afterMigrate.sql  beforeEachMigrate.sql  beforeMigrate.sql  unused-afterEachMigrate.sql  unused-beforeMigrate.sql
-  */
-  for r in
-  ( select  t.name
-    from    table
-            ( dbms_cloud_repo.list_files
-              ( repo => p_github_access_rec.repo
-              , path => p_path
-              , branch_name => p_github_access_rec.branch_name
-              , tag_name => p_github_access_rec.tag_name
-              , commit_id => p_github_access_rec.commit_id
-              )
-            ) t
-    where   t.name like '%/beforeMigrate.sql'
-    or      t.name like '%/beforeEachMigrate.sql'
-    or      t.name like '%/afterEachMigrate.sql'
-    or      t.name like '%/afterMigrate.sql'
-  )
-  loop
-    p_callbacks_tab(base_name(r.name)) :=
-      dbms_cloud_repo.get_file
-      ( repo => p_github_access_rec.repo
-      , file_path => r.name
-      , branch_name => p_github_access_rec.branch_name
-      , tag_name => p_github_access_rec.tag_name
-      , commit_id => p_github_access_rec.commit_id
-      );
-  end loop;
-end define_callbacks;
-
 procedure install_sql
 ( p_schema in varchar2
 , p_content in clob
 , p_base_name in varchar2
+, p_project_rec in project_rec_t default g_empty_project_rec
 )
 is
   l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_sql (1)';
@@ -455,8 +443,13 @@ is
     );
 begin
   dbug_enter(l_module_name);
-  dbug_print('schema: ' || p_schema);
-  dbug_print('base name: ' || p_base_name);
+  dbug_print('schema   : ' || p_schema);
+  if p_project_rec.callback_tab.exists(p_base_name)
+  then
+    dbug_print('callback : ' || p_project_rec.callbacks_project_handle || '/' || p_project_rec.callback_tab(p_base_name));
+  else
+    dbug_print('base name: ' || p_base_name);
+  end if;
   
 /*
 -- File: db/app/cfg/src/callbacks/afterMigrate.sql
@@ -480,7 +473,6 @@ begin
 declare
   l_target_schema constant all_objects.owner%type := upper(:b1);
 begin
-  admin.admin_install_pkg.dbug_print('#1');
   if l_target_schema <> sys_context('USERENV', 'CURRENT_SCHEMA')
   then
     execute immediate 'alter session set current_schema = ' || l_target_schema;
@@ -489,12 +481,10 @@ begin
       raise_application_error(-20000, 'Could not switch current user from "' || sys_context('USERENV', 'CURRENT_SCHEMA') || '" to "' || l_target_schema || '"');
     end if;
   end if;
-  admin.admin_install_pkg.dbug_print('#2');
   dbms_cloud_repo.install_sql
   ( content => :b2
   , stop_on_error => :b3
   );
-  admin.admin_install_pkg.dbug_print('#3');
 end;
 ]'
     using in p_schema
@@ -742,7 +732,7 @@ procedure process_file
 , p_file_path in varchar2 -- The repository file path
 , p_file_id in varchar2 default null
 , p_bytes in integer default null
-, p_callbacks_tab in callbacks_tab_t default g_empty_callbacks_tab
+, p_project_rec in project_rec_t default g_empty_project_rec
 )
 is
   pragma autonomous_transaction;
@@ -780,7 +770,7 @@ begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
   -- only 'install' implemented
-  if g_options_rec.operation = 'install' then null; else raise value_error; end if;
+  if g_options_rec.operation = 'install' then null; else raise_error($$PLSQL_LINE, 'raise value_error'); end if;
 
   --/*DBUG
   dbug_print
@@ -910,12 +900,13 @@ begin
       then
         -- Run Flyway callback before echo migration
         if l_flyway_file_type is not null and
-           p_callbacks_tab.exists('beforeEachMigrate.sql')
+           p_project_rec.callback_tab.exists('beforeEachMigrate.sql')
         then
           install_sql
           ( p_schema => p_schema
-          , p_content => p_callbacks_tab('beforeEachMigrate.sql')
+          , p_content => p_project_rec.callback_tab('beforeEachMigrate.sql')
           , p_base_name => 'beforeEachMigrate.sql'
+          , p_project_rec => p_project_rec
           );
         end if;
       
@@ -932,12 +923,13 @@ begin
         
         -- Run Flyway callback after each migration
         if l_flyway_file_type is not null and
-           p_callbacks_tab.exists('afterEachMigrate.sql')
+           p_project_rec.callback_tab.exists('afterEachMigrate.sql')
         then
           install_sql
           ( p_schema => p_schema
-          , p_content => p_callbacks_tab('afterEachMigrate.sql')
+          , p_content => p_project_rec.callback_tab('afterEachMigrate.sql')
           , p_base_name => 'afterEachMigrate.sql'
+          , p_project_rec => p_project_rec
           );
         end if;
       end if;
@@ -972,10 +964,10 @@ begin
     then
       if l_github_installed_versions_id is not null
       then
-        raise_application_error
-        ( -20000
+        raise_error
+        ( $$PLSQL_LINE
         , utl_lms.format_message
-          ( 'Expected l_github_installed_versions_id (%s) to be NULL'
+          ( q'[raise_application_error(-20000, 'Expected l_github_installed_versions_id (%s) to be NULL')]'
           , to_char(l_github_installed_versions_id)
           )
         );
@@ -1059,7 +1051,7 @@ begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
   -- only 'install' implemented
-  if g_options_rec.operation = 'install' then null; else raise value_error; end if;
+  if g_options_rec.operation = 'install' then null; else raise_error($$PLSQL_LINE, 'raise value_error'); end if;
 
   --/*DBUG
   dbug_print
@@ -1098,17 +1090,44 @@ end process_file_apex;
 procedure process_project
 ( p_github_access_handle in github_access_handle_t
 , p_path in varchar2 -- The repository file path
-, p_project_rec in project_rec_t
+, p_project_rec in out nocopy project_rec_t
 )
 is
   l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_project (1)';
   
   l_github_access_rec github_access_rec_t;
 
-  l_callbacks_tab callbacks_tab_t;
+  l_path varchar2(1000 byte);
+  l_base_name varchar2(1000 byte);
+  l_base_name_wildcard varchar2(100 byte);
+
+  cursor c_list_files
+  ( b_path in varchar2
+  , b_base_name_wildcard in varchar2
+  )
+  is
+    select  t.id
+    ,       t.name
+    ,       t.bytes
+    from    table
+            ( dbms_cloud_repo.list_files
+              ( repo => l_github_access_rec.repo
+              , path => b_path
+              , branch_name => l_github_access_rec.branch_name
+              , tag_name => l_github_access_rec.tag_name
+              , commit_id => l_github_access_rec.commit_id
+              )
+            ) t
+    where   t.name like b_path || '/' || b_base_name_wildcard escape '\'
+    order by
+            t.name;
+
+  type t_list_files is table of c_list_files%rowtype index by binary_integer;
+
+  l_flyway_files t_list_files;
 begin
   dbug_enter(l_module_name);
-  
+
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
   --/*DBUG
@@ -1123,84 +1142,132 @@ begin
 
   if p_project_rec.project_type = 'db'
   then
-    if p_project_rec.src_callbacks is not null
-    then
-      define_callbacks
-      ( p_github_access_rec => l_github_access_rec
-      , p_path => normalize_file_name(p_path || '/' || p_project_rec.src_callbacks)
-      , p_callbacks_tab => l_callbacks_tab
-      );
-    else
-      l_callbacks_tab := g_pato_callbacks_tab;
-    end if;
-
     -- export not implemented yet
     if g_options_rec.operation = 'install'
     then
-
-      -- Run Flyway callback before migration
-      if l_callbacks_tab.exists('beforeMigrate.sql')
-      then
-        install_sql
-        ( p_schema => p_project_rec.schema
-        , p_content => l_callbacks_tab('beforeMigrate.sql')
-        , p_base_name => 'beforeMigrate.sql'
-        );
-      end if;
-
-      for r in
-      ( select  id
-        ,       name
-        ,       bytes
-        ,       case
-                  when instr(name, p_project_rec.src_incr) > 0 then 1
-                  when instr(name, p_project_rec.src_full) > 0 then 2
-                  when instr(name, p_project_rec.src_dml) > 0 then 3
-                  when instr(name, p_project_rec.src_ords) > 0 then 4
-                end as file_type
-        from    table
-                ( dbms_cloud_repo.list_files
-                  ( repo => l_github_access_rec.repo
-                  , path => p_path
-                  , branch_name => l_github_access_rec.branch_name
-                  , tag_name => l_github_access_rec.tag_name
-                  , commit_id => l_github_access_rec.commit_id
-                  )
-                )
-        where   ( name like 'R\_\_%.sql' escape '\' -- Flyway repeatable scripts
-                  or
-                  name like '%/R\_\_%.sql' escape '\' -- Flyway repeatable scripts
-                  or
-                  name like 'V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
-                  or
-                  name like '%/V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
-                )
-        order by
-                file_type
-        ,       name        
-      )
+      <<file_type_loop>>
+      for i_file_type in 0..4
       loop
-        process_file
-        ( p_github_access_handle => p_github_access_handle
-        , p_schema => p_project_rec.schema
-        , p_file_path => r.name
-        , p_file_id => r.id
-        , p_bytes => r.bytes
-        , p_callbacks_tab => l_callbacks_tab
-        );
-      end loop;
-      
-      -- Run Flyway callback after migration
-      if l_callbacks_tab.exists('afterMigrate.sql')
+        l_path :=   
+          case i_file_type
+            when 0
+            then p_project_rec.src_callbacks
+            when 1
+            then p_project_rec.src_incr
+            when 2
+            then p_project_rec.src_full
+            when 3
+            then p_project_rec.src_dml
+            when 4
+            then p_project_rec.src_ords
+          end;
+
+        if i_file_type = 0
+        then
+          if l_path is null
+          then
+            -- p_project_rec.src_callbacks is null
+            p_project_rec.callbacks_project_handle := g_pato_callbacks_project_handle; -- should be not null
+            p_project_rec.callback_tab := g_project_tab(p_project_rec.callbacks_project_handle).callback_tab;
+          else
+            p_project_rec.callbacks_project_handle := p_github_access_handle || ':' || p_path;
+          end if;
+
+          if not(g_project_tab.exists(p_project_rec.callbacks_project_handle))
+          then
+            raise_error
+            ( $$PLSQL_LINE
+            , utl_lms.format_message
+              ( q'[raise_application_error(-20000, 'No callbacks project handle (%s) defined.')]'
+              , p_project_rec.callbacks_project_handle
+              )
+            );
+          end if;
+        end if;
+
+        if l_path is null
+        then
+          continue; -- nothing to find
+        end if;
+
+        l_path := normalize_file_name(p_path || '/' || l_path);
+
+        l_base_name_wildcard := 
+          case i_file_type
+            when 0
+            then '%Migrate.sql'
+            when 1
+            then 'V_%\_\_%.sql' -- V<nr>__%.sql (<nr> can contain digits)
+            else 'R\_\___.%.%.sql' -- R__<nr>.<type>.<name>.sql / R__<nr>.<owner>.<type>.<name>.sql (<nr> can contain digits)
+          end;
+
+        <<list_files_loop>>
+        for r in c_list_files(l_path, l_base_name_wildcard)
+        loop
+          if i_file_type = 0
+          then
+            l_base_name := base_name(r.name);
+            if l_base_name in ( 'beforeMigrate.sql'
+                              , 'beforeEachMigrate.sql'
+                              , 'afterEachMigrate.sql'
+                              , 'afterMigrate.sql'
+                              )
+            then
+              p_project_rec.callback_tab(l_base_name) :=
+                dbms_cloud_repo.get_file
+                ( repo => l_github_access_rec.repo
+                , file_path => r.name
+                , branch_name => l_github_access_rec.branch_name
+                , tag_name => l_github_access_rec.tag_name
+                , commit_id => l_github_access_rec.commit_id
+                );
+            end if;
+          else
+            l_flyway_files(l_flyway_files.count + 1) := r;
+          end if;
+        end loop list_files_loop;
+      end loop file_type_loop;
+
+      -- anything to install?
+      if l_flyway_files.count > 0
       then
-        install_sql
-        ( p_schema => p_project_rec.schema
-        , p_content => l_callbacks_tab('afterMigrate.sql')
-        , p_base_name => 'afterMigrate.sql'
-        );
+        -- Run Flyway callback before migration
+        if p_project_rec.callback_tab.exists('beforeMigrate.sql')
+        then
+          install_sql
+          ( p_schema => p_project_rec.schema
+          , p_content => p_project_rec.callback_tab('beforeMigrate.sql')
+          , p_base_name => 'beforeMigrate.sql'
+          , p_project_rec => p_project_rec
+          );
+        end if;
+
+        <<process_file_loop>>
+        for i_file_idx in l_flyway_files.first .. l_flyway_files.last
+        loop
+          process_file
+          ( p_github_access_handle => p_github_access_handle
+          , p_schema => p_project_rec.schema
+          , p_file_path => l_flyway_files(i_file_idx).name
+          , p_file_id => l_flyway_files(i_file_idx).id
+          , p_bytes => l_flyway_files(i_file_idx).bytes
+          , p_project_rec => p_project_rec
+          );
+        end loop process_file_loop;
+        
+        -- Run Flyway callback after migration
+        if p_project_rec.callback_tab.exists('afterMigrate.sql')
+        then
+          install_sql
+          ( p_schema => p_project_rec.schema
+          , p_content => p_project_rec.callback_tab('afterMigrate.sql')
+          , p_base_name => 'afterMigrate.sql'
+          , p_project_rec => p_project_rec
+          );
+        end if;
       end if;
     else
-      raise value_error;
+      raise_error($$PLSQL_LINE, 'raise value_error');
     end if;
   elsif p_project_rec.project_type = 'apex'
   then
@@ -1213,10 +1280,10 @@ begin
       , p_file_path => p_path || '/src/export/install.sql'
       );
     else
-      raise value_error;
+      raise_error($$PLSQL_LINE, 'raise value_error');
     end if;
   else
-    raise value_error;
+    raise_error($$PLSQL_LINE, 'raise value_error');
   end if;
 
   dbug_leave(l_module_name);
@@ -1244,15 +1311,15 @@ begin
   
   if g_github_access_tab.exists(p_github_access_handle)
   then
-    raise dup_val_on_index;
+    raise_error($$PLSQL_LINE, 'raise dup_val_on_index');
   end if;
 
   if g_github_access_tab.count = 0 and p_github_access_handle <> "paulissoft/oracle-tools"
   then
-    raise_application_error
-    ( -20000
+    raise_error
+    ( $$PLSQL_LINE
     , utl_lms.format_message
-      ( 'The first call for set_github_access() must be for repo owner "%s" and repo name "%s"'
+      ( q'[raise_application_error(-20000, 'The first call for set_github_access() must be for repo owner "%s" and repo name "%s"']'
       , "paulissoft"
       , "oracle-tools"
       )
@@ -1288,27 +1355,6 @@ begin
   l_github_access_rec.current_schema := sys_context('USERENV', 'CURRENT_SCHEMA');
 
   g_github_access_tab(p_github_access_handle) := l_github_access_rec;
-  
-  if g_github_access_tab.count = 1
-  then
-    /*
-    -- gpaulissen@pc-803 oracle-tools % find . -name callbacks -print -exec ls {} \;
-    -- ./db/app/admin/src/callbacks
-    -- ./db/app/cfg/src/callbacks
-    -- afterMigrate.sql  beforeEachMigrate.sql
-    -- ./db/src/callbacks
-    -- afterMigrate.sql  beforeEachMigrate.sql  beforeMigrate.sql  unused-afterEachMigrate.sql  unused-beforeMigrate.sql
-    */
-    define_callbacks
-    ( p_github_access_rec => l_github_access_rec
-    , p_path => 'db/src/callbacks'
-    , p_callbacks_tab => g_pato_callbacks_tab
-    );
-    if g_pato_callbacks_tab.count = 0
-    then
-      raise program_error;
-    end if;
-  end if;
 exception
   when others
   then raise_application_error
@@ -1357,7 +1403,10 @@ procedure dbug_enter
 )
 is
 begin
-  dbug_print('>' || p_module);
+  if g_options_rec.verbose
+  then
+    dbug_print('>' || p_module);
+  end if;
 end dbug_enter;
 
 procedure dbug_leave
@@ -1373,14 +1422,19 @@ begin
     -- display the first error in a call chain
     if g_first_error
     then
-      dbug_print('CALL STACK     : ' || p_call_stack);
-      dbug_print('ERROR BACKTRACE: ' || p_error_backtrace);
+      dbug_print('*** CALL STACK ***');
+      dbug_print(p_call_stack);
+      dbug_print('*** ERROR BACKTRACE ***');
+      dbug_print(p_error_backtrace);
       g_first_error := false;
     end if;
   else
     g_first_error := true;
   end if;
-  dbug_print('<' || p_module);
+  if g_options_rec.verbose
+  then
+    dbug_print('<' || p_module);
+  end if;
 end dbug_leave;
 
 procedure process_project_db
@@ -1411,6 +1465,8 @@ begin
   l_project_rec.src_dml := p_src_dml;
   l_project_rec.src_ords := p_src_ords;
 
+  g_project_tab(p_github_access_handle || ':' || p_path ) := l_project_rec;
+
   process_project
   ( p_github_access_handle => p_github_access_handle
   , p_path => p_path
@@ -1434,8 +1490,7 @@ procedure process_project_apex
 , p_application_id in integer
 )
 is
-  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_project_apex';
-  
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_project_apex';  
   l_project_rec project_rec_t;
 begin
   dbug_enter(l_module_name);
@@ -1445,6 +1500,8 @@ begin
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
   l_project_rec.application_id := p_application_id;
+
+  g_project_tab(p_github_access_handle || ':' || p_path ) := l_project_rec;
 
   process_project
   ( p_github_access_handle => p_github_access_handle
@@ -1476,6 +1533,8 @@ begin
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
 
+  g_project_tab(p_github_access_handle || ':' || p_path ) := l_project_rec;
+
   -- process the pom.sql inside
   PRAGMA INLINE(normalize_file_name, 'YES');
   process_file
@@ -1499,17 +1558,41 @@ procedure process_root_project
 , p_operation in varchar2
 , p_stop_on_error in boolean
 , p_dry_run in boolean
+, p_verbose in boolean
 )
 is
   l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_root_project';
+  l_project_rec project_rec_t;
 begin
-  g_root_project_rec.project_type := null;
-  g_root_project_rec.parent_github_access_handle := p_parent_github_access_handle;
-  g_root_project_rec.parent_path := p_parent_path;
+  l_project_rec.project_type := null;
+  l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
+  l_project_rec.parent_path := p_parent_path;
   g_options_rec.operation := p_operation;
   g_options_rec.stop_on_error := p_stop_on_error;
   g_options_rec.dry_run := p_dry_run;
+  g_options_rec.verbose := p_verbose;
 
+  g_project_tab(p_github_access_handle || ':' || null ) := l_project_rec;
+
+  /*
+  -- gpaulissen@pc-803 oracle-tools % find . -name callbacks -print -exec ls {} \;
+  -- ./db/app/admin/src/callbacks
+  -- ./db/app/cfg/src/callbacks
+  -- afterMigrate.sql  beforeEachMigrate.sql
+  -- ./db/src/callbacks
+  -- afterMigrate.sql  beforeEachMigrate.sql  beforeMigrate.sql  unused-afterEachMigrate.sql  unused-beforeMigrate.sql
+  */
+  g_pato_callbacks_project_handle := "paulissoft/oracle-tools" || ':' || 'db';
+  process_project_db
+  ( p_github_access_handle => "paulissoft/oracle-tools"
+  , p_path => 'db'
+  , p_src_callbacks => '/src/callbacks'
+  , p_src_incr => null
+  , p_src_full => null
+  , p_src_dml => null
+  , p_src_ords => null
+  );
+  
   -- process the pom.sql inside
   PRAGMA INLINE(normalize_file_name, 'YES');
   process_file
