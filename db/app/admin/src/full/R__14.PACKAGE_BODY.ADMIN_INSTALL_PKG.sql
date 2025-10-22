@@ -1092,7 +1092,7 @@ procedure process_file_apex
 , p_file_path in varchar2 -- The repository file path
 )
 is
-  pragma autonomous_transaction;
+  -- pragma autonomous_transaction;
 
   l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_file_apex';
   l_github_access_rec github_access_rec_t;
@@ -1235,13 +1235,13 @@ begin
     end loop line_loop;
   end if;
 
-  commit;
+--  commit;
 
   dbug_leave(l_module_name);
 exception
   when others
   then
-    commit;
+  --  commit;
     dbug_leave(l_module_name);    
     raise;
 end process_file_apex;
@@ -1288,6 +1288,9 @@ is
   type t_list_files is table of c_list_files%rowtype index by binary_integer;
 
   l_flyway_files t_list_files;
+
+  l_cursor sys_refcursor;
+  l_workspace_name varchar2(128 char);
 begin
   dbug_enter(l_module_name);
 
@@ -1426,12 +1429,44 @@ begin
   then
     -- export not implemented yet
     if g_options_rec.operation = 'install'
-    then 
+    then
+      -- from file apex/src/scripts/import.sql
+      -- 1) pre_import.sql: call oracle_tools.ui_apex_synchronize.pre_import(<application id>)
+      -- 2) prepare_import.sql: call oracle_tools.ui_apex_synchronize.prepare_import(<workspace name>, <application id>)
+      -- 3) execute export file(s), i.e. install.sql
+      -- 4) publish_application.sql: call oracle_tools.ui_apex_synchronize.publish_application
+      -- 5) post_import.sql: call oracle_tools.ui_apex_synchronize.post_import(<application id>);
+
+      -- step 1
+      execute immediate 'call oracle_tools.ui_apex_synchronize.pre_import(:b1)'
+        using p_project_rec.application_id;
+
+      -- step 2
+      open l_cursor for q'[
+select  workspace
+from    apex_workspaces
+where   workspace <> 'INTERNAL'
+and     workspace not like 'COM.ORACLE.%'
+and     rownum = 1
+]';
+      fetch l_cursor into l_workspace_name;
+      close l_cursor;
+      execute immediate 'call oracle_tools.ui_apex_synchronize.prepare_import(:b1, :b2)'
+        using l_workspace_name, p_project_rec.application_id;
+
+      -- step 3
       process_file_apex
       ( p_github_access_handle => p_github_access_handle
       , p_schema => p_project_rec.schema
       , p_file_path => p_path || '/src/export/install.sql'
       );
+
+      -- step 4
+      execute immediate 'call oracle_tools.ui_apex_synchronize.publish_application';
+      
+      -- step 5
+      execute immediate 'call oracle_tools.ui_apex_synchronize.post_import(:b1)'
+        using p_project_rec.application_id;
     else
       raise_error($$PLSQL_LINE, 'raise value_error');
     end if;
