@@ -1462,7 +1462,8 @@ and     rownum = 1
       );
 
       -- step 4
-      execute immediate 'call oracle_tools.ui_apex_synchronize.publish_application';
+      execute immediate 'call oracle_tools.ui_apex_synchronize.publish_application(:b1)'
+        using p_project_rec.application_id;
       
       -- step 5
       execute immediate 'call oracle_tools.ui_apex_synchronize.post_import(:b1)'
