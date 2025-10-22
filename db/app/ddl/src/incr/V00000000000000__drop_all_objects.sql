@@ -153,6 +153,9 @@ begin
       order by
               level desc;
 
+      -- GJP 2025-10-22 Add this one just to be sure.
+      l_statement_tab(l_statement_tab.count + 1) := 'drop type ' || l_type_tab(i_idx) || ' force';
+
       if l_statement_tab.count > 0
       then
         for i_idx in l_statement_tab.first .. l_statement_tab.last

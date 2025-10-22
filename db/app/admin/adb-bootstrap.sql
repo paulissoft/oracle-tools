@@ -1,6 +1,6 @@
 /*
--- Script: adb-install-bootstrap.sql
--- Goal  : A SQL*Plus script to install the ADMIN bootstrap ADMIN part of (P)aulissoft (A)pplication (T)ools for (O)racle
+-- Script: adb-bootstrap.sql
+-- Goal  : A SQL*Plus script to bootstrap the ADMIN part of (P)aulissoft (A)pplication (T)ools for (O)racle
 -- Note  : This script should NOT be run by DBMS_CLOUD_REPO.INSTALL_FILE
 */
 
