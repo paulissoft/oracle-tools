@@ -1,6 +1,6 @@
 /*
--- Script: adb-install-configure.sql
--- Goal  : A SQL*Plus script to return the repo handle from DBMS_CLOUD_REPO.INIT_GITHUB_REPO
+-- Script: adb-process.sql
+-- Goal  : A SQL*Plus script to start the Autonomous DataBase process to install or export
 -- Input : 1) The repo owner (case sensitive)
 --         2) The repo name (case sensitive)
 --         3) The operation (install/export)
@@ -11,6 +11,33 @@
 
 set serveroutput on size unlimited format trunc
 set feedback off verify off
+
+-- set defines 3, 4 and 5 even though undefined
+column d3 new_value 3
+column d4 new_value 4
+column d5 new_value 5
+
+select   1 d3
+,        1 d4
+,        1 d5
+from     dual
+where    1=2;
+
+select   'install' d3
+from     dual
+where    'X&3' = 'X';
+
+select   'true' d4
+from     dual
+where    'X&4' = 'X';
+
+select   'true' d5
+from     dual
+where    'X&5' = 'X';
+
+column d3 clear
+column d4 clear
+column d5 clear
 
 declare
   l_github_access_handle admin_install_pkg.github_access_handle_t := null;
@@ -49,4 +76,4 @@ exception
 end;
 /
 
-undefine 1 2
+undefine 1 2 3 4 5

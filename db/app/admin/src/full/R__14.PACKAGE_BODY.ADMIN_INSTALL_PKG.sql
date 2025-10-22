@@ -250,16 +250,19 @@ function flyway_file_type
 return varchar2
 deterministic
 is
+  l_base_name varchar2(1000 byte) := base_name(p_file_path);
 begin
   return
     case
-      when p_file_path like 'R\_\_%.sql' escape '\' -- Flyway repeatable scripts
-           or
-           p_file_path like '%/R\_\_%.sql' escape '\' -- Flyway repeatable scripts
+      when l_base_name in ( 'beforeMigrate.sql'
+                          , 'beforeEachMigrate.sql'
+                          , 'afterEachMigrate.sql'
+                          , 'afterMigrate.sql'
+                          )
+      then 'C' -- callback
+      when l_base_name like 'R\_\___.%.%.sql' escape '\' -- Flyway repeatable scripts
       then 'R'
-      when p_file_path like 'V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
-           or
-           p_file_path like '%/V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
+      when l_base_name like 'V_%\_\_%.sql' escape '\' -- Flyway incremental scripts
       then 'V'
     end;
 end flyway_file_type;
@@ -272,7 +275,7 @@ deterministic
 is
 begin
   PRAGMA INLINE (flyway_file_type, 'YES');
-  return case when flyway_file_type(p_file_path) in ('R', 'V') then true else false end;
+  return flyway_file_type(p_file_path) is not null;
 end is_flyway_file;
 
 procedure parse_repeatable_file
@@ -520,7 +523,13 @@ begin
 -- ./conf/src/env.properties:6:oracle_tools_schema_msg=ORACLE_TOOLS
 -- ./conf/src/flyway-app.conf:4:flyway.placeholders.oracle_tools_schema_msg=${oracle_tools_schema_msg}
 */
-  execute immediate q'[
+
+  -- should not come here
+  if g_options_rec.dry_run and is_flyway_file(p_file_path)
+  then
+    null; -- raise_error($$PLSQL_LINE, 'raise program_error'); end if;
+  else
+    execute immediate q'[
 declare
   l_target_schema constant all_objects.owner%type := upper(:b1);
 begin
@@ -538,9 +547,10 @@ begin
   );
 end;
 ]'
-    using in p_schema
-           , l_statement
-           , g_options_rec.stop_on_error;
+      using in p_schema
+             , l_statement
+             , g_options_rec.stop_on_error;
+  end if;             
 
   dbug_leave(l_module_name);
 exception
@@ -732,7 +742,12 @@ begin
                    )
     );  
   else
-    execute immediate q'[
+    -- should not come here
+    if g_options_rec.dry_run and is_flyway_file(p_file_path)
+    then
+      null; -- raise_error($$PLSQL_LINE, 'raise program_error'); end if;
+    else
+      execute immediate q'[
 declare
   l_target_schema constant all_objects.owner%type := upper(:b1);
 begin
@@ -754,13 +769,14 @@ begin
   );
 end;
 ]'
-        using in p_schema
-               , p_repo
-               , p_file_path
-               , p_branch_name
-               , p_tag_name
-               , p_commit_id
-               , p_stop_on_error;
+          using in p_schema
+                 , p_repo
+                 , p_file_path
+                 , p_branch_name
+                 , p_tag_name
+                 , p_commit_id
+                 , p_stop_on_error;
+    end if;                 
   end if;
 
   dbug_leave(l_module_name);
@@ -793,7 +809,7 @@ is
     p_file_id is not null and
     p_bytes is not null and
     not(g_options_rec.dry_run) and
-    p_flyway_file_type is not null;
+    p_flyway_file_type in ('R', 'V');
 
   l_github_access_rec github_access_rec_t;
   l_github_installed_projects_id github_installed_projects.id%type;
@@ -931,7 +947,7 @@ begin
         skipping_file(p_schema, p_file_path, l_github_installed_versions_id);
       else
         -- Run Flyway callback before echo migration
-        if p_flyway_file_type is not null and
+        if p_flyway_file_type in ('V', 'R') and
            p_project_rec.callback_tab.exists('beforeEachMigrate.sql')
         then
           install_sql
@@ -961,7 +977,7 @@ begin
         end if;
         
         -- Run Flyway callback after each migration
-        if p_flyway_file_type is not null and
+        if p_flyway_file_type in ('V', 'R') and
            p_project_rec.callback_tab.exists('afterEachMigrate.sql')
         then
           install_sql
