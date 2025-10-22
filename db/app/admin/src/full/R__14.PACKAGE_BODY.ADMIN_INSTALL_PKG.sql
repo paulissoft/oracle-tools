@@ -21,9 +21,9 @@ type project_rec_t is record
 , schema varchar(128 char) -- The database schema
 , parent_github_access_handle github_access_handle_t default null -- The parent GitHub access handle
 , parent_path varchar2(1000 char) default null -- The parent repository file path
-, src_callbacks varchar2(1000 char) -- can be empty
-, callbacks_project_handle project_handle_t -- this not and g_project_tab.exists(callbacks_project_handle)
-, callback_tab callback_tab_t -- can inherit from paulissoft/oracle-tools:db/src/callbacks
+, src_callbacks varchar2(1000 char) -- when empty set to g_pato_callbacks_project_rec.src_callbacks
+, callbacks_project_handle project_handle_t -- set to g_pato_callbacks_project_handle when src_callbacks was originally empty
+, callback_tab callback_tab_t -- set to g_pato_callbacks_project_rec.callback_tab when src_callbacks was originally empty
 , src_incr varchar2(1000 char)
 , src_full varchar2(1000 char)
 , src_dml varchar2(1000 char)
@@ -79,17 +79,19 @@ c_md_object_types constant sys.odcivarchar2list :=
 
 -- VARIABLES
 
-g_project_tab project_tab_t;
-
 g_github_access_tab github_access_tab_t;
 
 g_options_rec options_rec_t;
 
 g_first_error boolean := true;
 
-g_clob clob := null;
+g_view_clob clob := null;
+
+g_apex_clob clob := null;
 
 g_pato_callbacks_project_handle project_handle_t := null;
+
+g_pato_callbacks_project_rec project_rec_t;
 
 g_empty_project_rec project_rec_t; -- do not modify this one
 
@@ -415,11 +417,58 @@ begin
   return false;
 end do_not_install_file;
 
+procedure processing_file
+( p_schema in varchar2
+, p_file_path in varchar2
+, p_statement_nr in integer default null
+)
+is
+begin
+  dbug_print
+  ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
+    ' Processing file ' ||
+    p_file_path  ||
+    case when p_statement_nr is not null then '; statement ' || p_statement_nr end ||
+    '; target schema ' || p_schema
+  );
+end processing_file;
+
+procedure skipping_file
+( p_schema in varchar2
+, p_file_path in varchar2
+, p_github_installed_versions_id in integer
+)
+is
+begin
+  dbug_print
+  ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
+    ' Skipping file ' ||
+    p_file_path  ||
+    ' because already installed with GITHUB_INSTALLED_VERSIONS.ID ' || p_github_installed_versions_id ||
+    '; target schema ' || p_schema
+  );
+end skipping_file;
+
+procedure processing_project
+( p_schema in varchar2
+, p_path in varchar2
+)
+is
+begin
+  dbug_print
+  ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
+    ' Processing project ' ||
+    p_path  ||
+    '; target schema ' || p_schema
+  );
+end processing_project;
+
 procedure install_sql
 ( p_schema in varchar2
 , p_content in clob
-, p_base_name in varchar2
+, p_file_path in varchar2
 , p_project_rec in project_rec_t default g_empty_project_rec
+, p_statement_nr in integer default null
 )
 is
   l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_sql (1)';
@@ -443,13 +492,15 @@ is
     );
 begin
   dbug_enter(l_module_name);
-  dbug_print('schema   : ' || p_schema);
-  if p_project_rec.callback_tab.exists(p_base_name)
-  then
-    dbug_print('callback : ' || p_project_rec.callbacks_project_handle || '/' || p_project_rec.callback_tab(p_base_name));
-  else
-    dbug_print('base name: ' || p_base_name);
-  end if;
+  processing_file
+  ( p_schema
+  , case
+      when p_project_rec.callback_tab.exists(p_file_path)
+      then normalize_file_name(p_project_rec.callbacks_project_handle || '/' || p_project_rec.src_callbacks || '/' || p_file_path)
+      else p_file_path
+    end
+  , p_statement_nr
+  );
   
 /*
 -- File: db/app/cfg/src/callbacks/afterMigrate.sql
@@ -495,8 +546,6 @@ end;
 exception
   when others
   then
-    dbug_print('*** ERROR ***');
-    dbug_print(sqlerrm);
     dbug_print('*** STATEMENT ***');
     dbug_print(dbms_lob.substr(lob_loc => l_statement, amount => 256));
     dbug_leave(l_module_name);
@@ -529,16 +578,6 @@ is
   begin
     dbug_enter(l_module_name);
     
-    --/*DBUG
-    dbug_print
-    ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
-      ' Processing file ' ||
-      p_file_path  ||
-      case when p_statement_nr is not null then '; statement ' || p_statement_nr end ||
-      '; target schema ' || p_schema
-    );
-    --/*DBUG*/
-
     dbms_application_info.set_module
     ( module_name => l_base_name
     , action_name => 'processing SQL' || case when p_statement_nr is not null then ' statement ' || p_statement_nr end
@@ -548,8 +587,11 @@ is
       install_sql
       ( p_schema => p_schema
       , p_content => p_content
-      , p_base_name => l_base_name
+      , p_file_path => p_file_path
+      , p_statement_nr => p_statement_nr
       );
+    else
+      processing_file(p_schema, p_file_path, p_statement_nr);
     end if;
     
     dbms_application_info.set_module
@@ -596,21 +638,21 @@ begin
 
     if l_object_type = 'VIEW' and l_statement_tab.count > 2
     then
-      dbms_lob.trim(g_clob, 0);
+      dbms_lob.trim(g_view_clob, 0);
 
       -- l_statement_tab.first is CREATE OR REPLACE VIEW
       -- l_statement_tab.first + 1 is CREATE OR REPLACE TRIGGER
       for i_statement_idx in l_statement_tab.first + 1 .. l_statement_tab.last
       loop
         dbms_lob.writeappend
-        ( lob_loc => g_clob
+        ( lob_loc => g_view_clob
         , amount => length(l_statement_tab(i_statement_idx))
         , buffer => l_statement_tab(i_statement_idx)
         );
         if i_statement_idx < l_statement_tab.last
         then
           dbms_lob.writeappend
-          ( lob_loc => g_clob
+          ( lob_loc => g_view_clob
           , amount => length(l_delimiter)
           , buffer => l_delimiter
           );
@@ -622,7 +664,7 @@ begin
       , p_statement_nr => l_statement_tab.first
       );
       process_sql
-      ( p_content => g_clob
+      ( p_content => g_view_clob
       , p_statement_nr => l_statement_tab.first + 1
       );
     else
@@ -736,6 +778,7 @@ procedure process_file
 , p_file_id in varchar2 default null
 , p_bytes in integer default null
 , p_project_rec in project_rec_t default g_empty_project_rec
+, p_flyway_file_type in varchar2 default null
 )
 is
   pragma autonomous_transaction;
@@ -750,7 +793,7 @@ is
     p_file_id is not null and
     p_bytes is not null and
     not(g_options_rec.dry_run) and
-    is_flyway_file(p_file_path);
+    p_flyway_file_type is not null;
 
   l_github_access_rec github_access_rec_t;
   l_github_installed_projects_id github_installed_projects.id%type;
@@ -761,7 +804,6 @@ is
   l_owner all_objects.owner%type := upper(p_schema);
   l_object_type all_objects.object_type%type;
   l_object_name all_objects.object_name%type;
-  l_flyway_file_type constant varchar2(1) := flyway_file_type(p_file_path); -- R/V
 begin
   if do_not_install_file(p_github_access_handle, p_file_path)
   then
@@ -775,16 +817,7 @@ begin
   -- only 'install' implemented
   if g_options_rec.operation = 'install' then null; else raise_error($$PLSQL_LINE, 'raise value_error'); end if;
 
-  --/*DBUG
-  dbug_print
-  ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
-    ' Processing file ' ||
-    p_file_path  ||
-    '; target schema ' || p_schema
-  );
-  --/*DBUG*/
-  
-  if not(g_options_rec.dry_run) or base_name(p_file_path) = 'pom.sql'
+  if true -- not(g_options_rec.dry_run) or base_name(p_file_path) = 'pom.sql'
   then
     if l_github_installed_dml
     then
@@ -802,136 +835,136 @@ begin
         ,       p.directory_name
         ,       p.owner
         from    github_installed_projects p;
-
-      select  p.id
-      into    l_github_installed_projects_id
-      from    github_installed_projects p
-      where   p.github_repo = p_github_access_handle
-      and     p.directory_name = l_directory_name
-      and     p.owner in (p_schema, upper(p_schema));
-
-      -- github_installed_versions next
-
-      case l_flyway_file_type
-        when 'R' -- repeatable
-        then
-          -- Is the last creation of this exact file (and checksum and # bytes) there?
-          select  max(v.id)
-          into    l_github_installed_versions_id
-          from    github_installed_versions_v v
-          where   v.github_installed_projects_id = l_github_installed_projects_id
-          and     v.base_name = l_base_name      
-          and     v.installed_rank = -1 /* last date_created */
-          and     v.checksum = p_file_id
-          and     v.bytes = p_bytes
-          and     v.error_msg is null;
-
-        when 'V' -- incremental
-        then
-          -- Is the last creation of this exact file there?
-          select  max(v.id)
-          into    l_github_installed_versions_id
-          from    github_installed_versions_v v
-          where   v.github_installed_projects_id = l_github_installed_projects_id
-          and     v.base_name = l_base_name      
-          and     v.installed_rank = -1 /* last date_created */
-          and     v.error_msg is null;
-          
-        else
-          null;
-      end case;
-
-      --/*DBUG
-      if l_github_installed_versions_id is not null
-      then
-        dbug_print
-        ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
-          ' Previous installed version id: ' || l_github_installed_versions_id
-        );
-      end if;
-      --/*DBUG*/
-
-      if l_github_installed_versions_id is not null
-      then
-        if l_flyway_file_type = 'V'
-        then
-          l_github_installed_dml := false; -- skip install once scripts
-        elsif l_flyway_file_type = 'R'
-        then
-          -- check for a repeatable whether all the stored objects are still there with the same value for CREATED
-          <<check_difference_loop>>
-          for r in
-          ( select  o.owner
-            ,       o.object_type
-            ,       o.object_name
-            ,       o.created
-            from    github_installed_versions_objects o
-            where   o.github_installed_versions_id = l_github_installed_versions_id
-            minus
-            select  o.owner
-            ,       o.object_type
-            ,       o.object_name
-            ,       o.created
-            from    all_objects o
-          )
-          loop
-            --/*DBUG
-            dbug_print
-            ( utl_lms.format_message
-              ( '[%s] Must re-install due to %s "%s"."%s" with creation date "%s"'
-              , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
-              , r.object_type
-              , r.owner
-              , r.object_name
-              , to_char(r.created, 'yyyy-mm-dd hh24:mi:ss')
-              )
-            );
-            --/*DBUG*/
-            
-            -- there is at least one difference: stop and recreate again
-            l_github_installed_versions_id := null;
-            exit check_difference_loop;
-          end loop check_difference_loop;
-
-          l_github_installed_dml := l_github_installed_versions_id is null;
-        end if; -- if l_flyway_file_type = 'V'
-      end if; -- if l_github_installed_versions_id is not null
     end if; -- if l_github_installed_dml
 
-    begin
-      if l_github_installed_versions_id is null
+    select  max(p.id)
+    into    l_github_installed_projects_id
+    from    github_installed_projects p
+    where   p.github_repo = p_github_access_handle
+    and     p.directory_name = l_directory_name
+    and     p.owner in (p_schema, upper(p_schema));
+
+    -- github_installed_versions next
+
+    case p_flyway_file_type
+      when 'R' -- repeatable
       then
+        -- Is the last creation of this exact file (and checksum and # bytes) there?
+        select  max(v.id)
+        into    l_github_installed_versions_id
+        from    github_installed_versions_v v
+        where   v.github_installed_projects_id = l_github_installed_projects_id
+        and     v.base_name = l_base_name      
+        and     v.installed_rank = -1 /* last date_created */
+        and     v.checksum = p_file_id
+        and     v.bytes = p_bytes
+        and     v.error_msg is null;
+
+      when 'V' -- incremental
+      then
+        -- Is the last creation of this exact file there?
+        select  max(v.id)
+        into    l_github_installed_versions_id
+        from    github_installed_versions_v v
+        where   v.github_installed_projects_id = l_github_installed_projects_id
+        and     v.base_name = l_base_name      
+        and     v.installed_rank = -1 /* last date_created */
+        and     v.error_msg is null;
+        
+      else
+        null;
+    end case;
+
+    if l_github_installed_versions_id is not null
+    then
+      if p_flyway_file_type = 'V'
+      then
+        l_github_installed_dml := false; -- skip versioned scripts (install once)
+      elsif p_flyway_file_type = 'R'
+      then
+        -- check for a repeatable whether all the stored objects are still there with the same value for CREATED
+        <<check_difference_loop>>
+        for r in
+        ( select  o.owner
+          ,       o.object_type
+          ,       o.object_name
+          ,       o.created
+          from    github_installed_versions_objects o
+          where   o.github_installed_versions_id = l_github_installed_versions_id
+          minus
+          select  o.owner
+          ,       o.object_type
+          ,       o.object_name
+          ,       o.created
+          from    all_objects o
+        )
+        loop
+          --/*DBUG
+          dbug_print
+          ( utl_lms.format_message
+            ( '[%s] Must re-install %s due to difference for %s "%s"."%s" with creation date "%s"'
+            , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+            , p_file_path
+            , r.object_type
+            , r.owner
+            , r.object_name
+            , to_char(r.created, 'yyyy-mm-dd hh24:mi:ss')
+            )
+          );
+          --/*DBUG*/
+          
+          -- there is at least one difference: stop and recreate again
+          l_github_installed_versions_id := null;
+          exit check_difference_loop;
+        end loop check_difference_loop;
+
+        l_github_installed_dml := l_github_installed_versions_id is null;
+      end if; -- if p_flyway_file_type = 'V'
+    end if; -- if l_github_installed_versions_id is not null
+
+    begin
+      if l_github_installed_versions_id is not null
+      then
+        skipping_file(p_schema, p_file_path, l_github_installed_versions_id);
+      else
         -- Run Flyway callback before echo migration
-        if l_flyway_file_type is not null and
+        if p_flyway_file_type is not null and
            p_project_rec.callback_tab.exists('beforeEachMigrate.sql')
         then
           install_sql
           ( p_schema => p_schema
           , p_content => p_project_rec.callback_tab('beforeEachMigrate.sql')
-          , p_base_name => 'beforeEachMigrate.sql'
+          , p_file_path => 'beforeEachMigrate.sql'
           , p_project_rec => p_project_rec
           );
         end if;
-      
-        install_file
-        ( p_github_access_handle => p_github_access_handle
-        , p_schema => p_schema
-        , p_repo => l_github_access_rec.repo
-        , p_file_path => p_file_path
-        , p_branch_name => l_github_access_rec.branch_name
-        , p_tag_name => l_github_access_rec.tag_name
-        , p_commit_id => l_github_access_rec.commit_id
-        , p_stop_on_error => g_options_rec.stop_on_error
-        );
+
+        --/*DBUG
+        processing_file(p_schema, p_file_path);
+        --/*DBUG*/  
+
+        if not(g_options_rec.dry_run) or base_name(p_file_path) = 'pom.sql'
+        then
+          install_file
+          ( p_github_access_handle => p_github_access_handle
+          , p_schema => p_schema
+          , p_repo => l_github_access_rec.repo
+          , p_file_path => p_file_path
+          , p_branch_name => l_github_access_rec.branch_name
+          , p_tag_name => l_github_access_rec.tag_name
+          , p_commit_id => l_github_access_rec.commit_id
+          , p_stop_on_error => g_options_rec.stop_on_error
+          );
+        end if;
         
         -- Run Flyway callback after each migration
-        if l_flyway_file_type is not null and
+        if p_flyway_file_type is not null and
            p_project_rec.callback_tab.exists('afterEachMigrate.sql')
         then
           install_sql
           ( p_schema => p_schema
           , p_content => p_project_rec.callback_tab('afterEachMigrate.sql')
-          , p_base_name => 'afterEachMigrate.sql'
+          , p_file_path => 'afterEachMigrate.sql'
           , p_project_rec => p_project_rec
           );
         end if;
@@ -1041,8 +1074,57 @@ is
   pragma autonomous_transaction;
 
   l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_file_apex';
-
   l_github_access_rec github_access_rec_t;
+  l_line_tab dbms_sql.varchar2a;
+  l_delimiter constant varchar2(1) := chr(10);
+  l_prefixes_to_skip constant sys.odcivarchar2list :=
+    sys.odcivarchar2list
+    ( '@@'
+    , '@'
+    , 'prompt --'
+    , 'set verify '
+    , 'set feedback '
+    , 'set define '
+    , 'prompt '
+    , 'whenever sqlerror '
+    , 'whenever oserror '
+    );
+  l_statement_nr positiven := 1;  
+
+  procedure flush
+  is
+  begin
+    -- flush what was before the @ (or @@) line
+    if dbms_lob.getlength(g_apex_clob) > 0
+    then
+      if not(g_options_rec.dry_run)
+      then
+        install_sql
+        ( p_schema => p_schema
+        , p_content => g_apex_clob
+        , p_file_path => p_file_path
+        , p_statement_nr => l_statement_nr
+        );
+      end if;
+
+      dbms_lob.trim(g_apex_clob, 0);
+      l_statement_nr := l_statement_nr + 1;
+    end if;
+  end flush;
+
+  procedure process_file
+  ( p_file_path in varchar2 -- The repository file path
+  )
+  is
+  begin
+    flush;
+    
+    process_file_apex
+    ( p_github_access_handle => p_github_access_handle
+    , p_schema => p_schema
+    , p_file_path => p_file_path
+    );
+  end process_file;
 begin
   if do_not_install_file(p_github_access_handle, p_file_path)
   then
@@ -1057,26 +1139,79 @@ begin
   if g_options_rec.operation = 'install' then null; else raise_error($$PLSQL_LINE, 'raise value_error'); end if;
 
   --/*DBUG
-  dbug_print
-  ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
-    ' Processing APEX file ' ||
-    p_file_path  ||
-    '; target schema ' || p_schema
-  );
+  processing_file(p_schema, p_file_path);
   --/*DBUG*/
+
+  dbms_lob.trim(g_apex_clob, 0);
+
+  PRAGMA INLINE (split, 'YES');
+  split
+  ( dbms_cloud_repo.get_file
+    ( repo => l_github_access_rec.repo
+    , file_path => p_file_path
+    , branch_name => l_github_access_rec.branch_name
+    , tag_name => l_github_access_rec.tag_name
+    , commit_id => l_github_access_rec.commit_id
+    )
+  , l_delimiter
+  , l_line_tab
+  );
   
-  if not(g_options_rec.dry_run)
+  if l_line_tab.count > 0
   then
-    install_file
-    ( p_github_access_handle => p_github_access_handle
-    , p_schema => p_schema
-    , p_repo => l_github_access_rec.repo
-    , p_file_path => p_file_path
-    , p_branch_name => l_github_access_rec.branch_name
-    , p_tag_name => l_github_access_rec.tag_name
-    , p_commit_id => l_github_access_rec.commit_id
-    , p_stop_on_error => g_options_rec.stop_on_error
-    );
+    <<line_loop>>
+    for i_line_idx in l_line_tab.first .. l_line_tab.last
+    loop
+      if l_line_tab(i_line_idx) is null then continue; end if;
+      
+      <<prefix_loop>>
+      for i_prefix_idx in l_prefixes_to_skip.first .. l_prefixes_to_skip.last
+      loop
+        if substr(l_line_tab(i_line_idx), 1, length(l_prefixes_to_skip(i_prefix_idx))) = l_prefixes_to_skip(i_prefix_idx)
+        then
+          -- You can install SQL statements containing nested SQL from a Cloud Code repository file using the following:
+          -- @: includes a SQL file with a relative path to the ROOT of the repository.
+          -- @@: includes a SQL file with a path relative to the current file.
+          case l_prefixes_to_skip(i_prefix_idx)
+            when '@@'
+            then
+              -- relative to the current file directory
+              PRAGMA INLINE (directory_name, 'YES');
+              -- recursively install everything
+              process_file(normalize_file_name(directory_name(p_file_path) || '/' || trim(substr(l_line_tab(i_line_idx), 3))));
+              
+            when '@'
+            then
+              -- relative to the ROOT of the repository, i.e. absolute
+              -- recursively install everything
+              process_file(trim(substr(l_line_tab(i_line_idx), 2)));
+              
+            else
+              null;
+          end case;
+
+          -- remove this line, i.e. this action will not be executed anymore
+          l_line_tab(i_line_idx) := null;
+
+          exit prefix_loop;
+        end if;
+      end loop prefix_loop;
+
+      if l_line_tab(i_line_idx) is not null
+      then
+        -- apparently no prefix found
+        dbms_lob.writeappend
+        ( lob_loc => g_apex_clob
+        , amount => length(l_line_tab(i_line_idx))
+        , buffer => l_line_tab(i_line_idx)
+        );
+        dbms_lob.writeappend
+        ( lob_loc => g_apex_clob
+        , amount => length(l_delimiter)
+        , buffer => l_delimiter
+        );
+      end if;
+    end loop line_loop;
   end if;
 
   commit;
@@ -1100,6 +1235,8 @@ is
   
   l_github_access_rec github_access_rec_t;
 
+  l_project_handle constant project_handle_t := p_github_access_handle || ':' || p_path;
+
   l_path varchar2(1000 byte);
   l_base_name varchar2(1000 byte);
   l_base_name_wildcard varchar2(100 byte);
@@ -1107,11 +1244,13 @@ is
   cursor c_list_files
   ( b_path in varchar2
   , b_base_name_wildcard in varchar2
+  , b_flyway_file_type in varchar2
   )
   is
     select  t.id
     ,       t.name
     ,       t.bytes
+    ,       b_flyway_file_type as flyway_file_type
     from    table
             ( dbms_cloud_repo.list_files
               ( repo => l_github_access_rec.repo
@@ -1134,13 +1273,7 @@ begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
   --/*DBUG
-  dbug_print
-  ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
-    ' Processing project ' ||
-    p_path  ||
-    '; target schema ' || p_project_rec.schema ||
-    '; current schema ' || sys_context('USERENV', 'CURRENT_SCHEMA')
-  );
+  processing_project(p_project_rec.schema, p_path);
   --/*DBUG*/
 
   if p_project_rec.project_type = 'db'
@@ -1171,20 +1304,15 @@ begin
           then
             -- p_project_rec.src_callbacks is null
             p_project_rec.callbacks_project_handle := g_pato_callbacks_project_handle; -- should be not null
-            p_project_rec.callback_tab := g_project_tab(p_project_rec.callbacks_project_handle).callback_tab;
+            p_project_rec.callback_tab := g_pato_callbacks_project_rec.callback_tab;
+            p_project_rec.src_callbacks := g_pato_callbacks_project_rec.src_callbacks;
           else
-            p_project_rec.callbacks_project_handle := p_github_access_handle || ':' || p_path;
+            p_project_rec.callbacks_project_handle := l_project_handle;
           end if;
 
-          if not(g_project_tab.exists(p_project_rec.callbacks_project_handle))
+          if p_project_rec.callbacks_project_handle is null
           then
-            raise_error
-            ( $$PLSQL_LINE
-            , utl_lms.format_message
-              ( q'[raise_application_error(-20000, 'No callbacks project handle (%s) defined.')]'
-              , p_project_rec.callbacks_project_handle
-              )
-            );
+            raise_error($$PLSQL_LINE, 'raise value_error');
           end if;
         end if;
 
@@ -1205,7 +1333,7 @@ begin
           end;
 
         <<list_files_loop>>
-        for r in c_list_files(l_path, l_base_name_wildcard)
+        for r in c_list_files(l_path, l_base_name_wildcard, case i_file_type when 0 then 'C' when 1 then 'V' else 'R' end)
         loop
           if i_file_type = 0
           then
@@ -1240,7 +1368,7 @@ begin
           install_sql
           ( p_schema => p_project_rec.schema
           , p_content => p_project_rec.callback_tab('beforeMigrate.sql')
-          , p_base_name => 'beforeMigrate.sql'
+          , p_file_path => 'beforeMigrate.sql'
           , p_project_rec => p_project_rec
           );
         end if;
@@ -1255,6 +1383,7 @@ begin
           , p_file_id => l_flyway_files(i_file_idx).id
           , p_bytes => l_flyway_files(i_file_idx).bytes
           , p_project_rec => p_project_rec
+          , p_flyway_file_type => l_flyway_files(i_file_idx).flyway_file_type
           );
         end loop process_file_loop;
         
@@ -1264,7 +1393,7 @@ begin
           install_sql
           ( p_schema => p_project_rec.schema
           , p_content => p_project_rec.callback_tab('afterMigrate.sql')
-          , p_base_name => 'afterMigrate.sql'
+          , p_file_path => 'afterMigrate.sql'
           , p_project_rec => p_project_rec
           );
         end if;
@@ -1468,13 +1597,22 @@ begin
   l_project_rec.src_dml := p_src_dml;
   l_project_rec.src_ords := p_src_ords;
 
-  g_project_tab(p_github_access_handle || ':' || p_path ) := l_project_rec;
-
-  process_project
-  ( p_github_access_handle => p_github_access_handle
-  , p_path => p_path
-  , p_project_rec => l_project_rec
-  );
+  if p_github_access_handle = "paulissoft/oracle-tools" and p_path = 'db'
+  then
+    g_pato_callbacks_project_handle := "paulissoft/oracle-tools" || ':' || 'db';
+    g_pato_callbacks_project_rec := l_project_rec;
+    process_project
+    ( p_github_access_handle => p_github_access_handle
+    , p_path => p_path
+    , p_project_rec => g_pato_callbacks_project_rec
+    );
+  else
+    process_project
+    ( p_github_access_handle => p_github_access_handle
+    , p_path => p_path
+    , p_project_rec => l_project_rec
+    );
+  end if;
 
   dbug_leave(l_module_name);
 exception
@@ -1503,8 +1641,6 @@ begin
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
   l_project_rec.application_id := p_application_id;
-
-  g_project_tab(p_github_access_handle || ':' || p_path ) := l_project_rec;
 
   process_project
   ( p_github_access_handle => p_github_access_handle
@@ -1536,8 +1672,6 @@ begin
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
 
-  g_project_tab(p_github_access_handle || ':' || p_path ) := l_project_rec;
-
   -- process the pom.sql inside
   PRAGMA INLINE(normalize_file_name, 'YES');
   process_file
@@ -1565,17 +1699,11 @@ procedure process_root_project
 )
 is
   l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_root_project';
-  l_project_rec project_rec_t;
 begin
-  l_project_rec.project_type := null;
-  l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
-  l_project_rec.parent_path := p_parent_path;
   g_options_rec.operation := p_operation;
   g_options_rec.stop_on_error := p_stop_on_error;
   g_options_rec.dry_run := p_dry_run;
   g_options_rec.verbose := p_verbose;
-
-  g_project_tab(p_github_access_handle || ':' || null ) := l_project_rec;
 
   /*
   -- gpaulissen@pc-803 oracle-tools % find . -name callbacks -print -exec ls {} \;
@@ -1585,7 +1713,6 @@ begin
   -- ./db/src/callbacks
   -- afterMigrate.sql  beforeEachMigrate.sql  beforeMigrate.sql  unused-afterEachMigrate.sql  unused-beforeMigrate.sql
   */
-  g_pato_callbacks_project_handle := "paulissoft/oracle-tools" || ':' || 'db';
   process_project_db
   ( p_github_access_handle => "paulissoft/oracle-tools"
   , p_path => 'db'
@@ -1613,7 +1740,8 @@ exception
 end process_root_project;
 
 begin
-  dbms_lob.createtemporary(g_clob, true);
+  dbms_lob.createtemporary(g_view_clob, true);
+  dbms_lob.createtemporary(g_apex_clob, true);
 end;
 /
 
