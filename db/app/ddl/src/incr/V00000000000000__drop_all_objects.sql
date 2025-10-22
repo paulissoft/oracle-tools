@@ -3,26 +3,71 @@
 declare
   l_type_tab sys.odcivarchar2list :=
     sys.odcivarchar2list
-    ( -- collections
-      'T_ARGUMENT_OBJECT_TAB'
-    , 'T_SCHEMA_DDL_TAB'
-    , 'T_SCHEMA_OBJECT_TAB'
-    , 'T_OBJECT_INFO_TAB'
+    ( null -- makes adding next line easier
+      -- collections
+    , 'T_ARGUMENT_OBJECT_TAB'
     , 'T_DDL_TAB'
     , 'T_DISPLAY_DDL_SQL_TAB'
+    , 'T_OBJECT_INFO_TAB'
+    , 'T_SCHEMA_DDL_TAB'
+    , 'T_SCHEMA_OBJECT_TAB'
       -- object types
     , 'T_ARGUMENT_OBJECT'
-    , 'T_SCHEMA_DDL'
-    , 'T_SCHEMA_OBJECT'
+    , 'T_CLUSTER_OBJECT'
+    , 'T_COMMENT_DDL'
+    , 'T_COMMENT_OBJECT'
+    , 'T_CONSTRAINT_DDL'
+    , 'T_CONSTRAINT_OBJECT'
     , 'T_DDL'
-    , 'T_OBJECT_INFO_REC'
-    , 'T_SCHEMA_OBJECT_FILTER'
-    , 'T_SCHEMA_DDL_PARAMS'
-    , 'T_SCHEMA_OBJECT_PARAMS' -- obsolete
-    , 'T_OBJECT_JSON'
+    , 'T_DDL_SEQUENCE'
+    , 'T_DEPENDENT_OR_GRANTED_OBJECT'
     , 'T_DISPLAY_DDL_SQL'
+    , 'T_FUNCTION_OBJECT'
+    , 'T_INDEX_DDL'
+    , 'T_INDEX_OBJECT'
+    , 'T_JAVA_SOURCE_OBJECT'
+    , 'T_MATERIALIZED_VIEW_DDL'
+    , 'T_MATERIALIZED_VIEW_LOG_OBJECT'
+    , 'T_MATERIALIZED_VIEW_OBJECT'
+    , 'T_MEMBER_OBJECT'
+    , 'T_NAMED_OBJECT'
+    , 'T_OBJECT_GRANT_DDL'
+    , 'T_OBJECT_GRANT_OBJECT'
+    , 'T_OBJECT_INFO_REC'
+    , 'T_OBJECT_JSON'
+    , 'T_PACKAGE_BODY_OBJECT'
+    , 'T_PACKAGE_SPEC_OBJECT'
+    , 'T_PROCEDURE_OBJECT'
+    , 'T_PROCOBJ_DDL'
+    , 'T_PROCOBJ_OBJECT'
+    , 'T_REFRESH_GROUP_DDL'
+    , 'T_REFRESH_GROUP_OBJECT'
+    , 'T_REF_CONSTRAINT_OBJECT'
+    , 'T_SCHEMA_DDL'
+    , 'T_SCHEMA_DDL_PARAMS'
+    , 'T_SCHEMA_OBJECT'
+    , 'T_SCHEMA_OBJECT_FILTER'
+    , 'T_SCHEMA_OBJECT_PARAMS' -- obsolete
+    , 'T_SEQUENCE_DDL'
+    , 'T_SEQUENCE_OBJECT'
+    , 'T_SYNONYM_DDL'
+    , 'T_SYNONYM_OBJECT'
+    , 'T_TABLE_COLUMN_DDL'
+    , 'T_TABLE_COLUMN_OBJECT'
+    , 'T_TABLE_DDL'
+    , 'T_TABLE_OBJECT'
+    , 'T_TRIGGER_DDL'
+    , 'T_TRIGGER_OBJECT'
+    , 'T_TYPE_ATTRIBUTE_DDL'
+    , 'T_TYPE_ATTRIBUTE_OBJECT'
+    , 'T_TYPE_BODY_OBJECT'
+    , 'T_TYPE_METHOD_DDL'
+    , 'T_TYPE_METHOD_OBJECT'
+    , 'T_TYPE_SPEC_DDL'
+    , 'T_TYPE_SPEC_OBJECT'
+    , 'T_VIEW_OBJECT'
       -- must be last
-    , 'T_TEXT_TAB' 
+    , 'T_TEXT_TAB'
     );
   l_table_tab sys.odcivarchar2list :=
     sys.odcivarchar2list
@@ -142,6 +187,8 @@ begin
 
     for i_idx in l_type_tab.first .. l_type_tab.last
     loop
+      if l_type_tab(i_idx) is null then continue; end if;
+      
       select  'drop type ' || type_name || ' force' as cmd
       bulk collect
       into    l_statement_tab
