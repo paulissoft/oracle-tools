@@ -4,7 +4,7 @@
 <createdTime>2025-10-21 08:17:29 UTC</createdTime>
 <ownerDesignName>admin</ownerDesignName>
 <referredTableLongName>ADMIN.GITHUB_INSTALLED_VERSIONS</referredTableLongName>
-<deleteRule>NO ACTION</deleteRule>
+<deleteRule>CASCADE</deleteRule>
 <referredTableID>73A05CAF-3886-C92C-8006-14C1D69B982C</referredTableID>
 <keyObject>CAF7FE5D-C3ED-BDF0-2E5F-646C6C0538CF</keyObject>
 <referredKeyID>CAF7FE5D-C3ED-BDF0-2E5F-646C6C0538CF</referredKeyID>

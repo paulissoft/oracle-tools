@@ -885,10 +885,11 @@ begin
         -- check for a repeatable whether all the stored objects are still there with the same value for CREATED
         <<check_difference_loop>>
         for r in
-        ( select  o.owner
+        ( select  o.object_schema as owner
           ,       o.object_type
           ,       o.object_name
           ,       o.created
+          ,       o.last_ddl_time
           from    github_installed_versions_objects o
           where   o.github_installed_versions_id = l_github_installed_versions_id
           minus
@@ -896,19 +897,21 @@ begin
           ,       o.object_type
           ,       o.object_name
           ,       o.created
+          ,       o.last_ddl_time
           from    all_objects o
         )
         loop
           --/*DBUG
           dbug_print
           ( utl_lms.format_message
-            ( '[%s] Must re-install %s due to difference for %s "%s"."%s" with creation date "%s"'
+            ( '[%s] Must re-install %s due to difference for %s "%s"."%s" with creation date "%s" and last DDL time: "%s"'
             , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
             , p_file_path
             , r.object_type
             , r.owner
             , r.object_name
             , to_char(r.created, 'yyyy-mm-dd hh24:mi:ss')
+            , to_char(r.last_ddl_time, 'yyyy-mm-dd hh24:mi:ss')
             )
           );
           --/*DBUG*/
@@ -1037,16 +1040,18 @@ begin
       -- add the object based on the file name
       insert into github_installed_versions_objects
       ( github_installed_versions_id
-      , owner
+      , object_schema
       , object_type
       , object_name
       , created
+      , last_ddl_time
       )
         select  l_github_installed_versions_id as github_installed_versions_id
-        ,       o.owner
+        ,       o.owner as object_schema
         ,       o.object_type
         ,       o.object_name
         ,       o.created
+        ,       o.last_ddl_time
         from    all_objects o
         where   o.owner = l_owner
         and     o.object_type = l_object_type

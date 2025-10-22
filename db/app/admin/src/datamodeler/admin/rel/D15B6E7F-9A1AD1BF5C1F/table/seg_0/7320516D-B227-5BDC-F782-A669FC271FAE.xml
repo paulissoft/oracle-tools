@@ -23,6 +23,28 @@
 <property name="tableToUpperCase" value="1"/>
 </propertyMap>
 <columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID" id="8E004495-0241-20D3-C29A-C886BF26D7D0">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-22 12:37:17 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT011</logicalDatatype>
+<defaultValue>GITHUB_INSTALLED_VERSIONS_OBJECTS_SEQ.NEXTVAL</defaultValue>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementColumn>true</autoIncrementColumn>
+<defaultOntNull>true</defaultOntNull>
+<autoIncrementCycle>false</autoIncrementCycle>
+<autoIncrementSequenceName>GITHUB_INSTALLED_VERSIONS_OBJECTS_SEQ</autoIncrementSequenceName>
+<autoIncrementGenerateTrigger>false</autoIncrementGenerateTrigger>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_OBJECTS_ID</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
 <Column name="GITHUB_INSTALLED_VERSIONS_ID" id="D98331C9-39EF-BDBB-E5EB-A6E8801B841C">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2025-10-21 08:17:29 UTC</createdTime>
@@ -44,37 +66,17 @@
 <colAssociation fkAssociation="7B084565-5BC1-8C07-1F93-985729107F3B" referredColumn="FDC4CBA0-70F6-B7C7-9252-33DAA4DB5522"/>
 </associations>
 </Column>
-<Column name="OWNER" id="001FAEB2-FEDE-268E-98AA-FF1FA5207E07">
-<createdBy>gpaulissen</createdBy>
-<createdTime>2025-10-21 12:43:21 UTC</createdTime>
-<comment><![CDATA[ALL_OBJECTS.OWNER]]></comment>
-<commentInRDBMS><![CDATA[ALL_OBJECTS.OWNER]]></commentInRDBMS>
-<ownerDesignName>admin</ownerDesignName>
-<useDomainConstraints>false</useDomainConstraints>
-<use>1</use>
-<logicalDatatype>LOGDT024</logicalDatatype>
-<dataTypeSize>128</dataTypeSize>
-<ownDataTypeParameters>128,,</ownDataTypeParameters>
-<containsPII>false</containsPII>
-<containsSensitiveInformation>false</containsSensitiveInformation>
-<autoIncrementCycle>false</autoIncrementCycle>
-<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_OBJECTS_OWNER</notNullConstraintName>
-<propertyMap>
-<property name="copyComments" value="1"/>
-<property name="copyCommentsInRDBMS" value="1"/>
-</propertyMap>
-</Column>
 <Column name="OBJECT_TYPE" id="529ED3C0-7C0F-4F30-1830-E68BD01BA75C">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2025-10-21 08:13:25 UTC</createdTime>
-<comment><![CDATA[ALL_OBJECTS.OBJECT_TYPE]]></comment>
-<commentInRDBMS><![CDATA[ALL_OBJECTS.OBJECT_TYPE]]></commentInRDBMS>
+<comment><![CDATA[oracle_tools.t_schema_object.object_type]]></comment>
+<commentInRDBMS><![CDATA[oracle_tools.t_schema_object.object_type]]></commentInRDBMS>
 <ownerDesignName>admin</ownerDesignName>
 <useDomainConstraints>false</useDomainConstraints>
 <use>1</use>
 <logicalDatatype>LOGDT024</logicalDatatype>
-<dataTypeSize>23</dataTypeSize>
-<ownDataTypeParameters>23,,</ownDataTypeParameters>
+<dataTypeSize>30</dataTypeSize>
+<ownDataTypeParameters>30,,</ownDataTypeParameters>
 <containsPII>false</containsPII>
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
@@ -84,12 +86,34 @@
 <property name="copyCommentsInRDBMS" value="1"/>
 </propertyMap>
 </Column>
+<Column name="OBJECT_SCHEMA" id="001FAEB2-FEDE-268E-98AA-FF1FA5207E07">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-21 12:43:21 UTC</createdTime>
+<comment><![CDATA[oracle_tools.t_schema_object.object_schema]]></comment>
+<commentInRDBMS><![CDATA[oracle_tools.t_schema_object.object_schema]]></commentInRDBMS>
+<ownerDesignName>admin</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>128</dataTypeSize>
+<ownDataTypeParameters>128,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_OBJECTS_OBJECT_SCHEMA</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
 <Column name="OBJECT_NAME" id="96ED02AD-ABF2-7408-0166-61B1A906594C">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2025-10-21 08:13:47 UTC</createdTime>
-<comment><![CDATA[ALL_OBJECTS.OBJECT_NAME]]></comment>
-<commentInRDBMS><![CDATA[ALL_OBJECTS.OBJECT_NAME]]></commentInRDBMS>
+<comment><![CDATA[oracle_tools.t_schema_object.object_name]]></comment>
+<commentInRDBMS><![CDATA[oracle_tools.t_schema_object.object_name]]></commentInRDBMS>
 <ownerDesignName>admin</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
 <useDomainConstraints>false</useDomainConstraints>
 <use>1</use>
 <logicalDatatype>LOGDT024</logicalDatatype>
@@ -104,10 +128,153 @@
 <property name="copyCommentsInRDBMS" value="1"/>
 </propertyMap>
 </Column>
+<Column name="BASE_OBJECT_TYPE" id="1160454E-7586-3DD6-B7D2-0D381160F136">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-22 12:29:32 UTC</createdTime>
+<comment><![CDATA[oracle_tools.t_schema_object.base_object_type]]></comment>
+<commentInRDBMS><![CDATA[oracle_tools.t_schema_object.base_object_type]]></commentInRDBMS>
+<ownerDesignName>admin</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>30</dataTypeSize>
+<ownDataTypeParameters>30,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_OBJECTS_OBJECT_TYPE</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="BASE_OBJECT_SCHEMA" id="0CB058B8-0BCF-0ABA-E4F4-1641C6582256">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-22 12:29:00 UTC</createdTime>
+<comment><![CDATA[oracle_tools.t_schema_object.base_object_schema]]></comment>
+<commentInRDBMS><![CDATA[oracle_tools.t_schema_object.base_object_schema]]></commentInRDBMS>
+<ownerDesignName>admin</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>128</dataTypeSize>
+<ownDataTypeParameters>128,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_OBJECTS_OWNER</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="BASE_OBJECT_NAME" id="0084394D-877F-C191-95D6-588621570D72">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-22 12:29:32 UTC</createdTime>
+<comment><![CDATA[oracle_tools.t_schema_object.base_object_name]]></comment>
+<commentInRDBMS><![CDATA[oracle_tools.t_schema_object.base_object_name]]></commentInRDBMS>
+<ownerDesignName>admin</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>128</dataTypeSize>
+<ownDataTypeParameters>128,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_OBJECTS_OBJECT_NAME</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="COLUMN_NAME" id="25D40EEC-09B5-B948-9B65-A4FFFE7585E9">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-22 12:30:52 UTC</createdTime>
+<comment><![CDATA[oracle_tools.t_schema_object.column_name]]></comment>
+<commentInRDBMS><![CDATA[oracle_tools.t_schema_object.column_name]]></commentInRDBMS>
+<ownerDesignName>admin</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>128</dataTypeSize>
+<ownDataTypeParameters>128,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="GRANTEE" id="44406D0A-C48D-D5F1-9763-A0861CDB2D89">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-22 12:32:16 UTC</createdTime>
+<comment><![CDATA[oracle_tools.t_schema_object.grantee]]></comment>
+<commentInRDBMS><![CDATA[oracle_tools.t_schema_object.grantee]]></commentInRDBMS>
+<ownerDesignName>admin</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>128</dataTypeSize>
+<ownDataTypeParameters>128,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="PRIVILEGE" id="294FA838-9797-5C36-A504-283A7D85019F">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-22 12:33:01 UTC</createdTime>
+<comment><![CDATA[oracle_tools.t_schema_object.privilege]]></comment>
+<commentInRDBMS><![CDATA[oracle_tools.t_schema_object.privilege]]></commentInRDBMS>
+<ownerDesignName>admin</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>40</dataTypeSize>
+<ownDataTypeParameters>40,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="GRANTABLE" id="134F9EA6-D741-8A62-DA6B-013094A1C7EE">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-22 12:33:40 UTC</createdTime>
+<comment><![CDATA[oracle_tools.t_schema_object.grantable]]></comment>
+<commentInRDBMS><![CDATA[oracle_tools.t_schema_object.grantable]]></commentInRDBMS>
+<ownerDesignName>admin</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>3</dataTypeSize>
+<ownDataTypeParameters>3,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
 <Column name="CREATED" id="63A6B6B9-672D-1C9A-E199-AA193AE0A518">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2025-10-21 08:14:10 UTC</createdTime>
-<comment><![CDATA[ALL_OBJECTS.LAST_DDL_TIME]]></comment>
+<comment><![CDATA[ALL_OBJECTS.CREATED]]></comment>
 <commentInRDBMS><![CDATA[ALL_OBJECTS.CREATED]]></commentInRDBMS>
 <ownerDesignName>admin</ownerDesignName>
 <useDomainConstraints>false</useDomainConstraints>
@@ -118,6 +285,25 @@
 <containsSensitiveInformation>false</containsSensitiveInformation>
 <autoIncrementCycle>false</autoIncrementCycle>
 <notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_OBJECTS_CREATED</notNullConstraintName>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+</Column>
+<Column name="LAST_DDL_TIME" id="3043472E-A45C-0AA9-6B8D-1C8FABB5A6A5">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-22 12:35:10 UTC</createdTime>
+<comment><![CDATA[ALL_OBJECTS.LAST_DDL_TIME]]></comment>
+<commentInRDBMS><![CDATA[ALL_OBJECTS.LAST_DDL_TIME]]></commentInRDBMS>
+<ownerDesignName>admin</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT007</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<containsPII>false</containsPII>
+<containsSensitiveInformation>false</containsSensitiveInformation>
+<autoIncrementCycle>false</autoIncrementCycle>
+<notNullConstraintName>NNC_GITHUB_INSTALLED_VERSIONS_OBJECTS_LAST_DDL_TIME</notNullConstraintName>
 <propertyMap>
 <property name="copyComments" value="1"/>
 <property name="copyCommentsInRDBMS" value="1"/>
@@ -137,10 +323,31 @@
 <property name="copyCommentsInRDBMS" value="1"/>
 </propertyMap>
 <indexColumnUsage>
+<colUsage columnID="8E004495-0241-20D3-C29A-C886BF26D7D0"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="2A21680D-E8D8-5D29-64E4-ED91BD342141" name="GITHUB_INSTALLED_VERSIONS_OBJECTS_UK">
+<createdBy>gpaulissen</createdBy>
+<createdTime>2025-10-22 12:37:52 UTC</createdTime>
+<ownerDesignName>admin</ownerDesignName>
+<indexState>Unique Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<propertyMap>
+<property name="copyComments" value="1"/>
+<property name="copyCommentsInRDBMS" value="1"/>
+</propertyMap>
+<indexColumnUsage>
 <colUsage columnID="D98331C9-39EF-BDBB-E5EB-A6E8801B841C"/>
-<colUsage columnID="001FAEB2-FEDE-268E-98AA-FF1FA5207E07"/>
 <colUsage columnID="529ED3C0-7C0F-4F30-1830-E68BD01BA75C"/>
+<colUsage columnID="001FAEB2-FEDE-268E-98AA-FF1FA5207E07"/>
 <colUsage columnID="96ED02AD-ABF2-7408-0166-61B1A906594C"/>
+<colUsage columnID="1160454E-7586-3DD6-B7D2-0D381160F136"/>
+<colUsage columnID="0CB058B8-0BCF-0ABA-E4F4-1641C6582256"/>
+<colUsage columnID="0084394D-877F-C191-95D6-588621570D72"/>
+<colUsage columnID="25D40EEC-09B5-B948-9B65-A4FFFE7585E9"/>
+<colUsage columnID="44406D0A-C48D-D5F1-9763-A0861CDB2D89"/>
+<colUsage columnID="294FA838-9797-5C36-A504-283A7D85019F"/>
+<colUsage columnID="134F9EA6-D741-8A62-DA6B-013094A1C7EE"/>
 </indexColumnUsage>
 </ind_PK_UK>
 <ind_PK_UK id="83C71446-8347-1574-8FC9-2D33F3B60325" name="GITHUB_INSTALLED_VERSIONS_FK">

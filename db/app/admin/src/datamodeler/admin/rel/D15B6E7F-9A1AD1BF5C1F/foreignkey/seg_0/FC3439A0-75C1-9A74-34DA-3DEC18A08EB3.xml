@@ -4,7 +4,7 @@
 <createdTime>2025-10-21 08:07:57 UTC</createdTime>
 <ownerDesignName>admin</ownerDesignName>
 <referredTableLongName>ADMIN.GITHUB_INSTALLED_PROJECTS</referredTableLongName>
-<deleteRule>NO ACTION</deleteRule>
+<deleteRule>CASCADE</deleteRule>
 <referredTableID>0146E4B6-01D5-4B33-10E7-B444CF7F84F8</referredTableID>
 <keyObject>A430B97F-36CA-3FFD-9173-0AD70E489042</keyObject>
 <referredKeyID>A430B97F-36CA-3FFD-9173-0AD70E489042</referredKeyID>
