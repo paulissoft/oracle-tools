@@ -495,7 +495,10 @@ end;
 exception
   when others
   then
-    dbug_print('statement: ' || dbms_lob.substr(lob_loc => l_statement, amount => 256));
+    dbug_print('*** ERROR ***');
+    dbug_print(sqlerrm);
+    dbug_print('*** STATEMENT ***');
+    dbug_print(dbms_lob.substr(lob_loc => l_statement, amount => 256));
     dbug_leave(l_module_name);
     raise;
 end install_sql;
