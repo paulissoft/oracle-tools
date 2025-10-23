@@ -78,7 +78,7 @@
          ${db.proxy.username}[${db.schema}]. 
          If db.proxy.username is not set, db.username will be ${db.schema}.
     -->
-    <db.schema>${project.artifactId}</db.schema>
+    <db.schema.default>${project.artifactId}</db.schema.default>
     <!-- 
          Define db.password here as the environment variable DB_PASSWORD.
          So it can not be overridden in one of the property files since it
@@ -352,7 +352,9 @@
                       </and>
                     </condition>
                   </fail>
-                  
+
+                  <property name="db.schema" value="${db.schema.default}" />
+
                   <!-- use proxy users if property db.proxy.username exists -->
                   <condition property="db.username"
                              value="${db.proxy.username}[${db.schema}]"
