@@ -100,7 +100,7 @@ procedure column_ddl
 , p_column_name in all_tab_columns.column_name%type -- The column name
 , p_extra in varchar2 default null -- To add after the column name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_column_ddl -- SQL codes to ignore
-, p_owner in all_tab_columns.owner%type /*default null*/ -- The table owner
+, p_owner in all_tab_columns.owner%type default null -- The table owner
 );
 /**
 Issues a:
@@ -113,7 +113,7 @@ procedure table_ddl
 , p_table_name in all_tables.table_name%type -- The table name
 , p_extra in varchar2 default null -- To add after the table name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_table_ddl -- SQL codes to ignore
-, p_owner in all_tables.owner%type /*default null*/ -- The table owner
+, p_owner in all_tables.owner%type default null -- The table owner
 );
 /**
 Issues a p_operation || ' TABLE ' || p_table_name || ' ' || p_extra
@@ -127,7 +127,7 @@ procedure check_constraint_ddl
 , p_column_tab in t_column_tab default null -- The column names to check for in ascending order (there is no order in ALL_CONS_COLUMNS for check constraints)
 , p_extra in varchar2 default null -- To add after the constraint name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_constraint_ddl -- SQL codes to ignore
-, p_owner in all_constraints.owner%type /*default null*/ -- The table owner
+, p_owner in all_constraints.owner%type default null -- The table owner
 );
 /**
 Issues a "'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' CONSTRAINT ' || p_constraint_name || ' ' || p_extra" command.
@@ -146,7 +146,7 @@ procedure constraint_ddl
 , p_column_tab in t_column_tab default null -- The column names to check for (in ascending order for check constraints else the order from ALL_CONS_COLUMNS)
 , p_extra in varchar2 default null -- To add after the constraint name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_constraint_ddl -- SQL codes to ignore
-, p_owner in all_constraints.owner%type /*default null*/ -- The table owner
+, p_owner in all_constraints.owner%type default null -- The table owner
 );
 /**
 Issues a "'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' CONSTRAINT ' || p_constraint_name || ' ' || p_extra" command.
@@ -162,7 +162,7 @@ procedure comment_ddl
 , p_column_name in all_tab_columns.column_name%type default null -- The column name (empty for a table comment)
 , p_comment in varchar2 default null -- The comment (empty to remove)
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_comment_ddl -- SQL codes to ignore
-, p_owner in all_tab_columns.owner%type /*default null*/ -- The table owner
+, p_owner in all_tab_columns.owner%type default null -- The table owner
 );
 /**
 Issues:
@@ -177,7 +177,7 @@ procedure index_ddl
 , p_column_tab in t_column_tab default null -- The column names of the index (in that order). May be used when for operation CREATE or ALTER with a RENAME with index_name containing the wildcard %.
 , p_extra in varchar2 default null -- The extra to add to the DDL statement
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_index_ddl -- SQL codes to ignore
-, p_owner in all_indexes.owner%type /*default null*/ -- The index owner
+, p_owner in all_indexes.owner%type default null -- The index owner
 );
 /**
 Issues:
@@ -192,7 +192,7 @@ procedure trigger_ddl
 , p_table_name in all_triggers.table_name%type default null -- The table name
 , p_extra in varchar2 default null -- The extra to add to the DDL statement
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_trigger_ddl -- SQL codes to ignore
-, p_owner in all_triggers.owner%type /*default null*/ -- The trigger owner
+, p_owner in all_triggers.owner%type default null -- The trigger owner
 );
 /**
 Issues:
@@ -205,7 +205,7 @@ procedure view_ddl
 , p_view_name in all_views.view_name%type -- The view name
 , p_extra in varchar2 default null -- To add after the view name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_view_ddl -- SQL codes to ignore
-, p_owner in all_views.owner%type /*default null*/ -- The view owner
+, p_owner in all_views.owner%type default null -- The view owner
 );
 /**
 Issues a p_operation || ' VIEW ' || p_view_name || ' ' || p_extra
