@@ -96,10 +96,11 @@ procedure reset_ddl_execution_settings;
 
 procedure column_ddl
 ( p_operation in varchar2 -- The operation: usually ADD, MODIFY, DROP or RENAME
-, p_table_name in user_tab_columns.table_name%type -- The table name
-, p_column_name in user_tab_columns.column_name%type -- The column name
+, p_table_name in all_tab_columns.table_name%type -- The table name
+, p_column_name in all_tab_columns.column_name%type -- The column name
 , p_extra in varchar2 default null -- To add after the column name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_column_ddl -- SQL codes to ignore
+, p_owner in all_tab_columns.owner%type /*default null*/ -- The table owner
 );
 /**
 Issues a:
@@ -109,9 +110,10 @@ Issues a:
 
 procedure table_ddl
 ( p_operation in varchar2 -- The operation: usually CREATE, ALTER or DROP
-, p_table_name in user_tab_columns.table_name%type -- The table name
+, p_table_name in all_tables.table_name%type -- The table name
 , p_extra in varchar2 default null -- To add after the table name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_table_ddl -- SQL codes to ignore
+, p_owner in all_tables.owner%type /*default null*/ -- The table owner
 );
 /**
 Issues a p_operation || ' TABLE ' || p_table_name || ' ' || p_extra
@@ -119,12 +121,13 @@ Issues a p_operation || ' TABLE ' || p_table_name || ' ' || p_extra
 
 procedure check_constraint_ddl
 ( p_operation in varchar2 -- The operation: usually ADD, MODIFY, RENAME or DROP
-, p_table_name in user_constraints.table_name%type -- The table name
-, p_constraint_name in user_constraints.constraint_name%type -- The constraint name
-, p_search_condition_vc in user_constraints.search_condition_vc%type default null -- The check constraint search condition
-, p_column_tab in t_column_tab default null -- The column names to check for in ascending order (there is no order in USER_CONS_COLUMNS for check constraints)
+, p_table_name in all_constraints.table_name%type -- The table name
+, p_constraint_name in all_constraints.constraint_name%type -- The constraint name
+, p_search_condition_vc in all_constraints.search_condition_vc%type default null -- The check constraint search condition
+, p_column_tab in t_column_tab default null -- The column names to check for in ascending order (there is no order in ALL_CONS_COLUMNS for check constraints)
 , p_extra in varchar2 default null -- To add after the constraint name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_constraint_ddl -- SQL codes to ignore
+, p_owner in all_constraints.owner%type /*default null*/ -- The table owner
 );
 /**
 Issues a "'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' CONSTRAINT ' || p_constraint_name || ' ' || p_extra" command.
@@ -137,12 +140,13 @@ You can also use `constraint_ddl`, but then you will miss the search condition l
 
 procedure constraint_ddl
 ( p_operation in varchar2 -- The operation: usually ADD, MODIFY, RENAME or DROP
-, p_table_name in user_constraints.table_name%type -- The table name
-, p_constraint_name in user_constraints.constraint_name%type -- The constraint name
-, p_constraint_type in user_constraints.constraint_type%type default null -- The constraint type
-, p_column_tab in t_column_tab default null -- The column names to check for (in ascending order for check constraints else the order from USER_CONS_COLUMNS)
+, p_table_name in all_constraints.table_name%type -- The table name
+, p_constraint_name in all_constraints.constraint_name%type -- The constraint name
+, p_constraint_type in all_constraints.constraint_type%type default null -- The constraint type
+, p_column_tab in t_column_tab default null -- The column names to check for (in ascending order for check constraints else the order from ALL_CONS_COLUMNS)
 , p_extra in varchar2 default null -- To add after the constraint name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_constraint_ddl -- SQL codes to ignore
+, p_owner in all_constraints.owner%type /*default null*/ -- The table owner
 );
 /**
 Issues a "'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' CONSTRAINT ' || p_constraint_name || ' ' || p_extra" command.
@@ -154,10 +158,11 @@ You can also use `check_constraint_ddl` for check constraints which gives you th
 **/
 
 procedure comment_ddl
-( p_table_name in user_tab_columns.table_name%type -- The table name
-, p_column_name in user_tab_columns.column_name%type default null -- The column name (empty for a table comment)
+( p_table_name in all_tab_columns.table_name%type -- The table name
+, p_column_name in all_tab_columns.column_name%type default null -- The column name (empty for a table comment)
 , p_comment in varchar2 default null -- The comment (empty to remove)
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_comment_ddl -- SQL codes to ignore
+, p_owner in all_tab_columns.owner%type /*default null*/ -- The table owner
 );
 /**
 Issues:
@@ -167,11 +172,12 @@ b. p_column_name is null: 'COMMENT ON TABLE ' || p_table_name || ' IS ''' || p_c
 
 procedure index_ddl
 ( p_operation in varchar2 -- Usually CREATE, ALTER or DROP
-, p_index_name in user_indexes.index_name%type -- The index name
-, p_table_name in user_indexes.table_name%type default null -- The table name
+, p_index_name in all_indexes.index_name%type -- The index name
+, p_table_name in all_indexes.table_name%type default null -- The table name
 , p_column_tab in t_column_tab default null -- The column names of the index (in that order). May be used when for operation CREATE or ALTER with a RENAME with index_name containing the wildcard %.
 , p_extra in varchar2 default null -- The extra to add to the DDL statement
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_index_ddl -- SQL codes to ignore
+, p_owner in all_indexes.owner%type /*default null*/ -- The index owner
 );
 /**
 Issues:
@@ -181,11 +187,12 @@ b. p_table_name is null: p_operation || ' ' || p_index_name || p_extra
 
 procedure trigger_ddl
 ( p_operation in varchar2 -- Usually CREATE, CREATE OR REPLACE, ALTER or DROP
-, p_trigger_name in user_triggers.trigger_name%type -- The trigger name
+, p_trigger_name in all_triggers.trigger_name%type -- The trigger name
 , p_trigger_extra in varchar2 default null -- The extra to add after the trigger name
-, p_table_name in user_triggers.table_name%type default null -- The table name
+, p_table_name in all_triggers.table_name%type default null -- The table name
 , p_extra in varchar2 default null -- The extra to add to the DDL statement
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_trigger_ddl -- SQL codes to ignore
+, p_owner in all_triggers.owner%type /*default null*/ -- The trigger owner
 );
 /**
 Issues:
@@ -195,9 +202,10 @@ c. p_table_name is null: p_operation || ' TRIGGER ' || p_trigger_name || ' ' || 
 
 procedure view_ddl
 ( p_operation in varchar2 -- The operation: usually CREATE [OR REPLACE], ALTER or DROP
-, p_view_name in user_views.view_name%type -- The view name
+, p_view_name in all_views.view_name%type -- The view name
 , p_extra in varchar2 default null -- To add after the view name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_view_ddl -- SQL codes to ignore
+, p_owner in all_views.owner%type /*default null*/ -- The view owner
 );
 /**
 Issues a p_operation || ' VIEW ' || p_view_name || ' ' || p_extra

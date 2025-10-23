@@ -13,25 +13,27 @@ g_testing                    boolean  := false;
 
 $if cfg_pkg.c_testing $then
 
-c_test_base_name constant user_objects.object_name%type := 'test$' || $$PLSQL_UNIT || '$';
-c_test_base_name_parent constant user_objects.object_name%type := c_test_base_name || 'parent$';
-c_test_base_name_child constant user_objects.object_name%type := c_test_base_name || 'child$';
+c_owner constant all_objects.owner%type := user; -- AUTHID CURRENT_USER
 
-c_test_table_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'tab';
-c_test_table_name_child constant user_objects.object_name%type := c_test_base_name_child || 'tab';
-c_test_pk_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'pk';
-c_test_pk_name_child constant user_objects.object_name%type := c_test_base_name_child || 'pk';
-c_test_uk_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'uk';
+c_test_base_name constant all_objects.object_name%type := 'test$' || $$PLSQL_UNIT || '$';
+c_test_base_name_parent constant all_objects.object_name%type := c_test_base_name || 'parent$';
+c_test_base_name_child constant all_objects.object_name%type := c_test_base_name || 'child$';
+
+c_test_table_name_parent constant all_objects.object_name%type := c_test_base_name_parent || 'tab';
+c_test_table_name_child constant all_objects.object_name%type := c_test_base_name_child || 'tab';
+c_test_pk_name_parent constant all_objects.object_name%type := c_test_base_name_parent || 'pk';
+c_test_pk_name_child constant all_objects.object_name%type := c_test_base_name_child || 'pk';
+c_test_uk_name_parent constant all_objects.object_name%type := c_test_base_name_parent || 'uk';
 -- uk for child is unnamed (i.e. like SYS\_%)
-c_test_ck_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'ck';
-c_test_ck1_name_child constant user_objects.object_name%type := c_test_base_name_child || 'ck1';
-c_test_ck2_name_child constant user_objects.object_name%type := c_test_base_name_child || 'ck2';
-c_test_fk_name_child constant user_objects.object_name%type := c_test_base_name_child || 'fk';
-c_test_index_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'ind';
-c_test_index_name_child constant user_objects.object_name%type := c_test_base_name_child || 'ind';
-c_test_trigger_name_parent constant user_objects.object_name%type := c_test_base_name_parent || 'trg';
-c_test_trigger_name_child constant user_objects.object_name%type := c_test_base_name_child || 'trg';
-c_test_view_name constant user_objects.object_name%type := c_test_base_name_parent || 'vw';
+c_test_ck_name_parent constant all_objects.object_name%type := c_test_base_name_parent || 'ck';
+c_test_ck1_name_child constant all_objects.object_name%type := c_test_base_name_child || 'ck1';
+c_test_ck2_name_child constant all_objects.object_name%type := c_test_base_name_child || 'ck2';
+c_test_fk_name_child constant all_objects.object_name%type := c_test_base_name_child || 'fk';
+c_test_index_name_parent constant all_objects.object_name%type := c_test_base_name_parent || 'ind';
+c_test_index_name_child constant all_objects.object_name%type := c_test_base_name_child || 'ind';
+c_test_trigger_name_parent constant all_objects.object_name%type := c_test_base_name_parent || 'trg';
+c_test_trigger_name_child constant all_objects.object_name%type := c_test_base_name_child || 'trg';
+c_test_view_name constant all_objects.object_name%type := c_test_base_name_parent || 'vw';
 
 $end
 
@@ -327,19 +329,21 @@ begin
 end to_column_list;
 
 procedure determine_table_constraint_name
-( p_table_name in out nocopy user_constraints.table_name%type
-, p_constraint_name in out nocopy user_constraints.constraint_name%type
-, p_constraint_type in user_constraints.constraint_type%type
-, p_search_condition_vc in user_constraints.search_condition_vc%type
+( p_owner in out nocopy all_constraints.owner%type -- on output including . when not null
+, p_table_name in out nocopy all_constraints.table_name%type
+, p_constraint_name in out nocopy all_constraints.constraint_name%type
+, p_constraint_type in all_constraints.constraint_type%type
+, p_search_condition_vc in all_constraints.search_condition_vc%type
 , p_column_tab in t_column_tab
 , p_ignore_no_data_found in boolean default g_testing
 )
 is
   l_routine_name constant varchar2(60 byte) := 'determine_table_constraint_name';
-  l_table_name_no_qq user_constraints.table_name%type := unquote_name(p_table_name);
+  l_owner_no_qq all_constraints.owner%type := unquote_name(p_owner);
+  l_table_name_no_qq all_constraints.table_name%type := unquote_name(p_table_name);
   -- when p_table_name is already a quoted identifier we will use exact match
   l_table_name_exact constant natural := match_name_exact(p_table_name, l_table_name_no_qq);
-  l_constraint_name_no_qq user_constraints.constraint_name%type := unquote_name(p_constraint_name);
+  l_constraint_name_no_qq all_constraints.constraint_name%type := unquote_name(p_constraint_name);
   -- when p_constraint_name is already a quoted identifier we will use exact match
   l_constraint_name_exact constant natural := match_name_exact(p_constraint_name, l_constraint_name_no_qq);
   l_column_list varchar2(4000 byte) := to_column_list(p_column_tab);
@@ -350,6 +354,11 @@ is
     -- we can now use dbms_assert to get quoted identifiers
     if not p_error_raised
     then
+      p_owner :=
+        case
+          when l_owner_no_qq is not null
+          then dbms_assert.enquote_name(l_owner_no_qq, false) || '.'
+        end; -- do not convert to upper case since it is a data dictionary name
       p_table_name := dbms_assert.enquote_name(l_table_name_no_qq, false); -- do not convert to upper case since it is a data dictionary name
       print('p_table_name out', p_table_name);
     end if;
@@ -359,12 +368,14 @@ is
 begin
   enter(l_routine_name);
 
+  print('p_owner', p_owner);
   print('p_table_name', p_table_name);
   print('p_constraint_name', p_constraint_name);
   print('p_constraint_type', p_constraint_type);
   print('p_search_condition_vc', p_search_condition_vc);
   print('p_column_tab', p_column_tab);
 
+  print('l_owner_no_qq', l_owner_no_qq);
   print('l_table_name_no_qq', l_table_name_no_qq);
   print('l_table_name_exact', l_table_name_exact);
   print('l_constraint_name_no_qq', l_constraint_name_no_qq);
@@ -385,12 +396,12 @@ begin
     ,       con.constraint_type
     ,       con.search_condition_vc
     ,       listagg(cons.column_name, ',') within group (order by cons.position, cons.column_name) as column_list
-    from    user_constraints con
-            inner join user_cons_columns cons
+    from    all_constraints con
+            inner join all_cons_columns cons
             on cons.owner = con.owner and
                cons.constraint_name = con.constraint_name and
                cons.table_name = con.table_name
-    where   con.owner = user
+    where   con.owner = nvl(l_owner_no_qq, user)
     and     ( l_table_name_no_qq is null or
               con.table_name = l_table_name_no_qq or
               ( l_table_name_exact = 0 and con.table_name = upper(l_table_name_no_qq) )
@@ -412,9 +423,11 @@ begin
     ,       con.constraint_type
     ,       con.search_condition_vc
   )
-  select  src.table_name
+  select  src.owner
+  ,       src.table_name
   ,       src.constraint_name
-  into    l_table_name_no_qq
+  into    l_owner_no_qq
+  ,       l_table_name_no_qq
   ,       l_constraint_name_no_qq
   from    src
   where   l_column_list is null
@@ -437,17 +450,19 @@ exception
 end determine_table_constraint_name;
 
 procedure determine_table_index_name
-( p_table_name in out nocopy user_indexes.table_name%type
-, p_index_name in out nocopy user_indexes.index_name%type
+( p_owner in out nocopy all_indexes.owner%type -- on output including . when not null
+, p_table_name in out nocopy all_indexes.table_name%type
+, p_index_name in out nocopy all_indexes.index_name%type
 , p_column_tab in t_column_tab
 , p_ignore_no_data_found in boolean default g_testing
 )
 is
   l_routine_name constant varchar2(60 byte) := 'determine_table_index_name';
-  l_table_name_no_qq user_indexes.table_name%type := unquote_name(p_table_name);
+  l_owner_no_qq all_indexes.owner%type := unquote_name(p_owner);
+  l_table_name_no_qq all_indexes.table_name%type := unquote_name(p_table_name);
   -- when p_table_name is already a quoted identifier we will use exact match
   l_table_name_exact constant natural := match_name_exact(p_table_name, l_table_name_no_qq);
-  l_index_name_no_qq user_indexes.index_name%type := unquote_name(p_index_name);
+  l_index_name_no_qq all_indexes.index_name%type := unquote_name(p_index_name);
   -- when p_index_name is already a quoted identifier we will use exact match
   l_index_name_exact constant natural := match_name_exact(p_index_name, l_index_name_no_qq);
   l_column_list varchar2(4000 byte) := to_column_list(p_column_tab);
@@ -458,6 +473,11 @@ is
     -- we can now use dbms_assert to get quoted identifiers
     if not p_error_raised
     then
+      p_owner :=
+        case
+          when l_owner_no_qq is not null
+          then dbms_assert.enquote_name(l_owner_no_qq, false) || '.'
+        end; -- do not convert to upper case since it is a data dictionary name
       p_table_name := dbms_assert.enquote_name(l_table_name_no_qq, false); -- do not convert to upper case since it is a data dictionary name
       print('p_table_name out', p_table_name);
     end if;
@@ -466,10 +486,12 @@ is
   end finalize;
 begin
   enter(l_routine_name);
+  print('p_owner', p_owner);
   print('p_table_name', p_table_name);
   print('p_index_name', p_index_name);
   print('p_column_tab', p_column_tab);
 
+  print('l_owner_no_qq', l_owner_no_qq);
   print('l_table_name_no_qq', l_table_name_no_qq);
   print('l_table_name_exact', l_table_name_exact);
   print('l_index_name_no_qq', l_index_name_no_qq);
@@ -484,14 +506,18 @@ begin
   -- 1. Find the one and only index that matches the filter criteria p_table_name and p_index_name.
   -- 2. But also all the index columns must match p_column_tab (when not null and in that order).
   with src as
-  ( select  ind.table_name
+  ( select  ind.owner
+    ,       ind.table_name
     ,       ind.index_name
     ,       listagg(inds.column_name, ',') within group (order by inds.column_position) as column_list
-    from    user_indexes ind
-            inner join user_ind_columns inds
-            on inds.index_name = ind.index_name and
+    from    all_indexes ind
+            inner join all_ind_columns inds
+            on inds.index_owner = ind.owner and
+               inds.index_name = ind.index_name and
+               inds.table_owner = ind.table_owner and
                inds.table_name = ind.table_name
-    where   ind.table_owner = user
+    where   ind.owner = nvl(l_owner_no_qq, user)
+    and     ind.table_owner = nvl(l_owner_no_qq, user)
     and     ( l_table_name_no_qq is null or
               ind.table_name = l_table_name_no_qq or
               ( l_table_name_exact = 0 and ind.table_name = upper(l_table_name_no_qq) )
@@ -501,12 +527,15 @@ begin
               ( l_index_name_exact = 0 and ind.index_name like upper(l_index_name_no_qq) escape '\' )
             )
     group by
-            ind.table_name
+            ind.owner
+    ,       ind.table_name
     ,       ind.index_name
   )
-  select  src.table_name
+  select  src.owner
+  ,       src.table_name
   ,       src.index_name
-  into    l_table_name_no_qq
+  into    l_owner_no_qq
+  ,       l_table_name_no_qq
   ,       l_index_name_no_qq
   from    src
   where   l_column_list is null
@@ -530,25 +559,28 @@ end determine_table_index_name;
 
 procedure constraint_ddl
 ( p_operation in varchar2
-, p_table_name in user_constraints.table_name%type
-, p_constraint_name in user_constraints.constraint_name%type
-, p_constraint_type in user_constraints.constraint_type%type
-, p_search_condition_vc in user_constraints.search_condition_vc%type
+, p_table_name in all_constraints.table_name%type
+, p_constraint_name in all_constraints.constraint_name%type
+, p_constraint_type in all_constraints.constraint_type%type
+, p_search_condition_vc in all_constraints.search_condition_vc%type
 , p_column_tab in t_column_tab
 , p_extra in varchar2
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
+, p_owner in all_constraints.owner%type
 )
 is
   l_routine_name constant varchar2(30 byte) := 'constraint_ddl';
-  l_table_name user_constraints.table_name%type := p_table_name;
-  l_constraint_name user_constraints.constraint_name%type := p_constraint_name;
+  l_owner all_constraints.owner%type := p_owner;
+  l_table_name all_constraints.table_name%type := p_table_name;
+  l_constraint_name all_constraints.constraint_name%type := p_constraint_name;
   l_statement varchar2(32767 byte) := null;
 
   procedure determine_constraint_name
   is
   begin
     determine_table_constraint_name
-    ( p_table_name => l_table_name
+    ( p_owner => l_owner
+    , p_table_name => l_table_name
     , p_constraint_name => l_constraint_name
     , p_constraint_type => p_constraint_type
     , p_search_condition_vc => p_search_condition_vc
@@ -565,6 +597,7 @@ begin
   print('p_column_tab', p_column_tab);
   print('p_extra', p_extra);
   print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+  print('p_owner', p_owner);
 
   begin
     case 
@@ -577,7 +610,7 @@ begin
         check_condition(false, 'Parameter "p_operation" must be one of "ADD", "MODIFY", "RENAME" or "DROP"');
     end case;
     
-    l_statement := 'ALTER TABLE ' || l_table_name || ' ' || p_operation || ' CONSTRAINT ' || l_constraint_name || ' ' || p_extra;
+    l_statement := utl_lms.format_message('ALTER TABLE %s%s %s CONSTRAINT %s %s', l_owner, l_table_name, p_operation, l_constraint_name, p_extra);
   exception
     when others
     then
@@ -656,10 +689,11 @@ end reset_ddl_execution_settings;
 
 procedure column_ddl
 ( p_operation in varchar2
-, p_table_name in user_tab_columns.table_name%type
-, p_column_name in user_tab_columns.column_name%type
+, p_table_name in all_tab_columns.table_name%type
+, p_column_name in all_tab_columns.column_name%type
 , p_extra in varchar2
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab 
+, p_owner in all_tab_columns.owner%type
 )
 is
   l_routine_name constant varchar2(30 byte) := 'column_ddl';
@@ -670,6 +704,7 @@ begin
   print('p_column_name', p_column_name);
   print('p_extra', p_extra);
   print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+  print('p_owner', p_owner);
   
   check_condition
   ( upper(p_operation) in ('ADD', 'MODIFY', 'DROP', 'RENAME')
@@ -678,11 +713,18 @@ begin
 
   do
   ( p_statement =>
-      case
-        when upper(p_operation) <> 'RENAME'
-        then 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' (' || p_column_name || ' ' || p_extra || ')'
-        else 'ALTER TABLE ' || p_table_name || ' ' || p_operation || ' COLUMN ' || p_column_name || ' ' || p_extra
-      end
+      utl_lms.format_message
+      ( case
+          when upper(p_operation) <> 'RENAME'
+          then 'ALTER TABLE %s%s %s (%s %s)'
+          else 'ALTER TABLE %s%s %s COLUMN %s %s'
+        end
+      , case when p_owner is not null then p_owner || '.' end
+      , p_table_name
+      , p_operation
+      , p_column_name
+      , p_extra
+      )
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
 
@@ -696,9 +738,10 @@ end column_ddl;
 
 procedure table_ddl
 ( p_operation in varchar2
-, p_table_name in user_tab_columns.table_name%type
+, p_table_name in all_tables.table_name%type
 , p_extra in varchar2
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
+, p_owner in all_tables.owner%type
 )
 is
   l_routine_name constant varchar2(30 byte) := 'table_ddl';
@@ -708,13 +751,21 @@ begin
   print('p_table_name', p_table_name);
   print('p_extra', p_extra);
   print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+  print('p_owner', p_owner);
   
   check_condition
   ( upper(p_operation) in ('CREATE', 'ALTER', 'DROP')
   , 'Parameter "p_operation" must be one of "CREATE", "ALTER" or "DROP"'
   );
   do
-  ( p_statement => p_operation || ' TABLE ' || p_table_name || ' ' || p_extra
+  ( p_statement =>
+      utl_lms.format_message
+      ( '%s TABLE %s%s %s'
+      , p_operation
+      , case when p_owner is not null then p_owner || '.' end
+      , p_table_name
+      , p_extra
+      )
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
 
@@ -728,12 +779,13 @@ end table_ddl;
 
 procedure check_constraint_ddl
 ( p_operation in varchar2 -- The operation: usually ADD, MODIFY, RENAME or DROP
-, p_table_name in user_constraints.table_name%type -- The table name
-, p_constraint_name in user_constraints.constraint_name%type -- The constraint name
-, p_search_condition_vc in user_constraints.search_condition_vc%type default null -- The check constraint search condition
-, p_column_tab in t_column_tab default null -- The column names to check for in ascending order (there is no order in USER_CONS_COLUMNS for check constraints)
-, p_extra in varchar2 default null -- To add after the constraint name
-, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_constraint_ddl -- SQL codes to ignore
+, p_table_name in all_constraints.table_name%type -- The table name
+, p_constraint_name in all_constraints.constraint_name%type -- The constraint name
+, p_search_condition_vc in all_constraints.search_condition_vc%type
+, p_column_tab in t_column_tab
+, p_extra in varchar2
+, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
+, p_owner in all_constraints.owner%type
 )
 is
 begin
@@ -746,17 +798,19 @@ begin
   , p_column_tab => p_column_tab
   , p_extra => p_extra
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
+  , p_owner => p_owner
   );
 end check_constraint_ddl;  
 
 procedure constraint_ddl
 ( p_operation in varchar2 -- The operation: usually ADD, MODIFY, RENAME or DROP
-, p_table_name in user_constraints.table_name%type -- The table name
-, p_constraint_name in user_constraints.constraint_name%type -- The constraint name
-, p_constraint_type in user_constraints.constraint_type%type default null -- The constraint type
-, p_column_tab in t_column_tab default null -- The column names to check for (in ascending order for check constraints else the order from USER_CONS_COLUMNS)
-, p_extra in varchar2 default null -- To add after the constraint name
-, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_constraint_ddl -- SQL codes to ignore
+, p_table_name in all_constraints.table_name%type -- The table name
+, p_constraint_name in all_constraints.constraint_name%type -- The constraint name
+, p_constraint_type in all_constraints.constraint_type%type
+, p_column_tab in t_column_tab
+, p_extra in varchar2
+, p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
+, p_owner in all_constraints.owner%type
 )
 is
 begin
@@ -769,14 +823,16 @@ begin
   , p_column_tab => p_column_tab
   , p_extra => p_extra
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
+  , p_owner => p_owner
   );
 end constraint_ddl;    
 
 procedure comment_ddl
-( p_table_name in user_tab_columns.table_name%type
-, p_column_name in user_tab_columns.column_name%type
+( p_table_name in all_tab_columns.table_name%type
+, p_column_name in all_tab_columns.column_name%type
 , p_comment in varchar2
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
+, p_owner in all_tab_columns.owner%type
 )
 is
   l_routine_name constant varchar2(30 byte) := 'comment_ddl';
@@ -786,14 +842,18 @@ begin
   print('p_column_name', p_column_name);
   print('p_comment', p_comment);
   print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+  print('p_owner', p_owner);
   
   do
   ( p_statement =>
-      case
-        when p_column_name is not null
-        then 'COMMENT ON COLUMN ' || p_table_name || '.' || p_column_name || ' IS ''' || p_comment || ''''
-        else 'COMMENT ON TABLE ' || p_table_name || ' IS ''' || p_comment || ''''
-      end
+      utl_lms.format_message
+      ( q'<COMMENT ON %s %s%s%s IS q'[%s]'>'
+      , case when p_column_name is not null then 'COLUMN' else 'TABLE' end
+      , case when p_owner is not null then p_owner || '.' end
+      , p_table_name
+      , case when p_column_name is not null then '.' || p_column_name end
+      , p_comment
+      )
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
 
@@ -807,16 +867,18 @@ end comment_ddl;
 
 procedure index_ddl
 ( p_operation in varchar2
-, p_index_name in user_indexes.index_name%type
-, p_table_name in user_indexes.table_name%type
+, p_index_name in all_indexes.index_name%type
+, p_table_name in all_indexes.table_name%type
 , p_column_tab in t_column_tab
 , p_extra in varchar2
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
+, p_owner in all_indexes.owner%type
 )
 is
   l_routine_name constant varchar2(30 byte) := 'index_ddl';
-  l_index_name user_indexes.index_name%type := p_index_name;
-  l_table_name user_indexes.table_name%type := p_table_name;
+  l_index_name all_indexes.index_name%type := p_index_name;
+  l_table_name all_indexes.table_name%type := p_table_name;
+  l_owner all_indexes.owner%type := p_owner;
   l_index_name_list varchar2(32767) := null; -- used in CREATE
   l_statement varchar2(32767 byte) := null;
 
@@ -824,7 +886,8 @@ is
   is
   begin
     determine_table_index_name
-    ( p_table_name => l_table_name
+    ( p_owner => l_owner
+    , p_table_name => l_table_name
     , p_index_name => l_index_name
     , p_column_tab => p_column_tab
     );
@@ -837,6 +900,7 @@ begin
   print('p_column_tab', p_column_tab);
   print('p_extra', p_extra);
   print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+  print('p_owner', p_owner);
 
   begin
     case
@@ -854,7 +918,7 @@ begin
     
     if upper(p_operation) = 'ALTER'
     then
-      l_statement := p_operation || ' INDEX ' || l_index_name || ' ' || p_extra;
+      l_statement := utl_lms.format_message('%s INDEX %s%s %s', p_operation, l_owner, l_index_name, p_extra);
     else
       -- CREATE/DROP
       if upper(p_operation) = 'CREATE'
@@ -875,8 +939,16 @@ begin
         end loop;
         l_index_name_list := l_index_name_list || ')';
       end if;
-      
-      l_statement := p_operation || ' INDEX ' || l_index_name || case when l_table_name is not null then ' ON ' || l_table_name || l_index_name_list end || ' ' || p_extra;
+
+      l_statement :=
+        utl_lms.format_message
+        ( '%s INDEX %s%s %s %s'
+        , p_operation
+        , l_owner
+        , l_index_name
+        , case when l_table_name is not null then ' ON ' || l_table_name || l_index_name_list end
+        , p_extra
+        );
     end if;
   exception
     when others
@@ -911,11 +983,12 @@ end index_ddl;
 
 procedure trigger_ddl
 ( p_operation in varchar2
-, p_trigger_name in user_triggers.trigger_name%type
+, p_trigger_name in all_triggers.trigger_name%type
 , p_trigger_extra in varchar2
-, p_table_name in user_triggers.table_name%type
+, p_table_name in all_triggers.table_name%type
 , p_extra in varchar2
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab
+, p_owner in all_triggers.owner%type
 )
 is
   l_routine_name constant varchar2(30 byte) := 'trigger_ddl';
@@ -927,6 +1000,7 @@ begin
   print('p_table_name', p_table_name);
   print('p_extra', p_extra);
   print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+  print('p_owner', p_owner);
 
   check_condition
   ( upper(p_operation) in ('CREATE', 'CREATE OR REPLACE', 'ALTER', 'DROP')
@@ -935,11 +1009,14 @@ begin
 
   do
   ( p_statement =>
-      case
-        when p_table_name is not null
-        then p_operation || ' TRIGGER ' || p_trigger_name || ' ' || p_trigger_extra || ' ON ' || p_table_name || chr(10) || p_extra
-        else p_operation || ' TRIGGER ' || p_trigger_name || ' ' || p_trigger_extra
-      end
+      utl_lms.format_message
+      ( '%s TRIGGER %s%s %s%s'
+      , p_operation
+      , case when p_owner is not null then p_owner || '.' end
+      , p_trigger_name
+      , p_trigger_extra
+      , case when p_table_name is not null then ' ON ' || p_table_name || chr(10) || p_extra end
+      )
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
 
@@ -953,9 +1030,10 @@ end trigger_ddl;
 
 procedure view_ddl
 ( p_operation in varchar2 -- The operation: usually CREATE, ALTER or DROP
-, p_view_name in user_views.view_name%type -- The view name
+, p_view_name in all_views.view_name%type -- The view name
 , p_extra in varchar2 default null -- To add after the view name
 , p_ignore_sqlcode_tab in t_ignore_sqlcode_tab default c_ignore_sqlcodes_view_ddl -- SQL codes to ignore
+, p_owner in all_views.owner%type -- The view name
 )
 is
   l_routine_name constant varchar2(30 byte) := 'view_ddl';
@@ -965,6 +1043,7 @@ begin
   print('p_view_name', p_view_name);
   print('p_extra', p_extra);
   print('p_ignore_sqlcode_tab', p_ignore_sqlcode_tab);
+  print('p_owner', p_owner);
   
   check_condition
   ( upper(p_operation) in ('CREATE', 'CREATE OR REPLACE', 'ALTER', 'DROP')
@@ -972,7 +1051,14 @@ begin
   );
 
   do
-  ( p_statement => p_operation || ' VIEW ' || p_view_name || ' ' || p_extra
+  ( p_statement =>
+      utl_lms.format_message
+      ( '%s VIEW %s%s %s'
+      , p_operation
+      , case when p_owner is not null then p_owner || '.' end
+      , p_view_name
+      , p_extra
+      )
   , p_ignore_sqlcode_tab => p_ignore_sqlcode_tab
   );
 
@@ -1070,7 +1156,7 @@ is
 begin
   for r_con in
   ( select  con.constraint_name
-    from    user_constraints con
+    from    all_constraints con
     where   table_name = upper(p_table_name)
     and     ( p_constraint_name is null or con.constraint_name in ( p_constraint_name, upper(p_constraint_name) ) )
   )
@@ -1081,6 +1167,7 @@ begin
       , p_table_name => p_table_name
       , p_constraint_name => r_con.constraint_name
       , p_ignore_sqlcode_tab => null
+      , p_owner => null
       );
     exception
       when others
@@ -1146,7 +1233,9 @@ begin
     -- delete from the rear
     for i_idx in reverse lines.first .. l_last
     loop
-      if substr(lines(i_idx), 1, 3) = '-- '
+      -- see print(p_line => ..., p_is_ddl_statement => false)
+      if substr(lines(i_idx), 1, 3) = '/* ' and
+         substr(lines(i_idx), -3) = ' */' 
       then
         lines.delete(i_idx);
         numlines := numlines - 1;
@@ -1182,6 +1271,7 @@ begin
       , p_table_name => 'TEST'
       , p_column_name => 'ABC'
       , p_extra => 'XYZ'
+      , p_owner => null
       );
     exception
       when value_error
@@ -1199,6 +1289,7 @@ begin
   , p_table_name => 'test'
   , p_column_name => 'abc'
   , p_extra => 'xyz '
+  , p_owner => null
   );
   l_nr_lines := 1000;
   ut_get_statement_lines
@@ -1219,6 +1310,7 @@ begin
   , p_column_name => 'ID'
   , p_extra => 'number'
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_column_already_exists;
 
@@ -1230,6 +1322,7 @@ begin
   , p_table_name => c_test_table_name_child
   , p_column_name => 'xyz'
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_column_does_not_exist;
 
@@ -1259,6 +1352,7 @@ begin
                        end
       , p_table_name => 'TEST'
       , p_extra => 'XYZ'
+      , p_owner => null
       );
     exception
       when value_error
@@ -1275,6 +1369,7 @@ begin
   ( p_operation => 'CREATE'
   , p_table_name => 'TEST'
   , p_extra => 'XYZ'
+  , p_owner => null
   );
   l_nr_lines := 1000;
   ut_get_statement_lines
@@ -1294,6 +1389,7 @@ begin
   , p_table_name => c_test_table_name_parent
   , p_extra => '( id number )'
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_table_already_exists;
 
@@ -1305,6 +1401,7 @@ begin
   , p_table_name => c_test_table_name_child || 'XYZ'
   , p_extra => 'purge'
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_table_does_not_exist;
 
@@ -1341,6 +1438,7 @@ begin
       , p_table_name => 'TEST'
       , p_constraint_name => 'ABC'
       , p_extra => 'XYZ'
+      , p_owner => null
       );
     exception
       when value_error
@@ -1358,6 +1456,7 @@ begin
   , p_table_name => 'test'
   , p_constraint_name => 'abc'
   , p_extra => 'xyz '
+  , p_owner => null
   );
   l_nr_lines := 1000;
   ut_get_statement_lines
@@ -1385,6 +1484,7 @@ begin
   , p_constraint_name => c_test_pk_name_parent
   , p_extra => 'PRIMARY KEY (ID)'
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_pk_constraint_already_exists;
 
@@ -1397,6 +1497,7 @@ begin
   , p_constraint_name => c_test_uk_name_parent
   , p_extra => 'UNIQUE (NAME)'
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_uk_constraint_already_exists;
 
@@ -1409,6 +1510,7 @@ begin
   , p_constraint_name => c_test_fk_name_child
   , p_extra => 'FOREIGN KEY (PARENT_ID) REFERENCES ' || c_test_table_name_parent || '(ID)'
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_fk_constraint_already_exists;
 
@@ -1421,6 +1523,7 @@ begin
   , p_constraint_name => c_test_ck1_name_child
   , p_extra => 'CHECK (NAME IS NOT NULL)'
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_ck_constraint_already_exists;
 
@@ -1435,6 +1538,7 @@ begin
   , p_table_name => c_test_table_name_child
   , p_constraint_name => c_test_pk_name_child
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_pk_constraint_does_not_exist;
 
@@ -1449,6 +1553,7 @@ begin
   , p_table_name => c_test_table_name_parent
   , p_constraint_name => c_test_uk_name_parent
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_uk_constraint_does_not_exist;
 
@@ -1463,6 +1568,7 @@ begin
   , p_table_name => c_test_table_name_child
   , p_constraint_name => c_test_fk_name_child
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_fk_constraint_does_not_exist;
 
@@ -1477,6 +1583,7 @@ begin
   , p_table_name => c_test_table_name_child
   , p_constraint_name => c_test_ck1_name_child
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_ck_constraint_does_not_exist;
 
@@ -1497,6 +1604,7 @@ begin
   , p_constraint_type => 'C'
   , p_extra => 'TO ' || c_test_ck2_name_child
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
   l_nr_lines := 1000;
   ut_get_statement_lines
@@ -1505,7 +1613,7 @@ begin
   );
   ut.expect(l_nr_lines).to_be_greater_or_equal(1);
   -- 
-  ut.expect(l_lines(l_lines.first)).to_be_like('ALTER TABLE "TEST$CFG_INSTALL_DDL_PKG$CHILD$TAB" RENAME CONSTRAINT "SYS\_%" TO test$CFG_INSTALL_DDL_PKG$child$ck2', '\');
+  ut.expect(l_lines(l_lines.first)).to_be_like('ALTER TABLE "'||$$PLSQL_UNIT_OWNER||'"."TEST$CFG_INSTALL_DDL_PKG$CHILD$TAB" RENAME CONSTRAINT "SYS\_%" TO test$CFG_INSTALL_DDL_PKG$child$ck2', '\');
 end ut_rename_constraint;
 
 procedure ut_rename_index
@@ -1525,6 +1633,7 @@ begin
   , p_column_tab => t_column_tab('NAME')
   , p_extra => 'RENAME TO XYZ'
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
   l_nr_lines := 1000;
   ut_get_statement_lines
@@ -1533,7 +1642,7 @@ begin
   );
   ut.expect(l_nr_lines).to_be_greater_or_equal(1);
   -- 
-  ut.expect(l_lines(l_lines.first)).to_be_like('ALTER INDEX "SYS\_%" RENAME TO XYZ', '\');
+  ut.expect(l_lines(l_lines.first)).to_be_like('ALTER INDEX "'||$$PLSQL_UNIT_OWNER||'"."SYS\_%" RENAME TO XYZ', '\');
 end ut_rename_index;
 
 procedure ut_view_ddl
@@ -1562,6 +1671,7 @@ begin
                        end
       , p_view_name => 'TEST'
       , p_extra => 'XYZ'
+      , p_owner => null
       );
     exception
       when value_error
@@ -1578,6 +1688,7 @@ begin
   ( p_operation => 'CREATE'
   , p_view_name => 'TEST'
   , p_extra => 'XYZ'
+  , p_owner => null
   );
   l_nr_lines := 1000;
   ut_get_statement_lines
@@ -1598,12 +1709,14 @@ begin
   , p_view_name => c_test_view_name
   , p_extra => 'AS SELECT * FROM DUAL'
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
   view_ddl
   ( p_operation => 'CREATE'
   , p_view_name => c_test_view_name
   , p_extra => 'AS SELECT * FROM DUAL'
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_view_already_exists;
 
@@ -1615,6 +1728,7 @@ begin
   , p_view_name => c_test_view_name || 'XYZ'
   , p_extra => null
   , p_ignore_sqlcode_tab => null
+  , p_owner => null
   );
 end ut_view_does_not_exist;
 
