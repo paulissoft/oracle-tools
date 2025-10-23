@@ -5,10 +5,10 @@ create or replace package body admin_install_pkg is
 -- TYPES
 
 type options_rec_t is record
-( operation varchar2(10)
-, stop_on_error boolean
-, dry_run boolean
-, verbose boolean
+( operation varchar2(10) default 'install'
+, stop_on_error boolean default true
+, dry_run boolean default false
+, verbose boolean default false
 );
 
 -- key is base name, value is file contents
@@ -470,11 +470,12 @@ procedure install_sql
 ( p_schema in varchar2
 , p_content in clob
 , p_file_path in varchar2
-, p_project_rec in project_rec_t default g_empty_project_rec
-, p_statement_nr in integer default null
+, p_project_rec in project_rec_t
+, p_statement_nr in integer
+, p_stop_on_error in boolean default g_options_rec.stop_on_error
 )
 is
-  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_sql (1)';
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.install_sql';
   l_statement constant clob :=
     replace
     ( replace
@@ -495,6 +496,7 @@ is
     );
 begin
   dbug_enter(l_module_name);
+  
   processing_file
   ( p_schema
   , case
@@ -549,7 +551,7 @@ end;
 ]'
       using in p_schema
              , l_statement
-             , g_options_rec.stop_on_error;
+             , p_stop_on_error;
   end if;             
 
   dbug_leave(l_module_name);
@@ -560,6 +562,40 @@ exception
     dbug_print(dbms_lob.substr(lob_loc => l_statement, amount => 256));
     dbug_leave(l_module_name);
     raise;
+end install_sql;
+
+procedure install_sql
+( p_schema in varchar2
+, p_content in clob
+, p_file_path in varchar2
+, p_project_rec in project_rec_t
+)
+is
+begin
+  install_sql
+  ( p_schema => p_schema
+  , p_content => p_content
+  , p_file_path => p_file_path
+  , p_project_rec => p_project_rec  
+  , p_statement_nr => null
+  );
+end install_sql;
+
+procedure install_sql
+( p_schema in varchar2
+, p_content in clob
+, p_file_path in varchar2
+, p_statement_nr in integer
+)
+is
+begin
+  install_sql
+  ( p_schema => p_schema
+  , p_content => p_content
+  , p_file_path => p_file_path
+  , p_project_rec => g_empty_project_rec  
+  , p_statement_nr => p_statement_nr
+  );
 end install_sql;
 
 procedure process_sql
@@ -620,6 +656,13 @@ begin
   if do_not_install_file(p_github_access_handle, p_file_path)
   then
     return;
+  end if;
+
+  if sql_statement_terminator(p_file_path) = ';'
+  then
+    null;
+  else
+    raise_error($$PLSQL_LINE, utl_lms.format_message(q'[raise_application_error('File %s must for sure have SQL statements ending with a semi-colon')]', p_file_path));
   end if;
 
   dbug_enter(l_module_name);
@@ -709,16 +752,13 @@ end process_sql;
 
 procedure install_file
 ( p_github_access_handle in github_access_handle_t
+, p_github_access_rec in github_access_rec_t
 , p_schema in varchar2
-, p_repo in clob
 , p_file_path in varchar2
-, p_branch_name in varchar2
-, p_tag_name in varchar2
-, p_commit_id in varchar2
 , p_stop_on_error in boolean
 )
 is
-  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.install_file';
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.install_file (1)';
 begin
   if do_not_install_file(p_github_access_handle, p_file_path)
   then
@@ -734,11 +774,11 @@ begin
     , p_schema => p_schema
     , p_file_path => p_file_path
     , p_content => dbms_cloud_repo.get_file
-                   ( repo => p_repo
+                   ( repo => p_github_access_rec.repo
                    , file_path => p_file_path
-                   , branch_name => p_branch_name
-                   , tag_name => p_tag_name
-                   , commit_id => p_commit_id
+                   , branch_name => p_github_access_rec.branch_name
+                   , tag_name => p_github_access_rec.tag_name
+                   , commit_id => p_github_access_rec.commit_id
                    )
     );  
   else
@@ -770,11 +810,11 @@ begin
 end;
 ]'
           using in p_schema
-                 , p_repo
+                 , p_github_access_rec.repo
                  , p_file_path
-                 , p_branch_name
-                 , p_tag_name
-                 , p_commit_id
+                 , p_github_access_rec.branch_name
+                 , p_github_access_rec.tag_name
+                 , p_github_access_rec.commit_id
                  , p_stop_on_error;
     end if;                 
   end if;
@@ -783,6 +823,7 @@ end;
 exception
   when others
   then
+    dbug_print('schema: ' || p_schema || '; file path: ' || p_file_path);
     dbug_leave(l_module_name);
     raise;
 end install_file;               
@@ -966,12 +1007,9 @@ begin
         then
           install_file
           ( p_github_access_handle => p_github_access_handle
+          , p_github_access_rec => l_github_access_rec
           , p_schema => p_schema
-          , p_repo => l_github_access_rec.repo
           , p_file_path => p_file_path
-          , p_branch_name => l_github_access_rec.branch_name
-          , p_tag_name => l_github_access_rec.tag_name
-          , p_commit_id => l_github_access_rec.commit_id
           , p_stop_on_error => g_options_rec.stop_on_error
           );
         end if;
@@ -1508,7 +1546,7 @@ begin
     raise_error
     ( $$PLSQL_LINE
     , utl_lms.format_message
-      ( q'[raise_application_error(-20000, 'The first call for set_github_access() must be for repo owner "%s" and repo name "%s"']'
+      ( q'[raise_application_error(-20000, 'The first call for set_github_access() must be for repo owner "%s" and repo name "%s"')]'
       , "paulissoft"
       , "oracle-tools"
       )
@@ -1573,10 +1611,13 @@ procedure delete_github_access
 ( p_github_access_handle in github_access_handle_t -- The GitHub repository handle as returned from set_github_access()
 )
 is
-  l_github_access_rec github_access_rec_t;
 begin
-  l_github_access_rec := g_github_access_tab(p_github_access_handle);
-  g_github_access_tab.delete(p_github_access_handle);
+  if p_github_access_handle is null
+  then
+    g_github_access_tab.delete; -- delete all
+  else
+    g_github_access_tab.delete(p_github_access_handle);
+  end if;
 end delete_github_access;
 
 procedure dbug_print
@@ -1796,9 +1837,165 @@ exception
     raise;
 end process_root_project;
 
+procedure install_sql
+( p_schema in varchar2
+, p_content in clob
+, p_file_path in varchar2
+, p_stop_on_error in boolean
+)
+is
+begin
+  install_sql
+  ( p_schema => p_schema
+  , p_content => p_content
+  , p_file_path => p_file_path
+  , p_project_rec => g_empty_project_rec  
+  , p_statement_nr => null
+  , p_stop_on_error => p_stop_on_error
+  );
+end install_sql;
+
+procedure install_file
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar2
+, p_file_path in varchar2
+, p_stop_on_error in boolean
+)
+is
+  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.install_file (2)';
+  l_github_access_rec github_access_rec_t;
+  l_line_tab dbms_sql.varchar2a;
+  l_delimiter constant varchar2(1) := chr(10);
+  l_prefixes_to_skip constant sys.odcivarchar2list :=
+    sys.odcivarchar2list
+    ( '@@'
+    , '@'
+    , '--'
+      -- from here some common SQL*Plus commands (including space)
+    , 'prompt '
+    , 'set '
+    , 'whenever '
+    , 'pause '
+    , 'remark '
+    );
+  l_statement_nr positiven := 1;  
+  l_files sys.odcivarchar2list := sys.odcivarchar2list(p_file_path); -- this list is built up
+  l_file_nr positiven := l_files.first;
+  l_nr_includes naturaln := 0;
+  l_nr_lines_with_another_prefix naturaln := 0;
+  l_nr_empty_lines naturaln := 0;
+  l_content clob;
+begin
+  dbug_enter(l_module_name);
+  
+  get_github_access
+  ( p_github_access_handle
+  , l_github_access_rec
+  );
+
+  <<file_loop>>
+  loop
+    exit when not(l_file_nr between l_files.first and l_files.last);
+
+    l_content := dbms_cloud_repo.get_file
+                 ( repo => l_github_access_rec.repo
+                 , file_path => l_files(l_file_nr)
+                 , branch_name => l_github_access_rec.branch_name
+                 , tag_name => l_github_access_rec.tag_name
+                 , commit_id => l_github_access_rec.commit_id
+                 );
+                 
+    PRAGMA INLINE (split, 'YES');
+    split
+    ( l_content
+    , l_delimiter
+    , l_line_tab
+    );
+
+    l_nr_includes := 0;
+    l_nr_lines_with_another_prefix := 0;
+    l_nr_empty_lines := 0;
+
+    if l_line_tab.count > 0
+    then
+      <<line_loop>>
+      for i_line_idx in l_line_tab.first .. l_line_tab.last
+      loop
+        if trim(l_line_tab(i_line_idx)) is null
+        then
+          l_nr_empty_lines := l_nr_empty_lines + 1;
+        else
+          <<prefix_loop>>
+          for i_prefix_idx in l_prefixes_to_skip.first .. l_prefixes_to_skip.last
+          loop
+            if lower(substr(l_line_tab(i_line_idx), 1, length(l_prefixes_to_skip(i_prefix_idx)))) = l_prefixes_to_skip(i_prefix_idx)
+            then
+              -- You can install SQL statements containing nested SQL from a Cloud Code repository file using the following:
+              -- @: includes a SQL file with a relative path to the ROOT of the repository.
+              -- @@: includes a SQL file with a path relative to the current file.
+              case l_prefixes_to_skip(i_prefix_idx)
+                when '@@'
+                then
+                  -- relative to the current file directory
+                  PRAGMA INLINE (directory_name, 'YES');
+                  l_files.extend(1);
+                  l_files(l_files.last) := normalize_file_name(directory_name(p_file_path) || '/' || trim(substr(l_line_tab(i_line_idx), 3)));
+                  l_nr_includes := l_nr_includes + 1;
+                  
+                when '@'
+                then
+                  -- relative to the ROOT of the repository, i.e. absolute
+                  l_files.extend(1);
+                  l_files(l_files.last) := trim(substr(l_line_tab(i_line_idx), 2));
+                  l_nr_includes := l_nr_includes + 1;
+                  
+                else
+                  l_nr_lines_with_another_prefix := l_nr_lines_with_another_prefix + 1;
+              end case;
+
+              exit prefix_loop;
+            end if;
+          end loop prefix_loop;
+        end if;
+      end loop line_loop;
+    end if; -- if l_line_tab.count > 0
+
+    if l_nr_includes + l_nr_lines_with_another_prefix + l_nr_empty_lines = l_line_tab.count
+    then
+      null;
+    else
+      -- apparently not a file with only empty lines, includes and SQL*Plus commands
+      if sql_statement_terminator(l_files(l_file_nr)) = ';'
+      then
+        process_sql
+        ( p_github_access_handle => p_github_access_handle
+        , p_schema => p_schema
+        , p_file_path => l_files(l_file_nr)
+        , p_content => l_content
+        );
+      else
+        -- apparently not a file with only empty lines, includes and SQL*Plus commands
+        install_sql
+        ( p_schema => p_schema
+        , p_content => l_content
+        , p_file_path => l_files(l_file_nr)
+        , p_stop_on_error => p_stop_on_error
+        );
+      end if;
+    end if;
+    l_file_nr := l_file_nr + 1;
+  end loop file_loop;
+
+  dbug_leave(l_module_name);
+exception
+  when others
+  then
+    dbug_leave(l_module_name);
+    raise;
+end install_file;  
+
 begin
   dbms_lob.createtemporary(g_view_clob, true);
   dbms_lob.createtemporary(g_apex_clob, true);
 end;
 /
-
