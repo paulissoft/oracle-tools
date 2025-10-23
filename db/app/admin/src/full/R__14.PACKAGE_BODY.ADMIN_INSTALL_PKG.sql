@@ -29,6 +29,7 @@ type project_rec_t is record
 , src_dml varchar2(1000 char)
 , src_ords varchar2(1000 char)
 , application_id integer
+, workspace_id integer
 );
 
 type project_tab_t is table of project_rec_t index by project_handle_t;
@@ -1481,12 +1482,13 @@ begin
 
       -- step 2
       open l_cursor for q'[
-select  workspace
-from    apex_workspaces
-where   workspace <> 'INTERNAL'
-and     workspace not like 'COM.ORACLE.%'
+select  w.workspace
+from    apex_workspaces w
+where   w.workspace_id = nvl(:b1, w.workspace_id)
+and     w.workspace <> 'INTERNAL'
+and     w.workspace not like 'COM.ORACLE.%'
 and     rownum = 1
-]';
+]'      using in p_project_rec.workspace_id;
       fetch l_cursor into l_workspace_name;
       close l_cursor;
       execute immediate 'call oracle_tools.ui_apex_synchronize.prepare_import(:b1, :b2)'
@@ -1727,6 +1729,7 @@ procedure process_project_apex
 , p_parent_github_access_handle in github_access_handle_t
 , p_parent_path in varchar2
 , p_application_id in integer
+, p_workspace_id in integer
 )
 is
   l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_project_apex';  
@@ -1739,6 +1742,7 @@ begin
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
   l_project_rec.application_id := p_application_id;
+  l_project_rec.workspace_id := p_workspace_id;
 
   process_project
   ( p_github_access_handle => p_github_access_handle

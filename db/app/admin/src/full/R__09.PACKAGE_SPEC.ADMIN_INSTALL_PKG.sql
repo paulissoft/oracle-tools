@@ -76,7 +76,7 @@ procedure dbug_leave
 procedure process_project_db
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
-, p_schema in varchar default null -- The database schema
+, p_schema in varchar default apex_application_install.get_schema -- The database schema
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
 , p_src_callbacks in varchar2 default null -- A common option is '/src/callbacks/'
@@ -94,10 +94,11 @@ This procedure can be used in pom.sql.
 procedure process_project_apex
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
-, p_schema in varchar default null -- The database schema
+, p_schema in varchar default apex_application_install.get_schema -- The database schema
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
-, p_application_id in integer default null -- The APEX application id
+, p_application_id in integer default apex_application_install.get_application_id -- The APEX application id
+, p_workspace_id in integer default apex_application_install.get_workspace_id -- The APEX workspace id
 );
 /**
 A loose representation of an APEX POM in folder p_path (i.e. <p_path>/pom.xml).
