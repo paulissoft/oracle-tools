@@ -1,13 +1,14 @@
 CREATE OR REPLACE PACKAGE DATA_AUDITING_PKG AUTHID CURRENT_USER IS
 
 PROCEDURE add_columns
-( p_table_name in user_tab_columns.table_name%type -- Table name, may be surrounded by double quotes
-, p_column_aud$ins$who in user_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$INS$WHO
-, p_column_aud$ins$when in user_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$INS$WHEN
-, p_column_aud$ins$where in user_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$INS$WHERE
-, p_column_aud$upd$who in user_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$UPD$WHO
-, p_column_aud$upd$when in user_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$UPD$WHEN
-, p_column_aud$upd$where in user_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$UPD$WHERE
+( p_table_name in all_tab_columns.table_name%type -- Table name, may be surrounded by double quotes
+, p_column_aud$ins$who in all_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$INS$WHO
+, p_column_aud$ins$when in all_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$INS$WHEN
+, p_column_aud$ins$where in all_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$INS$WHERE
+, p_column_aud$upd$who in all_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$UPD$WHO
+, p_column_aud$upd$when in all_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$UPD$WHEN
+, p_column_aud$upd$where in all_tab_columns.column_name%type default null -- When not null this column will be renamed to AUD$UPD$WHERE
+, p_owner in all_tab_columns.owner%type default null -- Owner, may be surrounded by double quotes
 );
 /**
 
@@ -43,8 +44,9 @@ The package CFG_INSTALL_DDL_PKG will be used for all DDL.
 
 **/
 procedure add_trigger
-( p_table_name in user_tab_columns.table_name%type
+( p_table_name in all_tab_columns.table_name%type
 , p_replace in boolean default false
+, p_owner in all_tab_columns.owner%type default null -- Owner, may be surrounded by double quotes
 );
 /**
 
@@ -135,10 +137,11 @@ Get call info from these sources:
 **/
 
 procedure add_view_without_auditing_columns
-( p_table_name in user_tab_columns.table_name%type -- The table name
+( p_table_name in all_tab_columns.table_name%type -- The table name
 , p_prefix in varchar2 default 'AUD$EXCL$' -- The view prefix
 , p_suffix in varchar2 default '_V' -- The view suffix
 , p_replace in boolean default false -- Do we create (or replace)?
+, p_owner in all_tab_columns.owner%type default null -- Owner, may be surrounded by double quotes
 );
 /**
 
@@ -153,10 +156,11 @@ SELECT * FROM ORACLE_TOOLS.DATA_SHOW_WITHOUT_AUDITING_COLUMNS(<p_table_name>)
 **/
 
 procedure add_history_view
-( p_table_name in user_tab_columns.table_name%type -- The table name
+( p_table_name in all_tab_columns.table_name%type -- The table name
 , p_prefix in varchar2 default 'AUD$HIST$' -- The view prefix
 , p_suffix in varchar2 default '_V' -- The view suffix
 , p_replace in boolean default false -- Do we create (or replace)?
+, p_owner in all_tab_columns.owner%type default null -- Owner, may be surrounded by double quotes
 );
 /**
 

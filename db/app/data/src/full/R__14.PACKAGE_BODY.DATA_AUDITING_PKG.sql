@@ -1,19 +1,26 @@
 CREATE OR REPLACE PACKAGE BODY DATA_AUDITING_PKG IS
 
 procedure add_columns
-( p_table_name in user_tab_columns.table_name%type -- Table name, may be surrounded by double quotes
-, p_column_aud$ins$who in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$INS$WHO
-, p_column_aud$ins$when in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$INS$WHEN
-, p_column_aud$ins$where in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$INS$WHERE
-, p_column_aud$upd$who in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHO
-, p_column_aud$upd$when in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHEN
-, p_column_aud$upd$where in user_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHERE
+( p_table_name in all_tab_columns.table_name%type -- Table name, may be surrounded by double quotes
+, p_column_aud$ins$who in all_tab_columns.column_name%type -- When not null this column will be renamed to AUD$INS$WHO
+, p_column_aud$ins$when in all_tab_columns.column_name%type -- When not null this column will be renamed to AUD$INS$WHEN
+, p_column_aud$ins$where in all_tab_columns.column_name%type -- When not null this column will be renamed to AUD$INS$WHERE
+, p_column_aud$upd$who in all_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHO
+, p_column_aud$upd$when in all_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHEN
+, p_column_aud$upd$where in all_tab_columns.column_name%type -- When not null this column will be renamed to AUD$UPD$WHERE
+, p_owner in all_tab_columns.owner%type
 )
 is
-  -- user_tab_columns does not provide info about virtual columns but user_tab_cols does
-  type t_column_tab is table of user_tab_cols%rowtype index by user_tab_cols.column_name%type; -- index by column name
+  -- all_tab_columns does not provide info about virtual columns but all_tab_cols does
+  type t_column_tab is table of all_tab_cols%rowtype index by all_tab_cols.column_name%type; -- index by column name
 
-  l_table_name_no_qq constant user_tab_columns.table_name%type :=
+  l_owner_no_qq constant all_tab_columns.owner%type :=
+    case
+      when p_owner like '"%"'
+      then replace(substr(p_owner, 2, length(p_owner) - 2), '""', '"')
+      else p_owner
+    end;
+  l_table_name_no_qq constant all_tab_columns.table_name%type :=
     case
       when p_table_name like '"%"'
       then replace(substr(p_table_name, 2, length(p_table_name) - 2), '""', '"')
@@ -27,11 +34,11 @@ is
     end;
 
   procedure add_column
-  ( p_existing_column_name in user_tab_columns.column_name%type
-  , p_audit_column_name in user_tab_columns.column_name%type -- always exact
+  ( p_existing_column_name in all_tab_columns.column_name%type
+  , p_audit_column_name in all_tab_columns.column_name%type -- always exact
   )
   is
-    l_existing_column_name_no_qq constant user_tab_columns.column_name%type :=
+    l_existing_column_name_no_qq constant all_tab_columns.column_name%type :=
       case
         when p_existing_column_name like '"%"'
         then replace(substr(p_existing_column_name, 2, length(p_existing_column_name) - 2), '""', '"')
@@ -43,7 +50,7 @@ is
         then 1
         else 0
       end;    
-    l_data_type constant user_tab_columns.data_type%type :=
+    l_data_type constant all_tab_columns.data_type%type :=
       case
         when substr(p_audit_column_name, -3) = 'WHO'
         then 'VARCHAR2(128 CHAR)'
@@ -62,8 +69,9 @@ is
       
       for r in
       ( select  tc.*
-        from    user_tab_cols tc
-        where   ( tc.table_name = l_table_name_no_qq or
+        from    all_tab_cols tc
+        where   tc.owner = nvl(l_owner_no_qq, user)
+        and     ( tc.table_name = l_table_name_no_qq or
                   ( l_table_name_exact = 0 and tc.table_name = upper(l_table_name_no_qq) )
                 )
         and     ( tc.column_name = p_audit_column_name or
@@ -94,6 +102,7 @@ is
         , p_table_name => p_table_name
         , p_column_name => p_existing_column_name
         , p_extra => 'TO ' || p_audit_column_name
+        , p_owner => p_owner
         );
         get_column_info; -- refresh
       end if;
@@ -118,6 +127,7 @@ is
                               q'< + INTERVAL '0' SECOND>' -- add 0 seconds
                        end
                      )
+        , p_owner => p_owner
         );
         get_column_info; -- refresh
       end if;
@@ -130,6 +140,7 @@ is
       , p_table_name => p_table_name
       , p_column_name => p_audit_column_name
       , p_extra => l_data_type
+      , p_owner => p_owner
       );
     end if;
 /*DBUG    
@@ -158,11 +169,18 @@ begin
 end add_columns;
 
 procedure add_trigger
-( p_table_name in user_tab_columns.table_name%type
+( p_table_name in all_tab_columns.table_name%type
 , p_replace in boolean
+, p_owner in all_tab_columns.owner%type
 )
 is
-  l_table_name_no_qq constant user_tab_columns.table_name%type :=
+  l_owner_no_qq constant all_tab_columns.owner%type :=
+    case
+      when p_owner like '"%"'
+      then replace(substr(p_owner, 2, length(p_owner) - 2), '""', '"')
+      else p_owner
+    end;
+  l_table_name_no_qq constant all_tab_columns.table_name%type :=
     case
       when p_table_name like '"%"'
       then replace(substr(p_table_name, 2, length(p_table_name) - 2), '""', '"')
@@ -174,9 +192,9 @@ is
       then 1
       else 0
     end;
-  l_trigger_name_no_qq constant user_triggers.trigger_name%type :=
+  l_trigger_name_no_qq constant all_triggers.trigger_name%type :=
     utl_lms.format_message('AUD$%s_TRG', l_table_name_no_qq);
-  l_trigger_name constant user_triggers.trigger_name%type := 
+  l_trigger_name constant all_triggers.trigger_name%type := 
     case
       when l_table_name_exact = 1
       then utl_lms.format_message('"%s"', l_trigger_name_no_qq)
@@ -214,16 +232,18 @@ BEGIN
   END IF;
 END;
 >'
+  , p_owner => p_owner
   );
 
   -- disabled an invalid trigger
   begin
     select  1
     into    l_found
-    from    user_objects o
-            inner join user_triggers t
-            on t.trigger_name = o.object_name
-    where   o.status <> 'VALID'
+    from    all_objects o
+            inner join all_triggers t
+            on t.owner = o.owner and t.trigger_name = o.object_name
+    where   o.owner = nvl(l_owner_no_qq, user)
+    and     o.status <> 'VALID'
     and     o.object_type = 'TRIGGER'
     and     ( o.object_name = l_trigger_name_no_qq or
               ( l_table_name_exact = 0 and o.object_name = upper(l_trigger_name_no_qq) )
@@ -235,6 +255,7 @@ END;
     , p_trigger_name => l_trigger_name
     , p_table_name => null
     , p_trigger_extra => 'DISABLE'
+    , p_owner => p_owner
     );
   exception
     when others
@@ -642,14 +663,15 @@ exception
 end get_call_info;
 
 procedure add_view
-( p_table_name in user_tab_columns.table_name%type -- The table name
+( p_table_name in all_tab_columns.table_name%type -- The table name
 , p_prefix in varchar2
 , p_suffix in varchar2
 , p_replace in boolean
 , p_view_text in varchar2
+, p_owner in all_tab_columns.owner%type
 )
 is
-  l_table_name_no_qq constant user_tab_columns.table_name%type :=
+  l_table_name_no_qq constant all_tab_columns.table_name%type :=
     case
       when p_table_name like '"%"'
       then replace(substr(p_table_name, 2, length(p_table_name) - 2), '""', '"')
@@ -661,9 +683,9 @@ is
       then 1
       else 0
     end;
-  l_view_name_no_qq constant user_views.view_name%type :=
+  l_view_name_no_qq constant all_views.view_name%type :=
     utl_lms.format_message('%s%s%s', p_prefix, l_table_name_no_qq, p_suffix);
-  l_view_name constant user_views.view_name%type := 
+  l_view_name constant all_views.view_name%type := 
     case
       when l_table_name_exact = 1
       then utl_lms.format_message('"%s"', l_view_name_no_qq)
@@ -674,14 +696,16 @@ begin
   ( p_operation => case when p_replace then 'CREATE OR REPLACE' else 'CREATE' end
   , p_view_name => l_view_name
   , p_extra => p_view_text
+  , p_owner => p_owner
   );
 end add_view;
 
 procedure add_view_without_auditing_columns
-( p_table_name in user_tab_columns.table_name%type -- The table name
+( p_table_name in all_tab_columns.table_name%type -- The table name
 , p_prefix in varchar2 default 'AUD$EXCL$' -- The view prefix
 , p_suffix in varchar2 default '_V' -- The view suffix
 , p_replace in boolean default false -- Do we create (or replace)?
+, p_owner in all_tab_columns.owner%type
 )
 is
 begin
@@ -692,14 +716,16 @@ begin
   , p_replace => p_replace
   , p_view_text => utl_lms.format_message( 'AS
 SELECT * FROM ORACLE_TOOLS.DATA_SHOW_WITHOUT_AUDITING_COLUMNS(%s)', p_table_name )
+  , p_owner => p_owner
   );
 end add_view_without_auditing_columns;
 
 procedure add_history_view
-( p_table_name in user_tab_columns.table_name%type -- The table name
+( p_table_name in all_tab_columns.table_name%type -- The table name
 , p_prefix in varchar2 default 'AUD$HIST$' -- The view prefix
 , p_suffix in varchar2 default '_V' -- The view suffix
 , p_replace in boolean default false -- Do we create (or replace)?
+, p_owner in all_tab_columns.owner%type
 )
 is
 begin
@@ -714,6 +740,7 @@ SELECT  VERSIONS_STARTTIME
 ,       VERSIONS_OPERATION
 ,       TAB.*
 FROM    %s VERSIONS BETWEEN SCN MINVALUE AND MAXVALUE TAB', p_table_name )
+  , p_owner => p_owner
   );
 end add_history_view;
 
