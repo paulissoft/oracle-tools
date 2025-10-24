@@ -70,7 +70,7 @@ is
       for r in
       ( select  tc.*
         from    all_tab_cols tc
-        where   tc.owner = nvl(l_owner_no_qq, user)
+        where   tc.owner = nvl(l_owner_no_qq, sys_context('USERENV', 'CURRENT_SCHEMA'))
         and     ( tc.table_name = l_table_name_no_qq or
                   ( l_table_name_exact = 0 and tc.table_name = upper(l_table_name_no_qq) )
                 )
@@ -242,7 +242,7 @@ END;
     from    all_objects o
             inner join all_triggers t
             on t.owner = o.owner and t.trigger_name = o.object_name
-    where   o.owner = nvl(l_owner_no_qq, user)
+    where   o.owner = nvl(l_owner_no_qq, sys_context('USERENV', 'CURRENT_SCHEMA'))
     and     o.status <> 'VALID'
     and     o.object_type = 'TRIGGER'
     and     ( o.object_name = l_trigger_name_no_qq or
