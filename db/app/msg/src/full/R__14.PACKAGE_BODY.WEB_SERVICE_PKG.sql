@@ -1136,7 +1136,7 @@ $end
     select  owner || '.' || object_name
     into    l_plsql_callback
     from    all_objects o
-    where   o.owner = user
+    where   o.owner = sys_context('USERENV', 'CURRENT_SCHEMA')
     and     o.object_type = 'PROCEDURE'
     and     object_name = l_plsql_callback;
   exception
