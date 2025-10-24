@@ -1387,21 +1387,21 @@ $end
     ,       'SYNONYM' as object_type
     from    all_synonyms s
     where   s.owner <> s.table_owner
-    and     s.owner = user
+    and     s.owner = sys_context('USERENV', 'CURRENT_SCHEMA')
     and     s.table_name is not null
     union
     select  min(t.owner||'.'||t.trigger_name) as fq_object_name
     ,       'TRIGGER' as object_type
     from    all_triggers t
     where   t.owner <> t.table_owner
-    and     t.owner = user
+    and     t.owner = sys_context('USERENV', 'CURRENT_SCHEMA')
     and     t.table_name is not null
     union
     select  min(i.owner||'.'||i.index_name) as fq_object_name
     ,       'INDEX' as object_type
     from    all_indexes i
     where   i.owner <> i.table_owner
-    and     i.owner = user
+    and     i.owner = sys_context('USERENV', 'CURRENT_SCHEMA')
     and     i.table_name is not null
 $if oracle_tools.pkg_ddl_defs.c_exclude_system_indexes $then
     and     i.generated = 'N'
@@ -1459,7 +1459,7 @@ $end
             ,       row_number() over (partition by t.object_schema(), t.object_type() order by t.object_name() asc) as nr
             from    table
                     ( oracle_tools.schema_objects_api.get_schema_objects
-                      ( p_schema => user
+                      ( p_schema => sys_context('USERENV', 'CURRENT_SCHEMA')
                       , p_object_type => null
                       , p_object_names => null
                       , p_object_names_include => null
@@ -1488,7 +1488,7 @@ $end
       select  t.id as id
       from    table
               ( oracle_tools.schema_objects_api.get_schema_objects
-                ( p_schema => user
+                ( p_schema => sys_context('USERENV', 'CURRENT_SCHEMA')
                 , p_include_objects => to_clob(l_schema_object_id_tab(i_idx))
                 )
               ) t;
@@ -1502,7 +1502,7 @@ $end
       select  t.id as id
       from    table
               ( oracle_tools.schema_objects_api.get_schema_objects
-                ( p_schema => user
+                ( p_schema => sys_context('USERENV', 'CURRENT_SCHEMA')
                 , p_exclude_objects => to_clob(l_schema_object_id_tab(i_idx))
                 , p_include_objects => to_clob(l_schema_object_id_tab(i_idx))
                 )

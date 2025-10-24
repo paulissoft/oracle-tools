@@ -48,7 +48,7 @@ Steps:
 **/
 
 function get_schema_objects
-( p_schema in varchar2 default user
+( p_schema in varchar2 default sys_context('USERENV', 'CURRENT_SCHEMA')
 , p_object_type in varchar2 default null
 , p_object_names in varchar2 default null
 , p_object_names_include in integer default null
