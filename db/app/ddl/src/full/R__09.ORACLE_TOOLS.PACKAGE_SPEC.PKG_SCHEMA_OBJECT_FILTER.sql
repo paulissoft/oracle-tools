@@ -30,7 +30,7 @@ These two methods can be combined.
 **/
 
 procedure construct
-( p_schema in varchar2 default user -- The schema to filter
+( p_schema in varchar2 default sys_context('USERENV', 'CURRENT_SCHEMA') -- The schema to filter
 , p_object_type in varchar2 default null -- The object type to filter (PARTIAL)
 , p_object_names in varchar2 default null -- The object names to filter (PARTIAL)
 , p_object_names_include in integer default null -- Do we include (1) or exclude (0) objects for PARTIAL filtering? NULL when there is no PARTIAL filtering.

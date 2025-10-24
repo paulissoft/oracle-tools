@@ -141,16 +141,16 @@ is
         
         -- no datapump tables
         when 9
-        then if p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DDL' escape '\'
+        then if p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like sys_context('USERENV', 'CURRENT_SCHEMA') || '\_DDL' escape '\'
              then
-               p_info := q'[object type in ('TABLE', 'OBJECT_GRANT') and object name like user || '\_DDL' escape '\']';
+               p_info := q'[object type in ('TABLE', 'OBJECT_GRANT') and object name like sys_context('USERENV', 'CURRENT_SCHEMA') || '\_DDL' escape '\']';
              end if;
         
         -- no datapump tables
         when 10
-        then if p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like user || '\_DML' escape '\'
+        then if p_object_type in ('TABLE', 'OBJECT_GRANT') and p_object_name like sys_context('USERENV', 'CURRENT_SCHEMA') || '\_DML' escape '\'
              then
-               p_info := q'[object type in ('TABLE', 'OBJECT_GRANT') and object name like user || '\_DML' escape '\']';
+               p_info := q'[object type in ('TABLE', 'OBJECT_GRANT') and object name like sys_context('USERENV', 'CURRENT_SCHEMA') || '\_DML' escape '\']';
              end if;
         
         -- no Oracle generated datapump tables
