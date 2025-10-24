@@ -74,9 +74,9 @@
     <!-- 
          This property is used to construct the db.username property below in
          the conf-connect antrun execution.
-         If a db.proxy.username is set, db.username will become
+         If a db.proxy.username is set (and not empty), db.username will become
          ${db.proxy.username}[${db.schema}]. 
-         If db.proxy.username is not set, db.username will be ${db.schema}.
+         If db.proxy.username is not set (or empty), db.username will be ${db.schema}.
     -->
     <db.schema.default>${project.artifactId}</db.schema.default>
     <!-- 
@@ -333,7 +333,12 @@
                   <!-- https://github.com/paulissoft/oracle-tools/issues/50 -->
                   <!-- test if ${env.DB_USERNAME} equals to ${db.proxy.username} or ${db.username} -->
                   <condition property="tmp.username" value="${db.proxy.username}" else="${db.username}">
-                    <isset property="db.proxy.username"/>
+                    <and>
+                      <isset property="db.proxy.username"/>
+                      <not>
+                        <equals arg1="${db.proxy.username}" arg2="" trim="true"/>
+                      </not>
+                    </and>
                   </condition>
                   <fail message="Environment variabe DB_USERNAME (${env.DB_USERNAME}) is not equal to (${tmp.username}).">
                     <condition>
@@ -359,7 +364,12 @@
                   <condition property="db.username"
                              value="${db.proxy.username}[${db.schema}]"
                              else="${db.schema}">
-                    <isset property="db.proxy.username"/>
+                    <and>
+                      <isset property="db.proxy.username"/>
+                      <not>
+                        <equals arg1="${db.proxy.username}" arg2="" trim="true"/>
+                      </not>
+                    </and>
                   </condition>
                   <property name="db.userid" value="${db.username}/${db.password}@${db.connect.identifier}" />
                   <property name="db.userid.without.password" value="${db.username}@${db.connect.identifier}" />
