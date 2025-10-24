@@ -43,7 +43,7 @@ procedure compile_objects
 type t_compiler_message_tab is table of all_errors%rowtype;
 
 function show_compiler_messages
-( p_object_schema in varchar2 default user -- The schema owner of the objects to show.
+( p_object_schema in varchar2 default sys_context('USERENV', 'CURRENT_SCHEMA') -- The schema owner of the objects to show.
 , p_object_type in varchar2 default null -- The object type (may be a DBMS_METADATA object type).
 , p_object_names in varchar2 default null -- A comma separated list of object names.
 , p_object_names_include in integer default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
@@ -60,7 +60,7 @@ pipelined;
 type t_message_tab is table of varchar2(4000 char);
 
 function format_compiler_messages
-( p_object_schema in varchar2 default user -- The schema owner of the objects to show.
+( p_object_schema in varchar2 default sys_context('USERENV', 'CURRENT_SCHEMA') -- The schema owner of the objects to show.
 , p_object_type in varchar2 default null -- The object type (may be a DBMS_METADATA object type).
 , p_object_names in varchar2 default null -- A comma separated list of object names.
 , p_object_names_include in integer default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
@@ -90,7 +90,7 @@ Purge the Flyway table:
 procedure check_object_valid
 ( p_object_type in all_objects.object_type%type -- The object type (TYPE, PACKAGE, ...), case insensitive
 , p_object_name in all_objects.object_name%type -- The object name, case insensitive
-, p_owner in all_objects.owner%type default user -- The owner, case insensitive
+, p_owner in all_objects.owner%type default sys_context('USERENV', 'CURRENT_SCHEMA') -- The owner, case insensitive
 );
 /**
 Check whether a database object is valid with a query like this:

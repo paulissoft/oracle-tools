@@ -61,7 +61,7 @@ begin
   then
     raise_application_error
     ( -20000
-    , utl_lms.format_message('While connected as %s, I could not find a valid MSG_SCHEDULER_PKG package body in schema %s.', user, p_oracle_tools_schema_msg)
+    , utl_lms.format_message('While connected as %s, I could not find a valid MSG_SCHEDULER_PKG package body in schema %s.', sys_context('USERENV', 'CURRENT_SCHEMA'), p_oracle_tools_schema_msg)
     );
   end if;
 end scheduler_do;
@@ -223,13 +223,13 @@ begin
     end;
   end if;
 
-  dbms_utility.compile_schema(schema => user, compile_all => p_compile_all, reuse_settings => p_reuse_settings);
+  dbms_utility.compile_schema(schema => sys_context('USERENV', 'CURRENT_SCHEMA'), compile_all => p_compile_all, reuse_settings => p_reuse_settings);
   
   for r_error in
   ( select  e.*
     from    ( select  e.*, rank() over (partition by e.owner order by e.name, e.type) as rnk
               from    all_errors e
-              where   e.owner = user and e.attribute = 'ERROR' -- ignore WARNINGS
+              where   e.owner = sys_context('USERENV', 'CURRENT_SCHEMA') and e.attribute = 'ERROR' -- ignore WARNINGS
               order by
                       e.owner, e.name, e.type, e.line, e.position
             ) e
