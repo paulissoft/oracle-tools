@@ -134,7 +134,8 @@ Can be used in pom.sql.
 **/
 
 procedure install_sql
-( p_schema in varchar2 -- The schema to install into 
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar2 -- The schema to install into 
 , p_content in clob -- The SQL content
 , p_file_path in varchar2 -- A file path (description)
 , p_stop_on_error in boolean default true -- Stop on error?

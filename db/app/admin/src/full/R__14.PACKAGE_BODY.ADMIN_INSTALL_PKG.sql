@@ -422,53 +422,66 @@ begin
 end do_not_install_file;
 
 procedure processing_file
-( p_schema in varchar2
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar2
 , p_file_path in varchar2
 , p_statement_nr in integer default null
 )
 is
 begin
   dbug_print
-  ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
-    ' Processing file ' ||
-    p_file_path  ||
-    case when p_statement_nr is not null then '; statement ' || p_statement_nr end ||
-    '; target schema ' || p_schema
+  ( utl_lms.format_message
+    ( '[%s] Processing file %s:%s%s; target schema %s'
+    , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+    , p_github_access_handle
+    , p_file_path
+    , case when p_statement_nr is not null then '; statement ' || p_statement_nr end
+    , p_schema
+    )
   );
 end processing_file;
 
 procedure skipping_file
-( p_schema in varchar2
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar2
 , p_file_path in varchar2
 , p_github_installed_versions_id in integer
 )
 is
 begin
   dbug_print
-  ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
-    ' Skipping file ' ||
-    p_file_path  ||
-    ' because already installed with GITHUB_INSTALLED_VERSIONS.ID ' || p_github_installed_versions_id ||
-    '; target schema ' || p_schema
+  ( utl_lms.format_message
+    ( '[%s] Skipping file %s:%s because already installed (GITHUB_INSTALLED_VERSIONS.ID %s); target schema %s'
+    , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+    , p_github_access_handle
+    , p_file_path
+    , to_char(p_github_installed_versions_id)
+    , p_schema
+    )
   );
 end skipping_file;
 
 procedure processing_project
-( p_schema in varchar2
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar2
 , p_path in varchar2
 )
 is
 begin
   dbug_print
-  ( '[' || to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss') || ']' ||
-    ' Processing project ' ||
-    p_path  ||
-    '; target schema ' || p_schema
+  ( utl_lms.format_message
+    ( '[%s] Processing project %s:%s; target schema %s'
+    , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+    , p_github_access_handle
+    , p_path
+    , p_schema
+    )
   );
 end processing_project;
 
 procedure install_sql
-( p_schema in varchar2
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar2
 , p_content in clob
 , p_file_path in varchar2
 , p_project_rec in project_rec_t
@@ -499,7 +512,8 @@ begin
   dbug_enter(l_module_name);
   
   processing_file
-  ( p_schema
+  ( p_github_access_handle
+  , p_schema
   , case
       when p_project_rec.callback_tab.exists(p_file_path)
       then normalize_file_name(p_project_rec.callbacks_project_handle || '/' || p_project_rec.src_callbacks || '/' || p_file_path)
@@ -566,7 +580,8 @@ exception
 end install_sql;
 
 procedure install_sql
-( p_schema in varchar2
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar2
 , p_content in clob
 , p_file_path in varchar2
 , p_project_rec in project_rec_t
@@ -574,7 +589,8 @@ procedure install_sql
 is
 begin
   install_sql
-  ( p_schema => p_schema
+  ( p_github_access_handle => p_github_access_handle
+  , p_schema => p_schema
   , p_content => p_content
   , p_file_path => p_file_path
   , p_project_rec => p_project_rec  
@@ -583,7 +599,8 @@ begin
 end install_sql;
 
 procedure install_sql
-( p_schema in varchar2
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar2
 , p_content in clob
 , p_file_path in varchar2
 , p_statement_nr in integer
@@ -591,7 +608,8 @@ procedure install_sql
 is
 begin
   install_sql
-  ( p_schema => p_schema
+  ( p_github_access_handle => p_github_access_handle
+  , p_schema => p_schema
   , p_content => p_content
   , p_file_path => p_file_path
   , p_project_rec => g_empty_project_rec  
@@ -632,13 +650,14 @@ is
     if not(g_options_rec.dry_run) or base_name(p_file_path) = 'pom.sql'
     then
       install_sql
-      ( p_schema => p_schema
+      ( p_github_access_handle => p_github_access_handle
+      , p_schema => p_schema
       , p_content => p_content
       , p_file_path => p_file_path
       , p_statement_nr => p_statement_nr
       );
     else
-      processing_file(p_schema, p_file_path, p_statement_nr);
+      processing_file(p_github_access_handle, p_schema, p_file_path, p_statement_nr);
     end if;
     
     dbms_application_info.set_module
@@ -986,14 +1005,15 @@ begin
     begin
       if l_github_installed_versions_id is not null
       then
-        skipping_file(p_schema, p_file_path, l_github_installed_versions_id);
+        skipping_file(p_github_access_handle, p_schema, p_file_path, l_github_installed_versions_id);
       else
         -- Run Flyway callback before echo migration
         if p_flyway_file_type in ('V', 'R') and
            p_project_rec.callback_tab.exists('beforeEachMigrate.sql')
         then
           install_sql
-          ( p_schema => p_schema
+          ( p_github_access_handle => p_github_access_handle
+          , p_schema => p_schema
           , p_content => p_project_rec.callback_tab('beforeEachMigrate.sql')
           , p_file_path => 'beforeEachMigrate.sql'
           , p_project_rec => p_project_rec
@@ -1001,7 +1021,7 @@ begin
         end if;
 
         --/*DBUG
-        processing_file(p_schema, p_file_path);
+        processing_file(p_github_access_handle, p_schema, p_file_path);
         --/*DBUG*/  
 
         if not(g_options_rec.dry_run) or base_name(p_file_path) = 'pom.sql'
@@ -1020,7 +1040,8 @@ begin
            p_project_rec.callback_tab.exists('afterEachMigrate.sql')
         then
           install_sql
-          ( p_schema => p_schema
+          ( p_github_access_handle => p_github_access_handle
+          , p_schema => p_schema
           , p_content => p_project_rec.callback_tab('afterEachMigrate.sql')
           , p_file_path => 'afterEachMigrate.sql'
           , p_project_rec => p_project_rec
@@ -1160,7 +1181,8 @@ is
       if not(g_options_rec.dry_run)
       then
         install_sql
-        ( p_schema => p_schema
+        ( p_github_access_handle => p_github_access_handle
+        , p_schema => p_schema
         , p_content => g_apex_clob
         , p_file_path => p_file_path
         , p_statement_nr => l_statement_nr
@@ -1199,7 +1221,7 @@ begin
   if g_options_rec.operation = 'install' then null; else raise_error($$PLSQL_LINE, 'raise value_error'); end if;
 
   --/*DBUG
-  processing_file(p_schema, p_file_path);
+  processing_file(p_github_access_handle, p_schema, p_file_path);
   --/*DBUG*/
 
   dbms_lob.trim(g_apex_clob, 0);
@@ -1336,7 +1358,7 @@ begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
   --/*DBUG
-  processing_project(p_project_rec.schema, p_path);
+  processing_project(p_github_access_handle, p_project_rec.schema, p_path);
   --/*DBUG*/
 
   if p_project_rec.project_type = 'db'
@@ -1429,7 +1451,8 @@ begin
         if p_project_rec.callback_tab.exists('beforeMigrate.sql')
         then
           install_sql
-          ( p_schema => p_project_rec.schema
+          ( p_github_access_handle => p_github_access_handle
+          , p_schema => p_project_rec.schema
           , p_content => p_project_rec.callback_tab('beforeMigrate.sql')
           , p_file_path => 'beforeMigrate.sql'
           , p_project_rec => p_project_rec
@@ -1454,7 +1477,8 @@ begin
         if p_project_rec.callback_tab.exists('afterMigrate.sql')
         then
           install_sql
-          ( p_schema => p_project_rec.schema
+          ( p_github_access_handle => p_github_access_handle
+          , p_schema => p_project_rec.schema
           , p_content => p_project_rec.callback_tab('afterMigrate.sql')
           , p_file_path => 'afterMigrate.sql'
           , p_project_rec => p_project_rec
@@ -1842,7 +1866,8 @@ exception
 end process_root_project;
 
 procedure install_sql
-( p_schema in varchar2
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar2
 , p_content in clob
 , p_file_path in varchar2
 , p_stop_on_error in boolean
@@ -1850,7 +1875,8 @@ procedure install_sql
 is
 begin
   install_sql
-  ( p_schema => p_schema
+  ( p_github_access_handle => p_github_access_handle
+  , p_schema => p_schema
   , p_content => p_content
   , p_file_path => p_file_path
   , p_project_rec => g_empty_project_rec  
@@ -1980,7 +2006,8 @@ begin
       else
         -- apparently not a file with only empty lines, includes and SQL*Plus commands
         install_sql
-        ( p_schema => p_schema
+        ( p_github_access_handle => p_github_access_handle
+        , p_schema => p_schema
         , p_content => l_content
         , p_file_path => l_files(l_file_nr)
         , p_stop_on_error => p_stop_on_error
