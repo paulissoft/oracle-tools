@@ -400,20 +400,18 @@ begin
   then
     -- files mentioned in ../../adb-install-bootstrap.sql
     return
-      case p_file_path
-        when 'db/app/admin/src/incr/V20251021102600__create_GITHUB_INSTALLED_PROJECTS.sql'
+      case
+        -- files in db/app/admin/src/full/ folder
+        when p_file_path like 'db/app/admin/src/full/R\_\_%.ADMIN\_INSTALL\_PKG.sql' escape '\'
         then true
-        when 'db/app/admin/src/incr/V20251021102600__create_GITHUB_INSTALLED_PROJECTS.sql'
+        when p_file_path like 'db/app/admin/src/full/R\_\_%.GITHUB\_INSTALLED\_VERSIONS\_V.sql' escape '\'
         then true
-        when 'db/app/admin/src/incr/V20251021103000__create_GITHUB_INSTALLED_VERSIONS.sql'
+        -- files in db/app/admin/src/incr/ folder
+        when p_file_path like 'db/app/admin/src/incr/V_%\_\_%\_GITHUB\_INSTALLED\_PROJECTS.sql' escape '\'
         then true
-        when 'db/app/admin/src/incr/V20251021103400__create_GITHUB_INSTALLED_VERSIONS_OBJECTS.sql'
+        when p_file_path like 'db/app/admin/src/incr/V_%\_\_%\_GITHUB\_INSTALLED\_VERSIONS.sql' escape '\'
         then true
-        when 'db/app/admin/src/full/R__09.PACKAGE_SPEC.ADMIN_INSTALL_PKG.sql'
-        then true
-        when 'db/app/admin/src/full/R__10.VIEW.GITHUB_INSTALLED_VERSIONS_V.sql'
-        then true
-        when 'db/app/admin/src/full/R__14.PACKAGE_BODY.ADMIN_INSTALL_PKG.sql'
+        when p_file_path like 'db/app/admin/src/incr/V_%\_\_%\_GITHUB\_INSTALLED\_VERSIONS\_OBJECTS.sql' escape '\'
         then true
         else false
       end;
