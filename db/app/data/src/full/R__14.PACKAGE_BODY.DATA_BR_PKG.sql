@@ -11,6 +11,25 @@ pragma exception_init(e_invalid_ddl_statement_on_history_tracked_table, -55610);
 e_cannot_disable_constraint exception;
 pragma exception_init(e_cannot_disable_constraint, -2297);
 
+$if cfg_pkg.c_debugging $then
+
+procedure show_errors
+( p_error_tab in dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
+)
+is
+begin
+  dbug.print(dbug."output", '# errors: %s', p_error_tab.count);
+  if p_error_tab.count > 0
+  then
+    for i_idx in p_error_tab.first .. p_error_tab.last
+    loop
+      dbug.print(dbug."output", 'error %s: %s', i_idx, p_error_tab(i_idx));
+    end loop;
+  end if;
+end show_errors;
+
+$end  
+
 procedure enable_disable_constraint
 ( p_owner in varchar2
 , p_table_name in varchar2
@@ -20,38 +39,70 @@ procedure enable_disable_constraint
 )
 is
   l_cmd varchar2(4000 byte);
-  l_sqlerrm varchar2(4000 byte);
 begin
-  l_cmd := utl_lms.format_message
-           ( 'alter table "%s"."%s" %s %s constraint "%s"'
-           , p_owner
-           , p_table_name
-           , case when p_enable then 'enable' else 'disable' end
-           , p_validate_clause
-           , p_constraint_name
-           );
-  execute immediate l_cmd;
-exception
-  when e_invalid_ddl_statement_on_history_tracked_table
-  then
-    l_sqlerrm := sqlerrm;
-    begin
-      execute immediate 'call DBMS_FLASHBACK_ARCHIVE.DISASSOCIATE_FBA(:b1, :b2)' using p_owner, p_table_name;
-      execute immediate l_cmd;    
-      execute immediate 'call DBMS_FLASHBACK_ARCHIVE.REASSOCIATE_FBA(:b1, :b2)' using p_owner, p_table_name;
-    exception
-      when others
-      then
+$if cfg_pkg.c_debugging $then
+  dbug.enter($$PLSQL_UNIT || '.ENABLE_DISABLE_CONSTRAINT');
+  dbug.print
+  ( dbug."input"
+  , 'p_owner: %s; p_table_name: %s; p_enable: %s, p_validate_clause: %s; p_constraint_name: %s'
+  , p_owner
+  , p_table_name
+  , dbug.cast_to_varchar2(p_enable)
+  , p_validate_clause
+  , p_constraint_name
+  );
+$end
+
+  begin
+    l_cmd := utl_lms.format_message
+             ( 'alter table "%s"."%s" %s %s constraint "%s"'
+             , p_owner
+             , p_table_name
+             , case when p_enable then 'enable' else 'disable' end
+             , p_validate_clause
+             , p_constraint_name
+             );
+    execute immediate l_cmd;
+  exception
+    when e_invalid_ddl_statement_on_history_tracked_table
+    then
+$if cfg_pkg.c_debugging $then
+      dbug.on_error;
+$end
+      begin
+        execute immediate 'call DBMS_FLASHBACK_ARCHIVE.DISASSOCIATE_FBA(:b1, :b2)' using p_owner, p_table_name;
+        execute immediate l_cmd;    
         execute immediate 'call DBMS_FLASHBACK_ARCHIVE.REASSOCIATE_FBA(:b1, :b2)' using p_owner, p_table_name;
-        raise_application_error(-20000, l_cmd || ': ' || l_sqlerrm, true);
-    end;
-  when e_cannot_disable_constraint
-  then
-    null;
+      exception
+        when others
+        then
+$if cfg_pkg.c_debugging $then
+          dbug.on_error;
+$end    
+          execute immediate 'call DBMS_FLASHBACK_ARCHIVE.REASSOCIATE_FBA(:b1, :b2)' using p_owner, p_table_name;
+          raise_application_error(-20000, l_cmd || ': ' || sqlerrm, true);
+      end;
+    when e_cannot_disable_constraint
+    then
+      null;
+  end;
+  
+$if cfg_pkg.c_debugging $then
+  dbug.leave;
+$end
+
+exception
   when others
   then
-    l_sqlerrm := sqlerrm;
-    raise_application_error(-20000, l_cmd || ': ' || l_sqlerrm, true);
+$if cfg_pkg.c_debugging $then
+    dbug.leave_on_error;
+$end
+    if sqlcode = -20000
+    then
+      raise;
+    else
+      raise_application_error(-20000, l_cmd || ': ' || sqlerrm, true);
+    end if;
 end enable_disable_constraint;
 
 -- PUBLIC
@@ -743,10 +794,12 @@ $end
   end loop table_loop;
 
 $if cfg_pkg.c_debugging $then
+  show_errors(p_error_tab);
   dbug.leave;
 exception
   when others
   then
+    show_errors(p_error_tab);
     dbug.leave_on_error;
     raise;
 $end
@@ -812,10 +865,12 @@ $end
   end loop;
 
 $if cfg_pkg.c_debugging $then
+  show_errors(p_error_tab);
   dbug.leave;
 exception
   when others
   then
+    show_errors(p_error_tab);
     dbug.leave_on_error;
     raise;
 $end
@@ -881,10 +936,12 @@ $end
   end loop;
 
 $if cfg_pkg.c_debugging $then
+  show_errors(p_error_tab);
   dbug.leave;
 exception
   when others
   then
+    show_errors(p_error_tab);
     dbug.leave_on_error;
     raise;
 $end
