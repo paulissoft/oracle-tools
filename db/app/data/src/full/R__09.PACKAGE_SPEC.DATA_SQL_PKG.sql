@@ -139,7 +139,7 @@ procedure do
 , p_bind_variable_tab in column_value_tab_t default empty_column_value_tab -- only when an entry exists that table column will be used in the query or DML
 , p_statement in statement_t default null -- if null it will default to 'select * from <table>' for a (S)elect
 , p_order_by in varchar2 default null -- to be added after the (default) query (without ORDER BY)
-, p_owner in varchar2 default user -- the owner of the table
+, p_owner in varchar2 default sys_context('USERENV', 'CURRENT_SCHEMA') -- the owner of the table
 , p_row_count in out nocopy natural
 , p_column_value_tab in out nocopy column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
 );
@@ -161,7 +161,7 @@ procedure do
 , p_table_bind_variable_tab in table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
 , p_statement_tab in statement_tab_t default empty_statement_tab -- per table a query (if any): if none or null it will default to 'select * from <table>' for a (S)elect
 , p_order_by_tab in statement_tab_t default empty_statement_tab -- per table an order by (if any)
-, p_owner in varchar2 default user -- the owner of the table(s)
+, p_owner in varchar2 default sys_context('USERENV', 'CURRENT_SCHEMA') -- the owner of the table(s)
 , p_row_count_tab in out nocopy row_count_tab_t -- per table a max row count (if any) on input
 , p_table_column_value_tab in out nocopy table_column_value_tab_t -- only when an entry exists that table column will be used in the query or DML
 );

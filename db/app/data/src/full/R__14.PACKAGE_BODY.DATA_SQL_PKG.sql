@@ -1872,7 +1872,7 @@ $end
 
   construct_statement
   ( p_operation => 'U'
-  , p_owner => user
+  , p_owner => sys_context('USERENV', 'CURRENT_SCHEMA')
   , p_table_name => 'MY_DEPT'
   , p_statement => null
   , p_order_by => null
@@ -1919,7 +1919,7 @@ $end
   , p_column_value => l_table_bind_variable_tab('MY_DEPT')('DEPTNO')
   );
   l_row_count_tab('MY_DEPT') := 1;
-  for r_col in ( select * from table(data_sql_pkg.get_column_info(user, 'MY_DEPT')) )
+  for r_col in ( select * from table(data_sql_pkg.get_column_info(sys_context('USERENV', 'CURRENT_SCHEMA'), 'MY_DEPT')) )
   loop
     set_column_value( p_column_value => l_table_column_value_tab(r_col.table_name)(r_col.column_name) );
   end loop;
@@ -1930,7 +1930,7 @@ $end
   , p_column_value => l_table_bind_variable_tab('MY_EMP')('DEPTNO')
   );
   l_row_count_tab('MY_EMP') := null;
-  for r_col in ( select * from table(data_sql_pkg.get_column_info(user, 'MY_EMP')) )
+  for r_col in ( select * from table(data_sql_pkg.get_column_info(sys_context('USERENV', 'CURRENT_SCHEMA'), 'MY_EMP')) )
   loop
     set_column_value( p_column_value => l_table_column_value_tab(r_col.table_name)(r_col.column_name) );
   end loop;
