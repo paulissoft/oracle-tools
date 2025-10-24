@@ -19,7 +19,8 @@ procedure enable_disable_constraint
 , p_constraint_name in varchar2
 )
 is
-  l_cmd varchar2(4000);
+  l_cmd varchar2(4000 byte);
+  l_sqlerrm varchar2(4000 byte);
 begin
   l_cmd := utl_lms.format_message
            ( 'alter table "%s"."%s" %s %s constraint "%s"'
@@ -33,6 +34,7 @@ begin
 exception
   when e_invalid_ddl_statement_on_history_tracked_table
   then
+    l_sqlerrm := sqlerrm;
     begin
       execute immediate 'call DBMS_FLASHBACK_ARCHIVE.DISASSOCIATE_FBA(:b1, :b2)' using p_owner, p_table_name;
       execute immediate l_cmd;    
@@ -41,14 +43,15 @@ exception
       when others
       then
         execute immediate 'call DBMS_FLASHBACK_ARCHIVE.REASSOCIATE_FBA(:b1, :b2)' using p_owner, p_table_name;
-        raise_application_error(-20000, l_cmd || ': ' || sqlerrm, true);
+        raise_application_error(-20000, l_cmd || ': ' || l_sqlerrm, true);
     end;
   when e_cannot_disable_constraint
   then
     null;
   when others
   then
-    raise_application_error(-20000, l_cmd || ': ' || sqlerrm, true);
+    l_sqlerrm := sqlerrm;
+    raise_application_error(-20000, l_cmd || ': ' || l_sqlerrm, true);
 end enable_disable_constraint;
 
 -- PUBLIC
@@ -61,7 +64,7 @@ procedure enable_br
 is
   pragma autonomous_transaction;
 
-  l_cmd varchar2(4000);
+  l_cmd varchar2(4000 byte);
   
   l_count pls_integer := 0;
 begin
