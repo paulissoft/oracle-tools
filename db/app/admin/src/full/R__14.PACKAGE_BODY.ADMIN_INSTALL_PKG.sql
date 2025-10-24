@@ -899,19 +899,32 @@ begin
     if l_github_installed_dml
     then
       -- Update GITHUB tables
-
-      -- insert/select github_installed_projects first
-      insert into github_installed_projects(github_repo, directory_name, owner)
-        select  p_github_access_handle
-        ,       l_directory_name
-        ,       u.username
-        from    all_users u
-        where   u.username in (p_schema, upper(p_schema))
-        minus
-        select  p.github_repo
-        ,       p.directory_name
-        ,       p.owner
-        from    github_installed_projects p;
+      begin
+        -- insert/select github_installed_projects first
+        insert into github_installed_projects(github_repo, directory_name, owner)
+          select  p_github_access_handle
+          ,       l_directory_name
+          ,       u.username
+          from    all_users u
+          where   u.username in (p_schema, upper(p_schema))
+          minus
+          select  p.github_repo
+          ,       p.directory_name
+          ,       p.owner
+          from    github_installed_projects p;
+      exception
+        when others
+        then 
+          raise_error
+          ( $$PLSQL_LINE
+          , utl_lms.format_message
+            ( q'[raise_application_error(-20000, 'Could not insert into GITHUB_INSTALLED_PROJECTS: GITHUB_REPO=%s, DIRECTORY_NAME=%s, OWNER=%s')]'
+            , p_github_access_handle
+            , l_directory_name
+            , p_schema
+            )
+          );
+      end;
     end if; -- if l_github_installed_dml
 
     select  max(p.id)

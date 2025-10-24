@@ -138,6 +138,7 @@
 <ind_PK_UK id="358F8F23-3FCB-F59E-C6FC-3BB2D118A1FA" name="GITHUB_INSTALLED_PROJECTS_UK">
 <createdBy>gpaulissen</createdBy>
 <createdTime>2025-10-21 07:48:41 UTC</createdTime>
+<comment><![CDATA[For GitHub project KNPV-ICT/knpv and directory db/app/src/incr/, two users can install into (KNPV_DEV and WKSP_KNPV).]]></comment>
 <ownerDesignName>admin</ownerDesignName>
 <indexState>Unique Constraint</indexState>
 <isSurrogateKey>false</isSurrogateKey>
@@ -148,6 +149,7 @@
 <indexColumnUsage>
 <colUsage columnID="570ED983-52B4-0C30-78F2-EED03D3A777B"/>
 <colUsage columnID="13BF9C47-066C-D013-CF17-488D401F09E2"/>
+<colUsage columnID="622DFBF1-FC64-E88B-C778-BBDA57799091"/>
 </indexColumnUsage>
 </ind_PK_UK>
 </indexes>
