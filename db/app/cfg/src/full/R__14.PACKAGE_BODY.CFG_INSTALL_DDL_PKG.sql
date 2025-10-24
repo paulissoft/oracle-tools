@@ -13,7 +13,7 @@ g_testing                    boolean  := false;
 
 $if cfg_pkg.c_testing $then
 
-c_owner constant all_objects.owner%type := user; -- AUTHID CURRENT_USER
+c_owner constant all_objects.owner%type := sys_context('USERENV', 'CURRENT_SCHEMA'); -- AUTHID CURRENT_USER
 
 c_test_base_name constant all_objects.object_name%type := 'test$' || $$PLSQL_UNIT || '$';
 c_test_base_name_parent constant all_objects.object_name%type := c_test_base_name || 'parent$';
@@ -328,8 +328,25 @@ begin
   return l_column_list;
 end to_column_list;
 
+function owner_plus_dot
+( p_owner in varchar2
+)
+return varchar2
+deterministic
+is
+begin
+  return
+    case
+      when p_owner is null
+      then null
+      when substr(p_owner, -1) = '.'
+      then p_owner -- do not add a second dot
+      else p_owner || '.'
+    end;
+end owner_plus_dot;    
+
 procedure determine_table_constraint_name
-( p_owner in out nocopy all_constraints.owner%type -- on output including . when not null
+( p_owner in out nocopy all_constraints.owner%type
 , p_table_name in out nocopy all_constraints.table_name%type
 , p_constraint_name in out nocopy all_constraints.constraint_name%type
 , p_constraint_type in all_constraints.constraint_type%type
@@ -354,11 +371,7 @@ is
     -- we can now use dbms_assert to get quoted identifiers
     if not p_error_raised
     then
-      p_owner :=
-        case
-          when l_owner_no_qq is not null
-          then dbms_assert.enquote_name(l_owner_no_qq, false) || '.'
-        end; -- do not convert to upper case since it is a data dictionary name
+      p_owner := dbms_assert.enquote_name(l_owner_no_qq, false); -- do not convert to upper case since it is a data dictionary name
       p_table_name := dbms_assert.enquote_name(l_table_name_no_qq, false); -- do not convert to upper case since it is a data dictionary name
       print('p_table_name out', p_table_name);
     end if;
@@ -401,7 +414,7 @@ begin
             on cons.owner = con.owner and
                cons.constraint_name = con.constraint_name and
                cons.table_name = con.table_name
-    where   con.owner = nvl(l_owner_no_qq, user)
+    where   con.owner = nvl(l_owner_no_qq, sys_context('USERENV', 'CURRENT_SCHEMA'))
     and     ( l_table_name_no_qq is null or
               con.table_name = l_table_name_no_qq or
               ( l_table_name_exact = 0 and con.table_name = upper(l_table_name_no_qq) )
@@ -450,7 +463,7 @@ exception
 end determine_table_constraint_name;
 
 procedure determine_table_index_name
-( p_owner in out nocopy all_indexes.owner%type -- on output including . when not null
+( p_owner in out nocopy all_indexes.owner%type
 , p_table_name in out nocopy all_indexes.table_name%type
 , p_index_name in out nocopy all_indexes.index_name%type
 , p_column_tab in t_column_tab
@@ -473,11 +486,7 @@ is
     -- we can now use dbms_assert to get quoted identifiers
     if not p_error_raised
     then
-      p_owner :=
-        case
-          when l_owner_no_qq is not null
-          then dbms_assert.enquote_name(l_owner_no_qq, false) || '.'
-        end; -- do not convert to upper case since it is a data dictionary name
+      p_owner := dbms_assert.enquote_name(l_owner_no_qq, false); -- do not convert to upper case since it is a data dictionary name
       p_table_name := dbms_assert.enquote_name(l_table_name_no_qq, false); -- do not convert to upper case since it is a data dictionary name
       print('p_table_name out', p_table_name);
     end if;
@@ -516,8 +525,8 @@ begin
                inds.index_name = ind.index_name and
                inds.table_owner = ind.table_owner and
                inds.table_name = ind.table_name
-    where   ind.owner = nvl(l_owner_no_qq, user)
-    and     ind.table_owner = nvl(l_owner_no_qq, user)
+    where   ind.owner = nvl(l_owner_no_qq, sys_context('USERENV', 'CURRENT_SCHEMA'))
+    and     ind.table_owner = nvl(l_owner_no_qq, sys_context('USERENV', 'CURRENT_SCHEMA'))
     and     ( l_table_name_no_qq is null or
               ind.table_name = l_table_name_no_qq or
               ( l_table_name_exact = 0 and ind.table_name = upper(l_table_name_no_qq) )
@@ -610,7 +619,7 @@ begin
         check_condition(false, 'Parameter "p_operation" must be one of "ADD", "MODIFY", "RENAME" or "DROP"');
     end case;
     
-    l_statement := utl_lms.format_message('ALTER TABLE %s%s %s CONSTRAINT %s %s', l_owner, l_table_name, p_operation, l_constraint_name, p_extra);
+    l_statement := utl_lms.format_message('ALTER TABLE %s%s %s CONSTRAINT %s %s', owner_plus_dot(l_owner), l_table_name, p_operation, l_constraint_name, p_extra);
   exception
     when others
     then
@@ -719,7 +728,7 @@ begin
           then 'ALTER TABLE %s%s %s (%s %s)'
           else 'ALTER TABLE %s%s %s COLUMN %s %s'
         end
-      , case when p_owner is not null then p_owner || '.' end
+      , owner_plus_dot(p_owner)
       , p_table_name
       , p_operation
       , p_column_name
@@ -762,7 +771,7 @@ begin
       utl_lms.format_message
       ( '%s TABLE %s%s %s'
       , p_operation
-      , case when p_owner is not null then p_owner || '.' end
+      , owner_plus_dot(p_owner)
       , p_table_name
       , p_extra
       )
@@ -849,7 +858,7 @@ begin
       utl_lms.format_message
       ( q'<COMMENT ON %s %s%s%s IS q'[%s]'>'
       , case when p_column_name is not null then 'COLUMN' else 'TABLE' end
-      , case when p_owner is not null then p_owner || '.' end
+      , owner_plus_dot(p_owner)
       , p_table_name
       , case when p_column_name is not null then '.' || p_column_name end
       , p_comment
@@ -918,7 +927,7 @@ begin
     
     if upper(p_operation) = 'ALTER'
     then
-      l_statement := utl_lms.format_message('%s INDEX %s%s %s', p_operation, l_owner, l_index_name, p_extra);
+      l_statement := utl_lms.format_message('%s INDEX %s%s %s', p_operation, owner_plus_dot(l_owner), l_index_name, p_extra);
     else
       -- CREATE/DROP
       if upper(p_operation) = 'CREATE'
@@ -944,7 +953,7 @@ begin
         utl_lms.format_message
         ( '%s INDEX %s%s %s %s'
         , p_operation
-        , l_owner
+        , owner_plus_dot(l_owner)
         , l_index_name
         , case when l_table_name is not null then ' ON ' || l_table_name || l_index_name_list end
         , p_extra
@@ -1012,7 +1021,7 @@ begin
       utl_lms.format_message
       ( '%s TRIGGER %s%s %s%s'
       , p_operation
-      , case when p_owner is not null then p_owner || '.' end
+      , owner_plus_dot(p_owner)
       , p_trigger_name
       , p_trigger_extra
       , case when p_table_name is not null then ' ON ' || p_table_name || chr(10) || p_extra end
@@ -1055,7 +1064,7 @@ begin
       utl_lms.format_message
       ( '%s VIEW %s%s %s'
       , p_operation
-      , case when p_owner is not null then p_owner || '.' end
+      , owner_plus_dot(p_owner)
       , p_view_name
       , p_extra
       )
