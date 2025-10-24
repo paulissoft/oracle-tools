@@ -339,8 +339,8 @@ is
   l_upb positive := l_depth; 
 
 $if oracle_tools.cfg_pkg.c_apex_installed $then
-  l_app_id constant pls_integer := apex_application.g_flow_id;
-  l_app_page_id constant pls_integer := apex_application.g_flow_step_id;
+  l_app_id constant pls_integer := nv('app_id');
+  l_app_page_id constant pls_integer := nv('app_page_id');
   l_tool_call_info t_string :=
     case
       when l_app_id is not null and
