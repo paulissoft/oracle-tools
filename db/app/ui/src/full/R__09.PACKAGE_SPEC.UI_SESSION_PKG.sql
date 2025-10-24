@@ -198,7 +198,7 @@ procedure copy_page_items
 );
 
 /**
- * Prepares a diloag url where the variables are taken from the user input and not session state.
+ * Prepares a dialog url where the variables are taken from the user input and not session state.
  *
  * See https://hardlikesoftware.com/weblog/2017/01/05/passing-data-in-and-out-of-apex-dialogs/
  *
