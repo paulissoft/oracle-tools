@@ -134,6 +134,17 @@ Enable DISABLED constraints that have a VALIDATED clause, i.e. those constraints
 where ALL_CONSTRAINTS.STATUS = 'DISABLED'.
 
 Like when creating foreign keys, enabling foreign key constraints are enabled last.
+
+NOTE: You may get ORA-55610: Invalid DDL statement on history-tracked table.
+
+In that case issue DBMS_FLASHBACK_ARCHIVE.DISASSOCIATE_FBA and try again.
+Afterwards use DBMS_FLASHBACK_ARCHIVE.REASSOCIATE_FBA to reassociate the table.
+
+This procedure must then run as DBA (or ADMIN).
+
+Solution found on https://support.oracle.com:
+- Adding a constraint with NO VALIDATE clause on a Flashback Data Archive enabled Table results in ORA-55610 (Doc ID 2951382.1)
+
 **/
 
 procedure disable_constraints
@@ -149,6 +160,17 @@ Disable ENABLED constraints that have a VALIDATED clause, i.e. those constraints
 where ALL_CONSTRAINTS.STATUS = 'ENABLED'.
 
 Like when dropping foreign keys, disabling foreign key constraints are enabled first.
+
+NOTE: You may get ORA-55610: Invalid DDL statement on history-tracked table.
+
+In that case issue DBMS_FLASHBACK_ARCHIVE.DISASSOCIATE_FBA and try again.
+Afterwards use DBMS_FLASHBACK_ARCHIVE.REASSOCIATE_FBA to reassociate the table.
+
+This procedure must then run as DBA (or ADMIN).
+
+Solution found on https://support.oracle.com:
+- Adding a constraint with NO VALIDATE clause on a Flashback Data Archive enabled Table results in ORA-55610 (Doc ID 2951382.1)
+
 **/
 
 procedure restore_data_integrity

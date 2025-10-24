@@ -1,6 +1,58 @@
 CREATE OR REPLACE PACKAGE BODY "DATA_BR_PKG" 
 is
 
+-- LOCAL
+
+-- ORA-55610: Invalid DDL statement on history-tracked table
+e_invalid_ddl_statement_on_history_tracked_table exception;
+pragma exception_init(e_invalid_ddl_statement_on_history_tracked_table, -55610);
+
+-- ORA-02297: cannot disable constraint (BONUS_DATA.CFN_PK) - dependencies exist
+e_cannot_disable_constraint exception;
+pragma exception_init(e_cannot_disable_constraint, -2297);
+
+procedure enable_disable_constraint
+( p_owner in varchar2
+, p_table_name in varchar2
+, p_enable in boolean
+, p_validate_clause in varchar2
+, p_constraint_name in varchar2
+)
+is
+  l_cmd varchar2(4000);
+begin
+  l_cmd := utl_lms.format_message
+           ( 'alter table "%s"."%s" %s %s constraint "%s"'
+           , p_owner
+           , p_table_name
+           , case when p_enable then 'enable' else 'disable' end
+           , p_validate_clause
+           , p_constraint_name
+           );
+  execute immediate l_cmd;
+exception
+  when e_invalid_ddl_statement_on_history_tracked_table
+  then
+    begin
+      execute immediate 'call DBMS_FLASHBACK_ARCHIVE.DISASSOCIATE_FBA(:b1, :b2)' using p_owner, p_table_name;
+      execute immediate l_cmd;    
+      execute immediate 'call DBMS_FLASHBACK_ARCHIVE.REASSOCIATE_FBA(:b1, :b2)' using p_owner, p_table_name;
+    exception
+      when others
+      then
+        execute immediate 'call DBMS_FLASHBACK_ARCHIVE.REASSOCIATE_FBA(:b1, :b2)' using p_owner, p_table_name;
+        raise_application_error(-20000, l_cmd || ': ' || sqlerrm, true);
+    end;
+  when e_cannot_disable_constraint
+  then
+    null;
+  when others
+  then
+    raise_application_error(-20000, l_cmd || ': ' || sqlerrm, true);
+end enable_disable_constraint;
+
+-- PUBLIC
+
 procedure enable_br
 ( p_owner in varchar2
 , p_br_name in varchar2
@@ -8,10 +60,6 @@ procedure enable_br
 )
 is
   pragma autonomous_transaction;
-
-  -- ORA-02297: cannot disable constraint (BONUS_DATA.CFN_PK) - dependencies exist
-  e_cannot_disable_constraint exception;
-  pragma exception_init(e_cannot_disable_constraint, -2297);
 
   l_cmd varchar2(4000);
   
@@ -29,7 +77,8 @@ $if cfg_pkg.c_debugging $then
 $end
 
   for r in
-  ( select  trg.trigger_name
+  ( select  trg.owner
+    ,       trg.trigger_name
     ,       trg.status
     from    all_triggers trg
     where   trg.owner = p_owner
@@ -46,7 +95,12 @@ $end
       null; -- no action needed
     else
       begin
-        l_cmd := 'alter trigger "' || r.trigger_name || '" ' || case when p_enable then 'enable' else 'disable' end;
+        l_cmd := utl_lms.format_message
+                 ( 'alter trigger "%s"."%s" %s'
+                 , r.owner
+                 , r.trigger_name
+                 , case when p_enable then 'enable' else 'disable' end
+                 );
         execute immediate l_cmd;
       exception
         when e_cannot_disable_constraint
@@ -60,8 +114,9 @@ $end
   end loop;
 
   for r in
-  ( select  con.constraint_name
+  ( select  con.owner
     ,       con.table_name
+    ,       con.constraint_name
     ,       con.status
     from    all_constraints con
     where   con.owner = p_owner
@@ -84,17 +139,13 @@ $end
     then
       null; -- no action needed
     else
-      begin
-        l_cmd := 'alter table "' || r.table_name || '" ' || case when p_enable then 'enable' else 'disable' end || ' constraint "' || r.constraint_name || '"';
-        execute immediate l_cmd;
-      exception
-        when e_cannot_disable_constraint
-        then
-          null;
-        when others
-        then
-          raise_application_error(-20000, l_cmd || ': ' || sqlerrm, true);
-      end;
+      enable_disable_constraint
+      ( p_owner => r.owner
+      , p_table_name => r.table_name
+      , p_enable => p_enable
+      , p_validate_clause => null
+      , p_constraint_name => r.constraint_name
+      );
     end if;
   end loop;
 
@@ -707,7 +758,6 @@ procedure enable_constraints
 , p_error_tab out nocopy dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
 )
 is
-  l_statement varchar2(4000 byte);
 begin
 $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.ENABLE_CONSTRAINTS');
@@ -723,7 +773,8 @@ $if cfg_pkg.c_debugging $then
 $end
 
   for r in 
-  ( select  c.table_name
+  ( select  c.owner
+    ,       c.table_name
     ,       c.constraint_name
     from    all_constraints c
     where   c.owner = p_owner
@@ -739,18 +790,20 @@ $end
   )
   loop
     begin
-      l_statement := utl_lms.format_message('alter table "%s" enable %s constraint "%s"', r.table_name, p_validate_clause, r.constraint_name);
-$if cfg_pkg.c_debugging $then
-      dbug.print(dbug."info", 'statement: %s', l_statement);
-$end        
-      execute immediate l_statement;
+      enable_disable_constraint
+      ( p_owner => r.owner
+      , p_table_name => r.table_name
+      , p_enable => true
+      , p_validate_clause => p_validate_clause
+      , p_constraint_name => r.constraint_name
+      );
     exception
       when others
       then
 $if cfg_pkg.c_debugging $then
         dbug.on_error;
 $end        
-        p_error_tab(p_error_tab.count + 1) := r.table_name || '|' || r.constraint_name || '|' || sqlerrm;
+        p_error_tab(p_error_tab.count + 1) := r.owner || '|' || r.table_name || '|' || r.constraint_name || '|' || sqlerrm;
         if p_stop_on_error then raise; end if;
     end;
   end loop;
@@ -774,7 +827,6 @@ procedure disable_constraints
 , p_error_tab out nocopy dbms_sql.varchar2_table -- An array of error messages for constraints that could not be enabled
 )
 is
-  l_statement varchar2(4000 byte);
 begin
 $if cfg_pkg.c_debugging $then
   dbug.enter($$PLSQL_UNIT || '.DISABLE_CONSTRAINTS');
@@ -790,8 +842,9 @@ $if cfg_pkg.c_debugging $then
 $end
 
   for r in 
-  ( select  table_name
-    ,       constraint_name
+  ( select  c.owner
+    ,       c.table_name
+    ,       c.constraint_name
     from    all_constraints c
     where   c.owner = p_owner
     and     c.table_name like p_table_name escape '\'
@@ -806,18 +859,20 @@ $end
   )
   loop
     begin
-      l_statement := utl_lms.format_message('alter table "%s" disable %s constraint "%s"', r.table_name, p_validate_clause, r.constraint_name);
-$if cfg_pkg.c_debugging $then
-      dbug.print(dbug."info", 'statement: %s', l_statement);
-$end        
-      execute immediate l_statement;
+      enable_disable_constraint
+      ( p_owner => r.owner
+      , p_table_name => r.table_name
+      , p_enable => false
+      , p_validate_clause => p_validate_clause
+      , p_constraint_name => r.constraint_name
+      );
     exception
       when others
       then
 $if cfg_pkg.c_debugging $then
         dbug.on_error;
 $end        
-        p_error_tab(p_error_tab.count + 1) := r.table_name || '|' || r.constraint_name || '|' || sqlerrm;
+        p_error_tab(p_error_tab.count + 1) := r.owner || '|' || r.table_name || '|' || r.constraint_name || '|' || sqlerrm;
         if p_stop_on_error then raise; end if;
     end;
   end loop;
