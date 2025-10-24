@@ -66,9 +66,6 @@ $end
   exception
     when e_invalid_ddl_statement_on_history_tracked_table
     then
-$if cfg_pkg.c_debugging $then
-      dbug.on_error;
-$end
       begin
         execute immediate 'call DBMS_FLASHBACK_ARCHIVE.DISASSOCIATE_FBA(:b1, :b2)' using p_owner, p_table_name;
         execute immediate l_cmd;    
@@ -76,11 +73,8 @@ $end
       exception
         when others
         then
-$if cfg_pkg.c_debugging $then
-          dbug.on_error;
-$end    
           execute immediate 'call DBMS_FLASHBACK_ARCHIVE.REASSOCIATE_FBA(:b1, :b2)' using p_owner, p_table_name;
-          raise_application_error(-20000, l_cmd || ': ' || sqlerrm, true);
+          raise_application_error(-20000, l_cmd || ' (' || sqlerrm || ')', true);
       end;
     when e_cannot_disable_constraint
     then
@@ -101,7 +95,7 @@ $end
     then
       raise;
     else
-      raise_application_error(-20000, l_cmd || ': ' || sqlerrm, true);
+      raise_application_error(-20000, l_cmd || ' (' || sqlerrm || ')', true);
     end if;
 end enable_disable_constraint;
 
@@ -162,7 +156,7 @@ $end
           null;
         when others
         then
-          raise_application_error(-20000, l_cmd || ': ' || sqlerrm, true);
+          raise_application_error(-20000, l_cmd || ' (' || sqlerrm || ')', true);
       end;
     end if;
   end loop;
