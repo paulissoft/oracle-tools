@@ -12,7 +12,7 @@ CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_SCHEMA_OBJECT_INFO" ("SCHEMA_OBJECT_
 ,       t.grantable() as grantable
 from    table
         ( oracle_tools.schema_objects_api.get_schema_objects
-          ( p_schema => user
+          ( p_schema => sys_context('USERENV', 'CURRENT_SCHEMA')
           , p_object_type => null
           , p_object_names => null
           , p_object_names_include => null

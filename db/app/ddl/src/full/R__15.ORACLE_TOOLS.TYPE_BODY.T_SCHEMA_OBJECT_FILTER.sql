@@ -2,13 +2,13 @@ CREATE OR REPLACE TYPE BODY "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" AS
 
 constructor function t_schema_object_filter
 ( self in out nocopy oracle_tools.t_schema_object_filter
-, p_schema in varchar2 default user
-, p_object_type in varchar2 default null
-, p_object_names in varchar2 default null
-, p_object_names_include in integer default null
-, p_grantor_is_schema in integer default 0
-, p_exclude_objects in clob default null
-, p_include_objects in clob default null
+, p_schema in varchar2
+, p_object_type in varchar2
+, p_object_names in varchar2
+, p_object_names_include in integer
+, p_grantor_is_schema in integer
+, p_exclude_objects in clob
+, p_include_objects in clob
 )
 return self as result
 is

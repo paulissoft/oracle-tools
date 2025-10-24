@@ -6,5 +6,5 @@ CREATE OR REPLACE VIEW "ORACLE_TOOLS"."V_MY_GENERATE_DDL_SESSIONS" ("SESSION_ID"
 ,       gds.username
 ,       gds.updated
 from    oracle_tools.generate_ddl_sessions gds
-where   gds.username = user;
+where   gds.username = sys_context('USERENV', 'CURRENT_SCHEMA');
 

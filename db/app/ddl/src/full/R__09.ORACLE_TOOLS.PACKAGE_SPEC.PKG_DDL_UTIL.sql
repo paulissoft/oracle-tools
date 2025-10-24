@@ -91,7 +91,7 @@ procedure md_close
 );
 
 procedure determine_schema_ddl
-( p_schema in t_schema_nn default user -- The schema name.
+( p_schema in t_schema_nn default sys_context('USERENV', 'CURRENT_SCHEMA') -- The schema name.
 , p_new_schema in t_schema default null -- The new schema name.
 , p_object_type in t_metadata_object_type default null -- Filter for object type.
 , p_object_names in t_object_names default null -- A comma separated list of (base) object names.
@@ -104,7 +104,7 @@ procedure determine_schema_ddl
 );
 
 function display_ddl_sql
-( p_schema in t_schema_nn default user -- The schema name.
+( p_schema in t_schema_nn default sys_context('USERENV', 'CURRENT_SCHEMA') -- The schema name.
 , p_new_schema in t_schema default null -- The new schema name.
 , p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- Sort objects in dependency order to reduce the number of installation errors/warnings.
 , p_object_type in t_metadata_object_type default null -- Filter for object type.
@@ -120,7 +120,7 @@ return oracle_tools.t_display_ddl_sql_tab
 pipelined;
 
 function display_ddl_schema
-( p_schema in t_schema_nn default user -- The schema name.
+( p_schema in t_schema_nn default sys_context('USERENV', 'CURRENT_SCHEMA') -- The schema name.
 , p_new_schema in t_schema default null -- The new schema name.
 , p_sort_objects_by_deps in t_numeric_boolean_nn default 0 -- Sort objects in dependency order to reduce the number of installation errors/warnings.
 , p_object_type in t_metadata_object_type default null -- Filter for object type.
@@ -194,8 +194,8 @@ function display_ddl_sql_diff
 ( p_object_type in t_metadata_object_type default null -- Filter for object type.
 , p_object_names in t_object_names default null -- A comma separated list of (base) object names.
 , p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
-, p_schema_source in t_schema default user -- Source schema (may be empty for uninstall).
-, p_schema_target in t_schema_nn default user -- Target schema.
+, p_schema_source in t_schema default sys_context('USERENV', 'CURRENT_SCHEMA') -- Source schema (may be empty for uninstall).
+, p_schema_target in t_schema_nn default sys_context('USERENV', 'CURRENT_SCHEMA') -- Target schema.
 , p_network_link_source in t_network_link default null -- Source network link.
 , p_network_link_target in t_network_link default null -- Target network link.
 , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Skip repeatables objects (1) or check all objects (0) with 1 the default for Flyway with repeatable migrations
@@ -210,8 +210,8 @@ function display_ddl_schema_diff
 ( p_object_type in t_metadata_object_type default null -- Filter for object type.
 , p_object_names in t_object_names default null -- A comma separated list of (base) object names.
 , p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
-, p_schema_source in t_schema default user -- Source schema (may be empty for uninstall).
-, p_schema_target in t_schema_nn default user -- Target schema.
+, p_schema_source in t_schema default sys_context('USERENV', 'CURRENT_SCHEMA') -- Source schema (may be empty for uninstall).
+, p_schema_target in t_schema_nn default sys_context('USERENV', 'CURRENT_SCHEMA') -- Target schema.
 , p_network_link_source in t_network_link default null -- Source network link.
 , p_network_link_target in t_network_link default null -- Target network link.
 , p_skip_repeatables in t_numeric_boolean_nn default 1 -- Skip repeatables objects (1) or check all objects (0) with 1 the default for Flyway with repeatable migrations
@@ -251,8 +251,8 @@ procedure synchronize
 ( p_object_type in t_metadata_object_type default null -- Filter for object type.
 , p_object_names in t_object_names default null -- A comma separated list of (base) object names.
 , p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
-, p_schema_source in t_schema default user -- Source schema (may be empty for uninstall).
-, p_schema_target in t_schema_nn default user -- Target schema.
+, p_schema_source in t_schema default sys_context('USERENV', 'CURRENT_SCHEMA') -- Source schema (may be empty for uninstall).
+, p_schema_target in t_schema_nn default sys_context('USERENV', 'CURRENT_SCHEMA') -- Target schema.
 , p_network_link_source in t_network_link default null -- Source network link.
 , p_network_link_target in t_network_link default null -- Target network link.
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
@@ -265,7 +265,7 @@ procedure uninstall
 ( p_object_type in t_metadata_object_type default null -- Filter for object type.
 , p_object_names in t_object_names default null -- A comma separated list of (base) object names.
 , p_object_names_include in t_numeric_boolean default null -- How to treat the object name list: include (1), exclude (0) or don't care (null)?
-, p_schema_target in t_schema_nn default user -- Target schema.
+, p_schema_target in t_schema_nn default sys_context('USERENV', 'CURRENT_SCHEMA') -- Target schema.
 , p_network_link_target in t_network_link default null -- Target network link.
 , p_exclude_objects in t_objects default null -- A newline separated list of objects to exclude (their schema object id actually).
 , p_include_objects in t_objects default null -- A newline separated list of objects to include (their schema object id actually).

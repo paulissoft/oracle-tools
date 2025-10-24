@@ -461,14 +461,14 @@ end print;
 static procedure create_schema_object
 ( p_object_schema in varchar2
 , p_object_type in varchar2
-, p_object_name in varchar2 default null
-, p_base_object_schema in varchar2 default null
-, p_base_object_type in varchar2 default null
-, p_base_object_name in varchar2 default null
-, p_column_name in varchar2 default null
-, p_grantee in varchar2 default null
-, p_privilege in varchar2 default null
-, p_grantable in varchar2 default null
+, p_object_name in varchar2
+, p_base_object_schema in varchar2
+, p_base_object_type in varchar2
+, p_base_object_name in varchar2
+, p_column_name in varchar2
+, p_grantee in varchar2
+, p_privilege in varchar2
+, p_grantable in varchar2
 , p_schema_object out nocopy oracle_tools.t_schema_object
 )
 is
@@ -742,14 +742,14 @@ end create_schema_object;
 static function create_schema_object
 ( p_object_schema in varchar2
 , p_object_type in varchar2
-, p_object_name in varchar2 default null
-, p_base_object_schema in varchar2 default null
-, p_base_object_type in varchar2 default null
-, p_base_object_name in varchar2 default null
-, p_column_name in varchar2 default null
-, p_grantee in varchar2 default null
-, p_privilege in varchar2 default null
-, p_grantable in varchar2 default null
+, p_object_name in varchar2
+, p_base_object_schema in varchar2
+, p_base_object_type in varchar2
+, p_base_object_name in varchar2
+, p_column_name in varchar2
+, p_grantee in varchar2
+, p_privilege in varchar2
+, p_grantable in varchar2
 )
 return oracle_tools.t_schema_object
 is

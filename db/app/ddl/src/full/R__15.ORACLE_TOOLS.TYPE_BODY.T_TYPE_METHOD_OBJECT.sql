@@ -11,7 +11,7 @@ constructor function t_type_method_object
 , p_final in varchar2
 , p_instantiable in varchar2
 , p_overriding in varchar2
-, p_arguments in oracle_tools.t_argument_object_tab default null
+, p_arguments in oracle_tools.t_argument_object_tab
 )
 return self as result
 is

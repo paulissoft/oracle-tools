@@ -1202,10 +1202,10 @@ $end
     add(oracle_tools.t_text_tab('TABLE', 'OBJECT_GRANT'), 'SYS\_SQL\_FILE\_SCHEMA%');
     
     -- 9. idem
-    add(oracle_tools.t_text_tab('TABLE', 'OBJECT_GRANT'), user || '\_DDL');
+    add(oracle_tools.t_text_tab('TABLE', 'OBJECT_GRANT'), sys_context('USERENV', 'CURRENT_SCHEMA') || '\_DDL');
     
     -- 10. idem
-    add(oracle_tools.t_text_tab('TABLE', 'OBJECT_GRANT'), user || '\_DML');
+    add(oracle_tools.t_text_tab('TABLE', 'OBJECT_GRANT'), sys_context('USERENV', 'CURRENT_SCHEMA') || '\_DML');
     
     -- 11. no Oracle generated datapump tables
     add(oracle_tools.t_text_tab('TABLE', 'OBJECT_GRANT'), 'SYS\_EXPORT\_FULL\_%');
@@ -1855,10 +1855,10 @@ $end
         end if;
     end case;
 
-    if nvl(p_object_schema, p_base_object_schema) in (user, 'PUBLIC')
+    if nvl(p_object_schema, p_base_object_schema) in (sys_context('USERENV', 'CURRENT_SCHEMA'), 'PUBLIC')
     then
       null; -- we have all the privileges to lookup objects
-    elsif user <> 'SYS' -- SYS has access to all
+    elsif sys_context('USERENV', 'CURRENT_SCHEMA') <> 'SYS' -- SYS has access to all
     then
       -- GPA 2017-03-09 #141388347 In order too see grants from another grantor you do not need the role SELECT_CATALOG_ROLE.
       if p_object_type <> 'OBJECT_GRANT'
@@ -1876,7 +1876,7 @@ $end
             raise_application_error
             ( oracle_tools.pkg_ddl_error.c_missing_session_role
             , 'User "' || 
-              user || 
+              sys_context('USERENV', 'CURRENT_SCHEMA') || 
               '" must have session role SELECT_CATALOG_ROLE to view objects of type "' || p_object_type || '" for "' ||
               nvl(p_object_schema, p_base_object_schema) ||
               '".'
@@ -1898,7 +1898,7 @@ $end
             raise_application_error
             ( oracle_tools.pkg_ddl_error.c_missing_session_privilege
             , 'User "' || 
-              user || 
+              sys_context('USERENV', 'CURRENT_SCHEMA') || 
               '" must have session privilege CREATE ANY PROCEDURE to view package or type bodies for "' ||
               nvl(p_object_schema, p_base_object_schema) ||
               '".'

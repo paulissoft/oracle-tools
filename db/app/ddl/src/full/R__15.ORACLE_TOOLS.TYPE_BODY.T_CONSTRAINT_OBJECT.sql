@@ -5,9 +5,9 @@ constructor function t_constraint_object
 , p_base_object in oracle_tools.t_named_object
 , p_object_schema in varchar2
 , p_object_name in varchar2
-, p_constraint_type in varchar2 default null
-, p_column_names in varchar2 default null
-, p_search_condition in varchar2 default null
+, p_constraint_type in varchar2
+, p_column_names in varchar2
+, p_search_condition in varchar2
 )
 return self as result
 is

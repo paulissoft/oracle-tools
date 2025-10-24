@@ -1,5 +1,5 @@
 CREATE OR REPLACE PROCEDURE "ORACLE_TOOLS"."P_GENERATE_DDL" 
-( pi_source_schema in varchar2 default user
+( pi_source_schema in varchar2 default sys_context('USERENV', 'CURRENT_SCHEMA')
 , pi_source_database_link in varchar2 default null
 , pi_target_schema in varchar2 default null
 , pi_target_database_link in varchar2 default null

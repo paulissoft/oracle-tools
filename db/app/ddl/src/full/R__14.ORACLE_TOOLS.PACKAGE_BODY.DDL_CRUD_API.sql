@@ -210,7 +210,7 @@ $end
     ( p_session_id
     , p_schema_object_filter_id
     , p_generate_ddl_configuration_id
-    , user
+    , sys_context('USERENV', 'CURRENT_SCHEMA')
     );
 $if oracle_tools.ddl_crud_api.c_debugging $then
     dbug.print(dbug."info", '# rows inserted into generate_ddl_sessions: %s', sql%rowcount);
@@ -838,7 +838,7 @@ begin
     select  gds.session_id
     into    g_session_id
     from    oracle_tools.generate_ddl_sessions gds
-    where   user in (gds.username, $$PLSQL_UNIT_OWNER)
+    where   sys_context('USERENV', 'CURRENT_SCHEMA') in (gds.username, $$PLSQL_UNIT_OWNER)
     and     gds.session_id = p_session_id;
   end if;
 end set_session_id;

@@ -1,3 +1,10 @@
+-- re-create T_SCHEMA_OBJECT_FILTER since
+-- CONSTRUCTOR parameter p_schema default has changed from
+-- USER to SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')
+
+begin
+  execute immediate 'drop type "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER"';
+  execute immediate q'[
 CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" AUTHID CURRENT_USER UNDER T_OBJECT_JSON
 ( schema$ varchar2(30 char)
   /** The schema. **/
@@ -52,6 +59,6 @@ CREATE TYPE "ORACLE_TOOLS"."T_SCHEMA_OBJECT_FILTER" AUTHID CURRENT_USER UNDER T_
   /** Serialize into a JSON object. **/
 )
 instantiable
-final;
+final]';
+end;
 /
-

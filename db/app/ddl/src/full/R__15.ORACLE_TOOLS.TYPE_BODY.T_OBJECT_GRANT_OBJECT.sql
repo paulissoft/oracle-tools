@@ -152,7 +152,7 @@ $end
       and     grt.grantee = self.grantee()
       and     grt.privilege = self.privilege()
       and     grt.grantable = self.grantable()
-      and     grt.grantor = user /* we can always grant our own objects */
+      and     grt.grantor = sys_context('USERENV', 'CURRENT_SCHEMA') /* we can always grant our own objects */
       ;
 
       execute immediate l_statement;
