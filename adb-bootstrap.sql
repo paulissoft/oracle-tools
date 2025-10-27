@@ -47,6 +47,7 @@ begin
     ( p_github_access_handle => l_github_access_handle
     , p_schema => 'ORACLE_TOOLS'
     , p_file_path => 'src/sql/install-versioned-migrations.sql'
+    , p_stop_on_error => false
     );
   exception
     when others
@@ -56,6 +57,7 @@ begin
   ( p_github_access_handle => l_github_access_handle
   , p_schema => 'ORACLE_TOOLS'
   , p_file_path => 'src/sql/install-repeatable-migrations.sql'
+  , p_stop_on_error => false
   );
   reset_session;
 exception
