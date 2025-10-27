@@ -7,11 +7,11 @@ A package based on DBMS_CLOUD_REPO in order to:
 
 In order to mimic this Maven POM behaviour:
 - there will be `pom.sql` files in folders with a `pom.xml` defining the most important properties using:
-  * `process_root_project` (node)
+  * `process_pom` (start node)
   * `process_project` (node)
   * `process_project_db` (leaf)
   * `process_project_apex` (leaf)
-- the node routines (`process_root_project` and `process_project`) must have a pom.sql in that folder
+- the node routines (`process_pom` and `process_project`) must have a pom.sql in that folder
 **/
 
 type github_access_rec_t is record
@@ -131,6 +131,30 @@ procedure process_root_project
 A loose representation of an aggregator POM in folder p_path (i.e. <p_path>/pom.xml).
 Will be used to define the project in internal memory so it can be used by process_project.
 Can be used in pom.sql.
+**/
+
+function process_pom
+( p_github_access_handle in github_access_handle_t -- The GitHub access handle
+, p_path in varchar2 default null -- The repository file path
+, p_operation in varchar2 default null -- top level must be 'install' or 'export'
+, p_stop_on_error in naturaln default 1 -- Must we stop on error?
+, p_dry_run in naturaln default 0 -- A dry run?
+, p_verbose in naturaln default 0 -- More logging...
+)
+return dbmsoutput_linesarray
+pipelined;
+/**
+A loose representation of a starting POM.
+Will be used to define the project in internal memory so it can be used by process_project.
+Can be used in abd-process.sql.
+There must be a pom.sql in the repository file path.
+
+It will return the DBMS_OUTPUT which is retrieved (after every file) by:
+
+DBMS_OUTPUT.GET_LINES(lines OUT DBMSOUTPUT_LINESARRAY, numlines IN OUT INTEGER)
+
+Please note that APEX issues a lot of DBMS output while installing its files.
+
 **/
 
 procedure install_sql

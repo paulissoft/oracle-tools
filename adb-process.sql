@@ -4,8 +4,8 @@
 -- Input : 1) The repo owner (case sensitive)
 --         2) The repo name (case sensitive)
 --         3) The operation (install/export)
---         4) Stop on error? (true/false)
---         5) Do we perform a dry run? (true/false)
+--         4) Stop on error? (1/0)
+--         5) Do we perform a dry run? (1/0)
 -- Remark: Verify by https://github.com/&1/&2
 */
 
@@ -27,11 +27,11 @@ select   'install' d3
 from     dual
 where    'X&3' = 'X';
 
-select   'true' d4
+select   '1' d4
 from     dual
 where    'X&4' = 'X';
 
-select   'true' d5
+select   '1' d5
 from     dual
 where    'X&5' = 'X';
 
@@ -41,38 +41,31 @@ column d5 clear
 
 declare
   l_github_access_handle admin_install_pkg.github_access_handle_t := null;
-
-  procedure cleanup
-  is
-  begin
-    if l_github_access_handle is not null
-    then
-      admin_install_pkg.delete_github_access
-      ( p_github_access_handle => l_github_access_handle
-      );
-      l_github_access_handle := null;
-    end if;
-    execute immediate 'alter session set current_schema = ADMIN';
-  end;
 begin
+  execute immediate 'alter session set current_schema = ADMIN';
+  admin_install_pkg.delete_github_access; -- delete all
   admin_install_pkg.set_github_access
   ( p_repo_owner => '&1'
   , p_repo_name => '&2'
   , p_branch_name => 'development'
   , p_github_access_handle => l_github_access_handle
   );
-  admin_install_pkg.process_root_project
-  ( p_github_access_handle => l_github_access_handle
-  , p_operation => '&3'
-  , p_stop_on_error => &4
-  , p_dry_run => &5
-  );
-  cleanup;
-exception
-  when others
-  then
-    cleanup;
-    raise;
+end;
+/
+
+select  t.*
+from    table
+        ( admin.admin_install_pkg.process_pom
+          ( p_github_access_handle => 'paulissoft/oracle-tools'
+          , p_operation => '&3'
+          , p_stop_on_error => nvl(to_number('&4'), 1)
+          , p_dry_run => nvl(to_number('&5'), 0)
+          )
+        ) t;
+
+begin
+  execute immediate 'alter session set current_schema = ADMIN';
+  admin_install_pkg.delete_github_access; -- delete all
 end;
 /
 
