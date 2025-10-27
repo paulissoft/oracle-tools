@@ -53,6 +53,8 @@ begin
 end;
 /
 
+set pagesize 100 arraysize 10
+
 select  t.*
 from    table
         ( admin.admin_install_pkg.process_pom
@@ -65,7 +67,6 @@ from    table
 
 begin
   execute immediate 'alter session set current_schema = ADMIN';
-  admin_install_pkg.delete_github_access; -- delete all
 end;
 /
 
