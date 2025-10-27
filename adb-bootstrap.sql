@@ -21,13 +21,15 @@ prompt @@db/app/admin/adb-bootstrap.sql
 declare
   l_github_access_handle admin_install_pkg.github_access_handle_t;
 
-  procedure cleanup
+  procedure reset_session
   is
   begin
     execute immediate 'alter session set current_schema = ADMIN';
     admin_install_pkg.delete_github_access;
-  end cleanup;
+  end reset_session;
 begin
+  reset_session;
+  
   -- first call must be to paulissoft/oracle-tools
   admin_install_pkg.set_github_access
   ( p_repo_owner => 'paulissoft'
@@ -55,11 +57,11 @@ begin
   , p_schema => 'ORACLE_TOOLS'
   , p_file_path => 'src/sql/install-repeatable-migrations.sql'
   );
-  cleanup;
+  reset_session;
 exception
   when others
   then
-    cleanup;
+    reset_session;
     raise;
 end;
 /
