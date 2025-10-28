@@ -5,7 +5,7 @@ create or replace package body admin_install_pkg is
 -- TYPES
 
 type options_rec_t is record
-( operation varchar2(10) default 'install'
+( operation varchar2(100 byte) default 'install'
 , stop_on_error boolean default true
 , dry_run boolean default false
 , verbose boolean default false
@@ -16,15 +16,16 @@ type callback_tab_t is table of clob index by varchar2(100 byte);
 
 subtype project_handle_t is varchar2(512); -- github_access_handle || ':' || path
 
-type git_object_rec_t is record
-( github_access_handle github_access_handle_t default null -- The GitHub access handle
-, name github_installed_versions.base_name%type -- full name starting from repo root
+subtype flyway_file_type_t is varchar2(1);
+
+type git_file_rec_t is record
+( name github_installed_versions.base_name%type -- full name starting from repo root
 , id github_installed_versions.checksum%type
 , bytes github_installed_versions.bytes%type
-, flyway_file_type varchar2(1)
+, flyway_file_type flyway_file_type_t
 );
 
-type git_object_tab_t is table of git_object_rec_t index by binary_integer;
+type git_file_tab_t is table of git_file_rec_t index by binary_integer;
 
 type project_rec_t is record
 ( project_type varchar2(4 byte) -- db/apex
@@ -40,7 +41,7 @@ type project_rec_t is record
 , src_ords varchar2(1000 char)
 , application_id integer
 , workspace_id integer
-, files_tab dbms_sql.number_table -- the index list of files to process (excluding callbacks), i.e. g_git_object_tab
+, git_file_index_tab dbms_sql.number_table -- the index list of files to process (excluding callbacks), i.e. g_git_file_tab
 );
 
 type project_tab_t is table of project_rec_t index by binary_integer;
@@ -107,11 +108,37 @@ g_pato_callbacks_project_rec project_rec_t;
 
 g_empty_project_rec project_rec_t; -- do not modify this one
 
-g_git_object_tab git_object_tab_t;
+g_git_file_tab git_file_tab_t;
 
 g_project_tab project_tab_t;
 
 -- ROUTINES
+
+procedure done
+is
+  l_default_options_rec options_rec_t;
+  l_default_project_rec project_rec_t;
+begin
+  g_github_access_tab.delete;
+  g_options_rec := l_default_options_rec;
+  g_first_error := true;
+  if g_view_clob is null
+  then
+    dbms_lob.createtemporary(g_view_clob, true);
+  else
+    dbms_lob.trim(g_view_clob, 0);
+  end if;
+  if g_apex_clob is null
+  then
+    dbms_lob.createtemporary(g_apex_clob, true);
+  else
+    dbms_lob.trim(g_apex_clob, 0);
+  end if;
+  g_pato_callbacks_project_handle := null;
+  g_pato_callbacks_project_rec := l_default_project_rec;
+  g_git_file_tab.delete;
+  g_project_tab.delete;
+end done;  
 
 procedure raise_error
 ( p_line in integer
@@ -260,28 +287,26 @@ begin
   return substr(p_file_path, 1 + nvl(length(directory_name(p_file_path)), 0));
 end base_name;
 
-procedure add_git_object
-( p_github_access_handle in github_access_handle_t
-, p_name in varchar2
+procedure add_git_file
+( p_name in varchar2
 , p_id in varchar2 default null
 , p_bytes in number default null
-, p_flyway_file_type in varchar2 default null
+, p_flyway_file_type in flyway_file_type_t default null
 , p_index out nocopy number
 )
 is
 begin
-  p_index := g_git_object_tab.count + 1;
-  g_git_object_tab(p_index).github_access_handle := p_github_access_handle;
-  g_git_object_tab(p_index).name := p_name;
-  g_git_object_tab(p_index).id := p_id;
-  g_git_object_tab(p_index).bytes := p_bytes;
-  g_git_object_tab(p_index).flyway_file_type := p_flyway_file_type;
-end add_git_object;
+  p_index := g_git_file_tab.count + 1;
+  g_git_file_tab(p_index).name := p_name;
+  g_git_file_tab(p_index).id := p_id;
+  g_git_file_tab(p_index).bytes := p_bytes;
+  g_git_file_tab(p_index).flyway_file_type := p_flyway_file_type;
+end add_git_file;
 
 function flyway_file_type
 ( p_file_path in varchar2
 )
-return varchar2
+return flyway_file_type_t
 deterministic
 is
   l_base_name varchar2(1000 byte) := base_name(p_file_path);
@@ -429,7 +454,10 @@ return boolean
 deterministic
 is
 begin
-  if p_github_access_handle = "paulissoft/oracle-tools"
+  if g_options_rec.operation = 'list' and base_name(p_file_path) = 'pom.sql'
+  then
+    return true; -- no recursion
+  elsif p_github_access_handle = "paulissoft/oracle-tools"
   then
     -- files mentioned in ../../adb-install-bootstrap.sql
     return
@@ -451,6 +479,24 @@ begin
   end if;
   return false;
 end do_not_install_file;
+
+procedure listing_file
+( p_github_access_handle in github_access_handle_t
+, p_schema in varchar2
+, p_file_path in varchar2
+)
+is
+begin
+  dbug_print
+  ( utl_lms.format_message
+    ( '[%s] Listing file %s:%s; target schema %s'
+    , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+    , p_github_access_handle
+    , p_file_path
+    , p_schema
+    )
+  );
+end listing_file;
 
 procedure processing_file
 ( p_github_access_handle in github_access_handle_t
@@ -494,18 +540,19 @@ end skipping_file;
 
 procedure processing_project
 ( p_github_access_handle in github_access_handle_t
-, p_schema in varchar2
+, p_project_rec in project_rec_t
 , p_path in varchar2
 )
 is
 begin
   dbug_print
   ( utl_lms.format_message
-    ( '[%s] Processing project %s:%s; target schema %s'
+    ( '[%s] Processing project %s:%s; type: %s; target schema %s'
     , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
     , p_github_access_handle
     , p_path
-    , p_schema
+    , p_project_rec.project_type
+    , p_project_rec.schema
     )
   );
 end processing_project;
@@ -540,6 +587,11 @@ is
     , 'ORACLE_TOOLS'
     );
 begin
+  if do_not_install_file(p_github_access_handle, p_file_path)
+  then
+    return;
+  end if;
+  
   dbug_enter(l_module_name);
   
   processing_file
@@ -678,7 +730,8 @@ is
     ( module_name => l_base_name
     , action_name => 'processing SQL' || case when p_statement_nr is not null then ' statement ' || p_statement_nr end
     );
-    if not(g_options_rec.dry_run) or base_name(p_file_path) = 'pom.sql'
+    if not(g_options_rec.dry_run)
+    or (g_options_rec.operation like 'list-%' and base_name(p_file_path) = 'pom.sql')
     then
       install_sql
       ( p_github_access_handle => p_github_access_handle
@@ -886,7 +939,7 @@ procedure process_file
 , p_file_id in varchar2 default null
 , p_bytes in integer default null
 , p_project_rec in project_rec_t default g_empty_project_rec
-, p_flyway_file_type in varchar2 default null
+, p_flyway_file_type in flyway_file_type_t default null
 )
 is
   pragma autonomous_transaction;
@@ -923,8 +976,13 @@ begin
 
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
-  -- only 'install'/'list' implemented
-  if g_options_rec.operation in ('install', 'list') then null; else raise_error($$PLSQL_LINE, 'raise value_error'); end if;
+  -- only 'install' implemented
+  if g_options_rec.operation in ('install', 'list-projects', 'list-files')
+  then
+    null;
+  else
+    raise_error($$PLSQL_LINE, 'raise value_error');
+  end if;
 
   if true -- not(g_options_rec.dry_run) or base_name(p_file_path) = 'pom.sql'
   then
@@ -1002,6 +1060,7 @@ begin
       if p_flyway_file_type = 'V'
       then
         l_github_installed_dml := false; -- skip versioned scripts (install once)
+$if admin_install_pkg.c_use_github_installed_versions_objects $then        
       elsif p_flyway_file_type = 'R'
       then
         -- check for a repeatable whether all the stored objects are still there with the same value for CREATED
@@ -1044,6 +1103,7 @@ begin
         end loop check_difference_loop;
 
         l_github_installed_dml := l_github_installed_versions_id is null;
+$end -- $if admin_install_pkg.c_use_github_installed_versions_objects $then
       end if; -- if p_flyway_file_type = 'V'
     end if; -- if l_github_installed_versions_id is not null
 
@@ -1069,7 +1129,8 @@ begin
         processing_file(p_github_access_handle, p_schema, p_file_path);
         --/*DBUG*/  
 
-        if not(g_options_rec.dry_run) or base_name(p_file_path) = 'pom.sql'
+        if not(g_options_rec.dry_run)
+        or (g_options_rec.operation like 'list-%' and base_name(p_file_path) = 'pom.sql')
         then
           install_file
           ( p_github_access_handle => p_github_access_handle
@@ -1157,6 +1218,8 @@ begin
       , p_object_name => l_object_name
       );
 
+$if admin_install_pkg.c_use_github_installed_versions_objects $then        
+
       -- github_installed_versions_objects next:
       -- add the object based on the file name
       insert into github_installed_versions_objects
@@ -1177,6 +1240,9 @@ begin
         where   o.owner = l_owner
         and     o.object_type = l_object_type
         and     o.object_name = l_object_name;
+
+$end -- $if admin_install_pkg.c_use_github_installed_versions_objects $then
+        
     end if; -- if l_github_installed_dml
   end if;
 
@@ -1263,7 +1329,7 @@ begin
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
   -- only 'install' implemented
-  if g_options_rec.operation in ('install', 'list') then null; else raise_error($$PLSQL_LINE, 'raise value_error'); end if;
+  if g_options_rec.operation in ('install') then null; else raise_error($$PLSQL_LINE, 'raise value_error'); end if;
 
   --/*DBUG
   processing_file(p_github_access_handle, p_schema, p_file_path);
@@ -1367,12 +1433,12 @@ is
   l_path varchar2(1000 byte);
   l_base_name varchar2(1000 byte);
   l_base_name_wildcard varchar2(100 byte);
-  l_git_object_index number;
+  l_git_file_index number;
 
   cursor c_list_files
   ( b_path in varchar2
   , b_base_name_wildcard in varchar2
-  , b_flyway_file_type in varchar2
+  , b_flyway_file_type in flyway_file_type_t
   )
   is
     select  t.id
@@ -1392,25 +1458,18 @@ is
     order by
             t.name;
 
-  type t_list_files is table of c_list_files%rowtype index by binary_integer;
-
-  l_flyway_files t_list_files;
-
-  l_cursor sys_refcursor;
-  l_workspace_name varchar2(128 char);
 begin
   dbug_enter(l_module_name);
 
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
   --/*DBUG
-  processing_project(p_github_access_handle, p_project_rec.schema, p_path);
+  processing_project(p_github_access_handle, p_project_rec, p_path);
   --/*DBUG*/
 
-  if p_project_rec.project_type = 'db'
+  if g_options_rec.operation = 'list-files'
   then
-    -- export not implemented yet
-    if g_options_rec.operation in ('install', 'list') 
+    if p_project_rec.project_type = 'db'
     then
       <<file_type_loop>>
       for i_file_type in 0..4
@@ -1484,120 +1543,48 @@ begin
                 , commit_id => l_github_access_rec.commit_id
                 );
             end if;
-          elsif g_options_rec.operation = 'list'
-          then
-            l_git_object_index := g_git_object_tab.count + 1;
-            add_git_object
-            ( p_github_access_handle
-            , r.name
+          else
+            l_git_file_index := g_git_file_tab.count + 1;
+            add_git_file
+            ( r.name
             , r.id
             , r.bytes
             , r.flyway_file_type
-            , l_git_object_index
+            , l_git_file_index
             );
-            p_project_rec.files_tab(p_project_rec.files_tab.count + 1) := l_git_object_index;
-          else
-            l_flyway_files(l_flyway_files.count + 1) := r;
+            p_project_rec.git_file_index_tab(p_project_rec.git_file_index_tab.count + 1) := l_git_file_index;
           end if;
         end loop list_files_loop;
       end loop file_type_loop;
+    elsif p_project_rec.project_type = 'apex'
+    then
+      l_path := normalize_file_name(p_path || '/src/export');
 
-      -- anything to install?
-      if l_flyway_files.count > 0
-      then
-        -- Run Flyway callback before migration
-        if p_project_rec.callback_tab.exists('beforeMigrate.sql')
-        then
-          install_sql
-          ( p_github_access_handle => p_github_access_handle
-          , p_schema => p_project_rec.schema
-          , p_content => p_project_rec.callback_tab('beforeMigrate.sql')
-          , p_file_path => 'beforeMigrate.sql'
-          , p_project_rec => p_project_rec
-          );
-        end if;
+      l_base_name_wildcard := 'install.sql';
 
-        <<process_file_loop>>
-        for i_file_idx in l_flyway_files.first .. l_flyway_files.last
-        loop
-          process_file
-          ( p_github_access_handle => p_github_access_handle
-          , p_schema => p_project_rec.schema
-          , p_file_path => l_flyway_files(i_file_idx).name
-          , p_file_id => l_flyway_files(i_file_idx).id
-          , p_bytes => l_flyway_files(i_file_idx).bytes
-          , p_project_rec => p_project_rec
-          , p_flyway_file_type => l_flyway_files(i_file_idx).flyway_file_type
-          );
-        end loop process_file_loop;
-        
-        -- Run Flyway callback after migration
-        if p_project_rec.callback_tab.exists('afterMigrate.sql')
-        then
-          install_sql
-          ( p_github_access_handle => p_github_access_handle
-          , p_schema => p_project_rec.schema
-          , p_content => p_project_rec.callback_tab('afterMigrate.sql')
-          , p_file_path => 'afterMigrate.sql'
-          , p_project_rec => p_project_rec
-          );
-        end if;
-      end if;
+      <<list_files_loop>>
+      for r in c_list_files(l_path, l_base_name_wildcard, null)
+      loop
+        l_git_file_index := g_git_file_tab.count + 1;
+        add_git_file
+        ( r.name
+        , r.id
+        , r.bytes
+        , r.flyway_file_type
+        , l_git_file_index
+        );
+        p_project_rec.git_file_index_tab(p_project_rec.git_file_index_tab.count + 1) := l_git_file_index;
+      end loop list_files_loop;
     else
       raise_error($$PLSQL_LINE, 'raise value_error');
     end if;
-  elsif p_project_rec.project_type = 'apex'
+  elsif g_options_rec.operation = 'list-projects'
   then
-    -- export not implemented yet
-    if g_options_rec.operation in ('install')
-    then
-      -- from file apex/src/scripts/import.sql
-      -- 1) pre_import.sql: call oracle_tools.ui_apex_synchronize.pre_import(<application id>)
-      -- 2) prepare_import.sql: call oracle_tools.ui_apex_synchronize.prepare_import(<workspace name>, <application id>)
-      -- 3) execute export file(s), i.e. install.sql
-      -- 4) publish_application.sql: call oracle_tools.ui_apex_synchronize.publish_application
-      -- 5) post_import.sql: call oracle_tools.ui_apex_synchronize.post_import(<application id>);
-
-      -- step 1
-      execute immediate 'call oracle_tools.ui_apex_synchronize.pre_import(:b1)'
-        using p_project_rec.application_id;
-
-      -- step 2
-      open l_cursor for q'[
-select  w.workspace
-from    apex_workspaces w
-where   w.workspace_id = nvl(:b1, w.workspace_id)
-and     w.workspace <> 'INTERNAL'
-and     w.workspace not like 'COM.ORACLE.%'
-and     rownum = 1
-]'      using in p_project_rec.workspace_id;
-      fetch l_cursor into l_workspace_name;
-      close l_cursor;
-      execute immediate 'call oracle_tools.ui_apex_synchronize.prepare_import(:b1, :b2)'
-        using l_workspace_name, p_project_rec.application_id;
-
-      -- step 3
-      process_file_apex
-      ( p_github_access_handle => p_github_access_handle
-      , p_schema => p_project_rec.schema
-      , p_file_path => p_path || '/src/export/install.sql'
-      );
-
-      -- step 4
-      execute immediate 'call oracle_tools.ui_apex_synchronize.publish_application(:b1)'
-        using p_project_rec.application_id;
-      
-      -- step 5
-      execute immediate 'call oracle_tools.ui_apex_synchronize.post_import(:b1)'
-        using p_project_rec.application_id;
-    elsif g_options_rec.operation not in ('list')
-    then
-      raise_error($$PLSQL_LINE, 'raise value_error');
-    end if;
+    null;
   else
     raise_error($$PLSQL_LINE, 'raise value_error');
-  end if;
-
+  end if; -- if g_options_rec.operation = 'list-files'
+  
   g_project_tab(g_project_tab.count + 1) := p_project_rec;
 
   dbug_leave(l_module_name);
@@ -1875,57 +1862,6 @@ exception
     raise;
 end process_project;
 
-procedure process_root_project
-( p_github_access_handle in github_access_handle_t -- The GitHub access handle
-, p_parent_github_access_handle in github_access_handle_t
-, p_parent_path in varchar2
-, p_operation in varchar2
-, p_stop_on_error in boolean
-, p_dry_run in boolean
-, p_verbose in boolean
-)
-is
-  l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_root_project';
-begin
-  g_options_rec.operation := p_operation;
-  g_options_rec.stop_on_error := p_stop_on_error;
-  g_options_rec.dry_run := p_dry_run;
-  g_options_rec.verbose := p_verbose;
-
-  /*
-  -- gpaulissen@pc-803 oracle-tools % find . -name callbacks -print -exec ls {} \;
-  -- ./db/app/admin/src/callbacks
-  -- ./db/app/cfg/src/callbacks
-  -- afterMigrate.sql  beforeEachMigrate.sql
-  -- ./db/src/callbacks
-  -- afterMigrate.sql  beforeEachMigrate.sql  beforeMigrate.sql  unused-afterEachMigrate.sql  unused-beforeMigrate.sql
-  */
-  process_project_db
-  ( p_github_access_handle => "paulissoft/oracle-tools"
-  , p_path => 'db'
-  , p_src_callbacks => '/src/callbacks'
-  , p_src_incr => null
-  , p_src_full => null
-  , p_src_dml => null
-  , p_src_ords => null
-  );
-  
-  -- process the pom.sql inside
-  PRAGMA INLINE(normalize_file_name, 'YES');
-  process_file
-  ( p_github_access_handle => p_github_access_handle
-  , p_schema => null
-  , p_file_path => normalize_file_name('pom.sql')
-  );
-
-  dbug_leave(l_module_name);
-exception
-  when others
-  then
-    dbug_leave(l_module_name);
-    raise;
-end process_root_project;
-
 function process_pom
 ( p_github_access_handle in github_access_handle_t -- The GitHub access handle
 , p_path in varchar2 -- The repository file path
@@ -1942,9 +1878,12 @@ is
   l_max_output_lines constant number := 2147483647;
   
   l_project_rec project_rec_t;
-  l_git_object_rec git_object_rec_t;
+  l_git_file_rec git_file_rec_t;
   l_output_lines dbmsoutput_linesarray;
   l_nr_output_lines number;
+
+  l_cursor sys_refcursor;
+  l_workspace_name varchar2(128 char);
 
   procedure get_output_lines
   is
@@ -1953,7 +1892,23 @@ is
     dbms_output.get_lines(l_output_lines, l_nr_output_lines);
   end;
 begin
-  g_options_rec.operation := 'list';
+  -- start with list-files unless it is only list-projects
+  case 
+    when lower(p_operation) = 'list-projects'
+    then g_options_rec.operation := lower(p_operation);
+
+    when lower(p_operation) in ('list-files', 'install') -- export not yet implemented
+    then g_options_rec.operation := 'list-files'; -- first list the files
+
+    else raise_error
+         ( $$PLSQL_LINE
+         , utl_lms.format_message
+           ( q'[raise_application_error(-20000, 'Parameter p_operation (%s) must be one of "list-projects", "list-files" or "install"')]'
+           , p_operation
+           )
+         );
+  end case;
+
   g_options_rec.stop_on_error := p_stop_on_error <> 0;
   g_options_rec.dry_run := p_dry_run <> 0;
   g_options_rec.verbose := p_verbose <> 0;
@@ -1981,76 +1936,175 @@ begin
   process_file
   ( p_github_access_handle => p_github_access_handle
   , p_schema => null
-  , p_file_path => normalize_file_name('pom.sql')
+  , p_file_path => normalize_file_name(p_path || '/' || 'pom.sql')
   );
 
-  -- now we switch from list to p_operation
-  g_options_rec.operation := p_operation;
+  case 
+    when lower(p_operation) in ('list-projects', 'list-files')
+    then g_options_rec.operation := 'list'; -- this will not process pom.sql files anymore
+    else g_options_rec.operation := lower(p_operation);
+  end case;
 
+  <<project_loop>>
   for i_project_idx in g_project_tab.first .. g_project_tab.last
   loop
-    if g_project_tab(i_project_idx).files_tab.count > 0
+    if g_project_tab(i_project_idx).git_file_index_tab.count > 0
     then
       l_project_rec := g_project_tab(i_project_idx);
+
+      if l_project_rec.project_type = 'db'
+      then
+        -- Run Flyway callback before migration
+        if g_options_rec.operation = 'list'
+        then
+          null;
+        elsif l_project_rec.callback_tab.exists('beforeMigrate.sql')
+        then
+          install_sql
+          ( p_github_access_handle => p_github_access_handle
+          , p_schema => l_project_rec.schema
+          , p_content => l_project_rec.callback_tab('beforeMigrate.sql')
+          , p_file_path => 'beforeMigrate.sql'
+          , p_project_rec => l_project_rec
+          );
+          get_output_lines;
+          for i_output_line_idx in 1 .. l_nr_output_lines
+          loop
+            pipe row (l_output_lines(i_output_line_idx));
+          end loop;
+        end if;
+          
+        -- anything to install?
+        <<process_file_loop>>
+        for i_file_idx in l_project_rec.git_file_index_tab.first .. l_project_rec.git_file_index_tab.last
+        loop
+          l_git_file_rec := g_git_file_tab(l_project_rec.git_file_index_tab(i_file_idx));
+          if g_options_rec.operation = 'list'
+          then
+            listing_file(p_github_access_handle, l_project_rec.schema, l_git_file_rec.name);
+          else
+            process_file
+            ( p_github_access_handle => p_github_access_handle
+            , p_schema => l_project_rec.schema
+            , p_file_path => l_git_file_rec.name
+            , p_file_id => l_git_file_rec.id
+            , p_bytes => l_git_file_rec.bytes
+            , p_project_rec => l_project_rec
+            , p_flyway_file_type => l_git_file_rec.flyway_file_type
+            );
+          end if;
+          get_output_lines;
+          for i_output_line_idx in 1 .. l_nr_output_lines
+          loop
+            pipe row (l_output_lines(i_output_line_idx));
+          end loop;
+        end loop process_file_loop;
+          
+        -- Run Flyway callback after migration
+        if g_options_rec.operation = 'list'
+        then
+          null;
+        elsif l_project_rec.callback_tab.exists('afterMigrate.sql')
+        then
+          install_sql
+          ( p_github_access_handle => p_github_access_handle
+          , p_schema => l_project_rec.schema
+          , p_content => l_project_rec.callback_tab('afterMigrate.sql')
+          , p_file_path => 'afterMigrate.sql'
+          , p_project_rec => l_project_rec
+          );
+          get_output_lines;
+          for i_output_line_idx in 1 .. l_nr_output_lines
+          loop
+            pipe row (l_output_lines(i_output_line_idx));
+          end loop;
+        end if;
+      elsif l_project_rec.project_type = 'apex'
+      then
+        -- export not implemented yet
+        
+        -- from file apex/src/scripts/import.sql
+        -- 1) pre_import.sql: call oracle_tools.ui_apex_synchronize.pre_import(<application id>)
+        -- 2) prepare_import.sql: call oracle_tools.ui_apex_synchronize.prepare_import(<workspace name>, <application id>)
+        -- 3) execute export file(s), i.e. install.sql
+        -- 4) publish_application.sql: call oracle_tools.ui_apex_synchronize.publish_application
+        -- 5) post_import.sql: call oracle_tools.ui_apex_synchronize.post_import(<application id>);
+
+        if g_options_rec.operation in ('install')
+        then
+          -- step 1
+          execute immediate 'call oracle_tools.ui_apex_synchronize.pre_import(:b1)'
+            using l_project_rec.application_id;
+
+          -- step 2
+          open l_cursor for q'[
+select  w.workspace
+from    apex_workspaces w
+where   w.workspace_id = nvl(:b1, w.workspace_id)
+and     w.workspace <> 'INTERNAL'
+and     w.workspace not like 'COM.ORACLE.%'
+and     rownum = 1
+]'          using in l_project_rec.workspace_id;
+
+          fetch l_cursor into l_workspace_name;
+          close l_cursor;
+          execute immediate 'call oracle_tools.ui_apex_synchronize.prepare_import(:b1, :b2)'
+            using l_workspace_name, l_project_rec.application_id;
+
+          get_output_lines;
+          for i_output_line_idx in 1 .. l_nr_output_lines
+          loop
+            pipe row (l_output_lines(i_output_line_idx));
+          end loop;
+        end if; -- if g_options_rec.operation in ('install')
+        
+        -- step 3
+
+        -- anything to install?
+        <<process_file_loop>>
+        for i_file_idx in l_project_rec.git_file_index_tab.first .. l_project_rec.git_file_index_tab.last
+        loop
+          l_git_file_rec := g_git_file_tab(l_project_rec.git_file_index_tab(i_file_idx));
+          if g_options_rec.operation = 'list'
+          then
+            listing_file(p_github_access_handle, l_project_rec.schema, l_git_file_rec.name);
+          else
+            process_file_apex
+            ( p_github_access_handle => p_github_access_handle
+            , p_schema => l_project_rec.schema
+            , p_file_path => l_git_file_rec.name
+            );
+          end if;
+          get_output_lines;
+          for i_output_line_idx in 1 .. l_nr_output_lines
+          loop
+            pipe row (l_output_lines(i_output_line_idx));
+          end loop;
+        end loop process_file_loop;
+
+        if g_options_rec.operation in ('install')
+        then
+          -- step 4
+          execute immediate 'call oracle_tools.ui_apex_synchronize.publish_application(:b1)'
+            using l_project_rec.application_id;
       
-      -- Run Flyway callback before migration
-      if l_project_rec.callback_tab.exists('beforeMigrate.sql')
-      then
-        install_sql
-        ( p_github_access_handle => p_github_access_handle
-        , p_schema => l_project_rec.schema
-        , p_content => l_project_rec.callback_tab('beforeMigrate.sql')
-        , p_file_path => 'beforeMigrate.sql'
-        , p_project_rec => l_project_rec
-        );
-        get_output_lines;
-        for i_output_line_idx in 1 .. l_nr_output_lines
-        loop
-          pipe row (l_output_lines(i_output_line_idx));
-        end loop;
-      end if;
-        
-      -- anything to install?
-      <<process_file_loop>>
-      for i_file_idx in l_project_rec.files_tab.first .. l_project_rec.files_tab.last
-      loop
-        l_git_object_rec := g_git_object_tab(l_project_rec.files_tab(i_file_idx));
-        process_file
-        ( p_github_access_handle => l_git_object_rec.github_access_handle
-        , p_schema => l_project_rec.schema
-        , p_file_path => l_git_object_rec.name
-        , p_file_id => l_git_object_rec.id
-        , p_bytes => l_git_object_rec.bytes
-        , p_project_rec => l_project_rec
-        , p_flyway_file_type => l_git_object_rec.flyway_file_type
-        );
-        get_output_lines;
-        for i_output_line_idx in 1 .. l_nr_output_lines
-        loop
-          pipe row (l_output_lines(i_output_line_idx));
-        end loop;
-      end loop process_file_loop;
-        
-      -- Run Flyway callback after migration
-      if l_project_rec.callback_tab.exists('afterMigrate.sql')
-      then
-        install_sql
-        ( p_github_access_handle => p_github_access_handle
-        , p_schema => l_project_rec.schema
-        , p_content => l_project_rec.callback_tab('afterMigrate.sql')
-        , p_file_path => 'afterMigrate.sql'
-        , p_project_rec => l_project_rec
-        );
-        get_output_lines;
-        for i_output_line_idx in 1 .. l_nr_output_lines
-        loop
-          pipe row (l_output_lines(i_output_line_idx));
-        end loop;
-      end if;
-    end if;
-  end loop;
+          -- step 5
+          execute immediate 'call oracle_tools.ui_apex_synchronize.post_import(:b1)'
+            using l_project_rec.application_id;
+            
+          get_output_lines;
+          for i_output_line_idx in 1 .. l_nr_output_lines
+          loop
+            pipe row (l_output_lines(i_output_line_idx));
+          end loop;
+        end if; -- if g_options_rec.operation in ('install')
+      end if; -- if l_project_rec.project_type = 'db'
+    end if; -- if g_project_tab(i_project_idx).git_file_index_tab.count > 0
+  end loop project_loop;
 
   dbug_leave(l_module_name);
+
+  done;
 
   return;
 exception
@@ -2062,6 +2116,7 @@ exception
       pipe row (l_output_lines(i_output_line_idx));
     end loop;    
     dbug_leave(l_module_name);
+    done;
     raise;
 end process_pom;
 
@@ -2225,8 +2280,5 @@ exception
     raise;
 end install_file;  
 
-begin
-  dbms_lob.createtemporary(g_view_clob, true);
-  dbms_lob.createtemporary(g_apex_clob, true);
 end;
 /

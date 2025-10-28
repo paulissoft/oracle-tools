@@ -39,10 +39,11 @@ column d3 clear
 column d4 clear
 column d5 clear
 
+alter session set current_schema = ADMIN;
+
 declare
   l_github_access_handle admin_install_pkg.github_access_handle_t := null;
 begin
-  execute immediate 'alter session set current_schema = ADMIN';
   admin_install_pkg.delete_github_access; -- delete all
   admin_install_pkg.set_github_access
   ( p_repo_owner => '&1'
@@ -53,9 +54,11 @@ begin
 end;
 /
 
-set pagesize 100 arraysize 10
+set pagesize 1000 arraysize 1
 
-select  t.*
+column dbms_output format a255 wrap heading "DBMS output"
+
+select  t.column_value as dbms_output
 from    table
         ( admin.admin_install_pkg.process_pom
           ( p_github_access_handle => 'paulissoft/oracle-tools'
@@ -65,9 +68,6 @@ from    table
           )
         ) t;
 
-begin
-  execute immediate 'alter session set current_schema = ADMIN';
-end;
-/
+alter session set current_schema = ADMIN;
 
 undefine 1 2 3 4 5

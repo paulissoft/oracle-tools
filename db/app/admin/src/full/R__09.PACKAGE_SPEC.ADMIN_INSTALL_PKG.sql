@@ -1,5 +1,7 @@
 create or replace package admin_install_pkg authid definer is
 
+c_use_github_installed_versions_objects constant boolean := false;
+
 /**
 A package based on DBMS_CLOUD_REPO in order to:
 - install files (database/APEX) from a repository like the PATO does with Maven POM files using Flyway.
@@ -111,21 +113,6 @@ procedure process_project
 , p_path in varchar2 -- The repository file path
 , p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
 , p_parent_path in varchar2 default null -- The parent repository file path
-);
-/**
-A loose representation of an aggregator POM in folder p_path (i.e. <p_path>/pom.xml).
-Will be used to define the project in internal memory so it can be used by process_project.
-Can be used in pom.sql.
-**/
-
-procedure process_root_project
-( p_github_access_handle in github_access_handle_t -- The GitHub access handle
-, p_parent_github_access_handle in github_access_handle_t default null -- The parent GitHub access handle
-, p_parent_path in varchar2 default null -- The parent repository file path
-, p_operation in varchar2 default null -- top level must be 'install' or 'export'
-, p_stop_on_error in boolean default true -- Must we stop on error?
-, p_dry_run in boolean default false -- A dry run?
-, p_verbose in boolean default false -- More logging...
 );
 /**
 A loose representation of an aggregator POM in folder p_path (i.e. <p_path>/pom.xml).
