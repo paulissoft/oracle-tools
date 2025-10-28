@@ -113,6 +113,8 @@ g_git_file_tab git_file_tab_t;
 
 g_project_tab project_tab_t;
 
+g_last_path_printed varchar2(1000 byte) := null;
+
 -- ROUTINES
 
 procedure done
@@ -129,6 +131,7 @@ begin
   g_pato_callbacks_project_rec := l_default_project_rec;
   g_git_file_tab.delete;
   g_project_tab.delete;
+  g_last_path_printed := null;
 end done;  
 
 procedure raise_error
@@ -471,6 +474,36 @@ begin
   return false;
 end do_not_install_file;
 
+procedure print_file
+( p_file_path in varchar2
+, p_suffix in varchar2
+)
+is
+  l_path constant varchar2(1000 byte) := nvl(directory_name(p_file_path), '.');
+begin
+  if g_last_path_printed = l_path
+  then
+    null;
+  else
+    dbug_print
+    ( utl_lms.format_message
+      ( '[%s] --- path %s ---'
+      , to_char(sysdate, 'hh24:mi:ss')
+      , l_path
+      )
+    );
+    g_last_path_printed := l_path;
+  end if;
+  dbug_print
+  ( utl_lms.format_message
+    ( '[%s] %s%s'
+    , to_char(sysdate, 'hh24:mi:ss')
+    , base_name(p_file_path)
+    , p_suffix
+    )
+  );
+end print_file;
+
 procedure listing_file
 ( p_github_access_handle in github_access_handle_t
 , p_schema in varchar2
@@ -478,13 +511,7 @@ procedure listing_file
 )
 is
 begin
-  dbug_print
-  ( utl_lms.format_message
-    ( '[%s] file %s'
-    , to_char(sysdate, 'hh24:mi:ss')
-    , p_file_path
-    )
-  );
+  print_file(p_file_path, null);
 end listing_file;
 
 procedure processing_file
@@ -495,13 +522,9 @@ procedure processing_file
 )
 is
 begin
-  dbug_print
-  ( utl_lms.format_message
-    ( '[%s] file %s%s'
-    , to_char(sysdate, 'hh24:mi:ss')
-    , p_file_path
-    , case when p_statement_nr is not null then '; statement ' || p_statement_nr end
-    )
+  print_file
+  ( p_file_path
+  , case when p_statement_nr is not null then '; statement ' || p_statement_nr end
   );
 end processing_file;
 
@@ -513,11 +536,10 @@ procedure skipping_file
 )
 is
 begin
-  dbug_print
-  ( utl_lms.format_message
-    ( '[%s] file %s has already been installed (GITHUB_INSTALLED_VERSIONS.ID %s)'
-    , to_char(sysdate, 'hh24:mi:ss')
-    , p_file_path
+  print_file
+  ( p_file_path
+  , utl_lms.format_message
+    ( ' has already been installed (GITHUB_INSTALLED_VERSIONS.ID %s)'
     , to_char(p_github_installed_versions_id)
     )
   );
@@ -1064,12 +1086,10 @@ $if admin_install_pkg.c_use_github_installed_versions_objects $then
           from    all_objects o
         )
         loop
-          --/*DBUG
-          dbug_print
-          ( utl_lms.format_message
-            ( '[%s] %s will be re-installed due to difference for %s "%s"."%s" with creation date "%s" and last DDL time "%s"'
-            , to_char(sysdate, 'hh24:mi:ss')
-            , p_file_path
+          print_file
+          ( p_file_path
+          , utl_lms.format_message
+            ( ' will be re-installed due to difference for %s "%s"."%s" with creation date "%s" and last DDL time "%s"'
             , r.object_type
             , r.owner
             , r.object_name
@@ -1077,7 +1097,6 @@ $if admin_install_pkg.c_use_github_installed_versions_objects $then
             , to_char(r.last_ddl_time, 'yyyy-mm-dd hh24:mi:ss')
             )
           );
-          --/*DBUG*/
           
           -- there is at least one difference: stop and recreate again
           l_github_installed_versions_id := null;
