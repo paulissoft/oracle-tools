@@ -932,8 +932,6 @@ procedure process_file
 , p_flyway_file_type in flyway_file_type_t default null
 )
 is
-  pragma autonomous_transaction;
-
   l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_file (1)';
 
   -- Only issue DML for PATO generated files
@@ -1050,9 +1048,9 @@ begin
       if p_flyway_file_type = 'V'
       then
         l_github_installed_dml := false; -- skip versioned scripts (install once)
-$if admin_install_pkg.c_use_github_installed_versions_objects $then        
       elsif p_flyway_file_type = 'R'
       then
+$if admin_install_pkg.c_use_github_installed_versions_objects $then        
         -- check for a repeatable whether all the stored objects are still there with the same value for CREATED
         <<check_difference_loop>>
         for r in
@@ -1091,9 +1089,9 @@ $if admin_install_pkg.c_use_github_installed_versions_objects $then
           l_github_installed_versions_id := null;
           exit check_difference_loop;
         end loop check_difference_loop;
+$end -- $if admin_install_pkg.c_use_github_installed_versions_objects $then
 
         l_github_installed_dml := l_github_installed_versions_id is null;
-$end -- $if admin_install_pkg.c_use_github_installed_versions_objects $then
       end if; -- if p_flyway_file_type = 'V'
     end if; -- if l_github_installed_versions_id is not null
 
@@ -1236,13 +1234,10 @@ $end -- $if admin_install_pkg.c_use_github_installed_versions_objects $then
     end if; -- if l_github_installed_dml
   end if;
 
-  commit;
-
   dbug_leave(l_module_name);
 exception
   when others
   then
-    commit;
     dbug_leave(l_module_name);    
     raise;
 end process_file;
@@ -1253,8 +1248,6 @@ procedure process_file_apex
 , p_file_path in varchar2 -- The repository file path
 )
 is
-  -- pragma autonomous_transaction;
-
   l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_file_apex';
   l_github_access_rec github_access_rec_t;
   l_line_tab dbms_sql.varchar2a;
@@ -1397,13 +1390,10 @@ begin
     end loop line_loop;
   end if;
 
---  commit;
-
   dbug_leave(l_module_name);
 exception
   when others
   then
-  --  commit;
     dbug_leave(l_module_name);    
     raise;
 end process_file_apex;
@@ -1863,6 +1853,8 @@ function process_pom
 return dbmsoutput_linesarray
 pipelined
 is
+  pragma autonomous_transaction;
+
   l_module_name constant varchar2(100) := $$PLSQL_UNIT || '.process_pom';
 
   l_max_output_lines constant number := 2147483647;
@@ -1903,6 +1895,7 @@ begin
   get_output_lines;
   for i_output_line_idx in 1 .. l_nr_output_lines
   loop
+    commit; -- ORA-06519: active autonomous transaction detected and rolled back
     pipe row (l_output_lines(i_output_line_idx));
   end loop;
 
@@ -1956,6 +1949,7 @@ begin
     get_output_lines;
     for i_output_line_idx in 1 .. l_nr_output_lines
     loop
+      commit; -- ORA-06519: active autonomous transaction detected and rolled back
       pipe row (l_output_lines(i_output_line_idx));
     end loop;
   end if;
@@ -1985,6 +1979,7 @@ begin
           get_output_lines;
           for i_output_line_idx in 1 .. l_nr_output_lines
           loop
+            commit; -- ORA-06519: active autonomous transaction detected and rolled back
             pipe row (l_output_lines(i_output_line_idx));
           end loop;
         end if;
@@ -2011,6 +2006,7 @@ begin
           get_output_lines;
           for i_output_line_idx in 1 .. l_nr_output_lines
           loop
+            commit; -- ORA-06519: active autonomous transaction detected and rolled back
             pipe row (l_output_lines(i_output_line_idx));
           end loop;
         end loop process_file_loop;
@@ -2031,6 +2027,7 @@ begin
           get_output_lines;
           for i_output_line_idx in 1 .. l_nr_output_lines
           loop
+            commit; -- ORA-06519: active autonomous transaction detected and rolled back
             pipe row (l_output_lines(i_output_line_idx));
           end loop;
         end if;
@@ -2069,6 +2066,7 @@ and     rownum = 1
           get_output_lines;
           for i_output_line_idx in 1 .. l_nr_output_lines
           loop
+            commit; -- ORA-06519: active autonomous transaction detected and rolled back
             pipe row (l_output_lines(i_output_line_idx));
           end loop;
         end if; -- if g_options_rec.operation in ('install')
@@ -2093,6 +2091,7 @@ and     rownum = 1
           get_output_lines;
           for i_output_line_idx in 1 .. l_nr_output_lines
           loop
+            commit; -- ORA-06519: active autonomous transaction detected and rolled back
             pipe row (l_output_lines(i_output_line_idx));
           end loop;
         end loop process_file_loop;
@@ -2110,6 +2109,7 @@ and     rownum = 1
           get_output_lines;
           for i_output_line_idx in 1 .. l_nr_output_lines
           loop
+            commit; -- ORA-06519: active autonomous transaction detected and rolled back
             pipe row (l_output_lines(i_output_line_idx));
           end loop;
         end if; -- if g_options_rec.operation in ('install')
@@ -2118,23 +2118,23 @@ and     rownum = 1
   end loop project_loop;
 
   dbug_leave(l_module_name);
-
   done;
+  commit;
 
   return;
-/*  
 exception
   when others
   then
+    rollback;
     get_output_lines;
     for i_output_line_idx in 1 .. l_nr_output_lines
     loop
+      commit; -- ORA-06519: active autonomous transaction detected and rolled back
       pipe row (l_output_lines(i_output_line_idx));
     end loop;    
-    dbug_leave(l_module_name);
+--    dbug_leave(l_module_name);
     done;
     raise;
-*/    
 end process_pom;
 
 procedure install_sql
