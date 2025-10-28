@@ -19,6 +19,8 @@ column d4 new_value 4
 column d5 new_value 5
 column d6 new_value 6
 
+set termout off
+
 select   1 d3
 ,        1 d4
 ,        1 d5
@@ -42,6 +44,8 @@ select   '0' d6
 from     dual
 where    'X&6' = 'X';
 
+set termout on
+
 column d3 clear
 column d4 clear
 column d5 clear
@@ -62,7 +66,7 @@ begin
 end;
 /
 
-set pagesize 1000 arraysize 1
+set pagesize 1000 arraysize 10
 
 column dbms_output format a255 wrap heading "DBMS output"
 

@@ -122,18 +122,8 @@ begin
   g_github_access_tab.delete;
   g_options_rec := l_default_options_rec;
   g_first_error := true;
-  if g_view_clob is null
-  then
-    dbms_lob.createtemporary(g_view_clob, true);
-  else
-    dbms_lob.trim(g_view_clob, 0);
-  end if;
-  if g_apex_clob is null
-  then
-    dbms_lob.createtemporary(g_apex_clob, true);
-  else
-    dbms_lob.trim(g_apex_clob, 0);
-  end if;
+  dbms_lob.trim(g_view_clob, 0);
+  dbms_lob.trim(g_apex_clob, 0);
   g_pato_callbacks_project_handle := null;
   g_pato_callbacks_project_rec := l_default_project_rec;
   g_git_file_tab.delete;
@@ -1909,6 +1899,13 @@ begin
          );
   end case;
 
+  dbms_output.put_line(utl_lms.format_message('*** Getting files (operation: %s) ***', g_options_rec.operation));
+  get_output_lines;
+  for i_output_line_idx in 1 .. l_nr_output_lines
+  loop
+    pipe row (l_output_lines(i_output_line_idx));
+  end loop;
+
   g_options_rec.stop_on_error := p_stop_on_error <> 0;
   g_options_rec.dry_run := p_dry_run <> 0;
   g_options_rec.verbose := p_verbose <> 0;
@@ -1942,8 +1939,26 @@ begin
   case 
     when lower(p_operation) in ('list-projects', 'list-files')
     then g_options_rec.operation := 'list'; -- this will not process pom.sql files anymore
+    when lower(p_operation) in ('list-projects', 'list-files')
+    then g_options_rec.operation := 'list'; -- this will not process pom.sql files anymore
     else g_options_rec.operation := lower(p_operation);
   end case;
+
+  if g_git_file_tab.count > 0 -- we did get some files...
+  then
+    dbms_output.put_line
+    ( utl_lms.format_message
+      ( '*** Processing files (operation: %s, dry run: %s) ***'
+      , g_options_rec.operation
+      , case g_options_rec.dry_run when true then 'true' else 'false' end
+      )
+    );
+    get_output_lines;
+    for i_output_line_idx in 1 .. l_nr_output_lines
+    loop
+      pipe row (l_output_lines(i_output_line_idx));
+    end loop;
+  end if;
 
   <<project_loop>>
   for i_project_idx in g_project_tab.first .. g_project_tab.last
@@ -2030,7 +2045,7 @@ begin
         -- 4) publish_application.sql: call oracle_tools.ui_apex_synchronize.publish_application
         -- 5) post_import.sql: call oracle_tools.ui_apex_synchronize.post_import(<application id>);
 
-        if g_options_rec.operation in ('install')
+        if g_options_rec.operation in ('install') and not(g_options_rec.dry_run)
         then
           -- step 1
           execute immediate 'call oracle_tools.ui_apex_synchronize.pre_import(:b1)'
@@ -2082,7 +2097,7 @@ and     rownum = 1
           end loop;
         end loop process_file_loop;
 
-        if g_options_rec.operation in ('install')
+        if g_options_rec.operation in ('install') and not(g_options_rec.dry_run)
         then
           -- step 4
           execute immediate 'call oracle_tools.ui_apex_synchronize.publish_application(:b1)'
@@ -2107,6 +2122,7 @@ and     rownum = 1
   done;
 
   return;
+/*  
 exception
   when others
   then
@@ -2118,6 +2134,7 @@ exception
     dbug_leave(l_module_name);
     done;
     raise;
+*/    
 end process_pom;
 
 procedure install_sql
@@ -2280,5 +2297,8 @@ exception
     raise;
 end install_file;  
 
+begin
+  dbms_lob.createtemporary(g_view_clob, true);
+  dbms_lob.createtemporary(g_apex_clob, true);
 end;
 /
