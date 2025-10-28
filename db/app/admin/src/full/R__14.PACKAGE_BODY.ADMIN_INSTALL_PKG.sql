@@ -1886,13 +1886,8 @@ begin
          );
   end case;
 
-  dbms_output.put_line(utl_lms.format_message('*** Getting files (operation: %s) ***', g_options_rec.operation));
-  get_output_lines;
-  for i_output_line_idx in 1 .. l_nr_output_lines
-  loop
-    commit; -- ORA-06519: active autonomous transaction detected and rolled back
-    pipe row (l_output_lines(i_output_line_idx));
-  end loop;
+  commit; -- ORA-06519: active autonomous transaction detected and rolled back
+  pipe row (utl_lms.format_message('*** Starting to get files (operation: %s) ***', g_options_rec.operation));
 
   g_options_rec.stop_on_error := p_stop_on_error <> 0;
   g_options_rec.dry_run := p_dry_run <> 0;
@@ -1934,19 +1929,14 @@ begin
 
   if g_git_file_tab.count > 0 -- we did get some files...
   then
-    dbms_output.put_line
+    commit; -- ORA-06519: active autonomous transaction detected and rolled back
+    pipe row
     ( utl_lms.format_message
       ( '*** Processing files (operation: %s, dry run: %s) ***'
       , g_options_rec.operation
       , case g_options_rec.dry_run when true then 'true' else 'false' end
       )
     );
-    get_output_lines;
-    for i_output_line_idx in 1 .. l_nr_output_lines
-    loop
-      commit; -- ORA-06519: active autonomous transaction detected and rolled back
-      pipe row (l_output_lines(i_output_line_idx));
-    end loop;
   end if;
 
   <<project_loop>>
@@ -2113,6 +2103,9 @@ and     rownum = 1
       end if; -- if l_project_rec.project_type = 'db'
     end if; -- if g_project_tab(i_project_idx).git_file_index_tab.count > 0
   end loop project_loop;
+
+  commit; -- ORA-06519: active autonomous transaction detected and rolled back
+  pipe row ('*** The END ***');
 
   dbug_leave(l_module_name);
   done;

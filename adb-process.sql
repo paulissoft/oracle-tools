@@ -37,7 +37,8 @@ begin
 end;
 /
 
-select  t.column_value as "DBMS output"
+select  /*to_char(sysdate, 'hh24:mi:ss') as now -- to show the delay
+,       */t.column_value as "DBMS output"
 from    table
         ( admin.admin_install_pkg.process_pom
           ( p_github_access_handle => :github_access_handle
