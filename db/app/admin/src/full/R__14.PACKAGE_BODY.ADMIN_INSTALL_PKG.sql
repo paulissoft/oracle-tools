@@ -2122,6 +2122,7 @@ and     rownum = 1
   commit;
 
   return;
+/*
 exception
   when others
   then
@@ -2134,7 +2135,7 @@ exception
     end loop;    
 --    dbug_leave(l_module_name);
     done;
-    raise;
+    raise;*/
 end process_pom;
 
 procedure install_sql
