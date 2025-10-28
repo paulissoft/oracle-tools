@@ -13,7 +13,7 @@
 
 define repo_owner = paulissoft
 define repo_name = oracle-tools
-define path = null
+define path = ''
 define operation = install
 define stop_on_error = 1
 define dry_run = 1
@@ -41,7 +41,7 @@ select  t.column_value as "DBMS output"
 from    table
         ( admin.admin_install_pkg.process_pom
           ( p_github_access_handle => :github_access_handle
-          , p_path => &path
+          , p_path => '&path'
           , p_operation => '&operation'
           , p_stop_on_error => nvl(to_number('&stop_on_error'), 1)
           , p_dry_run => nvl(to_number('&dry_run'), 0)
