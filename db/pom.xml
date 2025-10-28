@@ -544,6 +544,9 @@ flyway.url=${flyway.url}
     <!-- profile to be called by the user -->
     <profile>
       <id>db-upgrade</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
       <properties>
         <generate.flyway.migrations.sql>true</generate.flyway.migrations.sql>
         <exec.executable>echo</exec.executable>
