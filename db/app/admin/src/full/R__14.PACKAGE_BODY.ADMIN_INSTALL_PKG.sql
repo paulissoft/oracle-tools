@@ -479,11 +479,10 @@ is
 begin
   dbug_print
   ( utl_lms.format_message
-    ( '[%s] Listing file %s:%s; target schema %s'
-    , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+    ( '[%s] file %s:%s'
+    , to_char(sysdate, 'hh24:mi:ss')
     , p_github_access_handle
     , p_file_path
-    , p_schema
     )
   );
 end listing_file;
@@ -498,12 +497,11 @@ is
 begin
   dbug_print
   ( utl_lms.format_message
-    ( '[%s] Processing file %s:%s%s; target schema %s'
-    , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+    ( '[%s] file %s:%s%s'
+    , to_char(sysdate, 'hh24:mi:ss')
     , p_github_access_handle
     , p_file_path
     , case when p_statement_nr is not null then '; statement ' || p_statement_nr end
-    , p_schema
     )
   );
 end processing_file;
@@ -518,12 +516,11 @@ is
 begin
   dbug_print
   ( utl_lms.format_message
-    ( '[%s] Skipping file %s:%s because already installed (GITHUB_INSTALLED_VERSIONS.ID %s); target schema %s'
-    , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+    ( '[%s] file %s:%s has already been installed (GITHUB_INSTALLED_VERSIONS.ID %s)'
+    , to_char(sysdate, 'hh24:mi:ss')
     , p_github_access_handle
     , p_file_path
     , to_char(p_github_installed_versions_id)
-    , p_schema
     )
   );
 end skipping_file;
@@ -537,8 +534,8 @@ is
 begin
   dbug_print
   ( utl_lms.format_message
-    ( '[%s] Processing project %s:%s; type: %s; target schema %s'
-    , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+    ( '[%s] project %s:%s; type: %s; target schema: %s'
+    , to_char(sysdate, 'hh24:mi:ss')
     , p_github_access_handle
     , p_path
     , p_project_rec.project_type
@@ -1073,8 +1070,8 @@ $if admin_install_pkg.c_use_github_installed_versions_objects $then
           --/*DBUG
           dbug_print
           ( utl_lms.format_message
-            ( '[%s] Must re-install %s due to difference for %s "%s"."%s" with creation date "%s" and last DDL time: "%s"'
-            , to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss')
+            ( '[%s] %s will be re-installed due to difference for %s "%s"."%s" with creation date "%s" and last DDL time "%s"'
+            , to_char(sysdate, 'hh24:mi:ss')
             , p_file_path
             , r.object_type
             , r.owner
