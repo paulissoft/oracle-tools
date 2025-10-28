@@ -28,7 +28,8 @@ type git_file_rec_t is record
 type git_file_tab_t is table of git_file_rec_t index by binary_integer;
 
 type project_rec_t is record
-( project_type varchar2(4 byte) -- db/apex
+( path varchar2(1000 char) -- The repository file path
+, project_type varchar2(4 byte) -- db/apex
 , schema varchar(128 char) -- The database schema
 , parent_github_access_handle github_access_handle_t default null -- The parent GitHub access handle
 , parent_path varchar2(1000 char) default null -- The parent repository file path
@@ -479,9 +480,8 @@ is
 begin
   dbug_print
   ( utl_lms.format_message
-    ( '[%s] file %s:%s'
+    ( '[%s] file %s'
     , to_char(sysdate, 'hh24:mi:ss')
-    , p_github_access_handle
     , p_file_path
     )
   );
@@ -497,9 +497,8 @@ is
 begin
   dbug_print
   ( utl_lms.format_message
-    ( '[%s] file %s:%s%s'
+    ( '[%s] file %s%s'
     , to_char(sysdate, 'hh24:mi:ss')
-    , p_github_access_handle
     , p_file_path
     , case when p_statement_nr is not null then '; statement ' || p_statement_nr end
     )
@@ -516,9 +515,8 @@ is
 begin
   dbug_print
   ( utl_lms.format_message
-    ( '[%s] file %s:%s has already been installed (GITHUB_INSTALLED_VERSIONS.ID %s)'
+    ( '[%s] file %s has already been installed (GITHUB_INSTALLED_VERSIONS.ID %s)'
     , to_char(sysdate, 'hh24:mi:ss')
-    , p_github_access_handle
     , p_file_path
     , to_char(p_github_installed_versions_id)
     )
@@ -528,16 +526,15 @@ end skipping_file;
 procedure processing_project
 ( p_github_access_handle in github_access_handle_t
 , p_project_rec in project_rec_t
-, p_path in varchar2
 )
 is
 begin
   dbug_print
   ( utl_lms.format_message
-    ( '[%s] project %s:%s; type: %s; target schema: %s'
+    ( '[%s] === project %s:%s; type: %s; target schema: %s ==='
     , to_char(sysdate, 'hh24:mi:ss')
     , p_github_access_handle
-    , p_path
+    , p_project_rec.path
     , p_project_rec.project_type
     , p_project_rec.schema
     )
@@ -1440,9 +1437,7 @@ begin
 
   l_github_access_rec := g_github_access_tab(p_github_access_handle);
 
-  --/*DBUG
-  processing_project(p_github_access_handle, p_project_rec, p_path);
-  --/*DBUG*/
+  processing_project(p_github_access_handle, p_project_rec);
 
   if g_options_rec.operation = 'list-files'
   then
@@ -1736,6 +1731,7 @@ is
 begin
   dbug_enter(l_module_name);
   
+  l_project_rec.path := p_path;
   l_project_rec.project_type := 'db';
   l_project_rec.schema := p_schema;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
@@ -1786,6 +1782,7 @@ is
 begin
   dbug_enter(l_module_name);
   
+  l_project_rec.path := p_path;
   l_project_rec.project_type := 'apex';
   l_project_rec.schema := p_schema;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
@@ -1819,6 +1816,7 @@ is
 begin
   dbug_enter(l_module_name);
   
+  l_project_rec.path := p_path;
   l_project_rec.project_type := null;
   l_project_rec.parent_github_access_handle := p_parent_github_access_handle;
   l_project_rec.parent_path := p_parent_path;
@@ -1957,6 +1955,8 @@ begin
     if g_project_tab(i_project_idx).git_file_index_tab.count > 0
     then
       l_project_rec := g_project_tab(i_project_idx);
+
+      processing_project(p_github_access_handle, l_project_rec);
 
       if l_project_rec.project_type = 'db'
       then
