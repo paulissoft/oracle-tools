@@ -172,6 +172,10 @@ Gert-Jan Paulissen
 
 =over 4
 
+=item 2025-10-29
+
+Can not parse correctly R__10.01.VIEW.HONDEN_V.sql. It reconverts it back to R__10.VIEW.HONDEN_V.sql
+
 =item 2025-01-09
 
 Enhanced checks for file names versus base names.
@@ -351,7 +355,7 @@ use constant FILE_MODIFIED => 'FILE_MODIFIED';
 
 # VARIABLES
 
-my $VERSION = "2024-12-07";
+my $VERSION = "2025-10-29";
 
 my $program = &basename($0);
 my $encoding = ''; # was :crlf:encoding(UTF-8)
@@ -1797,6 +1801,13 @@ sub add_object_info ($;$$) {
     error("Object '$object' should match 'SCHEMA:TYPE:NAME'")
         unless $object =~ m/^.+\..+\..+$/;
 
+    my ($object_schema, $object_type, $object_name) = split($object_sep_rex, $object);
+
+    # GJP 2025-10-29
+    # 01.VIEW.HONDEN_V
+    error("Object schema '$object_schema' is not an identifier")
+        if $object_schema =~ m/^\d+$/;
+
     error("File ($basename) must be a base name")
         if (defined($basename) && basename($basename) ne $basename);
 
@@ -1814,6 +1825,8 @@ sub add_object_info ($;$$) {
         # strip leading zeros otherwise it will be treated as an octal number
         # GJP 2024-12-29
         # A view can be named R__10.02.ORACLE_TOOLS.VIEW.V_MY_NAMED_SCHEMA_OBJECTS.sql and not just R__10.ORACLE_TOOLS.VIEW.V_MY_NAMED_SCHEMA_OBJECTS.sql
+        # GJP 2025-10-29
+        # A view can be named R__10.01.VIEW.HONDEN_V.sql and not just R__10.01.VIEW.HONDEN_V.sql.
         $object_seq =~ m/^0*(\d+)(\.\d+)?$/;  
         my $nr = $1;
         error(sprintf("Object sequence '%s' does not match '%s'", $object_seq, '^0*(\d+)(\.\d+)?$'))
@@ -1822,7 +1835,6 @@ sub add_object_info ($;$$) {
         $object_seq_max = $object_seq
             if ($interface ne PKG_DDL_UTIL_V4 && $object_seq > $object_seq_max);
     } elsif (!(defined($object_seq) && defined($basename))) {
-        my ($object_schema, $object_type, $object_name) = split($object_sep_rex, $object);
         my $nr_zeros = ($interface eq PKG_DDL_UTIL_V4 ? 2 : 4);
 
         # get the highest plus 1
@@ -1914,12 +1926,17 @@ sub read_object_info () {
     while (my $basename = readdir $dh) {
         my $file = File::Spec->catfile($output_directory, $basename);
         debug("Checking whether file $file can be reused");
-        if ($basename =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<schema>[^.]+)\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
+        # GJP 2025-10-29
+        # R__10.01.VIEW.HONDEN_V.sql must be correctly parsed
+        # The <seq> and <schema> expressions allow .01 to be a schema.
+        # So let schema, type and name be real (Oracle) identifiers.
+        # Hence the first character must be a word character.
+        if ($basename =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<schema>\w[\.]+)\.(?<type>\w[^.]+)\.(?<name>\w[^.]+)\.sql$/) {
             ($seq, $schema, $type, $name) = ($+{seq}, $+{schema}, $+{type}, $+{name});
             $objects{$seq}{object} = join($object_sep, $schema, $type, $name);
             $objects{$seq}{basename} = $basename;
             add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{basename});
-        } elsif ($basename =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<type>[^.]+)\.(?<name>[^.]+)\.sql$/) {
+        } elsif ($basename =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<type>\w[^.]+)\.(?<name>\w[^.]+)\.sql$/) {
             ($seq, $schema, $type, $name) = ($+{seq}, $source_schema, $+{type}, $+{name});
             $objects{$seq}{object} = join($object_sep, $schema, $type, $name);
             $objects{$seq}{basename} = $basename;
