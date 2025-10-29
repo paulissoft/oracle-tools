@@ -7,6 +7,9 @@ routines with the repo, branch, tag and commit id parameters.
 The idea is to initialize a repo and use its index to get info about the parameters needed later on.
 **/
 
+-- TYPES
+
+subtype provider_t is varchar2(100);
 subtype credential_name_t is user_credentials.credential_name%type;
 subtype region_t is varchar2(128 char);
 subtype organization_t is varchar2(128 char);
@@ -20,8 +23,15 @@ subtype commit_id_t is varchar2(40 char);
 subtype repo_t is clob;
 subtype repo_id_t is varchar2(128 char);
 
-subtype git_repo_index_t is binary_integer; -- index from internal PL/SQL table
+subtype git_repo_index_t is positive; -- index from internal PL/SQL table
 
+-- CONSTANTS
+c_provider_pato constant provider_t := dbms_cloud_repo.github_repo;
+c_repo_owner_pato constant repo_owner_t := 'paulissoft';
+c_repo_name_pato constant repo_name_t := 'oracle-tools';
+c_git_repo_index_pato constant git_repo_index_t := 1; -- The first initialized repo will be PATO (main branch)
+
+-- ROUTINES
 function init_aws_repo
 ( p_credential_name in credential_name_t
 , p_repo_name in repo_name_t

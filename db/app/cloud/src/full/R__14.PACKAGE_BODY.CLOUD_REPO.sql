@@ -47,7 +47,28 @@ is
   l_git_repo_rec git_repo_rec_t;
   l_git_repo_index git_repo_index_t;
 begin
-  select  c.credential_name
+  -- The first call must assure that PATO gets first,
+  -- so if the first call is not for the PATO do that now.
+  if g_git_repo_tab.count = 0
+  then
+    if p_provider = c_provider_pato and
+       p_repo_owner = c_repo_owner_pato and
+       p_repo_name = c_repo_name_pato
+    then
+      null; -- first call is for PATO
+    else
+      -- default PATO, no credentials necessary
+      l_git_repo_index :=
+        init
+        ( p_provider => c_provider_pato
+        , p_repo_owner => c_repo_owner_pato
+        , p_repo_name => c_repo_name_pato
+        );
+    end if;
+  end if;
+
+  -- GitHub does not really need credentials but the others do: no checking here
+  select  max(c.credential_name)
   into    l_git_repo_rec.credential_name
   from    dba_credentials c
   where   c.owner = 'ADMIN'

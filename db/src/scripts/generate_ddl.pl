@@ -1930,13 +1930,13 @@ sub read_object_info () {
         # R__10.01.VIEW.HONDEN_V.sql must be correctly parsed
         # The <seq> and <schema> expressions allow .01 to be a schema.
         # So let schema, type and name be real (Oracle) identifiers.
-        # Hence the first character must be a word character.
-        if ($basename =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<schema>\w[\.]+)\.(?<type>\w[^.]+)\.(?<name>\w[^.]+)\.sql$/) {
+        # Hence the first character must not be a digit (\D).
+        if ($basename =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<schema>\D[\.]+)\.(?<type>\D[^.]+)\.(?<name>\D[^.]+)\.sql$/) {
             ($seq, $schema, $type, $name) = ($+{seq}, $+{schema}, $+{type}, $+{name});
             $objects{$seq}{object} = join($object_sep, $schema, $type, $name);
             $objects{$seq}{basename} = $basename;
             add_object_info($objects{$seq}{object}, $seq, $objects{$seq}{basename});
-        } elsif ($basename =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<type>\w[^.]+)\.(?<name>\w[^.]+)\.sql$/) {
+        } elsif ($basename =~ m/^(R__)?(?<seq>(\d{4}|\d{2}(\.\d{2})?))\.(?<type>\D[^.]+)\.(?<name>\D[^.]+)\.sql$/) {
             ($seq, $schema, $type, $name) = ($+{seq}, $source_schema, $+{type}, $+{name});
             $objects{$seq}{object} = join($object_sep, $schema, $type, $name);
             $objects{$seq}{basename} = $basename;
