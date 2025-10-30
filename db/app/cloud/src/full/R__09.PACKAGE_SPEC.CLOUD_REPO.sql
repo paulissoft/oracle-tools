@@ -4,7 +4,14 @@ create or replace package cloud_repo authid definer is
 A package based on DBMS_CLOUD_REPO in order to make it easier to use the DBMS_CLOUD_REPO
 routines with the repo, branch, tag and commit id parameters.
 
-The idea is to initialize a repo and use its index to get info about the parameters needed later on.
+The idea is to:
+1) initialize a repo using one of the INIT subroutines
+2) use its git repo index to get info about the parameters needed later on
+
+That information is stored in an internal PL/SQL table.
+
+You can also add files with name, checksum, size, url and content.
+That information is also stored in an internal PL/SQL table.
 **/
 
 -- TYPES
@@ -46,41 +53,56 @@ c_git_repo_index_pato constant git_repo_index_t := 1; -- The first initialized r
 
 -- ROUTINES
 function init_aws_repo
-( p_credential_name in credential_name_t
-, p_repo_name in repo_name_t
-, p_region in region_t
-, p_branch_name in branch_name_t default null
-, p_tag_name in tag_name_t default null
-, p_commit_id in commit_id_t default null
+( p_credential_name in credential_name_t -- The credential name (use DBMS_CLOUD)
+, p_repo_name in repo_name_t -- The repository name
+, p_region in region_t -- The region
+, p_branch_name in branch_name_t default null -- The branch to use for DBMS_CLOUD_REPO operations
+, p_tag_name in tag_name_t default null -- The tag to use for DBMS_CLOUD_REPO operations
+, p_commit_id in commit_id_t default null -- The commit id to use for DBMS_CLOUD_REPO operations
 )
 return git_repo_index_t;
+/**
+Will use DBMS_CLOUD_REPO.INIT_AWS_REPO to create an opaque REPO handle.  That
+handle plus the other parameters will be stored in an internal table and the
+index will be returned.
+**/
 
 function init_azure_repo
-( p_credential_name in credential_name_t
-, p_repo_name in repo_name_t
-, p_organization in organization_t
-, p_project in project_t
-, p_branch_name in branch_name_t default null
-, p_tag_name in tag_name_t default null
-, p_commit_id in commit_id_t default null
+( p_credential_name in credential_name_t -- The credential name (use DBMS_CLOUD)
+, p_repo_name in repo_name_t -- The repository name
+, p_organization in organization_t -- The organization
+, p_project in project_t -- The project
+, p_branch_name in branch_name_t default null -- The branch to use for DBMS_CLOUD_REPO operations
+, p_tag_name in tag_name_t default null -- The tag to use for DBMS_CLOUD_REPO operations
+, p_commit_id in commit_id_t default null -- The commit id to use for DBMS_CLOUD_REPO operations
 )
 return git_repo_index_t;
+/**
+Will use DBMS_CLOUD_REPO.INIT_AZURE_REPO to create an opaque REPO handle.  That
+handle plus the other parameters will be stored in an internal table and the
+index will be returned.
+**/
 
 function init_github_repo
-( p_credential_name in credential_name_t default null
-, p_repo_name in repo_name_t
-, p_repo_owner in repo_owner_t
-, p_branch_name in branch_name_t default null
-, p_tag_name in tag_name_t default null
-, p_commit_id in commit_id_t default null
-) 
+( p_credential_name in credential_name_t default null -- The credential name (use DBMS_CLOUD)
+, p_repo_name in repo_name_t -- The repository name
+, p_repo_owner in repo_owner_t -- The repository owner
+, p_branch_name in branch_name_t default null -- The branch to use for DBMS_CLOUD_REPO operations
+, p_tag_name in tag_name_t default null -- The tag to use for DBMS_CLOUD_REPO operations
+, p_commit_id in commit_id_t default null -- The commit id to use for DBMS_CLOUD_REPO operations
+)
 return git_repo_index_t;
+/**
+Will use DBMS_CLOUD_REPO.INIT_GITHUB_REPO to create an opaque REPO handle.  That
+handle plus the other parameters will be stored in an internal table and the
+index will be returned.
+**/
 
 function init_repo
 ( p_params in clob
-, p_branch_name in branch_name_t default null
-, p_tag_name in tag_name_t default null
-, p_commit_id in commit_id_t default null
+, p_branch_name in branch_name_t default null -- The branch to use for DBMS_CLOUD_REPO operations
+, p_tag_name in tag_name_t default null -- The tag to use for DBMS_CLOUD_REPO operations
+, p_commit_id in commit_id_t default null -- The commit id to use for DBMS_CLOUD_REPO operations
 )
 return git_repo_index_t;
 /**
@@ -126,72 +148,87 @@ function credential_name
 )
 return credential_name_t
 deterministic;
+/** Return the credential name of the repo index as stored by one of the INIT subroutines. **/
 
 function region
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return region_t
 deterministic;
+/** Return the region of the repo index as stored by one of the INIT subroutines. **/
 
 function organization
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return organization_t
 deterministic;
+/** Return the organization of the repo index as stored by one of the INIT subroutines. **/
 
 function project
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return project_t
 deterministic;
+/** Return the project of the repo index as stored by one of the INIT subroutines. **/
 
 function repo_owner
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return repo_owner_t
 deterministic;
+/** Return the repo owner of the repo index as stored by one of the INIT subroutines. **/
 
 function repo_name
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return repo_name_t
 deterministic;
+/** Return the repo name of the repo index as stored by one of the INIT subroutines. **/
 
 function current_schema
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return current_schema_t
 deterministic;
+/** Return the current schema (SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')) of the repo index as stored by one of the INIT subroutines. **/
 
 function branch_name
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return branch_name_t
 deterministic;
+/** Return the branch name of the repo index as stored by one of the INIT subroutines. **/
 
 function tag_name
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return tag_name_t
 deterministic;
+/** Return the tag name of the repo index as stored by one of the INIT subroutines. **/
 
 function commit_id
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return commit_id_t
 deterministic;
+/** Return the commit id of the repo index as stored by one of the INIT subroutines. **/
 
 function repo
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return repo_t
 deterministic;
+/** Return the RREPO handle of the repo index as stored by one of the INIT subroutines. **/
 
 function repo_id
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return repo_id_t
 deterministic;
+/**
+Return the repo id of the repo index as stored by one of the INIT subroutines.
+The repo id is returned by DBMS_CLOUD_REPO.LIST_REPOSITORIES.
+**/
 
 procedure add_file
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
