@@ -24,9 +24,21 @@ type git_repo_rec_t is record
 
 type git_repo_tab_t is table of git_repo_rec_t index by git_repo_index_t;
 
+type file_rec_t is record
+( name file_name_t
+, id file_id_t
+, url file_url_t
+, bytes file_bytes_t
+, content file_content_t
+);
+
+type file_tab_t is table of file_rec_t index by file_index_t;
+
 -- VARIABLES
 
 g_git_repo_tab git_repo_tab_t;
+
+g_file_tab file_tab_t;
 
 -- PROCEDURES
 
@@ -395,6 +407,50 @@ is
 begin
   return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).repo_id;
 end repo_id;  
+
+procedure add_file
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_name in file_name_t
+, p_id in file_id_t default null
+, p_url in file_url_t default null
+, p_bytes in file_bytes_t default null
+, p_content in file_content_t default null
+, p_file_index out nocopy file_index_t
+)
+is
+  l_file_rec file_rec_t;
+begin
+g_file_tab file_tab_t;
+/**
+Add a file to internal (package) storage.
+
+The parameters are returned by a combination of DBMS_CLOUD_REPO.LIST_FILES() and DBMS_CLOUD_REPO.GET_FILE().
+**/
+
+procedure upd_file
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_index in file_index_t default null -- When null the last file added (within the repository)
+, p_content in file_content_t default null
+);
+/**
+Update the file content for a file added with ADD_FILE().
+**/
+
+procedure upd_content
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_index in file_index_t default null -- When null the last file added (within the repository)
+);
+/**
+Update the file content for a file added with ADD_FILE() by using DBMS_CLOUD_REPO.GET_FILE() to get the content.
+**/
+
+procedure del_file
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_index in file_index_t default null -- When null the last file added (within the repository)
+);
+/**
+Deletes a single file.
+**/
 
 procedure done
 ( p_git_repo_index in git_repo_index_t

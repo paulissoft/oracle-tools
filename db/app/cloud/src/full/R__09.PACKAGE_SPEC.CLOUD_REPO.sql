@@ -9,6 +9,11 @@ The idea is to initialize a repo and use its index to get info about the paramet
 
 -- TYPES
 
+-- repository types
+
+subtype git_repo_index_t is positive; -- index from internal PL/SQL table (the key)
+/** The key for a Git repository info including branch, tag or commit id. **/
+
 subtype provider_t is varchar2(100);
 subtype credential_name_t is user_credentials.credential_name%type;
 subtype region_t is varchar2(128 char);
@@ -23,7 +28,15 @@ subtype commit_id_t is varchar2(40 char);
 subtype repo_t is clob;
 subtype repo_id_t is varchar2(128 char);
 
-subtype git_repo_index_t is positive; -- index from internal PL/SQL table
+-- file types for columns returned by DBMS_CLOUD_REPO.LIST_FILES
+
+subtype file_index_t is positive; -- index from internal PL/SQL table (the key)
+
+subtype file_id_t is varchar2(128);
+subtype file_name_t is varchar2(4000);
+subtype file_url_t is varchar2(4000);
+subtype file_bytes_t is number;         
+subtype file_content_t is clob; -- only text files
 
 -- CONSTANTS
 c_provider_pato constant provider_t := dbms_cloud_repo.github_repo;
@@ -109,81 +122,123 @@ but that means four calls instead of one, thus this procedure is faster.
 **/
 
 function credential_name
-( p_git_repo_index in git_repo_index_t default null
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return credential_name_t
 deterministic;
 
 function region
-( p_git_repo_index in git_repo_index_t default null
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return region_t
 deterministic;
 
 function organization
-( p_git_repo_index in git_repo_index_t default null
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return organization_t
 deterministic;
 
 function project
-( p_git_repo_index in git_repo_index_t default null
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return project_t
 deterministic;
 
 function repo_owner
-( p_git_repo_index in git_repo_index_t default null
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return repo_owner_t
 deterministic;
 
 function repo_name
-( p_git_repo_index in git_repo_index_t default null
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return repo_name_t
 deterministic;
 
 function current_schema
-( p_git_repo_index in git_repo_index_t default null
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return current_schema_t
 deterministic;
 
 function branch_name
-( p_git_repo_index in git_repo_index_t default null
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return branch_name_t
 deterministic;
 
 function tag_name
-( p_git_repo_index in git_repo_index_t default null
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return tag_name_t
 deterministic;
 
 function commit_id
-( p_git_repo_index in git_repo_index_t default null
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return commit_id_t
 deterministic;
 
 function repo
-( p_git_repo_index in git_repo_index_t default null
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return repo_t
 deterministic;
 
 function repo_id
-( p_git_repo_index in git_repo_index_t default null
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 )
 return repo_id_t
 deterministic;
 
+procedure add_file
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_name in file_name_t
+, p_id in file_id_t default null
+, p_url in file_url_t default null
+, p_bytes in file_bytes_t default null
+, p_content in file_content_t default null
+, p_file_index out nocopy file_index_t
+);
+/**
+Add a file to internal (package) storage.
+
+The parameters are returned by a combination of DBMS_CLOUD_REPO.LIST_FILES() and DBMS_CLOUD_REPO.GET_FILE().
+**/
+
+procedure upd_file
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_index in file_index_t default null -- When null the last file added (within the repository)
+, p_content in file_content_t default null
+);
+/**
+Update the file content for a file added with ADD_FILE().
+**/
+
+procedure upd_content
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_index in file_index_t default null -- When null the last file added (within the repository)
+);
+/**
+Update the file content for a file added with ADD_FILE() by using DBMS_CLOUD_REPO.GET_FILE() to get the content.
+**/
+
+procedure del_file
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_index in file_index_t default null -- When null the last file added (within the repository)
+);
+/**
+Deletes a single file.
+**/
+
 procedure done
 ( p_git_repo_index in git_repo_index_t default null -- Destroy this index (or all when null)
 );
-/** Destroy the repo identified by the index. **/
+/**
+Destroy the repo identified by the index as well as all files added for the repo.
+**/
 
 end;
 /
