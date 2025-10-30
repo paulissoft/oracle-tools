@@ -411,12 +411,12 @@ begin
 end repo_id;  
 
 procedure add_file
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+( p_git_repo_index in git_repo_index_t
 , p_name in file_name_t
-, p_id in file_id_t default null
-, p_url in file_url_t default null
-, p_bytes in file_bytes_t default null
-, p_content in file_content_t default null
+, p_id in file_id_t
+, p_url in file_url_t
+, p_bytes in file_bytes_t
+, p_content in file_content_t
 , p_file_index out nocopy file_index_t
 )
 is
@@ -433,9 +433,9 @@ begin
 end add_file;
 
 procedure upd_file
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-, p_file_index in file_index_t default null -- When null the last file added (within the repository)
-, p_content in file_content_t default null
+( p_git_repo_index in git_repo_index_t
+, p_file_index in file_index_t
+, p_content in file_content_t
 )
 is
   l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_tab.last);
@@ -444,9 +444,9 @@ begin
   g_file_by_git_repo_index_tab(l_git_repo_index)(p_file_index).content := p_content;
 end upd_file;
 
-procedure upd_content
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-, p_file_index in file_index_t default null -- When null the last file added (within the repository)
+procedure upd_file_content
+( p_git_repo_index in git_repo_index_t
+, p_file_index in file_index_t
 )
 is
   l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_tab.last);
@@ -476,11 +476,11 @@ begin
       , commit_id => l_commit_id
       )
   );
-end upd_content;
+end upd_file_content;
 
 procedure del_file
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-, p_file_index in file_index_t default null -- When null the last file added (within the repository)
+( p_git_repo_index in git_repo_index_t
+, p_file_index in file_index_t
 )
 is
   l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_tab.last);

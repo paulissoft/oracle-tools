@@ -39,7 +39,7 @@ subtype repo_id_t is varchar2(128 char);
 
 subtype file_index_t is positive; -- index from internal PL/SQL table (the key)
 
-subtype file_id_t is varchar2(128);
+subtype file_id_t is varchar2(128); -- is also a checksum (SHA1, 40 bytes)
 subtype file_name_t is varchar2(4000);
 subtype file_url_t is varchar2(4000);
 subtype file_bytes_t is number;         
@@ -232,29 +232,31 @@ The repo id is returned by DBMS_CLOUD_REPO.LIST_REPOSITORIES.
 
 procedure add_file
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-, p_name in file_name_t
-, p_id in file_id_t default null
-, p_url in file_url_t default null
-, p_bytes in file_bytes_t default null
-, p_content in file_content_t default null
-, p_file_index out nocopy file_index_t
+, p_name in file_name_t -- The file name
+, p_id in file_id_t default null -- The file id, that is also a checksum (SHA1, 40 bytes)
+, p_url in file_url_t default null -- The file URL
+, p_bytes in file_bytes_t default null -- The size in bytes
+, p_content in file_content_t default null -- The (text) file content
+, p_file_index out nocopy file_index_t -- The file index that must be used in combination with the git repo index
 );
 /**
 Add a file to internal (package) storage.
 
 The parameters are returned by a combination of DBMS_CLOUD_REPO.LIST_FILES() and DBMS_CLOUD_REPO.GET_FILE().
+
+The file index is an index in the git repo internal table (as supplied by one of the INIT subroutines).
 **/
 
 procedure upd_file
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 , p_file_index in file_index_t default null -- When null the last file added (within the repository)
-, p_content in file_content_t default null
+, p_content in file_content_t -- The (text) file content
 );
 /**
 Update the file content for a file added with ADD_FILE().
 **/
 
-procedure upd_content
+procedure upd_file_content
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 , p_file_index in file_index_t default null -- When null the last file added (within the repository)
 );
