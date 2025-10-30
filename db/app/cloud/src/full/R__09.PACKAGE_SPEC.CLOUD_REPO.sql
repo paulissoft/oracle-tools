@@ -95,6 +95,19 @@ return git_repo_index_t;
 |                 | This parameter is only applicable for Azure cloud provider     |
 **/
 
+procedure get
+( p_git_repo_index in git_repo_index_t default null -- The repository index as returned by one of the INIT subroutines
+, p_repo out nocopy repo_t -- The DBMS_CLOUD_REPO REPO argument as determined by one of the INIT subroutines
+, p_branch_name out nocopy branch_name_t -- The DBMS_CLOUD_REPO BRANCH_NAME argument as supplied to one of the INIT subroutines
+, p_tag_name out nocopy tag_name_t -- The DBMS_CLOUD_REPO TAG_NAME argument as supplied to one of the INIT subroutines
+, p_commit_id out nocopy commit_id_t -- The DBMS_CLOUD_REPO COMMIT_ID argument as supplied to one of the INIT subroutines
+);
+/**
+Get the parameters for subprograms from DBMS_CLOUD_REPO where one of these OUT parameters are needed.
+You can also call CLOUD_REPO.REPO, CLOUD_REPO.BRANCH_NAME, CLOUD_REPO.TAG_NAME or CLOUD_REPO.COMMIT_ID
+but that means four calls instead of one, thus this procedure is faster.
+**/
+
 function credential_name
 ( p_git_repo_index in git_repo_index_t default null
 )

@@ -47,17 +47,17 @@ is
   l_git_repo_rec git_repo_rec_t;
   l_git_repo_index git_repo_index_t;
 begin
-  -- The first call must assure that PATO gets first,
-  -- so if the first call is not for the PATO do that now.
-  if g_git_repo_tab.count = 0
+  if p_provider = c_provider_pato and
+     p_repo_owner = c_repo_owner_pato and
+     p_repo_name = c_repo_name_pato
   then
-    if p_provider = c_provider_pato and
-       p_repo_owner = c_repo_owner_pato and
-       p_repo_name = c_repo_name_pato
+    l_git_repo_index := c_git_repo_index_pato; -- this entry call is for PATO
+  else
+    -- The first call must assure that PATO gets first,
+    -- so if the first call is not for the PATO do that now.
+    if g_git_repo_tab.count = 0
     then
-      null; -- first call is for PATO
-    else
-      -- default PATO, no credentials necessary
+      -- default PATO, no credentials necessaryfor GitHub
       l_git_repo_index :=
         init
         ( p_provider => c_provider_pato
@@ -65,6 +65,8 @@ begin
         , p_repo_name => c_repo_name_pato
         );
     end if;
+    -- we still need to pick the next even though PATO has just been installed (ignore that one)
+    l_git_repo_index := g_git_repo_tab.count + 1;    
   end if;
 
   -- GitHub does not really need credentials but the others do: no checking here
@@ -73,6 +75,12 @@ begin
   from    dba_credentials c
   where   c.owner = 'ADMIN'
   and     c.credential_name like nvl(p_credential_name, '%' || upper(p_provider) || '%') escape '\';
+
+  if p_provider in (dbms_cloud_repo.aws_repo, dbms_cloud_repo.azure_repo) and
+     l_git_repo_rec.credential_name is null
+  then
+    raise value_error;
+  end if;
 
   l_git_repo_rec.region := p_region;
   l_git_repo_rec.organization := p_organization;
@@ -89,19 +97,19 @@ begin
     case p_provider
       when dbms_cloud_repo.github_repo
       then dbms_cloud_repo.init_github_repo
-           ( credential_name => p_credential_name
+           ( credential_name => l_git_repo_rec.credential_name
            , repo_name => p_repo_name
            , owner => p_repo_owner
            )
       when dbms_cloud_repo.aws_repo
       then dbms_cloud_repo.init_aws_repo
-           ( credential_name => p_credential_name
+           ( credential_name => l_git_repo_rec.credential_name
            , repo_name => p_repo_name
            , region => p_region 
            )
       when dbms_cloud_repo.azure_repo
       then dbms_cloud_repo.init_azure_repo
-           ( credential_name => p_credential_name
+           ( credential_name => l_git_repo_rec.credential_name
            , repo_name => p_repo_name
            , organization => p_organization
            , project => p_project
@@ -129,7 +137,6 @@ begin
   where   t.owner = l_git_repo_rec.repo_owner
   and     t.name = l_git_repo_rec.repo_name;
 
-  l_git_repo_index := g_git_repo_tab.count + 1;
   g_git_repo_tab(l_git_repo_index) := l_git_repo_rec;
 
   return l_git_repo_index;
@@ -215,6 +222,30 @@ return git_repo_index_t
 is
   l_json_params json_object_t := json_object_t(p_params);
 begin
+  /**
+  | JSON key        | Desciption                                                     |
+  | :-------        | :------------------------------------------------------------- |
+  | provider        | Cloud code repository provider from the following:             |
+  |                 | * DBMS_CLOUD_REPO.GITHUB_REPO ('GITHUB')                       |
+  |                 | * DBMS_CLOUD_REPO.AWS_REPO ('AWS')                             |
+  |                 | * DBMS_CLOUD_REPO.AZURE_REPO ('AZURE')                         |
+  |                 |                                                                |
+  | credential_name | From DBA_CREDENTIALS and set with DBMS_CLOUD.                  |
+  |                 |                                                                |
+  | repo_name       | Specifies the repository name. DBMS_CLOUD_REPO.PARAM_REPO_NAME |
+  |                 |                                                                |
+  | owner           | GitHub Repository Owner. DBMS_CLOUD_REPO.PARAM_OWNER           |
+  |                 | This parameter is only applicable for GitHub cloud provider.   |
+  |                 |                                                                |
+  | region          | AWS Repository Region DBMS_CLOUD_REPO.PARAM_REGION             |
+  |                 | This parameter is only applicable for AWS cloud provider.      |
+  |                 |                                                                |
+  | organization    | Azure Organization DBMS_CLOUD_REPO.PARAM_ORGANIZATION          |
+  |                 | This parameter is only applicable for Azure cloud provider.    |
+  |                 |                                                                |
+  | project         | Azure Team Project DBMS_CLOUD_REPO.PARAM_PROJECT               |
+  |                 | This parameter is only applicable for Azure cloud provider     |
+  **/
   return init
          ( p_provider => l_json_params.get_string('provider')
          , p_credential_name => l_json_params.get_string('credential_name')
@@ -229,30 +260,21 @@ begin
          );
 end init_repo;
 
-/**
-| JSON key        | Desciption                                                     |
-| :-------        | :------------------------------------------------------------- |
-| provider        | Cloud code repository provider from the following:             |
-|                 | * DBMS_CLOUD_REPO.GITHUB_REPO ('GITHUB')                       |
-|                 | * DBMS_CLOUD_REPO.AWS_REPO ('AWS')                             |
-|                 | * DBMS_CLOUD_REPO.AZURE_REPO ('AZURE')                         |
-|                 |                                                                |
-| credential_name | From DBA_CREDENTIALS and set with DBMS_CLOUD.                  |
-|                 |                                                                |
-| repo_name       | Specifies the repository name. DBMS_CLOUD_REPO.PARAM_REPO_NAME |
-|                 |                                                                |
-| owner           | GitHub Repository Owner. DBMS_CLOUD_REPO.PARAM_OWNER           |
-|                 | This parameter is only applicable for GitHub cloud provider.   |
-|                 |                                                                |
-| region          | AWS Repository Region DBMS_CLOUD_REPO.PARAM_REGION             |
-|                 | This parameter is only applicable for AWS cloud provider.      |
-|                 |                                                                |
-| organization    | Azure Organization DBMS_CLOUD_REPO.PARAM_ORGANIZATION          |
-|                 | This parameter is only applicable for Azure cloud provider.    |
-|                 |                                                                |
-| project         | Azure Team Project DBMS_CLOUD_REPO.PARAM_PROJECT               |
-|                 | This parameter is only applicable for Azure cloud provider     |
-**/
+procedure get
+( p_git_repo_index in git_repo_index_t default null -- The repository index as returned by one of the INIT subroutines
+, p_repo out nocopy repo_t -- The DBMS_CLOUD_REPO REPO argument as determined by one of the INIT subroutines
+, p_branch_name out nocopy branch_name_t -- The DBMS_CLOUD_REPO BRANCH_NAME argument as supplied to one of the INIT subroutines
+, p_tag_name out nocopy tag_name_t -- The DBMS_CLOUD_REPO TAG_NAME argument as supplied to one of the INIT subroutines
+, p_commit_id out nocopy commit_id_t -- The DBMS_CLOUD_REPO COMMIT_ID argument as supplied to one of the INIT subroutines
+)
+is
+  l_git_repo_rec git_repo_rec_t := g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last));
+begin
+  p_repo := l_git_repo_rec.repo;
+  p_branch_name := l_git_repo_rec.branch_name;
+  p_tag_name := l_git_repo_rec.tag_name;
+  p_commit_id := l_git_repo_rec.commit_id;
+end get;
 
 function credential_name
 ( p_git_repo_index in git_repo_index_t
