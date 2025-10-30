@@ -261,11 +261,11 @@ begin
 end init_repo;
 
 procedure get
-( p_git_repo_index in git_repo_index_t default null -- The repository index as returned by one of the INIT subroutines
-, p_repo out nocopy repo_t -- The DBMS_CLOUD_REPO REPO argument as determined by one of the INIT subroutines
-, p_branch_name out nocopy branch_name_t -- The DBMS_CLOUD_REPO BRANCH_NAME argument as supplied to one of the INIT subroutines
-, p_tag_name out nocopy tag_name_t -- The DBMS_CLOUD_REPO TAG_NAME argument as supplied to one of the INIT subroutines
-, p_commit_id out nocopy commit_id_t -- The DBMS_CLOUD_REPO COMMIT_ID argument as supplied to one of the INIT subroutines
+( p_git_repo_index in git_repo_index_t
+, p_repo out nocopy repo_t
+, p_branch_name out nocopy branch_name_t
+, p_tag_name out nocopy tag_name_t
+, p_commit_id out nocopy commit_id_t
 )
 is
   l_git_repo_rec git_repo_rec_t := g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last));
