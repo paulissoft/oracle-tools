@@ -34,11 +34,13 @@ type file_rec_t is record
 
 type file_tab_t is table of file_rec_t index by file_index_t;
 
+type file_by_git_repo_index_tab_t is table of file_tab_t index by git_repo_index_t;
+
 -- VARIABLES
 
 g_git_repo_tab git_repo_tab_t;
 
-g_file_tab file_tab_t;
+g_file_by_git_repo_index_tab file_by_git_repo_index_tab_t;
 
 -- PROCEDURES
 
@@ -418,39 +420,74 @@ procedure add_file
 , p_file_index out nocopy file_index_t
 )
 is
+  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_tab.last);
   l_file_rec file_rec_t;
 begin
-g_file_tab file_tab_t;
-/**
-Add a file to internal (package) storage.
-
-The parameters are returned by a combination of DBMS_CLOUD_REPO.LIST_FILES() and DBMS_CLOUD_REPO.GET_FILE().
-**/
+  l_file_rec.name := p_name;
+  l_file_rec.id := p_id;
+  l_file_rec.url := p_url;
+  l_file_rec.bytes := p_bytes;
+  l_file_rec.content := p_content;  
+  p_file_index := g_file_by_git_repo_index_tab(l_git_repo_index).count + 1;
+  g_file_by_git_repo_index_tab(l_git_repo_index)(p_file_index) := l_file_rec;
+end add_file;
 
 procedure upd_file
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 , p_file_index in file_index_t default null -- When null the last file added (within the repository)
 , p_content in file_content_t default null
-);
-/**
-Update the file content for a file added with ADD_FILE().
-**/
+)
+is
+  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_tab.last);
+  l_file_index constant file_index_t := nvl(p_file_index, g_file_by_git_repo_index_tab(l_git_repo_index).last);
+begin
+  g_file_by_git_repo_index_tab(l_git_repo_index)(p_file_index).content := p_content;
+end upd_file;
 
 procedure upd_content
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 , p_file_index in file_index_t default null -- When null the last file added (within the repository)
-);
-/**
-Update the file content for a file added with ADD_FILE() by using DBMS_CLOUD_REPO.GET_FILE() to get the content.
-**/
+)
+is
+  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_tab.last);
+  l_file_index constant file_index_t := nvl(p_file_index, g_file_by_git_repo_index_tab(l_git_repo_index).last);
+  l_repo repo_t;
+  l_branch_name branch_name_t;
+  l_tag_name tag_name_t;
+  l_commit_id commit_id_t;
+begin
+  get
+  ( p_git_repo_index => l_git_repo_index
+  , p_repo => l_repo
+  , p_branch_name => l_branch_name
+  , p_tag_name => l_tag_name
+  , p_commit_id => l_commit_id
+  );
+
+  upd_file
+  ( p_git_repo_index => p_git_repo_index
+  , p_file_index => p_file_index
+  , p_content =>
+      dbms_cloud_repo.get_file
+      ( repo => l_repo
+      , file_path => g_file_by_git_repo_index_tab(l_git_repo_index)(p_file_index).name
+      , branch_name => l_branch_name
+      , tag_name => l_tag_name
+      , commit_id => l_commit_id
+      )
+  );
+end upd_content;
 
 procedure del_file
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 , p_file_index in file_index_t default null -- When null the last file added (within the repository)
-);
-/**
-Deletes a single file.
-**/
+)
+is
+  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_tab.last);
+  l_file_index constant file_index_t := nvl(p_file_index, g_file_by_git_repo_index_tab(l_git_repo_index).last);
+begin
+  g_file_by_git_repo_index_tab(l_git_repo_index).delete(l_file_index);
+end del_file;
 
 procedure done
 ( p_git_repo_index in git_repo_index_t
@@ -460,8 +497,10 @@ begin
   if p_git_repo_index is null
   then
     g_git_repo_tab.delete;
+    g_file_by_git_repo_index_tab.delete;
   else
     g_git_repo_tab.delete(p_git_repo_index);
+    g_file_by_git_repo_index_tab.delete(p_git_repo_index);
   end if;
 end done;
 
