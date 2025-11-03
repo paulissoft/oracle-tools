@@ -5,7 +5,8 @@ create or replace package body cloud_repo is
 -- TYPES
 
 type git_repo_rec_t is record
-( credential_name credential_name_t
+( provider provider_t
+, credential_name credential_name_t
 , region region_t
 , organization organization_t
 , project project_t
@@ -22,7 +23,17 @@ type git_repo_rec_t is record
 , repo_id repo_id_t
 );
 
-type git_repo_tab_t is table of git_repo_rec_t index by git_repo_index_t;
+type git_repo_by_index_tab_t is table of git_repo_rec_t index by git_repo_index_t;
+
+-- | PROVIDER | UNIQUE KEY |
+-- | :------- | :--------- |
+-- | aws      | provider:repo_name:region |
+-- | azure    | provider:repo_name:organization:project |
+-- | github   | provider:repo_name:repo_owner |
+
+subtype git_uk_t is varchar2(512); 
+
+type git_repo_by_uk_tab_t is table of git_repo_index_t index by git_uk_t;
 
 type file_rec_t is record
 ( name file_name_t
@@ -32,17 +43,44 @@ type file_rec_t is record
 , content file_content_t
 );
 
-type file_tab_t is table of file_rec_t index by file_index_t;
+type file_by_index_tab_t is table of file_rec_t index by file_index_t;
 
-type file_by_git_repo_index_tab_t is table of file_tab_t index by git_repo_index_t;
+type git_repo_index_file_by_index_tab_t is table of file_by_index_tab_t index by git_repo_index_t;
+
+type file_by_name_tab_t is table of file_index_t index by file_name_t;
+
+type git_repo_index_file_by_name_tab_t is table of file_by_name_tab_t index by git_repo_index_t;
 
 -- VARIABLES
 
-g_git_repo_tab git_repo_tab_t;
+g_git_repo_by_index_tab git_repo_by_index_tab_t;
 
-g_file_by_git_repo_index_tab file_by_git_repo_index_tab_t;
+g_git_repo_by_uk_tab git_repo_by_uk_tab_t;
+
+g_git_repo_index_file_by_index_tab git_repo_index_file_by_index_tab_t;
+
+g_git_repo_index_file_by_name_tab git_repo_index_file_by_name_tab_t;
 
 -- PROCEDURES
+
+function git_repo_uk
+( p_git_repo_rec in git_repo_rec_t
+)
+return git_uk_t
+deterministic
+is
+begin
+  return p_git_repo_rec.provider ||
+         ':' ||
+         case p_git_repo_rec.provider
+           when dbms_cloud_repo.github_repo
+           then p_git_repo_rec.repo_name || ':' || p_git_repo_rec.repo_owner
+           when dbms_cloud_repo.aws_repo
+           then p_git_repo_rec.repo_name || ':' || p_git_repo_rec.region
+           when dbms_cloud_repo.azure_repo
+           then p_git_repo_rec.repo_name || ':' || p_git_repo_rec.organization || ':' || p_git_repo_rec.project
+         end;
+end git_repo_uk;
 
 function init
 ( p_provider in varchar2 default null
@@ -69,7 +107,7 @@ begin
   else
     -- The first call must assure that PATO gets first,
     -- so if the first call is not for the PATO do that now.
-    if g_git_repo_tab.count = 0
+    if g_git_repo_by_index_tab.count = 0
     then
       -- default PATO, no credentials necessaryfor GitHub
       l_git_repo_index :=
@@ -80,7 +118,7 @@ begin
         );
     end if;
     -- we still need to pick the next even though PATO has just been installed (ignore that one)
-    l_git_repo_index := g_git_repo_tab.count + 1;    
+    l_git_repo_index := g_git_repo_by_index_tab.count + 1;    
   end if;
 
   -- GitHub does not really need credentials but the others do: no checking here
@@ -96,6 +134,7 @@ begin
     raise value_error;
   end if;
 
+  l_git_repo_rec.provider := p_provider;
   l_git_repo_rec.region := p_region;
   l_git_repo_rec.organization := p_organization;
   l_git_repo_rec.project := p_project;
@@ -151,7 +190,8 @@ begin
   where   t.owner = l_git_repo_rec.repo_owner
   and     t.name = l_git_repo_rec.repo_name;
 
-  g_git_repo_tab(l_git_repo_index) := l_git_repo_rec;
+  g_git_repo_by_index_tab(l_git_repo_index) := l_git_repo_rec;
+  g_git_repo_by_uk_tab(git_repo_uk(l_git_repo_rec)) := l_git_repo_index;
 
   return l_git_repo_index;
 end init;
@@ -282,7 +322,7 @@ procedure get
 , p_commit_id out nocopy commit_id_t
 )
 is
-  l_git_repo_rec git_repo_rec_t := g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last));
+  l_git_repo_rec git_repo_rec_t := g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last));
 begin
   p_repo := l_git_repo_rec.repo;
   p_branch_name := l_git_repo_rec.branch_name;
@@ -297,7 +337,7 @@ return credential_name_t
 deterministic
 is
 begin
-  return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).credential_name;
+  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).credential_name;
 end credential_name;  
 
 function region
@@ -307,7 +347,7 @@ return region_t
 deterministic
 is
 begin
-  return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).region;
+  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).region;
 end region;  
 
 function organization
@@ -317,7 +357,7 @@ return organization_t
 deterministic
 is
 begin
-  return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).organization;
+  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).organization;
 end organization;  
 
 function project
@@ -327,7 +367,7 @@ return project_t
 deterministic
 is
 begin
-  return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).project;
+  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).project;
 end project;  
 
 function repo_owner
@@ -337,7 +377,7 @@ return repo_owner_t
 deterministic
 is
 begin
-  return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).repo_owner;
+  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).repo_owner;
 end repo_owner;  
 
 function repo_name
@@ -347,7 +387,7 @@ return repo_name_t
 deterministic
 is
 begin
-  return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).repo_name;
+  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).repo_name;
 end repo_name;  
 
 function current_schema
@@ -357,7 +397,7 @@ return current_schema_t
 deterministic
 is
 begin
-  return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).current_schema;
+  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).current_schema;
 end current_schema;  
 
 function branch_name
@@ -367,7 +407,7 @@ return branch_name_t
 deterministic
 is
 begin
-  return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).branch_name;
+  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).branch_name;
 end branch_name;  
 
 function tag_name
@@ -377,7 +417,7 @@ return tag_name_t
 deterministic
 is
 begin
-  return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).tag_name;
+  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).tag_name;
 end tag_name;  
 
 function commit_id
@@ -387,7 +427,7 @@ return commit_id_t
 deterministic
 is
 begin
-  return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).commit_id;
+  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).commit_id;
 end commit_id;  
 
 function repo
@@ -397,7 +437,7 @@ return repo_t
 deterministic
 is
 begin
-  return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).repo;
+  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).repo;
 end repo;  
 
 function repo_id
@@ -407,8 +447,25 @@ return repo_id_t
 deterministic
 is
 begin
-  return g_git_repo_tab(nvl(p_git_repo_index, g_git_repo_tab.last)).repo_id;
+  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).repo_id;
 end repo_id;  
+
+function find_file
+( p_git_repo_index in git_repo_index_t
+, p_name in file_name_t
+)
+return file_index_t
+is
+  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_by_index_tab.last);
+  l_file_rec file_rec_t;
+begin
+  return
+    case
+      when g_git_repo_index_file_by_name_tab(l_git_repo_index).exists(p_name)
+      then g_git_repo_index_file_by_name_tab(l_git_repo_index)(p_name)
+      else null
+    end;
+end find_file;
 
 procedure add_file
 ( p_git_repo_index in git_repo_index_t
@@ -420,16 +477,22 @@ procedure add_file
 , p_file_index out nocopy file_index_t
 )
 is
-  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_tab.last);
+  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_by_index_tab.last);
   l_file_rec file_rec_t;
 begin
+  if find_file(p_git_repo_index  => l_git_repo_index, p_name => p_name) is not null
+  then
+    raise dup_val_on_index;
+  end if;
+  
   l_file_rec.name := p_name;
   l_file_rec.id := p_id;
   l_file_rec.url := p_url;
   l_file_rec.bytes := p_bytes;
   l_file_rec.content := p_content;  
-  p_file_index := g_file_by_git_repo_index_tab(l_git_repo_index).count + 1;
-  g_file_by_git_repo_index_tab(l_git_repo_index)(p_file_index) := l_file_rec;
+  p_file_index := g_git_repo_index_file_by_index_tab(l_git_repo_index).count + 1;
+  g_git_repo_index_file_by_index_tab(l_git_repo_index)(p_file_index) := l_file_rec;
+  g_git_repo_index_file_by_name_tab(l_git_repo_index)(p_name) := p_file_index;
 end add_file;
 
 procedure upd_file
@@ -438,10 +501,10 @@ procedure upd_file
 , p_content in file_content_t
 )
 is
-  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_tab.last);
-  l_file_index constant file_index_t := nvl(p_file_index, g_file_by_git_repo_index_tab(l_git_repo_index).last);
+  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_by_index_tab.last);
+  l_file_index constant file_index_t := nvl(p_file_index, g_git_repo_index_file_by_index_tab(l_git_repo_index).last);
 begin
-  g_file_by_git_repo_index_tab(l_git_repo_index)(p_file_index).content := p_content;
+  g_git_repo_index_file_by_index_tab(l_git_repo_index)(p_file_index).content := p_content;
 end upd_file;
 
 procedure upd_file_content
@@ -449,8 +512,8 @@ procedure upd_file_content
 , p_file_index in file_index_t
 )
 is
-  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_tab.last);
-  l_file_index constant file_index_t := nvl(p_file_index, g_file_by_git_repo_index_tab(l_git_repo_index).last);
+  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_by_index_tab.last);
+  l_file_index constant file_index_t := nvl(p_file_index, g_git_repo_index_file_by_index_tab(l_git_repo_index).last);
   l_repo repo_t;
   l_branch_name branch_name_t;
   l_tag_name tag_name_t;
@@ -470,7 +533,7 @@ begin
   , p_content =>
       dbms_cloud_repo.get_file
       ( repo => l_repo
-      , file_path => g_file_by_git_repo_index_tab(l_git_repo_index)(p_file_index).name
+      , file_path => g_git_repo_index_file_by_index_tab(l_git_repo_index)(p_file_index).name
       , branch_name => l_branch_name
       , tag_name => l_tag_name
       , commit_id => l_commit_id
@@ -483,10 +546,11 @@ procedure del_file
 , p_file_index in file_index_t
 )
 is
-  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_tab.last);
-  l_file_index constant file_index_t := nvl(p_file_index, g_file_by_git_repo_index_tab(l_git_repo_index).last);
+  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_by_index_tab.last);
+  l_file_index constant file_index_t := nvl(p_file_index, g_git_repo_index_file_by_index_tab(l_git_repo_index).last);
 begin
-  g_file_by_git_repo_index_tab(l_git_repo_index).delete(l_file_index);
+  g_git_repo_index_file_by_name_tab(l_git_repo_index).delete(g_git_repo_index_file_by_index_tab(l_git_repo_index)(l_file_index).name);
+  g_git_repo_index_file_by_index_tab(l_git_repo_index).delete(l_file_index);
 end del_file;
 
 procedure done
@@ -496,13 +560,142 @@ is
 begin
   if p_git_repo_index is null
   then
-    g_git_repo_tab.delete;
-    g_file_by_git_repo_index_tab.delete;
+    g_git_repo_by_index_tab.delete;
+    g_git_repo_by_uk_tab.delete;
+    g_git_repo_index_file_by_index_tab.delete;
+    g_git_repo_index_file_by_name_tab.delete;
   else
-    g_git_repo_tab.delete(p_git_repo_index);
-    g_file_by_git_repo_index_tab.delete(p_git_repo_index);
+    g_git_repo_by_index_tab.delete(p_git_repo_index);
+    g_git_repo_index_file_by_index_tab.delete(p_git_repo_index);
+    g_git_repo_index_file_by_name_tab.delete(p_git_repo_index);
   end if;
 end done;
+
+-- TEST
+
+procedure ut_setup
+is
+  l_git_repo_index git_repo_index_t;
+begin
+  l_git_repo_index :=
+    init_github_repo
+    ( p_credential_name => null
+    , p_repo_name => 'paulissoft'
+    , p_repo_owner => 'oracle-tools'
+    );
+end;
+
+--%aftereach
+procedure ut_teardown
+is
+begin
+  done(c_git_repo_index_pato);
+end;
+
+--%test
+procedure ut_init_github_repo
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_init_repo
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_get
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_credential_name
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_region
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_organization
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_project
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_repo_owner
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_repo_name
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_current_schema
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_branch_name
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_tag_name
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_commit_id
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_repo
+is
+begin
+  null;
+end;
+
+--%test
+procedure ut_repo_id
+is
+begin
+  null;
+end;
 
 end;
 /
