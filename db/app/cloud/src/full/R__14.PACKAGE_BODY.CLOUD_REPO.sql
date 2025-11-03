@@ -72,13 +72,15 @@ is
 begin
   return p_git_repo_rec.provider ||
          ':' ||
+         p_git_repo_rec.repo_name ||
+         ':' || 
          case p_git_repo_rec.provider
            when dbms_cloud_repo.github_repo
-           then p_git_repo_rec.repo_name || ':' || p_git_repo_rec.repo_owner
+           then p_git_repo_rec.repo_owner
            when dbms_cloud_repo.aws_repo
-           then p_git_repo_rec.repo_name || ':' || p_git_repo_rec.region
+           then p_git_repo_rec.region
            when dbms_cloud_repo.azure_repo
-           then p_git_repo_rec.repo_name || ':' || p_git_repo_rec.organization || ':' || p_git_repo_rec.project
+           then p_git_repo_rec.organization || ':' || p_git_repo_rec.project
          end;
 end git_repo_uk;
 
@@ -98,7 +100,21 @@ return git_repo_index_t
 is
   l_git_repo_rec git_repo_rec_t;
   l_git_repo_index git_repo_index_t;
+
+  -- ORA-20401: Authorization failed for URI - https://api.github.com/user/repos?page=1
+  "Authorization failed for URI" exception;
+  pragma exception_init("Authorization failed for URI", -20401);
 begin
+  dbms_output.put_line
+  ( utl_lms.format_message
+    ( q'[init(p_provider => '%s', p_credential_name => '%s', p_repo_owner => '%s', p_repo_name => '%s')]'
+    , p_provider
+    , p_credential_name
+    , p_repo_owner
+    , p_repo_name
+    )
+  );
+
   if p_provider = c_provider_pato and
      p_repo_owner = c_repo_owner_pato and
      p_repo_name = c_repo_name_pato
@@ -184,19 +200,61 @@ begin
   end if;
 
   -- check it does exist
-  select  t.id
-  into    l_git_repo_rec.repo_id
-  from    table(dbms_cloud_repo.list_repositories(repo => l_git_repo_rec.repo)) t
-  where   t.owner = l_git_repo_rec.repo_owner
-  and     t.name = l_git_repo_rec.repo_name;
+  begin
+    select  t.id
+    into    l_git_repo_rec.repo_id
+    from    table(dbms_cloud_repo.list_repositories(repo => l_git_repo_rec.repo)) t
+    where   t.owner = l_git_repo_rec.repo_owner
+    and     t.name = l_git_repo_rec.repo_name;
+  exception
+    when "Authorization failed for URI"
+    then l_git_repo_rec.repo_id := null;
+  end;
+
+  -- overwrite?
+  if g_git_repo_by_uk_tab.exists(git_repo_uk(l_git_repo_rec))
+  then
+    l_git_repo_index := g_git_repo_by_uk_tab(git_repo_uk(l_git_repo_rec));
+  else
+    g_git_repo_by_uk_tab(git_repo_uk(l_git_repo_rec)) := l_git_repo_index;
+  end if;
 
   g_git_repo_by_index_tab(l_git_repo_index) := l_git_repo_rec;
-  g_git_repo_by_uk_tab(git_repo_uk(l_git_repo_rec)) := l_git_repo_index;
+
+  dbms_output.put_line(utl_lms.format_message('return: %d', l_git_repo_index));
 
   return l_git_repo_index;
 end init;
 
 -- PUBLIC
+
+function find_repo
+( p_provider in varchar2
+, p_region in region_t
+, p_organization in organization_t
+, p_project in project_t
+, p_repo_owner in repo_owner_t
+, p_repo_name in repo_name_t
+)
+return git_repo_index_t
+is
+  l_git_repo_rec git_repo_rec_t;
+begin  
+  l_git_repo_rec.provider := p_provider;
+  l_git_repo_rec.repo_name := p_repo_name;
+  -- AWS
+  l_git_repo_rec.region := p_region;
+  -- AZURE
+  l_git_repo_rec.organization := p_organization;
+  l_git_repo_rec.project := p_project;
+  -- GITHUB
+  l_git_repo_rec.repo_owner := p_repo_owner;
+
+  return g_git_repo_by_uk_tab(git_repo_uk(l_git_repo_rec));
+exception
+  when others
+  then return null;
+end find_repo;
 
 function init_aws_repo
 ( p_credential_name in credential_name_t
@@ -565,6 +623,7 @@ begin
     g_git_repo_index_file_by_index_tab.delete;
     g_git_repo_index_file_by_name_tab.delete;
   else
+    g_git_repo_by_uk_tab.delete(git_repo_uk(g_git_repo_by_index_tab(p_git_repo_index)));
     g_git_repo_by_index_tab.delete(p_git_repo_index);
     g_git_repo_index_file_by_index_tab.delete(p_git_repo_index);
     g_git_repo_index_file_by_name_tab.delete(p_git_repo_index);
@@ -580,8 +639,8 @@ begin
   l_git_repo_index :=
     init_github_repo
     ( p_credential_name => null
-    , p_repo_name => 'paulissoft'
-    , p_repo_owner => 'oracle-tools'
+    , p_repo_name => c_repo_name_pato
+    , p_repo_owner => c_repo_owner_pato
     );
 end;
 
@@ -595,8 +654,15 @@ end;
 --%test
 procedure ut_init_github_repo
 is
+  l_git_repo_index git_repo_index_t;
 begin
-  null;
+  l_git_repo_index :=
+    init_github_repo
+    ( p_credential_name => null
+    , p_repo_name => 'pato-gui'
+    , p_repo_owner => c_repo_owner_pato
+    );
+  execute immediate q'[call ut.expect(:b1).to_equal(:b2)]' using l_git_repo_index, c_git_repo_index_pato + 1;
 end;
 
 --%test

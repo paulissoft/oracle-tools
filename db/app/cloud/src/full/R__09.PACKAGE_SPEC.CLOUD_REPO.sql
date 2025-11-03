@@ -52,6 +52,17 @@ c_repo_name_pato constant repo_name_t := 'oracle-tools';
 c_git_repo_index_pato constant git_repo_index_t := 1; -- The first initialized repo will be PATO (main branch)
 
 -- ROUTINES
+
+function find_repo
+( p_provider in varchar2 default null
+, p_region in region_t default null
+, p_organization in organization_t default null
+, p_project in project_t default null
+, p_repo_owner in repo_owner_t default null
+, p_repo_name in repo_name_t default null
+)
+return git_repo_index_t;
+
 function init_aws_repo
 ( p_credential_name in credential_name_t -- The credential name (use DBMS_CLOUD)
 , p_repo_name in repo_name_t -- The repository name
