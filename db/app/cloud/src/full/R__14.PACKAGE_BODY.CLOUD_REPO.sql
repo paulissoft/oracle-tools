@@ -95,7 +95,7 @@ function init
 , p_branch_name in branch_name_t
 , p_tag_name in tag_name_t
 , p_commit_id in commit_id_t
-, p_overwrite in boolean -- Overwrite an existing internal entry? If not raise dup_val_on_index
+, p_overwrite in boolean
 )
 return git_repo_index_t
 is
@@ -549,14 +549,22 @@ procedure add_file
 , p_url in file_url_t
 , p_bytes in file_bytes_t
 , p_content in file_content_t
+, p_overwrite in boolean
 , p_file_index out nocopy file_index_t
 )
 is
   l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_by_index_tab.last);
   l_file_rec file_rec_t;
 begin
-  if find_file(p_git_repo_index  => l_git_repo_index, p_name => p_name) is not null
+  p_file_index := find_file(p_git_repo_index => l_git_repo_index, p_name => p_name);
+  if p_file_index is null -- not found
   then
+    p_file_index := g_git_repo_index_file_by_index_tab(l_git_repo_index).count + 1;
+    g_git_repo_index_file_by_name_tab(l_git_repo_index)(p_name) := p_file_index;
+  elsif p_overwrite
+  then
+    null;
+  else
     raise dup_val_on_index;
   end if;
   
@@ -565,9 +573,8 @@ begin
   l_file_rec.url := p_url;
   l_file_rec.bytes := p_bytes;
   l_file_rec.content := p_content;  
-  p_file_index := g_git_repo_index_file_by_index_tab(l_git_repo_index).count + 1;
+
   g_git_repo_index_file_by_index_tab(l_git_repo_index)(p_file_index) := l_file_rec;
-  g_git_repo_index_file_by_name_tab(l_git_repo_index)(p_name) := p_file_index;
 end add_file;
 
 procedure upd_file

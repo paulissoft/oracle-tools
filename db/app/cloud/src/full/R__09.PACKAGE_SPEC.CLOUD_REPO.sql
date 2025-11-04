@@ -265,6 +265,7 @@ procedure add_file
 , p_url in file_url_t default null -- The file URL
 , p_bytes in file_bytes_t default null -- The size in bytes
 , p_content in file_content_t default null -- The (text) file content
+, p_overwrite in boolean default true -- Overwrite an existing internal entry? If not raise dup_val_on_index
 , p_file_index out nocopy file_index_t -- The file index that must be used in combination with the git repo index
 );
 /**
