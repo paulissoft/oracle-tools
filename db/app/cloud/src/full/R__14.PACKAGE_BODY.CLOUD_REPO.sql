@@ -6,12 +6,12 @@ create or replace package body cloud_repo is
 
 type git_repo_rec_t is record
 ( provider provider_t
-, credential_name credential_name_t
-, region region_t
-, organization organization_t
-, project project_t
-, repo_owner repo_owner_t
 , repo_name repo_name_t
+, credential_name credential_name_t
+, region region_t -- AWS
+, organization organization_t -- Azure
+, project project_t -- Azure
+, repo_owner repo_owner_t -- GitHub
   -- current schema to return to after work
 , current_schema current_schema_t
   -- standard parameters for DBMS_CLOUD_REPO.GET_FILE and so on
@@ -85,16 +85,17 @@ begin
 end git_repo_uk;
 
 function init
-( p_provider in varchar2 default null
-, p_credential_name in credential_name_t default null
+( p_provider in varchar2
+, p_repo_name in repo_name_t
+, p_credential_name in credential_name_t
 , p_region in region_t default null
 , p_organization in organization_t default null
 , p_project in project_t default null
 , p_repo_owner in repo_owner_t default null
-, p_repo_name in repo_name_t default null
-, p_branch_name in branch_name_t default null
-, p_tag_name in tag_name_t default null
-, p_commit_id in commit_id_t default null
+, p_branch_name in branch_name_t
+, p_tag_name in tag_name_t
+, p_commit_id in commit_id_t
+, p_overwrite in boolean -- Overwrite an existing internal entry? If not raise dup_val_on_index
 )
 return git_repo_index_t
 is
@@ -129,8 +130,13 @@ begin
       l_git_repo_index :=
         init
         ( p_provider => c_provider_pato
-        , p_repo_owner => c_repo_owner_pato
         , p_repo_name => c_repo_name_pato
+        , p_credential_name => null
+        , p_repo_owner => c_repo_owner_pato
+        , p_branch_name => null
+        , p_tag_name => null
+        , p_commit_id => null
+        , p_overwrite => false
         );
     end if;
     -- we still need to pick the next even though PATO has just been installed (ignore that one)
@@ -151,11 +157,22 @@ begin
   end if;
 
   l_git_repo_rec.provider := p_provider;
+  l_git_repo_rec.repo_name := p_repo_name;
   l_git_repo_rec.region := p_region;
   l_git_repo_rec.organization := p_organization;
   l_git_repo_rec.project := p_project;
   l_git_repo_rec.repo_owner := p_repo_owner;
-  l_git_repo_rec.repo_name := p_repo_name;
+
+  if not g_git_repo_by_uk_tab.exists(git_repo_uk(l_git_repo_rec))
+  then
+    g_git_repo_by_uk_tab(git_repo_uk(l_git_repo_rec)) := l_git_repo_index;
+  elsif p_overwrite
+  then
+    l_git_repo_index := g_git_repo_by_uk_tab(git_repo_uk(l_git_repo_rec));
+  else
+    raise dup_val_on_index;
+  end if;
+
   l_git_repo_rec.branch_name := p_branch_name;
   l_git_repo_rec.tag_name := p_tag_name;
   l_git_repo_rec.commit_id := p_commit_id;
@@ -211,14 +228,6 @@ begin
     then l_git_repo_rec.repo_id := null;
   end;
 
-  -- overwrite?
-  if g_git_repo_by_uk_tab.exists(git_repo_uk(l_git_repo_rec))
-  then
-    l_git_repo_index := g_git_repo_by_uk_tab(git_repo_uk(l_git_repo_rec));
-  else
-    g_git_repo_by_uk_tab(git_repo_uk(l_git_repo_rec)) := l_git_repo_index;
-  end if;
-
   g_git_repo_by_index_tab(l_git_repo_index) := l_git_repo_rec;
 
   dbms_output.put_line(utl_lms.format_message('return: %d', l_git_repo_index));
@@ -230,11 +239,11 @@ end init;
 
 function find_repo
 ( p_provider in varchar2
+, p_repo_name in repo_name_t
 , p_region in region_t
 , p_organization in organization_t
 , p_project in project_t
 , p_repo_owner in repo_owner_t
-, p_repo_name in repo_name_t
 )
 return git_repo_index_t
 is
@@ -263,6 +272,7 @@ function init_aws_repo
 , p_branch_name in branch_name_t
 , p_tag_name in tag_name_t
 , p_commit_id in commit_id_t
+, p_overwrite in boolean
 )
 return git_repo_index_t
 is
@@ -275,6 +285,7 @@ begin
          , p_branch_name => p_branch_name
          , p_tag_name => p_tag_name
          , p_commit_id => p_commit_id
+         , p_overwrite => p_overwrite
          );
 end init_aws_repo;
 
@@ -286,6 +297,7 @@ function init_azure_repo
 , p_branch_name in branch_name_t
 , p_tag_name in tag_name_t
 , p_commit_id in commit_id_t
+, p_overwrite in boolean
 )
 return git_repo_index_t
 is
@@ -299,6 +311,7 @@ begin
          , p_branch_name => p_branch_name
          , p_tag_name => p_tag_name
          , p_commit_id => p_commit_id
+         , p_overwrite => p_overwrite
          );
 end init_azure_repo;
 
@@ -309,6 +322,7 @@ function init_github_repo
 , p_branch_name in branch_name_t
 , p_tag_name in tag_name_t
 , p_commit_id in commit_id_t
+, p_overwrite in boolean
 ) 
 return git_repo_index_t
 is
@@ -321,6 +335,7 @@ begin
          , p_branch_name => p_branch_name
          , p_tag_name => p_tag_name
          , p_commit_id => p_commit_id
+         , p_overwrite => p_overwrite
          );
 end init_github_repo;
  
@@ -329,6 +344,7 @@ function init_repo
 , p_branch_name in branch_name_t
 , p_tag_name in tag_name_t
 , p_commit_id in commit_id_t
+, p_overwrite in boolean
 )
 return git_repo_index_t
 is
@@ -369,10 +385,11 @@ begin
          , p_branch_name => p_branch_name
          , p_tag_name => p_tag_name
          , p_commit_id => p_commit_id
+         , p_overwrite => p_overwrite
          );
 end init_repo;
 
-procedure get
+procedure get_repo
 ( p_git_repo_index in git_repo_index_t
 , p_repo out nocopy repo_t
 , p_branch_name out nocopy branch_name_t
@@ -386,7 +403,7 @@ begin
   p_branch_name := l_git_repo_rec.branch_name;
   p_tag_name := l_git_repo_rec.tag_name;
   p_commit_id := l_git_repo_rec.commit_id;
-end get;
+end get_repo;
 
 function credential_name
 ( p_git_repo_index in git_repo_index_t
@@ -577,7 +594,7 @@ is
   l_tag_name tag_name_t;
   l_commit_id commit_id_t;
 begin
-  get
+  get_repo
   ( p_git_repo_index => l_git_repo_index
   , p_repo => l_repo
   , p_branch_name => l_branch_name

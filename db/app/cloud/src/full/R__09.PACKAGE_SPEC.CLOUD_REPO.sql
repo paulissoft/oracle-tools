@@ -54,12 +54,12 @@ c_git_repo_index_pato constant git_repo_index_t := 1; -- The first initialized r
 -- ROUTINES
 
 function find_repo
-( p_provider in varchar2 default null
-, p_region in region_t default null
-, p_organization in organization_t default null
-, p_project in project_t default null
-, p_repo_owner in repo_owner_t default null
-, p_repo_name in repo_name_t default null
+( p_provider in varchar2 -- The provider: DBMS_CLOUD_REPO.AWS_REPO, DBMS_CLOUD_REPO.AZURE_REPO or DBMS_CLOUD_REPO.GITHUB_REPO
+, p_repo_name in repo_name_t -- The repository name, mandatory
+, p_region in region_t default null -- Only relevant for AWS
+, p_organization in organization_t default null -- Only relevant for Azure
+, p_project in project_t default null -- Only relevant for Azure
+, p_repo_owner in repo_owner_t default null -- Only relevant for GitHub
 )
 return git_repo_index_t;
 
@@ -70,6 +70,7 @@ function init_aws_repo
 , p_branch_name in branch_name_t default null -- The branch to use for DBMS_CLOUD_REPO operations
 , p_tag_name in tag_name_t default null -- The tag to use for DBMS_CLOUD_REPO operations
 , p_commit_id in commit_id_t default null -- The commit id to use for DBMS_CLOUD_REPO operations
+, p_overwrite in boolean default true -- Overwrite an existing internal entry? If not raise dup_val_on_index
 )
 return git_repo_index_t;
 /**
@@ -86,6 +87,7 @@ function init_azure_repo
 , p_branch_name in branch_name_t default null -- The branch to use for DBMS_CLOUD_REPO operations
 , p_tag_name in tag_name_t default null -- The tag to use for DBMS_CLOUD_REPO operations
 , p_commit_id in commit_id_t default null -- The commit id to use for DBMS_CLOUD_REPO operations
+, p_overwrite in boolean default true -- Overwrite an existing internal entry? If not raise dup_val_on_index
 )
 return git_repo_index_t;
 /**
@@ -101,6 +103,7 @@ function init_github_repo
 , p_branch_name in branch_name_t default null -- The branch to use for DBMS_CLOUD_REPO operations
 , p_tag_name in tag_name_t default null -- The tag to use for DBMS_CLOUD_REPO operations
 , p_commit_id in commit_id_t default null -- The commit id to use for DBMS_CLOUD_REPO operations
+, p_overwrite in boolean default true -- Overwrite an existing internal entry? If not raise dup_val_on_index
 )
 return git_repo_index_t;
 /**
@@ -114,6 +117,7 @@ function init_repo
 , p_branch_name in branch_name_t default null -- The branch to use for DBMS_CLOUD_REPO operations
 , p_tag_name in tag_name_t default null -- The tag to use for DBMS_CLOUD_REPO operations
 , p_commit_id in commit_id_t default null -- The commit id to use for DBMS_CLOUD_REPO operations
+, p_overwrite in boolean default true -- Overwrite an existing internal entry? If not raise dup_val_on_index
 )
 return git_repo_index_t;
 /**
@@ -141,7 +145,7 @@ return git_repo_index_t;
 |                 | This parameter is only applicable for Azure cloud provider     |
 **/
 
-procedure get
+procedure get_repo
 ( p_git_repo_index in git_repo_index_t default null -- The repository index as returned by one of the INIT subroutines
 , p_repo out nocopy repo_t -- The DBMS_CLOUD_REPO REPO argument as determined by one of the INIT subroutines
 , p_branch_name out nocopy branch_name_t -- The DBMS_CLOUD_REPO BRANCH_NAME argument as supplied to one of the INIT subroutines
