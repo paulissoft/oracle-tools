@@ -145,6 +145,13 @@ return git_repo_index_t;
 |                 | This parameter is only applicable for Azure cloud provider     |
 **/
 
+procedure done
+( p_git_repo_index in git_repo_index_t default null -- Destroy this index (or all when null)
+);
+/**
+Destroy the repo identified by the index as well as all files added for the repo.
+**/
+
 procedure get_repo
 ( p_git_repo_index in git_repo_index_t default null -- The repository index as returned by one of the INIT subroutines
 , p_repo out nocopy repo_t -- The DBMS_CLOUD_REPO REPO argument as determined by one of the INIT subroutines
@@ -245,9 +252,13 @@ Return the repo id of the repo index as stored by one of the INIT subroutines.
 The repo id is returned by DBMS_CLOUD_REPO.LIST_REPOSITORIES.
 **/
 
+/*
+-- File/folder operations
+*/
+
 function find_file
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-, p_name in file_name_t -- The file name (unique within a repo)
+, p_file_name in file_name_t -- The file name (unique within a repo)
 )
 return file_index_t; -- The file index that must be used in combination with the git repo index
 /**
@@ -260,7 +271,7 @@ The file index is an index in the git repo internal table (as supplied by one of
 
 procedure add_file
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-, p_name in file_name_t -- The file name (unique within a repo)
+, p_file_name in file_name_t -- The file name (unique within a repo)
 , p_id in file_id_t default null -- The file id, that is also a checksum (SHA1, 40 bytes)
 , p_url in file_url_t default null -- The file URL
 , p_bytes in file_bytes_t default null -- The size in bytes
@@ -303,11 +314,33 @@ procedure del_file
 Deletes a single file.
 **/
 
-procedure done
-( p_git_repo_index in git_repo_index_t default null -- Destroy this index (or all when null)
+procedure add_folder
+( p_git_repo_index in git_repo_index_t -- When null the last repository added
+, p_path in file_name_t -- The folder
+, p_base_name_wildcard in file_name_t default '%' -- Base names must comply to this wildcard
+, p_overwrite in boolean default true -- Parameter in add_file(..., p_overwrite => p_overwrite)
 );
 /**
-Destroy the repo identified by the index as well as all files added for the repo.
+Use DBMS_CLOUD_REPO.LIST_FILES to add files from the folder p_path like this:
+
+```
+select  t.name
+,       t.id
+,       t.url
+,       t.bytes
+from    table
+        ( dbms_cloud_repo.list_files
+          ( repo => b_repo
+          , path => b_path
+          , branch_name => b_branch_name
+          , tag_name => b_tag_name
+          , commit_id => b_commit_id
+          )
+        ) t
+where   t.name like b_path || '/' || b_base_name_wildcard escape '\'
+order by
+        t.name;
+```
 **/
 
 -- Do not use ORACLE_TOOLS.CFG_PKG.C_TESTING here since this package will be created before ORACLE_TOOLS.CFG_PKG.

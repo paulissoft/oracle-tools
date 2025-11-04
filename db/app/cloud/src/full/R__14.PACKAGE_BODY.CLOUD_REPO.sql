@@ -36,7 +36,7 @@ subtype git_uk_t is varchar2(512);
 type git_repo_by_uk_tab_t is table of git_repo_index_t index by git_uk_t;
 
 type file_rec_t is record
-( name file_name_t
+( file_name file_name_t
 , id file_id_t
 , url file_url_t
 , bytes file_bytes_t
@@ -261,7 +261,7 @@ begin
 
   return g_git_repo_by_uk_tab(git_repo_uk(l_git_repo_rec));
 exception
-  when others
+  when no_data_found
   then return null;
 end find_repo;
 
@@ -388,6 +388,25 @@ begin
          , p_overwrite => p_overwrite
          );
 end init_repo;
+
+procedure done
+( p_git_repo_index in git_repo_index_t
+)
+is
+begin
+  if p_git_repo_index is null
+  then
+    g_git_repo_by_index_tab.delete;
+    g_git_repo_by_uk_tab.delete;
+    g_git_repo_index_file_by_index_tab.delete;
+    g_git_repo_index_file_by_name_tab.delete;
+  else
+    g_git_repo_by_uk_tab.delete(git_repo_uk(g_git_repo_by_index_tab(p_git_repo_index)));
+    g_git_repo_by_index_tab.delete(p_git_repo_index);
+    g_git_repo_index_file_by_index_tab.delete(p_git_repo_index);
+    g_git_repo_index_file_by_name_tab.delete(p_git_repo_index);
+  end if;
+end done;
 
 procedure get_repo
 ( p_git_repo_index in git_repo_index_t
@@ -527,7 +546,7 @@ end repo_id;
 
 function find_file
 ( p_git_repo_index in git_repo_index_t
-, p_name in file_name_t
+, p_file_name in file_name_t
 )
 return file_index_t
 is
@@ -536,15 +555,15 @@ is
 begin
   return
     case
-      when g_git_repo_index_file_by_name_tab(l_git_repo_index).exists(p_name)
-      then g_git_repo_index_file_by_name_tab(l_git_repo_index)(p_name)
+      when g_git_repo_index_file_by_name_tab(l_git_repo_index).exists(p_file_name)
+      then g_git_repo_index_file_by_name_tab(l_git_repo_index)(p_file_name)
       else null
     end;
 end find_file;
 
 procedure add_file
 ( p_git_repo_index in git_repo_index_t
-, p_name in file_name_t
+, p_file_name in file_name_t
 , p_id in file_id_t
 , p_url in file_url_t
 , p_bytes in file_bytes_t
@@ -556,11 +575,11 @@ is
   l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_by_index_tab.last);
   l_file_rec file_rec_t;
 begin
-  p_file_index := find_file(p_git_repo_index => l_git_repo_index, p_name => p_name);
+  p_file_index := find_file(p_git_repo_index => l_git_repo_index, p_file_name => p_file_name);
   if p_file_index is null -- not found
   then
     p_file_index := g_git_repo_index_file_by_index_tab(l_git_repo_index).count + 1;
-    g_git_repo_index_file_by_name_tab(l_git_repo_index)(p_name) := p_file_index;
+    g_git_repo_index_file_by_name_tab(l_git_repo_index)(p_file_name) := p_file_index;
   elsif p_overwrite
   then
     null;
@@ -568,7 +587,7 @@ begin
     raise dup_val_on_index;
   end if;
   
-  l_file_rec.name := p_name;
+  l_file_rec.file_name := p_file_name;
   l_file_rec.id := p_id;
   l_file_rec.url := p_url;
   l_file_rec.bytes := p_bytes;
@@ -586,7 +605,7 @@ is
   l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_by_index_tab.last);
   l_file_index constant file_index_t := nvl(p_file_index, g_git_repo_index_file_by_index_tab(l_git_repo_index).last);
 begin
-  g_git_repo_index_file_by_index_tab(l_git_repo_index)(p_file_index).content := p_content;
+  g_git_repo_index_file_by_index_tab(l_git_repo_index)(l_file_index).content := p_content;
 end upd_file;
 
 procedure upd_file_content
@@ -615,7 +634,7 @@ begin
   , p_content =>
       dbms_cloud_repo.get_file
       ( repo => l_repo
-      , file_path => g_git_repo_index_file_by_index_tab(l_git_repo_index)(p_file_index).name
+      , file_path => g_git_repo_index_file_by_index_tab(l_git_repo_index)(p_file_index).file_name
       , branch_name => l_branch_name
       , tag_name => l_tag_name
       , commit_id => l_commit_id
@@ -631,48 +650,91 @@ is
   l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_by_index_tab.last);
   l_file_index constant file_index_t := nvl(p_file_index, g_git_repo_index_file_by_index_tab(l_git_repo_index).last);
 begin
-  g_git_repo_index_file_by_name_tab(l_git_repo_index).delete(g_git_repo_index_file_by_index_tab(l_git_repo_index)(l_file_index).name);
+  g_git_repo_index_file_by_name_tab(l_git_repo_index).delete(g_git_repo_index_file_by_index_tab(l_git_repo_index)(l_file_index).file_name);
   g_git_repo_index_file_by_index_tab(l_git_repo_index).delete(l_file_index);
 end del_file;
 
-procedure done
+procedure add_folder
 ( p_git_repo_index in git_repo_index_t
+, p_path in file_name_t
+, p_base_name_wildcard in file_name_t
+, p_overwrite in boolean
 )
 is
+  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_by_index_tab.last);
+  l_repo repo_t;
+  l_branch_name branch_name_t;
+  l_tag_name tag_name_t;
+  l_commit_id commit_id_t;
+  l_file_index file_index_t;
+  
+  cursor c_list_files
+  ( b_repo in repo_t
+  , b_branch_name in branch_name_t
+  , b_tag_name in tag_name_t
+  , b_commit_id in commit_id_t
+  , b_path in file_name_t
+  , b_base_name_wildcard in file_name_t
+  )
+  is
+    select  t.name as file_name
+    ,       t.id
+    ,       t.url
+    ,       t.bytes
+    from    table
+            ( dbms_cloud_repo.list_files
+              ( repo => b_repo
+              , path => b_path
+              , branch_name => b_branch_name
+              , tag_name => b_tag_name
+              , commit_id => b_commit_id
+              )
+            ) t
+    where   t.name like b_path || '/' || b_base_name_wildcard escape '\'
+    order by
+            t.name;
 begin
-  if p_git_repo_index is null
-  then
-    g_git_repo_by_index_tab.delete;
-    g_git_repo_by_uk_tab.delete;
-    g_git_repo_index_file_by_index_tab.delete;
-    g_git_repo_index_file_by_name_tab.delete;
-  else
-    g_git_repo_by_uk_tab.delete(git_repo_uk(g_git_repo_by_index_tab(p_git_repo_index)));
-    g_git_repo_by_index_tab.delete(p_git_repo_index);
-    g_git_repo_index_file_by_index_tab.delete(p_git_repo_index);
-    g_git_repo_index_file_by_name_tab.delete(p_git_repo_index);
-  end if;
-end done;
+  get_repo
+  ( p_git_repo_index => l_git_repo_index
+  , p_repo => l_repo
+  , p_branch_name => l_branch_name
+  , p_tag_name => l_tag_name
+  , p_commit_id => l_commit_id
+  );
+  for r in c_list_files( b_repo => l_repo
+                       , b_branch_name => l_branch_name
+                       , b_tag_name => l_tag_name
+                       , b_commit_id => l_commit_id
+                       , b_path => p_path
+                       , b_base_name_wildcard => p_base_name_wildcard
+                       )
+  loop
+    add_file
+    ( p_git_repo_index => l_git_repo_index
+    , p_file_name => r.file_name
+    , p_id => r.id
+    , p_url => r.url
+    , p_bytes => r.bytes
+    , p_content => null
+    , p_overwrite => p_overwrite
+    , p_file_index => l_file_index
+    );
+  end loop;
+end add_folder;
 
 -- TEST
 
 procedure ut_setup
 is
-  l_git_repo_index git_repo_index_t;
 begin
-  l_git_repo_index :=
-    init_github_repo
-    ( p_credential_name => null
-    , p_repo_name => c_repo_name_pato
-    , p_repo_owner => c_repo_owner_pato
-    );
-end;
+  null;
+end ut_setup;
 
 --%aftereach
 procedure ut_teardown
 is
 begin
-  done(c_git_repo_index_pato);
+  done;
 end;
 
 --%test
