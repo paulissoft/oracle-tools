@@ -54,16 +54,6 @@ c_git_repo_index_pato constant git_repo_index_t := 1; -- The first initialized r
 
 -- ROUTINES
 
-function find_repo
-( p_provider in varchar2 -- The provider: DBMS_CLOUD_REPO.AWS_REPO, DBMS_CLOUD_REPO.AZURE_REPO or DBMS_CLOUD_REPO.GITHUB_REPO
-, p_repo_name in repo_name_t -- The repository name, mandatory
-, p_region in region_t default null -- Only relevant for AWS
-, p_organization in organization_t default null -- Only relevant for Azure
-, p_project in project_t default null -- Only relevant for Azure
-, p_repo_owner in repo_owner_t default null -- Only relevant for GitHub
-)
-return git_repo_index_t;
-
 function init_aws_repo
 ( p_credential_name in credential_name_t -- The credential name (use DBMS_CLOUD)
 , p_repo_name in repo_name_t -- The repository name
@@ -146,12 +136,15 @@ return git_repo_index_t;
 |                 | This parameter is only applicable for Azure cloud provider     |
 **/
 
-procedure done_repo
-( p_git_repo_index in git_repo_index_t default null -- Destroy this index (or all when null)
-);
-/**
-Destroy the repo identified by the index as well as all files added for the repo.
-**/
+function find_repo
+( p_provider in varchar2 -- The provider: DBMS_CLOUD_REPO.AWS_REPO, DBMS_CLOUD_REPO.AZURE_REPO or DBMS_CLOUD_REPO.GITHUB_REPO
+, p_repo_name in repo_name_t -- The repository name, mandatory
+, p_region in region_t default null -- Only relevant for AWS
+, p_organization in organization_t default null -- Only relevant for Azure
+, p_project in project_t default null -- Only relevant for Azure
+, p_repo_owner in repo_owner_t default null -- Only relevant for GitHub
+)
+return git_repo_index_t;
 
 procedure get_repo
 ( p_git_repo_index in git_repo_index_t default null -- The repository index as returned by one of the INIT subroutines
@@ -184,22 +177,16 @@ procedure get_repo
 Get all the parameters used in one of the INIT subroutines.
 **/
 
+procedure done_repo
+( p_git_repo_index in git_repo_index_t default null -- Destroy this index (or all when null)
+);
+/**
+Destroy the repo identified by the index as well as all files added for the repo.
+**/
+
 /*
 -- File/folder operations
 */
-
-function find_file
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-, p_file_name in file_name_t -- The file name (unique within a repo)
-)
-return file_index_t; -- The file index that must be used in combination with the git repo index
-/**
-Find a file in internal (package) storage.
-
-The unique key for a file is the combination of the git_repo_index and name.
-
-The file index is an index in the git repo internal table (as supplied by one of the INIT subroutines).
-**/
 
 procedure add_file
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
@@ -219,44 +206,6 @@ The parameters are returned by a combination of DBMS_CLOUD_REPO.LIST_FILES() and
 The file index is an index in the git repo internal table (as supplied by one of the INIT subroutines).
 
 The unique key for a file is the combination of the git_repo_index and name.
-**/
-
-procedure upd_file
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-, p_file_index in file_index_t default null -- When null the last file added (within the repository)
-, p_content in file_content_t -- The (text) file content
-);
-/**
-Update the file content for a file added with ADD_FILE().
-**/
-
-procedure upd_file_content
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-, p_file_index in file_index_t default null -- When null the last file added (within the repository)
-);
-/**
-Update the file content for a file added with ADD_FILE() by using DBMS_CLOUD_REPO.GET_FILE() to get the content.
-**/
-
-procedure get_file
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-, p_file_index in file_index_t default null -- The file index that must be used in combination with the git repo index
-, p_file_name out nocopy file_name_t -- The file name (unique within a repo)
-, p_id out nocopy file_id_t -- The file id, that is also a checksum (SHA1, 40 bytes)
-, p_url out nocopy file_url_t -- The file URL
-, p_bytes out nocopy file_bytes_t -- The size in bytes
-, p_content out nocopy file_content_t -- The (text) file content
-);
-/**
-Get file info from internal storage, as added by add_file/add_folder.
-**/
-
-procedure del_file
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-, p_file_index in file_index_t default null -- When null the last file added (within the repository)
-);
-/**
-Deletes a single file.
 **/
 
 procedure add_folder
@@ -300,6 +249,57 @@ order by
 ```
 **/
 
+procedure upd_file
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_index in file_index_t default null -- When null the last file added (within the repository)
+, p_content in file_content_t -- The (text) file content
+);
+/**
+Update the file content for a file added with ADD_FILE().
+**/
+
+procedure upd_file_content
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_index in file_index_t default null -- When null the last file added (within the repository)
+);
+/**
+Update the file content for a file added with ADD_FILE() by using DBMS_CLOUD_REPO.GET_FILE() to get the content.
+**/
+
+function find_file
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_name in file_name_t -- The file name (unique within a repo)
+)
+return file_index_t; -- The file index that must be used in combination with the git repo index
+/**
+Find a file in internal (package) storage.
+
+The unique key for a file is the combination of the git_repo_index and name.
+
+The file index is an index in the git repo internal table (as supplied by one of the INIT subroutines).
+**/
+
+procedure get_file
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_index in file_index_t default null -- The file index that must be used in combination with the git repo index
+, p_file_name out nocopy file_name_t -- The file name (unique within a repo)
+, p_id out nocopy file_id_t -- The file id, that is also a checksum (SHA1, 40 bytes)
+, p_url out nocopy file_url_t -- The file URL
+, p_bytes out nocopy file_bytes_t -- The size in bytes
+, p_content out nocopy file_content_t -- The (text) file content
+);
+/**
+Get file info from internal storage, as added by add_file/add_folder.
+**/
+
+procedure del_file
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_index in file_index_t default null -- When null the last file added (within the repository)
+);
+/**
+Deletes a single file.
+**/
+
 -- Do not use ORACLE_TOOLS.CFG_PKG.C_TESTING here since this package will be created before ORACLE_TOOLS.CFG_PKG.
 
 --%suitepath(API)
@@ -318,43 +318,34 @@ procedure ut_init_github_repo;
 procedure ut_init_repo;
 
 --%test
-procedure ut_get;
+procedure ut_find_repo;
 
 --%test
-procedure ut_credential_name;
+procedure ut_get_repo;
 
 --%test
-procedure ut_region;
+procedure ut_done_repo;
 
 --%test
-procedure ut_organization;
+procedure ut_add_file;
 
 --%test
-procedure ut_project;
+procedure ut_add_folder;
 
 --%test
-procedure ut_repo_owner;
+procedure ut_upd_file;
 
 --%test
-procedure ut_repo_name;
+procedure ut_upd_file_content;
 
 --%test
-procedure ut_current_schema;
+procedure ut_find_file;
 
 --%test
-procedure ut_branch_name;
+procedure ut_get_file;
 
 --%test
-procedure ut_tag_name;
-
---%test
-procedure ut_commit_id;
-
---%test
-procedure ut_repo;
-
---%test
-procedure ut_repo_id;
+procedure ut_del_file;
 
 end;
 /
