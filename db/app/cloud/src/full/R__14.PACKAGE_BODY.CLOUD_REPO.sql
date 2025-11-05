@@ -389,7 +389,7 @@ begin
          );
 end init_repo;
 
-procedure done
+procedure done_repo
 ( p_git_repo_index in git_repo_index_t
 )
 is
@@ -406,7 +406,7 @@ begin
     g_git_repo_index_file_by_index_tab.delete(p_git_repo_index);
     g_git_repo_index_file_by_name_tab.delete(p_git_repo_index);
   end if;
-end done;
+end done_repo;
 
 procedure get_repo
 ( p_git_repo_index in git_repo_index_t
@@ -424,125 +424,39 @@ begin
   p_commit_id := l_git_repo_rec.commit_id;
 end get_repo;
 
-function credential_name
-( p_git_repo_index in git_repo_index_t
+procedure get_repo
+( p_git_repo_index in git_repo_index_t default null -- The repository index as returned by one of the INIT subroutines
+, p_provider out nocopy provider_t -- The provider
+, p_repo_name out nocopy repo_name_t -- The repo name
+, p_credential_name out nocopy credential_name_t -- The credential name
+, p_region out nocopy region_t -- AWS region
+, p_organization out nocopy organization_t -- Azure organization
+, p_project out nocopy project_t -- Azure project
+, p_repo_owner out nocopy repo_owner_t -- GitHub repo owner  
+, p_current_schema out nocopy current_schema_t -- current schema to return to after work
+, p_branch_name out nocopy branch_name_t -- The DBMS_CLOUD_REPO BRANCH_NAME argument as supplied to one of the INIT subroutines
+, p_tag_name out nocopy tag_name_t -- The DBMS_CLOUD_REPO TAG_NAME argument as supplied to one of the INIT subroutines
+, p_commit_id out nocopy commit_id_t -- The DBMS_CLOUD_REPO COMMIT_ID argument as supplied to one of the INIT subroutines
+, p_repo out nocopy repo_t -- The DBMS_CLOUD_REPO REPO argument as determined by one of the INIT subroutines
+, p_repo_id out nocopy repo_id_t -- The repo id is returned by DBMS_CLOUD_REPO.LIST_REPOSITORIES.
 )
-return credential_name_t
-deterministic
 is
+  l_git_repo_rec git_repo_rec_t := g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last));
 begin
-  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).credential_name;
-end credential_name;  
-
-function region
-( p_git_repo_index in git_repo_index_t
-)
-return region_t
-deterministic
-is
-begin
-  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).region;
-end region;  
-
-function organization
-( p_git_repo_index in git_repo_index_t
-)
-return organization_t
-deterministic
-is
-begin
-  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).organization;
-end organization;  
-
-function project
-( p_git_repo_index in git_repo_index_t
-)
-return project_t
-deterministic
-is
-begin
-  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).project;
-end project;  
-
-function repo_owner
-( p_git_repo_index in git_repo_index_t
-)
-return repo_owner_t
-deterministic
-is
-begin
-  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).repo_owner;
-end repo_owner;  
-
-function repo_name
-( p_git_repo_index in git_repo_index_t
-)
-return repo_name_t
-deterministic
-is
-begin
-  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).repo_name;
-end repo_name;  
-
-function current_schema
-( p_git_repo_index in git_repo_index_t
-)
-return current_schema_t
-deterministic
-is
-begin
-  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).current_schema;
-end current_schema;  
-
-function branch_name
-( p_git_repo_index in git_repo_index_t
-)
-return branch_name_t
-deterministic
-is
-begin
-  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).branch_name;
-end branch_name;  
-
-function tag_name
-( p_git_repo_index in git_repo_index_t
-)
-return tag_name_t
-deterministic
-is
-begin
-  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).tag_name;
-end tag_name;  
-
-function commit_id
-( p_git_repo_index in git_repo_index_t
-)
-return commit_id_t
-deterministic
-is
-begin
-  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).commit_id;
-end commit_id;  
-
-function repo
-( p_git_repo_index in git_repo_index_t
-)
-return repo_t
-deterministic
-is
-begin
-  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).repo;
-end repo;  
-
-function repo_id
-( p_git_repo_index in git_repo_index_t
-)
-return repo_id_t
-deterministic
-is
-begin
-  return g_git_repo_by_index_tab(nvl(p_git_repo_index, g_git_repo_by_index_tab.last)).repo_id;
-end repo_id;  
+  p_provider := l_git_repo_rec.provider;
+  p_repo_name := l_git_repo_rec.repo_name;
+  p_credential_name := l_git_repo_rec.credential_name;
+  p_region := l_git_repo_rec.region;
+  p_organization := l_git_repo_rec.organization;
+  p_project := l_git_repo_rec.project;
+  p_repo_owner := l_git_repo_rec.repo_owner;
+  p_current_schema := l_git_repo_rec.current_schema;
+  p_branch_name := l_git_repo_rec.branch_name;
+  p_tag_name := l_git_repo_rec.tag_name;
+  p_commit_id := l_git_repo_rec.commit_id;
+  p_repo := l_git_repo_rec.repo;
+  p_repo_id := l_git_repo_rec.repo_id;
+end get_repo;
 
 function find_file
 ( p_git_repo_index in git_repo_index_t
@@ -629,18 +543,40 @@ begin
   );
 
   upd_file
-  ( p_git_repo_index => p_git_repo_index
-  , p_file_index => p_file_index
+  ( p_git_repo_index => l_git_repo_index
+  , p_file_index => l_file_index
   , p_content =>
       dbms_cloud_repo.get_file
       ( repo => l_repo
-      , file_path => g_git_repo_index_file_by_index_tab(l_git_repo_index)(p_file_index).file_name
+      , file_path => g_git_repo_index_file_by_index_tab(l_git_repo_index)(l_file_index).file_name
       , branch_name => l_branch_name
       , tag_name => l_tag_name
       , commit_id => l_commit_id
       )
   );
 end upd_file_content;
+
+procedure get_file
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_index in file_index_t default null -- The file index that must be used in combination with the git repo index
+, p_file_name out nocopy file_name_t -- The file name (unique within a repo)
+, p_id out nocopy file_id_t -- The file id, that is also a checksum (SHA1, 40 bytes)
+, p_url out nocopy file_url_t -- The file URL
+, p_bytes out nocopy file_bytes_t -- The size in bytes
+, p_content out nocopy file_content_t -- The (text) file content
+)
+is
+  l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_by_index_tab.last);
+  l_file_index constant file_index_t := nvl(p_file_index, g_git_repo_index_file_by_index_tab(l_git_repo_index).last);
+  l_file_rec file_rec_t;
+begin
+  l_file_rec := g_git_repo_index_file_by_index_tab(l_git_repo_index)(l_file_index);
+  p_file_name := l_file_rec.file_name;
+  p_id := l_file_rec.id;
+  p_url := l_file_rec.url;
+  p_bytes := l_file_rec.bytes;
+  p_content := l_file_rec.content;  
+end get_file;
 
 procedure del_file
 ( p_git_repo_index in git_repo_index_t
@@ -658,7 +594,9 @@ procedure add_folder
 ( p_git_repo_index in git_repo_index_t
 , p_path in file_name_t
 , p_base_name_wildcard in file_name_t
+, p_with_content in boolean
 , p_overwrite in boolean
+, p_file_index_tab out nocopy file_index_tab_t
 )
 is
   l_git_repo_index constant git_repo_index_t := nvl(p_git_repo_index, g_git_repo_by_index_tab.last);
@@ -666,7 +604,6 @@ is
   l_branch_name branch_name_t;
   l_tag_name tag_name_t;
   l_commit_id commit_id_t;
-  l_file_index file_index_t;
   
   cursor c_list_files
   ( b_repo in repo_t
@@ -675,12 +612,23 @@ is
   , b_commit_id in commit_id_t
   , b_path in file_name_t
   , b_base_name_wildcard in file_name_t
+  , b_with_content in naturaln
   )
   is
     select  t.name as file_name
     ,       t.id
     ,       t.url
     ,       t.bytes
+    ,       case
+              when b_with_content = 1
+              then dbms_cloud_repo.get_file
+                   ( repo => b_repo
+                   , file_path => t.name
+                   , branch_name => b_branch_name
+                   , tag_name => b_tag_name
+                   , commit_id => b_commit_id
+                   )
+            end as content
     from    table
             ( dbms_cloud_repo.list_files
               ( repo => b_repo
@@ -694,6 +642,7 @@ is
     order by
             t.name;
 begin
+  p_file_index_tab := sys.odcinumberlist();
   get_repo
   ( p_git_repo_index => l_git_repo_index
   , p_repo => l_repo
@@ -707,17 +656,19 @@ begin
                        , b_commit_id => l_commit_id
                        , b_path => p_path
                        , b_base_name_wildcard => p_base_name_wildcard
+                       , b_with_content => case when p_with_content then 1 else 0 end
                        )
   loop
+    p_file_index_tab.extend(1);
     add_file
     ( p_git_repo_index => l_git_repo_index
     , p_file_name => r.file_name
     , p_id => r.id
     , p_url => r.url
     , p_bytes => r.bytes
-    , p_content => null
+    , p_content => r.content
     , p_overwrite => p_overwrite
-    , p_file_index => l_file_index
+    , p_file_index => p_file_index_tab(p_file_index_tab.last)
     );
   end loop;
 end add_folder;
@@ -734,7 +685,7 @@ end ut_setup;
 procedure ut_teardown
 is
 begin
-  done;
+  done_repo;
 end;
 
 --%test

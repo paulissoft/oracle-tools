@@ -38,6 +38,7 @@ subtype repo_id_t is varchar2(128 char);
 -- file types for columns returned by DBMS_CLOUD_REPO.LIST_FILES
 
 subtype file_index_t is positive; -- index from internal PL/SQL table (the key)
+subtype file_index_tab_t is sys.odcinumberlist;
 
 subtype file_id_t is varchar2(128); -- is also a checksum (SHA1, 40 bytes)
 subtype file_name_t is varchar2(4000);
@@ -145,7 +146,7 @@ return git_repo_index_t;
 |                 | This parameter is only applicable for Azure cloud provider     |
 **/
 
-procedure done
+procedure done_repo
 ( p_git_repo_index in git_repo_index_t default null -- Destroy this index (or all when null)
 );
 /**
@@ -161,95 +162,26 @@ procedure get_repo
 );
 /**
 Get the parameters for subprograms from DBMS_CLOUD_REPO where one of these OUT parameters are needed.
-You can also call CLOUD_REPO.REPO, CLOUD_REPO.BRANCH_NAME, CLOUD_REPO.TAG_NAME or CLOUD_REPO.COMMIT_ID
-but that means four calls instead of one, thus this procedure is faster.
 **/
 
-function credential_name
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-)
-return credential_name_t
-deterministic;
-/** Return the credential name of the repo index as stored by one of the INIT subroutines. **/
-
-function region
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-)
-return region_t
-deterministic;
-/** Return the region of the repo index as stored by one of the INIT subroutines. **/
-
-function organization
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-)
-return organization_t
-deterministic;
-/** Return the organization of the repo index as stored by one of the INIT subroutines. **/
-
-function project
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-)
-return project_t
-deterministic;
-/** Return the project of the repo index as stored by one of the INIT subroutines. **/
-
-function repo_owner
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-)
-return repo_owner_t
-deterministic;
-/** Return the repo owner of the repo index as stored by one of the INIT subroutines. **/
-
-function repo_name
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-)
-return repo_name_t
-deterministic;
-/** Return the repo name of the repo index as stored by one of the INIT subroutines. **/
-
-function current_schema
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-)
-return current_schema_t
-deterministic;
-/** Return the current schema (SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA')) of the repo index as stored by one of the INIT subroutines. **/
-
-function branch_name
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-)
-return branch_name_t
-deterministic;
-/** Return the branch name of the repo index as stored by one of the INIT subroutines. **/
-
-function tag_name
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-)
-return tag_name_t
-deterministic;
-/** Return the tag name of the repo index as stored by one of the INIT subroutines. **/
-
-function commit_id
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-)
-return commit_id_t
-deterministic;
-/** Return the commit id of the repo index as stored by one of the INIT subroutines. **/
-
-function repo
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-)
-return repo_t
-deterministic;
-/** Return the RREPO handle of the repo index as stored by one of the INIT subroutines. **/
-
-function repo_id
-( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
-)
-return repo_id_t
-deterministic;
+procedure get_repo
+( p_git_repo_index in git_repo_index_t default null -- The repository index as returned by one of the INIT subroutines
+, p_provider out nocopy provider_t -- The provider
+, p_repo_name out nocopy repo_name_t -- The repo name
+, p_credential_name out nocopy credential_name_t -- The credential name
+, p_region out nocopy region_t -- AWS region
+, p_organization out nocopy organization_t -- Azure organization
+, p_project out nocopy project_t -- Azure project
+, p_repo_owner out nocopy repo_owner_t -- GitHub repo owner  
+, p_current_schema out nocopy current_schema_t -- current schema to return to after work
+, p_branch_name out nocopy branch_name_t -- The DBMS_CLOUD_REPO BRANCH_NAME argument as supplied to one of the INIT subroutines
+, p_tag_name out nocopy tag_name_t -- The DBMS_CLOUD_REPO TAG_NAME argument as supplied to one of the INIT subroutines
+, p_commit_id out nocopy commit_id_t -- The DBMS_CLOUD_REPO COMMIT_ID argument as supplied to one of the INIT subroutines
+, p_repo out nocopy repo_t -- The DBMS_CLOUD_REPO REPO argument as determined by one of the INIT subroutines
+, p_repo_id out nocopy repo_id_t -- The repo id is returned by DBMS_CLOUD_REPO.LIST_REPOSITORIES.
+);
 /**
-Return the repo id of the repo index as stored by one of the INIT subroutines.
-The repo id is returned by DBMS_CLOUD_REPO.LIST_REPOSITORIES.
+Get all the parameters used in one of the INIT subroutines.
 **/
 
 /*
@@ -306,6 +238,19 @@ procedure upd_file_content
 Update the file content for a file added with ADD_FILE() by using DBMS_CLOUD_REPO.GET_FILE() to get the content.
 **/
 
+procedure get_file
+( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
+, p_file_index in file_index_t default null -- The file index that must be used in combination with the git repo index
+, p_file_name out nocopy file_name_t -- The file name (unique within a repo)
+, p_id out nocopy file_id_t -- The file id, that is also a checksum (SHA1, 40 bytes)
+, p_url out nocopy file_url_t -- The file URL
+, p_bytes out nocopy file_bytes_t -- The size in bytes
+, p_content out nocopy file_content_t -- The (text) file content
+);
+/**
+Get file info from internal storage, as added by add_file/add_folder.
+**/
+
 procedure del_file
 ( p_git_repo_index in git_repo_index_t default null -- When null the last repository added
 , p_file_index in file_index_t default null -- When null the last file added (within the repository)
@@ -318,16 +263,28 @@ procedure add_folder
 ( p_git_repo_index in git_repo_index_t -- When null the last repository added
 , p_path in file_name_t -- The folder
 , p_base_name_wildcard in file_name_t default '%' -- Base names must comply to this wildcard
+, p_with_content in boolean default false -- Do we add content using DBMS_CLOUD_REPO.GET_FILE?
 , p_overwrite in boolean default true -- Parameter in add_file(..., p_overwrite => p_overwrite)
+, p_file_index_tab out nocopy file_index_tab_t -- The list of file indexes
 );
 /**
 Use DBMS_CLOUD_REPO.LIST_FILES to add files from the folder p_path like this:
 
 ```
-select  t.name
+select  t.name as file_name
 ,       t.id
 ,       t.url
 ,       t.bytes
+,       case
+          when b_with_content = 1
+          then dbms_cloud_repo.get_file
+               ( repo => b_repo
+               , file_path => t.name
+               , branch_name => b_branch_name
+               , tag_name => b_tag_name
+               , commit_name => b_commit_name
+               )
+        end as content
 from    table
         ( dbms_cloud_repo.list_files
           ( repo => b_repo
