@@ -13,6 +13,7 @@
   
   <properties>
     <apex.application>138</apex.application>
+    <apex.application.alias>ORACLE-TOOLS</apex.application.alias>
     <db.schema>${oracle_tools_schema}</db.schema>
   </properties>
   

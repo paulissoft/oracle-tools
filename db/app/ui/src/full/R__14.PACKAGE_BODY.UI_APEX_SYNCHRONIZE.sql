@@ -39,6 +39,7 @@ begin
 exception
   when others
   then
+    dbms_output.put_line(sqlerrm);    
     if c_translations%isopen
     then
       close c_translations;
@@ -46,33 +47,87 @@ exception
     raise;
 end get_translations;
 
-procedure create_apex_session
+procedure open_apex_session
 ( p_application_id in apex_application_trans_map.primary_application_id%type
 )
 is
-  l_username constant varchar2(30) := 'ADMIN';
+  cursor c_apex_info(b_application_id in apex_application_trans_map.primary_application_id%type)
+  is
+    select  r.api_compatibility -- 2024.11.30
+    ,       r.version_no -- 24.2.9
+    ,       a.workspace_id
+    ,       a.owner
+    from    apex_release r
+            cross join apex_applications a
+    where   a.application_id = b_application_id;
+
+  r_apex_info c_apex_info%rowtype;
 begin
-$if dbms_db_version.ver_le_12 $then
+  dbms_output.put_line('*** ui_apex_synchronize.open_apex_session ***');
+  dbms_output.put_line('application id: ' || p_application_id);
+  
+  /*
+  -- Prevent an error like this:
+  --
+  -- Error report -
+  -- ORA-20987: APEX - An API call has been prohibited.
+  -- Contact your administrator.
+  -- Details about this incident are available via debug id "1293648". - Contact your application administrator.
+  --
+  -- Solution: reuse part of application/delete_application.sql, i.e. wwv_flow_imp.component_begin/wwv_flow_imp.component_end
+  */
+  open c_apex_info(p_application_id);
+  fetch c_apex_info into r_apex_info;
+  if c_apex_info%notfound
+  then
+    close c_apex_info;
+    raise no_data_found;
+  else
+    close c_apex_info; -- OK
+  end if;
+    
+  apex_application_install.generate_offset;
 
-  /* apex_session.create_session does not exist for Apex 5.1 */
+  dbms_output.put_line('offset        : ' || apex_application_install.get_offset);
 
-  ui_session_pkg.create_apex_session
-  ( p_app_id => p_application_id
-  , p_app_user => l_username
-  , p_app_page_id => 1
+  wwv_flow_imp.component_begin
+  ( p_version_yyyy_mm_dd => r_apex_info.api_compatibility
+  , p_release => r_apex_info.version_no
+  , p_default_workspace_id => r_apex_info.workspace_id
+  , p_default_application_id => p_application_id
+  , p_default_id_offset => apex_application_install.get_offset
+  , p_default_owner => r_apex_info.owner
   );
+end open_apex_session;
 
-$else
+procedure close_apex_session
+( p_application_id in apex_application_trans_map.primary_application_id%type
+)
+is
+  cursor c_apex_info(b_application_id in apex_application_trans_map.primary_application_id%type)
+  is
+    select  a.workspace_id
+    ,       a.owner
+    from    apex_release r
+            cross join apex_applications a
+    where   a.application_id = b_application_id;
 
-  apex_session.create_session
-  ( p_app_id => p_application_id
-  , p_page_id => 1
-  , p_username => l_username
-  );
+  r_apex_info c_apex_info%rowtype;
+begin
+  dbms_output.put_line('*** ui_apex_synchronize.close_apex_session ***');
 
-$end
+  open c_apex_info(p_application_id);
+  fetch c_apex_info into r_apex_info;
+  if c_apex_info%notfound
+  then
+    close c_apex_info;
+    raise no_data_found;
+  else
+    close c_apex_info; -- OK
+  end if;
 
-end create_apex_session;
+  wwv_flow_imp.component_end;
+end close_apex_session;
 
 function get_workspace_id
 ( p_workspace_name in apex_workspaces.workspace%type
@@ -217,7 +272,7 @@ begin
 exception
   when others
   then
-    dbms_output.put_line(substr(sqlerrm, 1, 255));
+    dbms_output.put_line(sqlerrm);    
     raise;
 end pre_export;
 
@@ -234,37 +289,51 @@ begin
   dbms_output.put_line('*** ui_apex_synchronize.pre_import ***');
   dbms_output.put_line('application id: ' || p_application_id);
   
-  create_apex_session(p_application_id);
+  open_apex_session(p_application_id);
   
   apex_util.set_application_status
   ( p_application_id => p_application_id
   , p_application_status => l_application_status
   , p_unavailable_value => 'Updating application'
   );
+
+  close_apex_session(p_application_id);
 exception
   when e_apex_error or no_data_found
   then
-    null;   
+    dbms_output.put_line(sqlerrm);
+    close_apex_session(p_application_id);
+  when others
+  then
+    close_apex_session(p_application_id);
+    raise;
 end pre_import;
 
 procedure prepare_import
 ( p_workspace_name in apex_workspaces.workspace%type
-, p_application_id in apex_application_trans_map.primary_application_id%type
-, p_user in varchar2
+, p_application_id in apex_applications.application_id%type
+, p_user in apex_applications.owner%type
+, p_application_alias in apex_applications.alias%type
 )
 is
   l_workspace_id number;
 begin
   dbms_output.put_line('*** ui_apex_synchronize.prepare_import ***');
-  dbms_output.put_line('workspace name: ' || p_workspace_name);
-  dbms_output.put_line('application id: ' || p_application_id);
-  dbms_output.put_line('user          : ' || p_user);
+  dbms_output.put_line('workspace name   : ' || p_workspace_name);
+  dbms_output.put_line('application id   : ' || p_application_id);
+  dbms_output.put_line('user             : ' || p_user);
+  dbms_output.put_line('application alias: ' || p_application_alias);
   
   l_workspace_id := get_workspace_id(p_workspace_name);
   
   apex_application_install.set_workspace_id(l_workspace_id);
   apex_application_install.set_application_id(p_application_id);
+  if p_application_alias is not null
+  then
+    apex_application_install.set_application_alias(p_application_alias);
+  end if;
   apex_application_install.generate_offset;
+  dbms_output.put_line('offset           : ' || apex_application_install.get_offset);
   apex_application_install.set_schema(p_user);
 end prepare_import;
 
@@ -315,7 +384,7 @@ begin
 exception
   when others
   then
-    dbms_output.put_line(substr(sqlerrm, 1, 255));
+    dbms_output.put_line(sqlerrm);
     raise;
 end publish_application;
 
@@ -328,12 +397,19 @@ begin
   dbms_output.put_line('*** ui_apex_synchronize.post_import ***');
   dbms_output.put_line('application id: ' || p_application_id);
   
-  create_apex_session(p_application_id);
+  open_apex_session(p_application_id);
 
   apex_util.set_application_status
   ( p_application_id => p_application_id
   , p_application_status => l_application_status
   );
+  
+  close_apex_session(p_application_id);  
+exception  
+  when others
+  then
+    close_apex_session(p_application_id);
+    raise;
 end post_import;
 
 end ui_apex_synchronize;

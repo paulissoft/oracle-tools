@@ -22,6 +22,7 @@ Types of changes:
 - [Generating DDL raises an error when there are column comments for a partitioned table.](https://github.com/paulissoft/oracle-tools/issues/222)
 - [The CFG_INSTALL_DLL_PKG had some index/constraint rename errors and logging was not sufficient.](https://github.com/paulissoft/oracle-tools/issues/223)
 - [The APEX export fails when the export directory does not exist.](https://github.com/paulissoft/oracle-tools/issues/224)
+- [The APEX export/export must be able to handle parsing schema and alias changes.](https://github.com/paulissoft/oracle-tools/issues/227)
 
 ## [5.0.0] - 2025-10-01
 

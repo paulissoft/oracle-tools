@@ -8,6 +8,7 @@ Functionality:
 
 The following properties must be set before:
 - application: an Apex application id
+- application.alias: the Apex application alias
 - userid: an Oracle userid to connect to the database
 - workspace: Apex workspace name
 - export.dir: directory to save/retrieve install.sql (will be created when necessary)
@@ -231,6 +232,7 @@ The following properties are only important during export:
     <attribute name="sqlarg1" default=""/>
     <attribute name="sqlarg2" default=""/>
     <attribute name="sqlarg3" default=""/>
+    <attribute name="sqlarg4" default=""/>
     <sequential>
       <tempfile property="@{name}.file" deleteonexit="true" />
       <ac:trycatch property="@{name}.error">
@@ -248,6 +250,7 @@ The following properties are only important during export:
             <arg value="@{sqlarg1}" />
             <arg value="@{sqlarg2}" />
             <arg value="@{sqlarg3}" />
+            <arg value="@{sqlarg4}" />
             <!-- Oracle clients love NLS_LANG -->
             <env key="NLS_LANG" value="American_America.UTF8"/>
           </exec>
@@ -286,7 +289,8 @@ The following properties are only important during export:
              sqlfile='@${basedir}/import.sql'
              sqlarg1='"${workspace}"'
              sqlarg2='"${application}"'
-             sqlarg3='"${input.file}"'/>
+             sqlarg3='"${input.file}"'
+             sqlarg4='"${application.alias}"'/>
   </target>
 
   <macrodef name="sqlcl" description="Run Java Sql Client">
@@ -295,7 +299,8 @@ The following properties are only important during export:
     <attribute name="sqlfile"/>
     <attribute name="sqlarg1" default=""/>
     <attribute name="sqlarg2" default=""/>
-    <attribute name="sqlarg3" default=""/>
+    <attribute name="sqlarg3" default=" "/> <!-- to prevent string index -1 error -->
+    <attribute name="sqlarg4" default=" "/> <!-- idem -->
     <sequential>
       <echo message="&gt;sqlcl"/>
       <ac:trycatch property="@{name}.error">
@@ -403,13 +408,20 @@ The following properties are only important during export:
                 <arg value="@{sqlarg1}" />
                 <arg value="@{sqlarg2}" />
                 <arg value="@{sqlarg3}" />
+                <arg value="@{sqlarg4}" />
               </java>
             </then>
             <else>
-              <!-- empty sqlarg3 gives a string index -1 error -->
+              <!-- empty sqlarg3/sqlarg4 may give a string index -1 error -->
+              <!-- replace by a SPACE -->
               <ac:if>
-                <equals arg1="@{sqlarg3}" arg2=""/>
+                <!-- both last arguments empty -->
+                <and>
+                  <equals arg1="@{sqlarg3}" arg2=""/>
+                  <equals arg1="@{sqlarg4}" arg2=""/>
+                </and>
                 <then>
+                  <echo message="sqlarg3 and sqlarg4 empty"/>
                   <exec executable="${sql.executable}"
                         dir="@{dir}"
                         inputstring="${my.password}"
@@ -419,11 +431,56 @@ The following properties are only important during export:
                     <arg value="@{sqlfile}" />
                     <arg value="@{sqlarg1}" />
                     <arg value="@{sqlarg2}" />
+                    <arg value=" " />
+                    <arg value=" " />
                     <!-- Oracle clients love NLS_LANG -->
                     <env key="NLS_LANG" value="American_America.UTF8"/>
                   </exec>
                 </then>
+                <elseif>
+                  <!-- only last arguments empty -->
+                  <equals arg1="@{sqlarg4}" arg2=""/>
+                  <then>
+                    <echo message="sqlarg4 empty"/>
+                    <exec executable="${sql.executable}"
+                          dir="@{dir}"
+                          inputstring="${my.password}"
+                          failonerror="true">
+                      <arg value="-S" /> <!-- silent -->
+                      <arg value="${quote}${my.userid}${quote}" />
+                      <arg value="@{sqlfile}" />
+                      <arg value="@{sqlarg1}" />
+                      <arg value="@{sqlarg2}" />
+                      <arg value="@{sqlarg3}" />
+                      <arg value=" " />
+                      <!-- Oracle clients love NLS_LANG -->
+                      <env key="NLS_LANG" value="American_America.UTF8"/>
+                    </exec>
+                  </then>
+                </elseif>
+                <elseif>
+                  <!-- only last but one arguments empty -->
+                  <equals arg1="@{sqlarg3}" arg2=""/>
+                  <then>
+                  <echo message="sqlarg3 empty"/>
+                    <exec executable="${sql.executable}"
+                          dir="@{dir}"
+                          inputstring="${my.password}"
+                          failonerror="true">
+                      <arg value="-S" /> <!-- silent -->
+                      <arg value="${quote}${my.userid}${quote}" />
+                      <arg value="@{sqlfile}" />
+                      <arg value="@{sqlarg1}" />
+                      <arg value="@{sqlarg2}" />
+                      <arg value=" " />
+                      <arg value="@{sqlarg4}" />
+                      <!-- Oracle clients love NLS_LANG -->
+                      <env key="NLS_LANG" value="American_America.UTF8"/>
+                    </exec>
+                  </then>
+                </elseif>
                 <else>
+                  <echo message="no empty arguments"/>
                   <exec executable="${sql.executable}"
                         dir="@{dir}"
                         inputstring="${my.password}"
@@ -434,6 +491,7 @@ The following properties are only important during export:
                     <arg value="@{sqlarg1}" />
                     <arg value="@{sqlarg2}" />
                     <arg value="@{sqlarg3}" />
+                    <arg value="@{sqlarg4}" />
                     <!-- Oracle clients love NLS_LANG -->
                     <env key="NLS_LANG" value="American_America.UTF8"/>
                   </exec>
@@ -496,7 +554,8 @@ The following properties are only important during export:
            sqlfile='@${basedir}/import.sql'
            sqlarg1='"${workspace}"'
            sqlarg2='"${application}"'
-           sqlarg3='"${input.file}"'/>
+           sqlarg3='"${input.file}"'
+           sqlarg4='"${application.alias}"'/>
   </target>
 
   <target name="import"

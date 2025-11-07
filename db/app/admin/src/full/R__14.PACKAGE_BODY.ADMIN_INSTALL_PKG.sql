@@ -1880,6 +1880,7 @@ is
 
   l_cursor sys_refcursor;
   l_workspace_name varchar2(128 char);
+  l_application_alias varchar2(128 char);
 
   procedure get_output_lines
   is
@@ -2043,7 +2044,7 @@ begin
         
         -- from file apex/src/scripts/import.sql
         -- 1) pre_import.sql: call oracle_tools.ui_apex_synchronize.pre_import(<application id>)
-        -- 2) prepare_import.sql: call oracle_tools.ui_apex_synchronize.prepare_import(<workspace name>, <application id>)
+        -- 2) prepare_import.sql: call oracle_tools.ui_apex_synchronize.prepare_import(p_workspace_name, p_application_id, p_application_alias)
         -- 3) execute export file(s), i.e. install.sql
         -- 4) publish_application.sql: call oracle_tools.ui_apex_synchronize.publish_application
         -- 5) post_import.sql: call oracle_tools.ui_apex_synchronize.post_import(<application id>);
@@ -2054,20 +2055,36 @@ begin
           execute immediate 'call oracle_tools.ui_apex_synchronize.pre_import(:b1)'
             using l_project_rec.application_id;
 
-          -- step 2
+          -- step 2 try to reuse alias from existing application
           open l_cursor for q'[
-select  w.workspace
-from    apex_workspaces w
-where   w.workspace_id = nvl(:b1, w.workspace_id)
-and     w.workspace <> 'INTERNAL'
-and     w.workspace not like 'COM.ORACLE.%'
-and     rownum = 1
-]'          using in l_project_rec.workspace_id;
+with src as
+( select  a.workspace
+  ,       a.alias
+  from    apex_applications a
+  where   a.application_id = :b1
+  union all /* the application may not exist so we need to query apex_workspaces */
+  select  w.workspace
+  ,       null as alias
+  from    apex_workspaces w
+  where   w.workspace_id = nvl(:b2, w.workspace_id)
+  and     w.workspace <> 'INTERNAL'
+  and     w.workspace not like 'COM.ORACLE.%'
+)
+select  src.*
+from    src
+where   rownum = 1 /* prefer existing application */
+]'          using in l_project_rec.application_id, l_project_rec.workspace_id;
 
-          fetch l_cursor into l_workspace_name;
-          close l_cursor;
-          execute immediate 'call oracle_tools.ui_apex_synchronize.prepare_import(:b1, :b2)'
-            using l_workspace_name, l_project_rec.application_id;
+          fetch l_cursor into l_workspace_name, l_application_alias;
+          if l_cursor%notfound
+          then
+            close l_cursor;
+            raise no_data_found;
+          else
+            close l_cursor; -- OK
+          end if;
+          execute immediate 'call oracle_tools.ui_apex_synchronize.prepare_import(p_workspace_name => :b1, p_application_id => :b2, p_application_alias => :b3)'
+            using l_workspace_name, l_project_rec.application_id, l_application_alias;
 
           get_output_lines;
           for i_output_line_idx in 1 .. l_nr_output_lines

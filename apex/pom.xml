@@ -28,6 +28,7 @@
     <apex.phase.init>validate</apex.phase.init>
     <apex.phase.process>compile</apex.phase.process>
     <apex.show.properties>false</apex.show.properties>
+    <apex.application.alias></apex.application.alias>
   </properties>
 
   <!-- Needed for Apex Export/Import scripts in child projects -->
@@ -145,6 +146,7 @@
                   </tstamp>
                   <ant antfile="synchronize.xml" target="${apex.operation}" inheritAll="false" dir="${oracle-tools.apex.scripts.dir}">
                     <property name="application" value="${apex.application}" />
+                    <property name="application.alias" value="${apex.application.alias}" />
                     <property name="application.version" value="${apex.application.version}" />
                     <property name="userid" value="${db.userid}" />
                     <property name="workspace" value="${apex.workspace}" />
