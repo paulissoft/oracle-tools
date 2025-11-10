@@ -49,7 +49,7 @@ end get_translations;
 
 procedure open_apex_session
 ( p_application_id in apex_application_trans_map.primary_application_id%type
-, p_parsing_schema in apex_applications.owner%type
+, p_parsing_schema out nocopy apex_applications.owner%type
 )
 is
 begin
