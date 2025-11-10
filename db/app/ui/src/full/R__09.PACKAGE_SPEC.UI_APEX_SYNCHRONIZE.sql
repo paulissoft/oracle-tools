@@ -14,7 +14,6 @@ procedure pre_import
 procedure prepare_import
 ( p_workspace_name in apex_workspaces.workspace%type
 , p_application_id in apex_applications.application_id%type
-, p_user in apex_applications.owner%type default sys_context('USERENV', 'CURRENT_SCHEMA')
 , p_application_alias in apex_applications.alias%type default null
 );
 

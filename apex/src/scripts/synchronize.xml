@@ -412,91 +412,20 @@ The following properties are only important during export:
               </java>
             </then>
             <else>
-              <!-- empty sqlarg3/sqlarg4 may give a string index -1 error -->
-              <!-- replace by a SPACE -->
-              <ac:if>
-                <!-- both last arguments empty -->
-                <and>
-                  <equals arg1="@{sqlarg3}" arg2=""/>
-                  <equals arg1="@{sqlarg4}" arg2=""/>
-                </and>
-                <then>
-                  <echo message="sqlarg3 and sqlarg4 empty"/>
-                  <exec executable="${sql.executable}"
-                        dir="@{dir}"
-                        inputstring="${my.password}"
-                        failonerror="true">
-                    <arg value="-S" /> <!-- silent -->
-                    <arg value="${quote}${my.userid}${quote}" />
-                    <arg value="@{sqlfile}" />
-                    <arg value="@{sqlarg1}" />
-                    <arg value="@{sqlarg2}" />
-                    <arg value=" " />
-                    <arg value=" " />
-                    <!-- Oracle clients love NLS_LANG -->
-                    <env key="NLS_LANG" value="American_America.UTF8"/>
-                  </exec>
-                </then>
-                <elseif>
-                  <!-- only last arguments empty -->
-                  <equals arg1="@{sqlarg4}" arg2=""/>
-                  <then>
-                    <echo message="sqlarg4 empty"/>
-                    <exec executable="${sql.executable}"
-                          dir="@{dir}"
-                          inputstring="${my.password}"
-                          failonerror="true">
-                      <arg value="-S" /> <!-- silent -->
-                      <arg value="${quote}${my.userid}${quote}" />
-                      <arg value="@{sqlfile}" />
-                      <arg value="@{sqlarg1}" />
-                      <arg value="@{sqlarg2}" />
-                      <arg value="@{sqlarg3}" />
-                      <arg value=" " />
-                      <!-- Oracle clients love NLS_LANG -->
-                      <env key="NLS_LANG" value="American_America.UTF8"/>
-                    </exec>
-                  </then>
-                </elseif>
-                <elseif>
-                  <!-- only last but one arguments empty -->
-                  <equals arg1="@{sqlarg3}" arg2=""/>
-                  <then>
-                  <echo message="sqlarg3 empty"/>
-                    <exec executable="${sql.executable}"
-                          dir="@{dir}"
-                          inputstring="${my.password}"
-                          failonerror="true">
-                      <arg value="-S" /> <!-- silent -->
-                      <arg value="${quote}${my.userid}${quote}" />
-                      <arg value="@{sqlfile}" />
-                      <arg value="@{sqlarg1}" />
-                      <arg value="@{sqlarg2}" />
-                      <arg value=" " />
-                      <arg value="@{sqlarg4}" />
-                      <!-- Oracle clients love NLS_LANG -->
-                      <env key="NLS_LANG" value="American_America.UTF8"/>
-                    </exec>
-                  </then>
-                </elseif>
-                <else>
-                  <echo message="no empty arguments"/>
-                  <exec executable="${sql.executable}"
-                        dir="@{dir}"
-                        inputstring="${my.password}"
-                        failonerror="true">
-                    <arg value="-S" /> <!-- silent -->
-                    <arg value="${quote}${my.userid}${quote}" />
-                    <arg value="@{sqlfile}" />
-                    <arg value="@{sqlarg1}" />
-                    <arg value="@{sqlarg2}" />
-                    <arg value="@{sqlarg3}" />
-                    <arg value="@{sqlarg4}" />
-                    <!-- Oracle clients love NLS_LANG -->
-                    <env key="NLS_LANG" value="American_America.UTF8"/>
-                  </exec>
-                </else>
-              </ac:if>
+              <exec executable="${sql.executable}"
+                    dir="@{dir}"
+                    inputstring="${my.password}"
+                    failonerror="true">
+                <arg value="-S" /> <!-- silent -->
+                <arg value="${quote}${my.userid}${quote}" />
+                <arg value="@{sqlfile}" />
+                <arg value="@{sqlarg1}" />
+                <arg value="@{sqlarg2}" />
+                <arg value="@{sqlarg3}" />
+                <arg value="@{sqlarg4}" />
+                <!-- Oracle clients love NLS_LANG -->
+                <env key="NLS_LANG" value="American_America.UTF8"/>
+              </exec>
             </else>
           </ac:if>        
         </try>

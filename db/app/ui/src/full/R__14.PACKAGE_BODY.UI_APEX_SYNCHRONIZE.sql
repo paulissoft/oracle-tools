@@ -49,22 +49,14 @@ end get_translations;
 
 procedure open_apex_session
 ( p_application_id in apex_application_trans_map.primary_application_id%type
+, p_parsing_schema in apex_applications.owner%type
 )
 is
-  cursor c_apex_info(b_application_id in apex_application_trans_map.primary_application_id%type)
-  is
-    select  r.api_compatibility -- 2024.11.30
-    ,       r.version_no -- 24.2.9
-    ,       a.workspace_id
-    ,       a.owner
-    from    apex_release r
-            cross join apex_applications a
-    where   a.application_id = b_application_id;
-
-  r_apex_info c_apex_info%rowtype;
 begin
   dbms_output.put_line('*** ui_apex_synchronize.open_apex_session ***');
   dbms_output.put_line('application id: ' || p_application_id);
+
+  p_parsing_schema := null;
   
   /*
   -- Prevent an error like this:
@@ -76,57 +68,52 @@ begin
   --
   -- Solution: reuse part of application/delete_application.sql, i.e. wwv_flow_imp.component_begin/wwv_flow_imp.component_end
   */
-  open c_apex_info(p_application_id);
-  fetch c_apex_info into r_apex_info;
-  if c_apex_info%notfound
-  then
-    close c_apex_info;
-    raise no_data_found;
-  else
-    close c_apex_info; -- OK
-  end if;
+
+  -- maybe the application id is new, so just a cursor loop and set p_parsing_schema
+  for r in
+  ( select  r.api_compatibility -- 2024.11.30
+    ,       r.version_no -- 24.2.9
+    ,       a.workspace_id
+    ,       a.owner
+    from    apex_release r
+            cross join apex_applications a
+    where   a.application_id = p_application_id
+  )
+  loop
+    p_parsing_schema := r.owner;
     
-  apex_application_install.generate_offset;
+    apex_application_install.generate_offset;
 
-  dbms_output.put_line('offset        : ' || apex_application_install.get_offset);
+    dbms_output.put_line('offset        : ' || apex_application_install.get_offset);
 
-  wwv_flow_imp.component_begin
-  ( p_version_yyyy_mm_dd => r_apex_info.api_compatibility
-  , p_release => r_apex_info.version_no
-  , p_default_workspace_id => r_apex_info.workspace_id
-  , p_default_application_id => p_application_id
-  , p_default_id_offset => apex_application_install.get_offset
-  , p_default_owner => r_apex_info.owner
-  );
+    wwv_flow_imp.component_begin
+    ( p_version_yyyy_mm_dd => r.api_compatibility
+    , p_release => r.version_no
+    , p_default_workspace_id => r.workspace_id
+    , p_default_application_id => p_application_id
+    , p_default_id_offset => apex_application_install.get_offset
+    , p_default_owner => r.owner
+    );
+  end loop;    
 end open_apex_session;
 
 procedure close_apex_session
 ( p_application_id in apex_application_trans_map.primary_application_id%type
 )
 is
-  cursor c_apex_info(b_application_id in apex_application_trans_map.primary_application_id%type)
-  is
-    select  a.workspace_id
-    ,       a.owner
-    from    apex_release r
-            cross join apex_applications a
-    where   a.application_id = b_application_id;
-
-  r_apex_info c_apex_info%rowtype;
 begin
   dbms_output.put_line('*** ui_apex_synchronize.close_apex_session ***');
 
-  open c_apex_info(p_application_id);
-  fetch c_apex_info into r_apex_info;
-  if c_apex_info%notfound
-  then
-    close c_apex_info;
-    raise no_data_found;
-  else
-    close c_apex_info; -- OK
-  end if;
-
-  wwv_flow_imp.component_end;
+  for r in
+  ( select  a.workspace_id
+    ,       a.owner
+    from    apex_release r
+            cross join apex_applications a
+    where   a.application_id = p_application_id
+  )
+  loop
+    wwv_flow_imp.component_end;
+  end loop;
 end close_apex_session;
 
 function get_workspace_id
@@ -281,6 +268,8 @@ procedure pre_import
 )
 is
   l_application_status constant varchar2(100) := 'DEVELOPERS_ONLY';
+  l_current_schema constant all_users.username%type := sys_context('USERENV', 'CURRENT_SCHEMA');
+  l_parsing_schema apex_applications.owner%type;
   
   -- ORA-20987: APEX - ERR-1014 Application not found. - Contact your application
   e_apex_error exception;
@@ -289,7 +278,20 @@ begin
   dbms_output.put_line('*** ui_apex_synchronize.pre_import ***');
   dbms_output.put_line('application id: ' || p_application_id);
   
-  open_apex_session(p_application_id);
+  open_apex_session(p_application_id, l_parsing_schema);
+
+  if l_current_schema <> l_parsing_schema
+  then
+    -- both not null and different
+    raise_application_error
+    ( -20000
+    , utl_lms.format_message
+      ( 'The current user is %s but it should be the parsing schema (%s)'
+      , l_current_schema
+      , l_parsing_schema
+      )
+    );
+  end if;
   
   apex_util.set_application_status
   ( p_application_id => p_application_id
@@ -312,16 +314,15 @@ end pre_import;
 procedure prepare_import
 ( p_workspace_name in apex_workspaces.workspace%type
 , p_application_id in apex_applications.application_id%type
-, p_user in apex_applications.owner%type
 , p_application_alias in apex_applications.alias%type
 )
 is
+  l_current_schema constant all_users.username%type := sys_context('USERENV', 'CURRENT_SCHEMA');
   l_workspace_id number;
 begin
   dbms_output.put_line('*** ui_apex_synchronize.prepare_import ***');
   dbms_output.put_line('workspace name   : ' || p_workspace_name);
   dbms_output.put_line('application id   : ' || p_application_id);
-  dbms_output.put_line('user             : ' || p_user);
   dbms_output.put_line('application alias: ' || p_application_alias);
   
   l_workspace_id := get_workspace_id(p_workspace_name);
@@ -334,7 +335,7 @@ begin
   end if;
   apex_application_install.generate_offset;
   dbms_output.put_line('offset           : ' || apex_application_install.get_offset);
-  apex_application_install.set_schema(p_user);
+  apex_application_install.set_schema(l_current_schema);
 end prepare_import;
 
 procedure publish_application
@@ -393,11 +394,26 @@ procedure post_import
 )
 is
   l_application_status constant varchar2(100) := 'AVAILABLE_W_EDIT_LINK';
+  l_current_schema constant all_users.username%type := sys_context('USERENV', 'CURRENT_SCHEMA');
+  l_parsing_schema apex_applications.owner%type;
 begin
   dbms_output.put_line('*** ui_apex_synchronize.post_import ***');
   dbms_output.put_line('application id: ' || p_application_id);
   
-  open_apex_session(p_application_id);
+  open_apex_session(p_application_id, l_parsing_schema);
+
+  if l_current_schema <> l_parsing_schema
+  then
+    -- both not null and different
+    raise_application_error
+    ( -20000
+    , utl_lms.format_message
+      ( 'The current user is %s but it should be the parsing schema (%s)'
+      , l_current_schema
+      , l_parsing_schema
+      )
+    );
+  end if;
 
   apex_util.set_application_status
   ( p_application_id => p_application_id
