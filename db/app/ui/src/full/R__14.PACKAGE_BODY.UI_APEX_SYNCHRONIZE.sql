@@ -47,16 +47,19 @@ exception
     raise;
 end get_translations;
 
-procedure open_apex_session
+procedure set_application_status
 ( p_application_id in apex_application_trans_map.primary_application_id%type
-, p_parsing_schema out nocopy apex_applications.owner%type
+, p_application_status in varchar2
+, p_unavailable_value in varchar2 default null
 )
 is
+  l_current_schema constant all_users.username%type := sys_context('USERENV', 'CURRENT_SCHEMA');
+  l_parsing_schema apex_applications.owner%type := null;
 begin
-  dbms_output.put_line('*** ui_apex_synchronize.open_apex_session ***');
-  dbms_output.put_line('application id: ' || p_application_id);
-
-  p_parsing_schema := null;
+  dbms_output.put_line('*** ui_apex_synchronize.set_application_status ***');
+  dbms_output.put_line('application id    : ' || p_application_id);
+  dbms_output.put_line('application status: ' || p_application_status);
+  dbms_output.put_line('unavailable value : ' || p_unavailable_value);
   
   /*
   -- Prevent an error like this:
@@ -80,11 +83,24 @@ begin
     where   a.application_id = p_application_id
   )
   loop
-    p_parsing_schema := r.owner;
-    
+    l_parsing_schema := r.owner;
+
+    if l_current_schema <> l_parsing_schema
+    then
+      -- both not null and different
+      raise_application_error
+      ( -20000
+      , utl_lms.format_message
+        ( 'The current user is %s but it should be the parsing schema (%s)'
+        , l_current_schema
+        , l_parsing_schema
+        )
+      );
+    end if;
+
     apex_application_install.generate_offset;
 
-    dbms_output.put_line('offset        : ' || apex_application_install.get_offset);
+    dbms_output.put_line('offset            : ' || apex_application_install.get_offset);
 
     wwv_flow_imp.component_begin
     ( p_version_yyyy_mm_dd => r.api_compatibility
@@ -94,27 +110,16 @@ begin
     , p_default_id_offset => apex_application_install.get_offset
     , p_default_owner => r.owner
     );
-  end loop;    
-end open_apex_session;
+  
+    apex_util.set_application_status
+    ( p_application_id => p_application_id
+    , p_application_status => p_application_status
+    , p_unavailable_value => p_unavailable_value
+    );
 
-procedure close_apex_session
-( p_application_id in apex_application_trans_map.primary_application_id%type
-)
-is
-begin
-  dbms_output.put_line('*** ui_apex_synchronize.close_apex_session ***');
-
-  for r in
-  ( select  a.workspace_id
-    ,       a.owner
-    from    apex_release r
-            cross join apex_applications a
-    where   a.application_id = p_application_id
-  )
-  loop
     wwv_flow_imp.component_end;
-  end loop;
-end close_apex_session;
+  end loop;    
+end set_application_status;
 
 function get_workspace_id
 ( p_workspace_name in apex_workspaces.workspace%type
@@ -267,48 +272,8 @@ procedure pre_import
 ( p_application_id in apex_application_trans_map.primary_application_id%type
 )
 is
-  l_application_status constant varchar2(100) := 'DEVELOPERS_ONLY';
-  l_current_schema constant all_users.username%type := sys_context('USERENV', 'CURRENT_SCHEMA');
-  l_parsing_schema apex_applications.owner%type;
-  
-  -- ORA-20987: APEX - ERR-1014 Application not found. - Contact your application
-  e_apex_error exception;
-  pragma exception_init(e_apex_error, -20987);
 begin
-  dbms_output.put_line('*** ui_apex_synchronize.pre_import ***');
-  dbms_output.put_line('application id: ' || p_application_id);
-  
-  open_apex_session(p_application_id, l_parsing_schema);
-
-  if l_current_schema <> l_parsing_schema
-  then
-    -- both not null and different
-    raise_application_error
-    ( -20000
-    , utl_lms.format_message
-      ( 'The current user is %s but it should be the parsing schema (%s)'
-      , l_current_schema
-      , l_parsing_schema
-      )
-    );
-  end if;
-  
-  apex_util.set_application_status
-  ( p_application_id => p_application_id
-  , p_application_status => l_application_status
-  , p_unavailable_value => 'Updating application'
-  );
-
-  close_apex_session(p_application_id);
-exception
-  when e_apex_error or no_data_found
-  then
-    dbms_output.put_line(sqlerrm);
-    close_apex_session(p_application_id);
-  when others
-  then
-    close_apex_session(p_application_id);
-    raise;
+  set_application_status(p_application_id, 'DEVELOPERS_ONLY', 'Updating application');
 end pre_import;
 
 procedure prepare_import
@@ -393,39 +358,8 @@ procedure post_import
 ( p_application_id in apex_application_trans_map.primary_application_id%type
 )
 is
-  l_application_status constant varchar2(100) := 'AVAILABLE_W_EDIT_LINK';
-  l_current_schema constant all_users.username%type := sys_context('USERENV', 'CURRENT_SCHEMA');
-  l_parsing_schema apex_applications.owner%type;
 begin
-  dbms_output.put_line('*** ui_apex_synchronize.post_import ***');
-  dbms_output.put_line('application id: ' || p_application_id);
-  
-  open_apex_session(p_application_id, l_parsing_schema);
-
-  if l_current_schema <> l_parsing_schema
-  then
-    -- both not null and different
-    raise_application_error
-    ( -20000
-    , utl_lms.format_message
-      ( 'The current user is %s but it should be the parsing schema (%s)'
-      , l_current_schema
-      , l_parsing_schema
-      )
-    );
-  end if;
-
-  apex_util.set_application_status
-  ( p_application_id => p_application_id
-  , p_application_status => l_application_status
-  );
-  
-  close_apex_session(p_application_id);  
-exception  
-  when others
-  then
-    close_apex_session(p_application_id);
-    raise;
+  set_application_status(p_application_id, 'AVAILABLE_W_EDIT_LINK');
 end post_import;
 
 end ui_apex_synchronize;
